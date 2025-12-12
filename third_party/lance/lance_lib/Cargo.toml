@@ -1,0 +1,45 @@
+# Copyright 2024-present Alibaba Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[package]
+name = "lance_lib"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lance = { version = "0.31.0" }
+lance-io = "0.31.0"
+lance-file = "0.31.0"
+lance-core = "0.31.0"
+lance-encoding = "0.31.0"
+
+tokio = { version = "1.23", features = [
+    "rt-multi-thread",
+    "macros",
+    "fs",
+    "sync",
+] }
+
+arrow = { version = "55.1", features = ["ffi"] }
+arrow-array = "55.1"
+arrow-data = "55.1"
+arrow-schema = "55.1"
+arrow-select = "55.1"
+object_store = "0.12.2"
+
+futures = "0.3"
+lazy_static = "1"
+
+[lib]
+crate-type = ["cdylib"]
