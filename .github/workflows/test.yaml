@@ -47,6 +47,6 @@ jobs:
       - name: Build Paimon
         shell: bash
         env:
-          CC: gcc-14
-          CXX: g++-14
+          CC: clang
+          CXX: clang++
         run: ci/scripts/build_paimon.sh $(pwd) ON
