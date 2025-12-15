@@ -15,7 +15,7 @@
 header:
   license:
     spdx-id: Apache-2.0
-    copyright-owner: Alibaba Inc
+    copyright-owner: 2024-present Alibaba Inc
 
   paths:
     - '**'
@@ -23,6 +23,7 @@ header:
   paths-ignore:
     - '**/.gitignore'
     - '.github/**'
+    - 'test/test_data/**'
     - 'LICENSE'
     - 'NOTICE'
 
