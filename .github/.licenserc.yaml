@@ -15,7 +15,7 @@
 header:
   license:
     spdx-id: Apache-2.0
-    copyright-owner: Alibaba Inc, Apache Software Foundation
+    copyright-owner: Alibaba Inc
 
   paths:
     - '**'
