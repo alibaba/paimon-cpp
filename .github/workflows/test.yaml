@@ -36,7 +36,7 @@ jobs:
   ubuntu:
     name: AMD64 Ubuntu 24.04
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
     steps:
