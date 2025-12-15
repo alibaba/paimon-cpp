@@ -32,7 +32,7 @@ CMAKE_ARGS=(
 )
 
 cmake "${CMAKE_ARGS[@]}" ${source_dir}
-cmake --build . --target install -- -j$(nproc)
+cmake --build . -- -j$(nproc)
 ctest --output-on-failure -j $(nproc)
 
 popd
