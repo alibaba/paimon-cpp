@@ -42,9 +42,8 @@ jobs:
     steps:
       - name: Checkout paimon-cpp
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-      - name: Install dependencies
-        shell: bash
-        run: head -n 5 /home/runner/work/paimon-cpp/paimon-cpp/third_party/lumina/lib/liblumina.so
+        with:
+          lfs: true
       - name: Build Paimon
         shell: bash
         env:
