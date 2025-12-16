@@ -49,4 +49,4 @@ jobs:
         env:
           CC: gcc-14
           CXX: g++-14
-        run: ci/scripts/build_paimon.sh $(pwd) ON
+        run: ci/scripts/build_paimon.sh $(pwd)
