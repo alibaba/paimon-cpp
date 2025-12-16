@@ -24,7 +24,7 @@
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {
 TEST(LoggerTest, TestMultiThreadGetLogger) {
-    auto executor = CreateDefaultExecutor(/*thread_count*/ 4);
+    auto executor = CreateDefaultExecutor(/*thread_count=*/ 4);
     auto get_logger = []() {
         auto logger = Logger::GetLogger("my_log");
         ASSERT_TRUE(logger);
