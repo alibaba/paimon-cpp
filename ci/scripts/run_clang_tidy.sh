@@ -1,4 +1,6 @@
-# Copyright 2025-present Alibaba Inc.
+#!/usr/bin/env bash
+#
+# Copyright 2024-present Alibaba Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,18 +14,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: pre-commit
+set -eux
 
-on:
-  pull_request:
-  push:
-    branches:
-      - '**'
+source_dir=${1}
+build_dir=${1}/build
 
-jobs:
-  pre-commit:
-    runs-on: ubuntu-24.04
-    steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-    - uses: actions/setup-python@v6
-    - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd  # v3.0.1
+mkdir ${build_dir}
+pushd ${build_dir}
+
+CMAKE_ARGS=(
+    "-G Ninja"
+    "-DCMAKE_BUILD_TYPE=Debug"
+    "-DPAIMON_BUILD_TESTS=ON"
+    "-DPAIMON_ENABLE_LANCE=ON"
+    "-DPAIMON_ENABLE_JINDO=ON"
+    "-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+    "-DPAIMON_LINT_GIT_TARGET_COMMIT=origin/${{git.merge_request.targetBranch}}"
+)
+
+cmake "${CMAKE_ARGS[@]}" ${source_dir}
+cmake --build . -- -j$(nproc)
+ninja check-clang-tidy
+
+popd
+
+rm -rf ${build_dir}

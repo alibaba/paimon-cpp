@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Test with sanitizer
+name: Run Clang Tidy
 
 on:
   push:
@@ -41,9 +41,9 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
-      - name: Build Paimon
+      - name: Run Paimon Clang Tidy
         shell: bash
         env:
           CC: clang
           CXX: clang++
-        run: ci/scripts/build_paimon.sh $(pwd) true
+        run: ci/scripts/run_clang_tidy.sh $(pwd)

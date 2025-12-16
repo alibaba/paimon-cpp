@@ -29,9 +29,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  PAIMON_HOME: /tmp/paimon
-
 jobs:
   ubuntu:
     name: AMD64 Ubuntu 24.04
