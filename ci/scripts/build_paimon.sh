@@ -17,6 +17,7 @@
 set -eux
 
 source_dir=${1}
+enable_sanitizer=${2:-false}
 build_dir=${1}/build
 
 mkdir ${build_dir}
@@ -29,6 +30,13 @@ CMAKE_ARGS=(
     "-DPAIMON_ENABLE_LANCE=ON"
     "-DPAIMON_ENABLE_JINDO=ON"
 )
+
+if [[ "${enable_sanitizer}" == "true" ]]; then
+    CMAKE_ARGS+=(
+        "-DPAIMON_USE_ASAN=ON"
+        "-DPAIMON_USE_UBSAN=ON"
+    )
+fi
 
 cmake "${CMAKE_ARGS[@]}" ${source_dir}
 cmake --build . -- -j$(nproc)

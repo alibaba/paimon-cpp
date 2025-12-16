@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Test
+name: Test with sanitizer
 
 on:
   push:
@@ -33,7 +33,7 @@ env:
   PAIMON_HOME: /tmp/paimon
 
 jobs:
-  ubuntu-clang:
+  ubuntu:
     name: AMD64 Ubuntu 24.04
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -49,21 +49,4 @@ jobs:
         env:
           CC: clang
           CXX: clang++
-        run: ci/scripts/build_paimon.sh $(pwd) ON
-  ubuntu-gcc:
-    name: AMD64 Ubuntu 24.04
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
-    strategy:
-      fail-fast: false
-    steps:
-      - name: Checkout paimon-cpp
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
-        with:
-          lfs: true
-      - name: Build Paimon
-        shell: bash
-        env:
-          CC: gcc-14
-          CXX: g++-14
-        run: ci/scripts/build_paimon.sh $(pwd) ON
+        run: ci/scripts/build_paimon.sh $(pwd) true
