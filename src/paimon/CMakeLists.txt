@@ -335,6 +335,7 @@ if(PAIMON_BUILD_TESTS)
                     common/io/buffered_input_stream_test.cpp
                     common/io/memory_segment_output_stream_test.cpp
                     common/io/offset_input_stream_test.cpp
+                    common/logging/logging_test.cpp
                     common/metrics/metrics_impl_test.cpp
                     common/options/memory_size_test.cpp
                     common/options/time_duration_test.cpp
