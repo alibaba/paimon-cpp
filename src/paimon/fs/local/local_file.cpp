@@ -151,15 +151,8 @@ Result<bool> LocalFile::Mkdir() const {
             dir.resize(len - 1);
         }
     }
-    size_t pos = dir.rfind('/');
-    if (pos == std::string::npos) {
-        return mkdir(dir.c_str(), 0755) == 0;
-    }
-    std::string parent_dir = dir.substr(0, pos);
-    if (!parent_dir.empty() && access(parent_dir.c_str(), F_OK) != 0) {
-        PAIMON_RETURN_NOT_OK(MkNestDir(parent_dir));
-    }
-    return mkdir(dir.c_str(), 0755) == 0;
+    PAIMON_ASSIGN_OR_RAISE(bool success, MkNestDir(dir));
+    return success;
 }
 
 Result<std::unique_ptr<LocalFileStatus>> LocalFile::GetFileStatus() const {

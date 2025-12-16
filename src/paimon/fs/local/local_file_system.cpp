@@ -76,7 +76,7 @@ Status LocalFileSystem::Mkdirs(const std::string& path) const {
 }
 
 Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
-    // Important: The 'Exists()' check above must come before the 'IsDirectory()'
+    // Important: The 'Exists()' check above must come before the 'IsDir()'
     // check to be safe when multiple parallel instances try to create the directory
     PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
     if (is_exist) {
@@ -90,6 +90,10 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
         }
     }
 
+    auto parent = file.GetParentFile();
+    if (!parent.IsEmpty()) {
+        PAIMON_RETURN_NOT_OK(MkdirsInternal(parent));
+    }
     PAIMON_ASSIGN_OR_RAISE(bool success, file.Mkdir());
     if (!success) {
         PAIMON_ASSIGN_OR_RAISE(bool is_dir, file.IsDir());
