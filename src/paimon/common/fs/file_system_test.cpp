@@ -1017,7 +1017,7 @@ TEST_P(FileSystemTest, TestMkdir2) {
     }
 }
 
-// test for create multi dir such as "partition1/bucket1" and "partition1/bucket2"
+// test for create multi dir such as "/table/partition1/bucket1" and "/table/partition1/bucket2"
 TEST_P(FileSystemTest, TestMkdirMultiThread) {
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
@@ -1042,7 +1042,7 @@ TEST_P(FileSystemTest, TestMkdirMultiThread) {
     }
 }
 
-// test for create multi dir such as "partition1" and "partition1"
+// test for create multi dir such as "/table/partition1" and "/table/partition1"
 TEST_P(FileSystemTest, TestMkdirMultiThread2) {
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
@@ -1055,8 +1055,28 @@ TEST_P(FileSystemTest, TestMkdirMultiThread2) {
         for (uint32_t thread_idx = 0; thread_idx < thread_count; thread_idx++) {
             futures.push_back(Via(executor.get(), [this, &uuid]() -> void {
                 std::string dir_path = PathUtil::JoinPath(test_root_, uuid);
-                // ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
-                // ASSERT_FALSE(is_exist);
+                ASSERT_OK(fs_->Mkdirs(dir_path));
+                ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
+                ASSERT_TRUE(is_exist);
+            }));
+        }
+        Wait(futures);
+    }
+}
+
+// test for create multi dir such as "partition1" and "partition1" (relative path)
+TEST_P(FileSystemTest, TestMkdirMultiThread3) {
+    uint32_t runs_count = 10;
+    uint32_t thread_count = 10;
+    auto executor = CreateDefaultExecutor(thread_count);
+
+    for (uint32_t i = 0; i < runs_count; i++) {
+        std::string uuid;
+        ASSERT_TRUE(UUID::Generate(&uuid));
+        std::vector<std::future<void>> futures;
+        for (uint32_t thread_idx = 0; thread_idx < thread_count; thread_idx++) {
+            futures.push_back(Via(executor.get(), [this, &uuid]() -> void {
+                std::string dir_path = uuid;
                 ASSERT_OK(fs_->Mkdirs(dir_path));
                 ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
                 ASSERT_TRUE(is_exist);

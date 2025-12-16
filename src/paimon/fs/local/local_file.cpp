@@ -158,7 +158,7 @@ Status LocalFile::Mkdir() const {
     size_t len = dir.size();
     if (dir[len - 1] == '/') {
         if (len == 1) {
-            return Status::Exist(fmt::format("directory '{}' already exist", dir));
+            return Status::OK();
         } else {
             dir.resize(len - 1);
         }
@@ -166,9 +166,11 @@ Status LocalFile::Mkdir() const {
     size_t pos = dir.rfind('/');
     if (pos == std::string::npos) {
         if (mkdir(dir.c_str(), 0755) < 0) {
-            int32_t cur_errno = errno;
-            return Status::IOError(
-                fmt::format("Mkdir path '{}' fail, ec: {}", dir, std::strerror(cur_errno)));
+            if (errno != EEXIST) {
+                int32_t cur_errno = errno;
+                return Status::IOError(
+                    fmt::format("Mkdir path '{}' fail, ec: {}", dir, std::strerror(cur_errno)));
+            }
         }
         return Status::OK();
     }

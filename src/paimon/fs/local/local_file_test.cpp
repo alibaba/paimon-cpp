@@ -178,9 +178,9 @@ TEST(LocalFileTest, TestOpenFile) {
     ASSERT_GE(modify_time, -1);
 
     LocalFile dir2 = LocalFile("/");
-    ASSERT_NOK_WITH_MSG(dir2.Mkdir(), "directory '/' already exist");
+    ASSERT_OK(dir2.Mkdir());
     LocalFile dir3 = LocalFile(test_root + "/");
-    ASSERT_NOK_WITH_MSG(dir3.Mkdir(), "already exist");
+    ASSERT_OK(dir3.Mkdir());
 }
 
 }  // namespace paimon::test
