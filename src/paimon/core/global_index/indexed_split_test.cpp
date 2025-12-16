@@ -132,4 +132,28 @@ TEST(IndexedSplitTest, TestIndexedSplitWithScore) {
     ASSERT_EQ(serialize_bytes, std::string((char*)split_bytes.data(), split_bytes.size()));
 }
 
+TEST(IndexedSplitTest, TestValidate) {
+    {
+        std::vector<Range> row_ranges = {Range(10, 20), Range(30, 40)};
+        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges);
+        ASSERT_OK(split.Validate());
+    }
+    {
+        std::vector<Range> row_ranges = {Range(10, 12), Range(30, 31)};
+        std::vector<float> scores = {10.01f, 10.11f, 10.21f, -30.01f, -30.11f};
+        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges, scores);
+        ASSERT_OK(split.Validate());
+    }
+    {
+        IndexedSplitImpl split(/*data_split=*/nullptr, /*row_ranges=*/std::vector<Range>());
+        ASSERT_NOK_WITH_MSG(split.Validate(), "IndexedSplit must have non-empty row ranges");
+    }
+    {
+        std::vector<Range> row_ranges = {Range(10, 12), Range(30, 31)};
+        std::vector<float> scores = {10.01f, 10.11f, 10.21f, -30.01f};
+        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges, scores);
+        ASSERT_NOK_WITH_MSG(split.Validate(),
+                            "Scores length does not match row ranges in indexed split.");
+    }
+}
 }  // namespace paimon::test

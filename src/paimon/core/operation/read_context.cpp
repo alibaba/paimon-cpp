@@ -27,20 +27,21 @@
 namespace paimon {
 class Predicate;
 
-ReadContext::ReadContext(
-    const std::string& path, const std::string& branch, const std::vector<std::string>& read_schema,
-    const std::shared_ptr<Predicate>& predicate, const std::vector<Range>& row_ranges,
-    bool enable_predicate_filter, bool enable_prefetch, uint32_t prefetch_batch_count,
-    uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
-    uint32_t row_to_batch_thread_number, const std::optional<std::string>& table_schema,
-    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor,
-    const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-    const std::map<std::string, std::string>& options)
+ReadContext::ReadContext(const std::string& path, const std::string& branch,
+                         const std::vector<std::string>& read_schema,
+                         const std::shared_ptr<Predicate>& predicate, bool enable_predicate_filter,
+                         bool enable_prefetch, uint32_t prefetch_batch_count,
+                         uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
+                         uint32_t row_to_batch_thread_number,
+                         const std::optional<std::string>& table_schema,
+                         const std::shared_ptr<MemoryPool>& memory_pool,
+                         const std::shared_ptr<Executor>& executor,
+                         const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
+                         const std::map<std::string, std::string>& options)
     : path_(path),
       branch_(branch),
       read_schema_(read_schema),
       predicate_(predicate),
-      row_ranges_(row_ranges),
       enable_predicate_filter_(enable_predicate_filter),
       enable_prefetch_(enable_prefetch),
       prefetch_batch_count_(prefetch_batch_count),
@@ -64,7 +65,6 @@ class ReadContextBuilder::Impl {
         fs_scheme_to_identifier_map_.clear();
         options_.clear();
         predicate_.reset();
-        row_ranges_.clear();
         enable_predicate_filter_ = false;
         enable_prefetch_ = false;
         prefetch_batch_count_ = 600;
@@ -83,7 +83,6 @@ class ReadContextBuilder::Impl {
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
     std::shared_ptr<Predicate> predicate_;
-    std::vector<Range> row_ranges_;
     bool enable_predicate_filter_ = false;
     bool enable_prefetch_ = false;
     uint32_t prefetch_batch_count_ = 600;
@@ -181,11 +180,6 @@ ReadContextBuilder& ReadContextBuilder::WithFileSystemSchemeToIdentifierMap(
     return *this;
 }
 
-ReadContextBuilder& ReadContextBuilder::SetRowRanges(const std::vector<Range>& row_ranges) {
-    impl_->row_ranges_ = row_ranges;
-    return *this;
-}
-
 Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->path_, PathUtil::NormalizePath(impl_->path_));
     if (impl_->path_.empty()) {
@@ -210,11 +204,10 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     }
     auto ctx = std::make_unique<ReadContext>(
         impl_->path_, impl_->branch_, impl_->read_field_names_, impl_->predicate_,
-        impl_->row_ranges_, impl_->enable_predicate_filter_, impl_->enable_prefetch_,
-        impl_->prefetch_batch_count_, impl_->prefetch_max_parallel_num_,
-        impl_->enable_multi_thread_row_to_batch_, impl_->row_to_batch_thread_number_,
-        impl_->table_schema_, impl_->memory_pool_, impl_->executor_,
-        impl_->fs_scheme_to_identifier_map_, impl_->options_);
+        impl_->enable_predicate_filter_, impl_->enable_prefetch_, impl_->prefetch_batch_count_,
+        impl_->prefetch_max_parallel_num_, impl_->enable_multi_thread_row_to_batch_,
+        impl_->row_to_batch_thread_number_, impl_->table_schema_, impl_->memory_pool_,
+        impl_->executor_, impl_->fs_scheme_to_identifier_map_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

@@ -61,16 +61,36 @@ Result<std::shared_ptr<RowRangeGlobalIndexScanner>> GlobalIndexScanImpl::CreateR
     return std::make_shared<RowRangeGlobalIndexScannerImpl>(table_schema_, index_file_path_factory,
                                                             filtered_entries, options_, pool_);
 }
-Result<std::set<Range>> GlobalIndexScanImpl::GetRowRangeList() {
+Result<std::vector<Range>> GlobalIndexScanImpl::GetRowRangeList() {
     PAIMON_RETURN_NOT_OK(Scan());
-    std::set<Range> ranges;
+    std::map<std::string, std::vector<Range>> index_ranges;
     for (const auto& entry : entries_) {
         const auto& global_index_meta = entry.index_file->GetGlobalIndexMeta();
         assert(global_index_meta);
-        ranges.insert(Range(global_index_meta.value().row_range_start,
-                            global_index_meta.value().row_range_end));
+        const auto& index_meta = global_index_meta.value();
+        index_ranges[entry.index_file->IndexType()].push_back(
+            Range(index_meta.row_range_start, index_meta.row_range_end));
     }
-    return ranges;
+    std::string check_index_type;
+    std::vector<Range> check_ranges;
+    // check all type index have same shard ranges
+    // If index a has [1,10],[20,30] and index b has [1,10],[20,25], it's inconsistent, because
+    // it is hard to handle the [26,30] range.
+    for (const auto& [type, ranges] : index_ranges) {
+        if (check_index_type.empty()) {
+            check_index_type = type;
+            check_ranges = Range::SortAndMergeOverlap(ranges, /*adjacent=*/true);
+        } else {
+            auto merged = Range::SortAndMergeOverlap(ranges, /*adjacent=*/true);
+            if (merged != check_ranges) {
+                return Status::Invalid(
+                    fmt::format("Inconsistent row ranges among index types: {} and {}",
+                                check_index_type, type));
+            }
+        }
+    }
+
+    return check_ranges;
 }
 
 Status GlobalIndexScanImpl::Scan() {

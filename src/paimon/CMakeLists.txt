@@ -46,7 +46,8 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
-    common/global_index/bitmap_topk_global_index_result.cpp
+    common/global_index/complete_index_score_batch_reader.cpp
+    common/global_index/bitmap_topk_global_index_result.cpp    
     common/global_index/bitmap_global_index_result.cpp
     common/global_index/global_index_result.cpp
     common/global_index/global_indexer_factory.cpp
@@ -326,6 +327,7 @@ if(PAIMON_BUILD_TESTS)
                     common/file_index/bsi/bit_slice_index_roaring_bitmap_test.cpp
                     common/file_index/bloomfilter/bloom_filter_file_index_test.cpp
                     common/file_index/bloomfilter/fast_hash_test.cpp
+                    common/global_index/complete_index_score_batch_reader_test.cpp                    
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp

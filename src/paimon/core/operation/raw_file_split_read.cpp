@@ -61,7 +61,7 @@ RawFileSplitRead::RawFileSplitRead(const std::shared_ptr<FileStorePathFactory>& 
                         memory_pool, executor) {}
 
 Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
-    const std::shared_ptr<DataSplit>& split) {
+    const std::shared_ptr<Split>& split) {
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
     if (!data_split) {
         return Status::Invalid("cannot cast split to data_split in RawFileSplitRead");
@@ -71,10 +71,10 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<DataFilePathFactory> data_file_path_factory,
         path_factory_->CreateDataFilePathFactory(data_split->Partition(), data_split->Bucket()));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
-        CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(), raw_read_schema_,
-                             predicate, deletion_file_map, data_file_path_factory));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+                           CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(),
+                                                raw_read_schema_, predicate, deletion_file_map,
+                                                /*row_ranges=*/{}, data_file_path_factory));
     auto concat_batch_reader =
         std::make_unique<ConcatBatchReader>(std::move(raw_file_readers), pool_);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
@@ -82,9 +82,9 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
 }
 
-Result<bool> RawFileSplitRead::Match(const std::shared_ptr<DataSplit>& data_split,
+Result<bool> RawFileSplitRead::Match(const std::shared_ptr<Split>& split,
                                      bool force_keep_delete) const {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
+    auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
     if (split_impl == nullptr) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }
@@ -112,6 +112,7 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::vector<Range>& ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<FileIndexResult> file_index_result;
     if (options_.FileIndexReadEnabled()) {
@@ -153,16 +154,6 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
         actual_selection.value().Flip(0, file_reader->GetNumberOfRows());
     }
 
-    // merge row id selection
-    PAIMON_ASSIGN_OR_RAISE(std::optional<RoaringBitmap32> selection_row_ids,
-                           file->ToFileSelection(context_->GetRowRanges()));
-    if (selection_row_ids) {
-        if (actual_selection) {
-            actual_selection.value() &= selection_row_ids.value();
-        } else {
-            actual_selection = std::move(selection_row_ids);
-        }
-    }
     if (actual_selection && actual_selection.value().IsEmpty()) {
         return std::unique_ptr<FileBatchReader>();
     }

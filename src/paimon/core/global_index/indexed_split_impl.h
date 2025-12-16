@@ -88,6 +88,22 @@ class IndexedSplitImpl : public IndexedSplit {
                            data_split_->ToString(), row_ranges_str, scores_str);
     }
 
+    Status Validate() const {
+        if (row_ranges_.empty()) {
+            return Status::Invalid("IndexedSplit must have non-empty row ranges");
+        }
+        if (!scores_.empty()) {
+            size_t row_count = 0;
+            for (const auto& range : row_ranges_) {
+                row_count += range.Count();
+            }
+            if (row_count != scores_.size()) {
+                return Status::Invalid("Scores length does not match row ranges in indexed split.");
+            }
+        }
+        return Status::OK();
+    }
+
  private:
     static constexpr float kEpsilon = 1e-5f;
 

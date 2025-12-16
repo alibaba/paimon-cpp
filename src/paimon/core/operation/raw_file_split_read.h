@@ -60,11 +60,9 @@ class RawFileSplitRead : public AbstractSplitRead {
                      const std::shared_ptr<MemoryPool>& memory_pool,
                      const std::shared_ptr<Executor>& executor);
 
-    Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& split) override;
+    Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
-    Result<bool> Match(const std::shared_ptr<DataSplit>& data_split,
-                       bool force_keep_delete) const override;
+    Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
     Result<std::unique_ptr<BatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
@@ -72,6 +70,7 @@ class RawFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::vector<Range>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 };
 
