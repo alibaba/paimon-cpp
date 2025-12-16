@@ -19,10 +19,10 @@
 .. https://github.com/apache/paimon/blob/master/docs/content/concepts/basic-concepts.md
 
 Basic Concepts
-=========================
+========================
 
 File Layouts
--------------------------
+------------------------
 All files of a table are stored under one base directory. Paimon files are
 organized in a layered style. The following image illustrates the file layout.
 Starting from a snapshot file, Paimon readers can recursively access all records
