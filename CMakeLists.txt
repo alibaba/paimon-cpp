@@ -331,17 +331,17 @@ if(PAIMON_BUILD_TESTS)
         paimon_global_index_static
         paimon_local_file_system_static
         paimon_mock_file_format_static
-        paimon_parquet_file_format_shared
-        paimon_blob_file_format_shared)
+        paimon_parquet_file_format_static
+        paimon_blob_file_format_static)
 
     if(PAIMON_ENABLE_LANCE)
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_lance_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS paimon_lance_file_format_static)
     endif()
     if(PAIMON_ENABLE_ORC)
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_orc_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS paimon_orc_file_format_static)
     endif()
     if(PAIMON_ENABLE_AVRO)
-        list(APPEND TEST_STATIC_LINK_LIBS paimon_avro_file_format_shared)
+        list(APPEND TEST_STATIC_LINK_LIBS paimon_avro_file_format_static)
     endif()
     if(PAIMON_ENABLE_JINDO)
         list(APPEND TEST_STATIC_LINK_LIBS paimon_jindo_file_system_shared)
