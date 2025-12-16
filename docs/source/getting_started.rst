@@ -23,8 +23,8 @@ understanding of C++ Paimon. These articles will get you set up quickly with C++
 Paimon and give you a taste of what the library is capable of.
 
 Start here to gain a basic understanding of Paimon, and move on to the
-:doc:`/implementations/user_guide` to explore more specific topics and
-underlying concepts, or the :doc:`/implementations/api` to explore Paimon's API.
+:doc:`/user_guide` to explore more specific topics and
+underlying concepts, or the :doc:`/api` to explore Paimon's API.
 
 .. toctree::
 

@@ -111,7 +111,7 @@ html_sidebars = {
 }
 
 # The master toctree document.
-master_doc = "implementations/index"
+master_doc = "index"
 
 version = "0.9.0"
 

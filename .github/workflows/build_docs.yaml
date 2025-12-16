@@ -63,6 +63,7 @@ jobs:
             mkdir -p /tmp/site
             cp -r ./_build/html/* /tmp/site/
             cd -
+            touch .nojekyll
 
       - name: Deploy to gh-pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
