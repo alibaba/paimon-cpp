@@ -340,7 +340,7 @@ TEST_P(WriteInteTest, TestAppendTableBatchWrite) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 =
@@ -448,7 +448,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
             [0, null, 1, 32767, 2147483647, null, null, 2.0, 3.141592657, null, "lucy"],
             [0, true, -2, -32768, -2147483648, null, -4294967298, 2.0, 3.141592657, "20250326", "mouse"]])";
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     ASSERT_OK_AND_ASSIGN(bool success,
@@ -507,7 +507,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
     ASSERT_EQ(2, snapshot2.value().Id());
     ASSERT_EQ(7, snapshot2.value().TotalRecordCount().value());
     ASSERT_EQ(3, snapshot2.value().DeltaRecordCount().value());
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
 
     std::string expected_data_2 =
@@ -574,7 +574,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 3);
 
@@ -627,7 +627,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
     ASSERT_EQ(16, snapshot2.value().TotalRecordCount().value());
     ASSERT_EQ(8, snapshot2.value().DeltaRecordCount().value());
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 3);
 
     std::map<std::pair<std::string, int32_t>, std::string> expected_datas_2;
@@ -774,7 +774,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 = R"([
@@ -832,7 +832,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     ASSERT_EQ(10, snapshot2.value().TotalRecordCount().value());
     ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 = R"([
         [0, [[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
@@ -970,7 +970,7 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 3);
 
@@ -1087,7 +1087,7 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
 
     // round 2 read
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 3);
     std::map<std::pair<std::string, int32_t>, std::string> expected_datas_2;
     expected_datas_2[std::make_pair("f1=20250326/", 0)] = R"([[0, "Farm", "20250326", 15, 22.1]])";
@@ -1225,7 +1225,7 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
     ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 3);
 
@@ -1365,7 +1365,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 2);
 
@@ -1455,7 +1455,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
 
     // round2 read
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 2);
     std::map<int32_t, std::string> expected_datas_2;
     expected_datas_2[0] =
@@ -1626,7 +1626,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 = R"([
@@ -1695,7 +1695,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
     ASSERT_EQ(9, snapshot2.value().TotalRecordCount().value());
     ASSERT_EQ(4, snapshot2.value().DeltaRecordCount().value());
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 = R"([
         [3, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
@@ -1760,7 +1760,7 @@ TEST_P(WriteInteTest, TestPkTableForceLookup) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
                                          /*is_streaming=*/false));
     ASSERT_EQ(data_splits.size(), 1);
@@ -1826,7 +1826,7 @@ TEST_P(WriteInteTest, TestPkTableEnableDeletionVector) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt,
                                          /*is_streaming=*/false));
     ASSERT_TRUE(data_splits.empty());
@@ -2119,7 +2119,7 @@ TEST_F(WriteInteTest, TestAppendTableWriteWithAlterTable) {
     ASSERT_OK_AND_ASSIGN(auto helper,
                          TestHelper::Create(table_path, options, /*is_streaming_mode=*/true));
     // scan with empty split
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> empty_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> empty_splits,
                          helper->NewScan(StartupMode::Latest(), /*snapshot_id=*/std::nullopt));
     ASSERT_TRUE(empty_splits.empty());
 
@@ -2161,7 +2161,7 @@ TEST_F(WriteInteTest, TestAppendTableWriteWithAlterTable) {
     ASSERT_EQ(3, snapshot.value().Id());
 
     // read
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits, helper->Scan());
     ASSERT_EQ(data_splits.size(), 1);
 
     arrow::FieldVector fields_with_row_kind = fields;
@@ -2697,7 +2697,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 =
@@ -2760,7 +2760,7 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
     ASSERT_EQ(2, snapshot2.value().Id());
     ASSERT_EQ(7, snapshot2.value().TotalRecordCount().value());
     ASSERT_EQ(3, snapshot2.value().DeltaRecordCount().value());
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_2, helper->Scan());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 =
         fmt::format(R"([
@@ -3372,7 +3372,7 @@ TEST_P(WriteInteTest, TestPkTablePostponeBucket) {
     ASSERT_EQ(5, snapshot1.value().TotalRecordCount().value());
     ASSERT_EQ(5, snapshot1.value().DeltaRecordCount().value());
 
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits.size(), 1);
 
@@ -3805,7 +3805,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
     ASSERT_EQ(4, snapshot.value().NextRowId().value());
 
     // check data file meta after commit
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits.size(), 1);
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(data_splits[0]);
@@ -3878,7 +3878,7 @@ TEST_P(WriteInteTest, TestAppendTableWithDateFieldAsPartitionField) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits_1,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_1,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 =

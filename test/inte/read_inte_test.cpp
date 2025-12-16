@@ -90,8 +90,8 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         std::vector<std::tuple<std::string, BinaryRow, std::vector<std::string>,
                                std::vector<int64_t>, std::vector<std::optional<DeletionFile>>>>;
 
-    std::vector<std::shared_ptr<DataSplit>> CreateDataSplits(
-        const DataSplitsSimple& input_data_splits, int64_t snapshot_id) const {
+    std::vector<std::shared_ptr<Split>> CreateDataSplits(const DataSplitsSimple& input_data_splits,
+                                                         int64_t snapshot_id) const {
         DataSplitsSchemaDv results;
         results.reserve(input_data_splits.size());
 
@@ -105,8 +105,8 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         return CreateDataSplits(results, snapshot_id);
     }
 
-    std::vector<std::shared_ptr<DataSplit>> CreateDataSplits(const DataSplitsDv& input_data_splits,
-                                                             int64_t snapshot_id) const {
+    std::vector<std::shared_ptr<Split>> CreateDataSplits(const DataSplitsDv& input_data_splits,
+                                                         int64_t snapshot_id) const {
         DataSplitsSchemaDv results;
         results.reserve(input_data_splits.size());
         for (const auto& input_data_split : input_data_splits) {
@@ -119,8 +119,8 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         return CreateDataSplits(results, snapshot_id);
     }
 
-    std::vector<std::shared_ptr<DataSplit>> CreateDataSplits(
-        const DataSplitsSchema& input_data_splits, int64_t snapshot_id) const {
+    std::vector<std::shared_ptr<Split>> CreateDataSplits(const DataSplitsSchema& input_data_splits,
+                                                         int64_t snapshot_id) const {
         DataSplitsSchemaDv results;
         results.reserve(input_data_splits.size());
         for (const auto& input_data_split : input_data_splits) {
@@ -133,9 +133,9 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         return CreateDataSplits(results, snapshot_id);
     }
 
-    std::vector<std::shared_ptr<DataSplit>> CreateDataSplits(
+    std::vector<std::shared_ptr<Split>> CreateDataSplits(
         const DataSplitsSchemaDv& input_data_splits, int64_t snapshot_id) const {
-        std::vector<std::shared_ptr<DataSplit>> data_splits;
+        std::vector<std::shared_ptr<Split>> data_splits;
         for (const auto& input_data_split : input_data_splits) {
             std::vector<std::shared_ptr<DataFileMeta>> data_file_metas;
             const auto& bucket_path = std::get<0>(input_data_split);
@@ -174,7 +174,7 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         return data_splits;
     }
 
-    std::shared_ptr<DataSplit> GetDataSplitFromFile(const std::string& split_file_name) {
+    std::shared_ptr<Split> GetDataSplitFromFile(const std::string& split_file_name) {
         auto file_system = std::make_shared<LocalFileSystem>();
         EXPECT_OK_AND_ASSIGN(auto input_stream, file_system->Open(split_file_name));
         std::vector<char> split_bytes(input_stream->Length().value_or(0), 0);
@@ -182,9 +182,9 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
                              input_stream->Read(split_bytes.data(), split_bytes.size()));
         EXPECT_OK(input_stream->Close());
 
-        EXPECT_OK_AND_ASSIGN(auto split, DataSplit::Deserialize((char*)split_bytes.data(),
-                                                                split_bytes.size(), pool_));
-        return split;
+        EXPECT_OK_AND_ASSIGN(
+            auto split, Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool_));
+        return std::dynamic_pointer_cast<Split>(split);
     }
 
  private:
@@ -394,7 +394,7 @@ TEST_P(ReadInteTest, TestReadOnlyPartitionField) {
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
 
-    std::vector<std::shared_ptr<DataSplit>> data_splits;
+    std::vector<std::shared_ptr<Split>> data_splits;
     data_splits.reserve(3);
     for (size_t i = 0; i < 3; ++i) {
         std::string file_name = path + "/data-splits/data_split-" + std::to_string(i);
@@ -2005,7 +2005,7 @@ TEST_P(ReadInteTest, TestReadWithPKFallBackBranch) {
     auto param = GetParam();
     std::string path = paimon::test::GetDataDir() + "/" + param.file_format +
                        "/append_table_with_rt_branch.db/append_table_with_rt_branch";
-    std::vector<std::shared_ptr<DataSplit>> data_splits;
+    std::vector<std::shared_ptr<Split>> data_splits;
     data_splits.reserve(3);
     for (size_t i = 0; i < 3; ++i) {
         std::string file_name = path + "/data-splits/data_split-" + std::to_string(i);
@@ -2069,7 +2069,7 @@ TEST_P(ReadInteTest, TestReadWithAppendFallBackBranch) {
     auto param = GetParam();
     std::string path = paimon::test::GetDataDir() + "/" + param.file_format +
                        "/append_table_with_append_pt_branch.db/append_table_with_append_pt_branch";
-    std::vector<std::shared_ptr<DataSplit>> data_splits;
+    std::vector<std::shared_ptr<Split>> data_splits;
     data_splits.reserve(2);
     for (size_t i = 0; i < 2; ++i) {
         std::string file_name = path + "/data-splits/data_split-" + std::to_string(i);
@@ -2147,7 +2147,7 @@ TEST_P(ReadInteTest, TestReadWithPKRtBranch) {
     auto param = GetParam();
     std::string path = paimon::test::GetDataDir() + "/" + param.file_format +
                        "/append_table_with_rt_branch.db/append_table_with_rt_branch";
-    std::vector<std::shared_ptr<DataSplit>> data_splits;
+    std::vector<std::shared_ptr<Split>> data_splits;
     data_splits.reserve(4);
     for (size_t i = 0; i < 4; ++i) {
         std::string file_name = path + "/data-splits/data_split-rt-" + std::to_string(i);
@@ -2204,7 +2204,7 @@ TEST_P(ReadInteTest, TestReadWithAppendPtBranch) {
     auto param = GetParam();
     std::string path = paimon::test::GetDataDir() + "/" + param.file_format +
                        "/append_table_with_append_pt_branch.db/append_table_with_append_pt_branch";
-    std::vector<std::shared_ptr<DataSplit>> data_splits;
+    std::vector<std::shared_ptr<Split>> data_splits;
     for (size_t i = 0; i < 1; ++i) {
         std::string file_name = path + "/data-splits/data_split-pt-" + std::to_string(i);
         auto split = GetDataSplitFromFile(file_name);

@@ -18,6 +18,7 @@
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/bitmap/bitmap_global_index_factory.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
@@ -109,7 +110,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         return file_store_commit->Commit(commit_msgs);
     }
 
-    Result<std::shared_ptr<DataSplit>> ScanData(
+    Result<std::shared_ptr<DataSplitImpl>> ScanData(
         const std::string& table_path,
         const std::vector<std::map<std::string, std::string>>& partition_filters) const {
         ScanContextBuilder scan_context_builder(table_path);
@@ -118,7 +119,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
         EXPECT_EQ(result_plan->Splits().size(), 1);
-        return result_plan->Splits()[0];
+        return std::dynamic_pointer_cast<DataSplitImpl>(result_plan->Splits()[0]);
     }
 
  private:
@@ -168,7 +169,9 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
     ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                    table_path, "f1", "lumina", split, Range(0, 3),
+                                                    table_path, "f1", "lumina",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 3)})),
                                                     /*options=*/lumina_options, pool_));
     auto index_commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
     ASSERT_TRUE(index_commit_msg_impl);
@@ -210,9 +213,11 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg,
-                         RowRangeGlobalIndexWriter::WriteIndex(table_path, "f0", "bitmap", split,
-                                                               Range(0, 7), /*options=*/{}, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+                                                    table_path, "f0", "bitmap",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 7)})),
+                                                    /*options=*/{}, pool_));
     auto index_commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
     ASSERT_TRUE(index_commit_msg_impl);
 
@@ -264,9 +269,12 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
         [&](const std::vector<std::map<std::string, std::string>>& partition,
             const Range& expected_range, const BinaryRow& expected_partition_row) {
             ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, partition));
-            ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                            table_path, "f0", "bitmap", split,
-                                                            expected_range, /*options=*/{}, pool_));
+            ASSERT_OK_AND_ASSIGN(
+                auto index_commit_msg,
+                RowRangeGlobalIndexWriter::WriteIndex(
+                    table_path, "f0", "bitmap",
+                    std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                    /*options=*/{}, pool_));
             auto index_commit_msg_impl =
                 std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
             ASSERT_TRUE(index_commit_msg_impl);
@@ -680,9 +688,11 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg,
-                         RowRangeGlobalIndexWriter::WriteIndex(table_path, "f0", "bitmap", split,
-                                                               Range(0, 7), /*options=*/{}, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+                                                    table_path, "f0", "bitmap",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 7)})),
+                                                    /*options=*/{}, pool_));
     ASSERT_OK(Commit(table_path, {index_commit_msg}));
 
     ASSERT_OK_AND_ASSIGN(auto global_index_scan,
@@ -728,14 +738,20 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 
         ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{partition}));
         // write bitmap index
-        ASSERT_OK_AND_ASSIGN(auto bitmap_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                         table_path, "f0", "bitmap", split,
-                                                         expected_range, /*options=*/{}, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto bitmap_commit_msg,
+            RowRangeGlobalIndexWriter::WriteIndex(
+                table_path, "f0", "bitmap",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                /*options=*/{}, pool_));
         ASSERT_OK(Commit(table_path, {bitmap_commit_msg}));
         // write and commit lumina index
-        ASSERT_OK_AND_ASSIGN(auto lumina_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                         table_path, "f1", "lumina", split,
-                                                         expected_range, lumina_options, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto lumina_commit_msg,
+            RowRangeGlobalIndexWriter::WriteIndex(
+                table_path, "f1", "lumina",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                lumina_options, pool_));
         ASSERT_OK(Commit(table_path, {lumina_commit_msg}));
     };
 

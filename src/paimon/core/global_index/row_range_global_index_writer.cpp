@@ -147,13 +147,19 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
 }  // namespace
 Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
     const std::string& table_path, const std::string& field_name, const std::string& index_type,
-    const std::shared_ptr<DataSplit>& split, const Range& range,
+    const std::shared_ptr<IndexedSplit>& indexed_split,
     const std::map<std::string, std::string>& options,
     const std::shared_ptr<MemoryPool>& memory_pool) {
-    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(indexed_split->GetDataSplit());
     if (!data_split) {
         return Status::Invalid("split cannot be casted to data split");
     }
+    const auto& ranges = indexed_split->RowRanges();
+    if (ranges.size() != 1) {
+        return Status::Invalid(
+            "RowRangeGlobalIndexWriter only supports a single contiguous range.");
+    }
+    const auto& range = ranges[0];
     std::shared_ptr<MemoryPool> pool = memory_pool ? memory_pool : GetDefaultPool();
 
     // load schema
@@ -186,7 +192,7 @@ Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
     // create batch reader
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<BatchReader> batch_reader,
-        CreateBatchReader(table_path, field_name, split, range, core_options, pool));
+        CreateBatchReader(table_path, field_name, data_split, range, core_options, pool));
 
     // read from data split and write to index writer
     PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> global_index_io_metas,

@@ -50,7 +50,11 @@ Result<std::unique_ptr<TableRead>> KeyValueTableRead::Create(
 }
 
 Result<std::unique_ptr<BatchReader>> KeyValueTableRead::CreateReader(
-    const std::shared_ptr<DataSplit>& data_split) {
+    const std::shared_ptr<Split>& split) {
+    auto data_split = std::dynamic_pointer_cast<DataSplit>(split);
+    if (!data_split) {
+        return Status::Invalid("split cannot be casted to DataSplit");
+    }
     for (const auto& read : split_reads_) {
         PAIMON_ASSIGN_OR_RAISE(bool matched, read->Match(data_split, force_keep_delete_));
         if (matched) {

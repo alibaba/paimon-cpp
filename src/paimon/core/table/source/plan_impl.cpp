@@ -17,11 +17,10 @@
 #include "paimon/core/table/source/plan_impl.h"
 
 namespace paimon {
-class DataSplit;
 
 const std::shared_ptr<Plan> PlanImpl::EmptyPlan() {
-    static const std::shared_ptr<Plan> empty_plan = std::make_shared<PlanImpl>(
-        std::optional<int64_t>(), std::vector<std::shared_ptr<DataSplit>>());
+    static const std::shared_ptr<Plan> empty_plan =
+        std::make_shared<PlanImpl>(std::optional<int64_t>(), std::vector<std::shared_ptr<Split>>());
     return empty_plan;
 }
 

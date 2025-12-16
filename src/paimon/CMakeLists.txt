@@ -227,7 +227,8 @@ set(PAIMON_CORE_SRCS
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
     core/table/source/append_only_table_read.cpp
-    core/table/source/data_split.cpp
+    core/table/source/split.cpp
+    core/table/source/data_split_impl.cpp    
     core/table/source/data_table_batch_scan.cpp
     core/table/source/data_table_stream_scan.cpp
     core/table/source/fallback_table_read.cpp
@@ -445,6 +446,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/file_index_evaluator_test.cpp
                     core/io/single_file_writer_test.cpp
                     core/io/rolling_blob_file_writer_test.cpp
+                    core/global_index/indexed_split_test.cpp                    
                     core/manifest/file_source_test.cpp
                     core/manifest/file_kind_test.cpp
                     core/manifest/manifest_entry_writer_test.cpp

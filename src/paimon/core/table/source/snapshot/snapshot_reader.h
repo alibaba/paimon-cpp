@@ -88,7 +88,7 @@ class SnapshotReader {
     Result<std::shared_ptr<Plan>> Read() const;
 
  private:
-    Result<std::vector<std::shared_ptr<DataSplit>>> GenerateSplits(
+    Result<std::vector<std::shared_ptr<Split>>> GenerateSplits(
         const std::optional<Snapshot>& snapshot, bool is_streaming,
         const std::unique_ptr<SplitGenerator>& split_generator,
         FileStoreScan::RawPlan::GroupFiles&& grouped_data_files) const;

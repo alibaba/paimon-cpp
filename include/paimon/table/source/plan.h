@@ -20,7 +20,7 @@
 #include <optional>
 #include <vector>
 
-#include "paimon/table/source/data_split.h"
+#include "paimon/table/source/split.h"
 
 namespace paimon {
 /// %Result plan of this `TableScan`.
@@ -28,7 +28,7 @@ class PAIMON_EXPORT Plan {
  public:
     virtual ~Plan() = default;
     /// %Result splits.
-    virtual const std::vector<std::shared_ptr<DataSplit>>& Splits() const = 0;
+    virtual const std::vector<std::shared_ptr<Split>>& Splits() const = 0;
     /// Snapshot id of this plan, return `std::nullopt` if the table is empty.
     virtual std::optional<int64_t> SnapshotId() const = 0;
 };

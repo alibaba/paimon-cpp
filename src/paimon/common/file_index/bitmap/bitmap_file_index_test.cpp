@@ -644,10 +644,10 @@ TEST_F(BitmapIndexTest, TestHighCardinalityForCompatibility) {
     };
 
     // test v1 version
-    check_result(paimon::test::GetDataDir() + "/fileindex/bitmap-index-v1");
+    check_result(paimon::test::GetDataDir() + "/file_index/bitmap-index-v1");
 
     // test v2 version
-    check_result(paimon::test::GetDataDir() + "/fileindex/bitmap-index-v2");
+    check_result(paimon::test::GetDataDir() + "/file_index/bitmap-index-v2");
 }
 
 TEST_F(BitmapIndexTest, TestHighCardinalityForWriteAndRead) {

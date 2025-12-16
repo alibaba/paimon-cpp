@@ -26,42 +26,15 @@
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
+#include "paimon/table/source/split.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
 class MemoryPool;
 
-/// Input splits for read operation. Needed by most batch computation engines. Support Serialize and
-/// Deserialize, compatible with java version.
-class PAIMON_EXPORT DataSplit {
+/// Input data split for reading operation. Needed by most batch computation engines.
+class PAIMON_EXPORT DataSplit : public Split {
  public:
-    virtual ~DataSplit() = default;
-
-    /// Deserialize a `DataSplit` from a binary buffer.
-    ///
-    /// Creates a `DataSplit` instance from its serialized binary representation.
-    /// This is typically used in distributed computing scenarios where splits
-    /// are transmitted between different nodes or processes.
-    ///
-    /// @param buffer Const pointer to the binary data containing the serialized `DataSplit`.
-    /// @param length Size of the buffer in bytes.
-    /// @param pool Memory pool for allocating objects during deserialization.
-    /// @return Result containing the deserialized `DataSplit` or an error status.
-    static Result<std::shared_ptr<DataSplit>> Deserialize(const char* buffer, size_t length,
-                                                          const std::shared_ptr<MemoryPool>& pool);
-
-    /// Serialize a `DataSplit` to a binary string.
-    ///
-    /// Converts a `DataSplit` instance to its binary representation for storage
-    /// or transmission. The serialized data can later be deserialized using
-    /// the Deserialize method.
-    ///
-    /// @param data_split The `DataSplit` instance to serialize.
-    /// @param pool Memory pool for allocating temporary objects during serialization.
-    /// @return Result containing the serialized binary data as a string or an error status.
-    static Result<std::string> Serialize(const std::shared_ptr<DataSplit>& data_split,
-                                         const std::shared_ptr<MemoryPool>& pool);
-
     /// Metadata structure for simple data files.
     ///
     /// Contains essential information about a data file including its location,
@@ -97,6 +70,7 @@ class PAIMON_EXPORT DataSplit {
         std::optional<int64_t> delete_row_count;
 
         bool operator==(const SimpleDataFileMeta& other) const;
+
         std::string ToString() const;
     };
 

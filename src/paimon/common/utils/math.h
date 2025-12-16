@@ -27,6 +27,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <type_traits>
 
 namespace paimon {
@@ -35,31 +36,53 @@ namespace paimon {
 // encode/decode big endian.
 template <typename T>
 inline T EndianSwapValue(T v) {
-    static_assert(std::is_integral_v<T>, "non-integral type");
+    static_assert(std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T>,
+                  "Type must be standard-layout and trivially copyable (e.g., integral or "
+                  "floating-point types).");
+    if constexpr (sizeof(T) == 1) {
+        return v;
+    } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
+                         std::is_integral_v<T>) {
+        using UintType = std::conditional_t<
+            sizeof(T) == 2, uint16_t,
+            std::conditional_t<sizeof(T) == 4, uint32_t,
+                               std::conditional_t<sizeof(T) == 8, uint64_t, void> > >;
+
+        static_assert(!std::is_same_v<UintType, void>,
+                      "Unsupported size: only 4-byte and 8-byte types are supported.");
+
+        UintType int_repr;
+        std::memcpy(&int_repr, &v, sizeof(T));
 
 #ifdef _MSC_VER
-    if (sizeof(T) == 2) {
-        return static_cast<T>(_byteswap_ushort(static_cast<uint16_t>(v)));
-    } else if (sizeof(T) == 4) {
-        return static_cast<T>(_byteswap_ulong(static_cast<uint32_t>(v)));
-    } else if (sizeof(T) == 8) {
-        return static_cast<T>(_byteswap_uint64(static_cast<uint64_t>(v)));
-    }
+        if constexpr (sizeof(T) == 2) {
+            int_repr = _byteswap_ushort(static_cast<uint16_t>(int_repr));
+        } else if constexpr (sizeof(T) == 4) {
+            int_repr = _byteswap_ulong(static_cast<uint32_t>(int_repr));
+        } else if constexpr (sizeof(T) == 8) {
+            int_repr = _byteswap_uint64(static_cast<uint64_t>(int_repr));
+        }
 #else
-    if (sizeof(T) == 2) {
-        return static_cast<T>(__builtin_bswap16(static_cast<uint16_t>(v)));
-    } else if (sizeof(T) == 4) {
-        return static_cast<T>(__builtin_bswap32(static_cast<uint32_t>(v)));
-    } else if (sizeof(T) == 8) {
-        return static_cast<T>(__builtin_bswap64(static_cast<uint64_t>(v)));
-    }
+        if constexpr (sizeof(T) == 2) {
+            int_repr = __builtin_bswap16(static_cast<uint16_t>(int_repr));
+        } else if constexpr (sizeof(T) == 4) {
+            int_repr = __builtin_bswap32(static_cast<uint32_t>(int_repr));
+        } else if constexpr (sizeof(T) == 8) {
+            int_repr = __builtin_bswap64(static_cast<uint64_t>(int_repr));
+        }
 #endif
-    // Recognized by clang as bswap, but not by gcc :(
-    T ret_val = 0;
-    for (std::size_t i = 0; i < sizeof(T); ++i) {
-        ret_val |= ((v >> (8 * i)) & 0xff) << (8 * (sizeof(T) - 1 - i));
+        T result;
+        std::memcpy(&result, &int_repr, sizeof(T));
+        return result;
+    } else {
+        // Fallback for unsupported sizes (e.g., 16-bit integers on some platforms)
+        T ret_val{};
+        for (std::size_t i = 0; i < sizeof(T); ++i) {
+            reinterpret_cast<unsigned char*>(&ret_val)[sizeof(T) - 1 - i] =
+                reinterpret_cast<unsigned char*>(&v)[i];
+        }
+        return ret_val;
     }
-    return ret_val;
 }
 
 }  // namespace paimon

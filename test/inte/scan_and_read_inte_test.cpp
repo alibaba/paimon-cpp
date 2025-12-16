@@ -136,7 +136,7 @@ class ScanAndReadInteTest : public testing::Test,
 
     void AdjustSplitWithExternalPath(const std::string& src_path, const std::string& target_path,
                                      bool adjust_index,
-                                     std::vector<std::shared_ptr<DataSplit>>* splits_ptr) {
+                                     std::vector<std::shared_ptr<Split>>* splits_ptr) {
         // adjust external path from src_path to target_path
         auto& splits = *splits_ptr;
         for (auto& split : splits) {
