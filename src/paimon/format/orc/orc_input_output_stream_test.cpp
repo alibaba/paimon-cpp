@@ -97,7 +97,7 @@ TEST(OrcInputOutputStreamTest, TestSimple) {
     std::unique_ptr<::orc::ColumnVectorBatch> batch = writer->createRowBatch(batch_size);
     auto* struct_batch = dynamic_cast<::orc::StructVectorBatch*>(batch.get());
     ASSERT_TRUE(struct_batch);
-    auto* int_batch = static_cast<::orc::IntVectorBatch*>(struct_batch->fields[0]);
+    auto* int_batch = dynamic_cast<::orc::LongVectorBatch*>(struct_batch->fields[0]);
     ASSERT_TRUE(int_batch);
     auto* double_batch = dynamic_cast<::orc::DoubleVectorBatch*>(struct_batch->fields[1]);
     ASSERT_TRUE(double_batch);
@@ -159,7 +159,7 @@ TEST(OrcInputOutputStreamTest, TestSimple) {
 
     struct_batch = dynamic_cast<::orc::StructVectorBatch*>(batch.get());
     ASSERT_TRUE(struct_batch);
-    int_batch = static_cast<::orc::IntVectorBatch*>(struct_batch->fields[0]);
+    int_batch = static_cast<::orc::LongVectorBatch*>(struct_batch->fields[0]);
     ASSERT_TRUE(int_batch);
     double_batch = dynamic_cast<::orc::DoubleVectorBatch*>(struct_batch->fields[1]);
     ASSERT_TRUE(double_batch);
