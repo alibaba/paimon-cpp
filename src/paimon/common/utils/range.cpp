@@ -85,41 +85,6 @@ std::vector<Range> Range::And(const std::vector<Range>& left, const std::vector<
 
     return results;
 }
-// std::vector<Range> MergeSortedAsPossible(const std::vector<Range>& ranges) {
-//     if (ranges.empty() || ranges.size() == 1) {
-//         return ranges;
-//     }
-//     std::vector<Range> results;
-//     Range current = ranges[0];
-
-//     for (size_t i = 1; i < ranges.size(); ++i) {
-//         Range next = ranges[i];
-//         // Try to merge current and next
-//         std::optional<Range> merged = Range::Union(current, next);
-//         if (merged) {
-//             // Merged successfully
-//             current = merged;
-//         } else {
-//             // Cannot merge: add current to result and move to next
-//             results.push_back(merged);
-//             current = next;
-//         }
-//     }
-//     // Add the last range
-//     results.push_back(current);
-//     return results;
-// }
-
-// std::optional<Range> Range::Union(const Range& left, const Range& right) {
-//     if (left.from <= right.from) {
-//         if (left.to + 1 >= right.from) {
-//             return Range(left.from, std::max(left.to, right.to));
-//         }
-//     } else if (right.to + 1 >= left.from) {
-//         return Range(right.from, std::max(left.to, right.to));
-//     }
-//     return std::nullopt;
-// }
 
 std::optional<Range> Range::Intersection(const Range& left, const Range& right) {
     int64_t start = std::max(left.from, right.from);

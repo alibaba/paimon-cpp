@@ -1498,7 +1498,7 @@ TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
     }
     {
         // f2 has bitmap index, data evolution scan will ignore index => not empty plan
-        // data evolution split read will also ignore index => empty read batch
+        // data evolution split read will also ignore index => not empty read batch
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(203));
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
@@ -1559,7 +1559,7 @@ TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
     {
         // test row id with predicate
         std::vector<Range> row_ranges = {Range(4l, 5l)};
-        // row id = {4, 5},data evolution split read will ignore bitmap index
+        // row id = {4, 5}, data evolution split read will ignore bitmap index
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(204));
         CheckScanResult(table_path, /*predicate=*/predicate, /*row_ranges=*/row_ranges,

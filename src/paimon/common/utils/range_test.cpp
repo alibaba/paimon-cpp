@@ -109,7 +109,7 @@ TEST(RangeTest, TestSortAndMergeOverlap) {
         ASSERT_EQ(result, expected);
     }
     {
-        // test no overlap with adjacent = falese
+        // test no overlap with adjacent = false
         std::vector<Range> ranges = {Range(0, 10), Range(11, 20)};
         auto result = Range::SortAndMergeOverlap(ranges, /*adjacent=*/false);
         std::vector<Range> expected = {Range(0, 10), Range(11, 20)};
