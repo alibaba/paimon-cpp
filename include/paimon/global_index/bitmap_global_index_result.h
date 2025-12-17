@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/utils/range.h"
@@ -33,7 +34,8 @@ namespace paimon {
 class PAIMON_EXPORT BitmapGlobalIndexResult : public GlobalIndexResult {
  public:
     using BitmapSupplier = std::function<Result<RoaringBitmap64>()>;
-    BitmapGlobalIndexResult(BitmapSupplier bitmap_supplier) : bitmap_supplier_(bitmap_supplier) {}
+    explicit BitmapGlobalIndexResult(BitmapSupplier bitmap_supplier)
+        : bitmap_supplier_(bitmap_supplier) {}
 
     class Iterator : public GlobalIndexResult::Iterator {
      public:

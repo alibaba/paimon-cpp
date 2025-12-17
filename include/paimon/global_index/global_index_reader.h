@@ -15,7 +15,10 @@
  */
 
 #pragma once
+
 #include <functional>
+#include <memory>
+#include <vector>
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/function_visitor.h"

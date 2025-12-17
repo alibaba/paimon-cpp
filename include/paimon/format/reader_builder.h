@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "paimon/memory/memory_pool.h"
 #include "paimon/reader/file_batch_reader.h"

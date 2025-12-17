@@ -15,8 +15,13 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
 #include <optional>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "paimon/global_index/row_range_global_index_scanner.h"
 #include "paimon/utils/range.h"

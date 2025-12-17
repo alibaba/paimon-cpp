@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "paimon/predicate/predicate.h"

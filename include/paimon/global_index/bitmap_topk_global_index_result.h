@@ -18,6 +18,8 @@
 
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -35,7 +37,7 @@ class PAIMON_EXPORT BitmapTopKGlobalIndexResult : public TopKGlobalIndexResult {
  public:
     BitmapTopKGlobalIndexResult(RoaringBitmap64&& bitmap, std::vector<float>&& scores)
         : bitmap_(std::move(bitmap)), scores_(std::move(scores)) {
-        assert((size_t)bitmap_.Cardinality() == scores_.size());
+        assert(static_cast<size_t>(bitmap_.Cardinality()) == scores_.size());
     }
 
     class TopKIterator : public TopKGlobalIndexResult::TopKIterator {
