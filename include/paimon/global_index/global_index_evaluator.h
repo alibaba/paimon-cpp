@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/visibility.h"

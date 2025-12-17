@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/result.h"
 #include "paimon/status.h"

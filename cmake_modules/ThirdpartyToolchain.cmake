@@ -251,8 +251,7 @@ macro(build_fmt)
     externalproject_add(fmt_ep
                         URL ${FMT_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_FMT_BUILD_SHA256_CHECKSUM}"
-                        ${FMT_CONFIGURE}
-                        ${THIRDPARTY_LOG_OPTIONS}
+                        ${FMT_CONFIGURE} ${THIRDPARTY_LOG_OPTIONS}
                         BUILD_BYPRODUCTS ${FMT_STATIC_LIB})
 
     file(MAKE_DIRECTORY "${FMT_INCLUDE_DIR}")
@@ -340,8 +339,7 @@ macro(build_zstd)
     externalproject_add(zstd_ep
                         URL ${ZSTD_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_ZSTD_BUILD_SHA256_CHECKSUM}"
-                        ${ZSTD_CONFIGURE}
-                        ${THIRDPARTY_LOG_OPTIONS}
+                        ${ZSTD_CONFIGURE} ${THIRDPARTY_LOG_OPTIONS}
                         BUILD_BYPRODUCTS ${ZSTD_STATIC_LIB})
 
     file(MAKE_DIRECTORY "${ZSTD_INCLUDE_DIR}")
@@ -367,8 +365,7 @@ macro(build_lz4)
     externalproject_add(lz4_ep
                         URL ${LZ4_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_LZ4_BUILD_SHA256_CHECKSUM}"
-                        ${LZ4_CONFIGURE}
-                        ${THIRDPARTY_LOG_OPTIONS}
+                        ${LZ4_CONFIGURE} ${THIRDPARTY_LOG_OPTIONS}
                         BUILD_BYPRODUCTS ${LZ4_STATIC_LIB})
 
     file(MAKE_DIRECTORY "${LZ4_INCLUDE_DIR}")
@@ -510,8 +507,7 @@ macro(build_protobuf)
     externalproject_add(protobuf_ep
                         URL ${PROTOBUF_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_PROTOBUF_BUILD_SHA256_CHECKSUM}"
-                        ${PROTOBUF_CONFIGURE}
-                        ${THIRDPARTY_LOG_OPTIONS}
+                        ${PROTOBUF_CONFIGURE} ${THIRDPARTY_LOG_OPTIONS}
                         # BUILD_IN_SOURCE 1
                         BUILD_BYPRODUCTS "${PROTOBUF_STATIC_LIB}" "${PROTOBUF_COMPILER}"
                         DEPENDS zlib)

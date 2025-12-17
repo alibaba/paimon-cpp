@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/lance/lance_file_batch_reader.h"
 #include "paimon/format/lance/lance_format_defs.h"

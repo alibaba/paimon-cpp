@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/range.h"
 

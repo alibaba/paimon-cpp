@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/global_index/global_index_writer.h"

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/file_index/file_index_reader.h"
 #include "paimon/file_index/file_index_result.h"
 #include "paimon/file_index/file_index_writer.h"

@@ -291,7 +291,9 @@ function(add_test_case REL_TEST_NAME)
         add_dependencies(${LABEL_TEST_NAME} ${TEST_NAME})
     endforeach()
 
-    set_property(TEST ${TEST_NAME} APPEND PROPERTY LABELS ${LABELS})
+    set_property(TEST ${TEST_NAME}
+                 APPEND
+                 PROPERTY LABELS ${LABELS})
 endfunction()
 
 # Adding unit tests part of the "paimon" portion of the test suite

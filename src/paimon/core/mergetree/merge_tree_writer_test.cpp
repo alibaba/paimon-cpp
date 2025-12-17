@@ -380,7 +380,7 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     // check metrics
     auto metrics = merge_writer->GetMetrics();
     ASSERT_OK_AND_ASSIGN(uint64_t write_io_count, metrics->GetCounter("orc.write.io.count"));
-    ASSERT_TRUE(write_io_count > 0);
+    ASSERT_GT(write_io_count, 0);
 
     // batch2
     std::shared_ptr<arrow::Array> array2 =

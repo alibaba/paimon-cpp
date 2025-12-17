@@ -120,7 +120,7 @@
 
 // macros to disable padding
 // these macros are portable across different compilers and platforms
-//[https://github.com/google/flatbuffers/blob/master/include/flatbuffers/flatbuffers.h#L1355]
+// [https://github.com/google/flatbuffers/blob/master/include/flatbuffers/flatbuffers.h#L1355]
 #if !defined(MANUALLY_ALIGNED_STRUCT)
 #if defined(_MSC_VER)
 #define MANUALLY_ALIGNED_STRUCT(alignment) \

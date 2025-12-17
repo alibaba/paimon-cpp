@@ -15,7 +15,10 @@
  */
 
 #pragma once
+
+#include <algorithm>
 #include <limits>
+#include <memory>
 
 #include "fmt/format.h"
 #include "lumina/io/FileWriter.h"

@@ -18,6 +18,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 #include "paimon/status.h"
 #include "paimon/traits.h"
@@ -38,11 +39,11 @@ class PAIMON_MUST_USE_TYPE PAIMON_EXPORT Result {
 
     /// Construct a successful result with a copy of the given value.
     /// @param data The value to store in result.
-    Result(const T& data) : status_(), data_(data) {}  // NOLINT(google-explicit-constructor)
+    Result(const T& data) : status_(), data_(data) {}  // NOLINT(runtime/explicit)
 
     /// Construct a successful result by moving the given value.
     /// @param data The value to move into result.
-    Result(T&& data) : status_(), data_(std::move(data)) {}  // NOLINT(google-explicit-constructor)
+    Result(T&& data) : status_(), data_(std::move(data)) {}  // NOLINT(runtime/explicit)
 
     /// Template constructor for converting compatible pointer types.
     /// Support T = std::unique_ptr<B> and U = std::unique_ptr<D> convert, where D is derived class
@@ -52,11 +53,11 @@ class PAIMON_MUST_USE_TYPE PAIMON_EXPORT Result {
               std::enable_if_t<
                   is_pointer<U>::value && is_pointer<T>::value &&
                   std::is_convertible_v<value_type_traits_t<U>, value_type_traits_t<T>>>* = nullptr>
-    Result(U&& data) : status_(), data_(std::move(data)) {}  // NOLINT(google-explicit-constructor)
+    Result(U&& data) : status_(), data_(std::move(data)) {}  // NOLINT(runtime/explicit)
 
     /// Construct a failed result with the given status.
     /// @param status The status object describing the error.
-    Result(const Status& status) : status_(status) {}  // NOLINT(google-explicit-constructor)
+    Result(const Status& status) : status_(status) {}  // NOLINT(runtime/explicit)
 
     /// Copy constructor.
     /// @param other The result to copy from.
@@ -84,7 +85,7 @@ class PAIMON_MUST_USE_TYPE PAIMON_EXPORT Result {
               std::enable_if_t<
                   is_pointer<U>::value && is_pointer<T>::value &&
                   std::is_convertible_v<value_type_traits_t<U>, value_type_traits_t<T>>>* = nullptr>
-    Result(Result<U>&& other) noexcept {  // NOLINT(google-explicit-constructor)
+    Result(Result<U>&& other) noexcept {  // NOLINT(runtime/explicit)
         if (other.ok()) {
             MakeValue(std::move(other).value());
         }

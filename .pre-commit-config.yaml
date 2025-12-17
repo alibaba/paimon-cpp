@@ -43,7 +43,7 @@ repos:
         exclude: (^test/test_data/.*|^third_party/.*)
 
   - repo: https://github.com/cheshirekow/cmake-format-precommit
-    rev: v0.6.10
+    rev: v0.6.13
     hooks:
       - id: cmake-format
         exclude: (^test/test_data/.*|^third_party/.*)
@@ -67,3 +67,23 @@ repos:
           '--disable',
           'dangling-hyphen,line-too-long',
         ]
+
+  - repo: https://github.com/cpplint/cpplint
+    rev: 1.6.1
+    hooks:
+      - id: cpplint
+        alias: cpp
+        name: C++ Lint
+        args:
+          - "--quiet"
+          - "--verbose=2"
+          - "--filter=-whitespace/line_length,-whitespace/parens,-build/c++11,-readability/nolint,-runtime/references"
+
+        types_or:
+          - c++
+        exclude: |
+          (?x)^(
+            (third_party)/.*|
+            (test)/.*|
+            (src)/.*
+          )$

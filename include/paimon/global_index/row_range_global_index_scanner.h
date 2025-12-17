@@ -15,6 +15,10 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <string>
+
 #include "paimon/global_index/global_index_evaluator.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/visibility.h"
