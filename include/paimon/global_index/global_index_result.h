@@ -65,10 +65,32 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
 
     virtual std::string ToString() const = 0;
 
+    /// Serializes a GlobalIndexResult object into a byte array.
+    ///
+    /// @note This method only supports the following concrete implementations:
+    ///       - BitmapTopKGlobalIndexResult
+    ///       - BitmapGlobalIndexResult
+    ///
+    /// @param global_index_result The GlobalIndexResult instance to serialize (must not be null).
+    /// @param pool Memory pool used to allocate the output byte buffer.
+    /// @return A Result containing a unique pointer to the serialized Bytes on success,
+    ///         or an error status on failure.
     static Result<PAIMON_UNIQUE_PTR<Bytes>> Serialize(
         const std::shared_ptr<GlobalIndexResult>& global_index_result,
         const std::shared_ptr<MemoryPool>& pool);
 
+    /// Deserializes a GlobalIndexResult object from a raw byte buffer.
+    ///
+    /// @note The concrete type of the deserialized object is determined by metadata
+    ///       embedded in the buffer. Currently, only the following types are supported:
+    ///       - BitmapTopKGlobalIndexResult
+    ///       - BitmapGlobalIndexResult
+    ///
+    /// @param buffer Pointer to the serialized byte data (must not be null).
+    /// @param length Size of the buffer in bytes.
+    /// @param pool Memory pool used to allocate internal objects during deserialization.
+    /// @return A Result containing a shared pointer to the reconstructed GlobalIndexResult
+    ///         on success, or an error status on failure.
     static Result<std::shared_ptr<GlobalIndexResult>> Deserialize(
         const char* buffer, size_t length, const std::shared_ptr<MemoryPool>& pool);
 
