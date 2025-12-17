@@ -288,6 +288,7 @@ if(PAIMON_BUILD_TESTS)
                     common/memory/memory_segment_utils_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
+                    test_utils_static
                     fmt
                     ${GTEST_LINK_TOOLCHAIN})
 
