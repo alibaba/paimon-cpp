@@ -104,7 +104,7 @@ TEST_P(WriteAndReadInteTest, TestAppendSimple) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
             [0, "banana", 2],
@@ -165,7 +165,7 @@ TEST_P(WriteAndReadInteTest, TestPKSimple) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string data = R"([
             [0, "apple", 20, 23.0],
@@ -222,7 +222,7 @@ TEST_P(WriteAndReadInteTest, TestNestedType) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
 
     std::string expected_data = R"([
@@ -322,7 +322,7 @@ TEST_P(WriteAndReadInteTest, TestAppendExternalPath) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
         [0, "Alice", 10, 0, 11.1],
@@ -408,7 +408,7 @@ TEST_P(WriteAndReadInteTest, TestAppendExternalPathAndNoneExternalPathStrategy) 
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
         [0, "Alice", 10, 0, 11.1],
@@ -465,7 +465,7 @@ TEST_P(WriteAndReadInteTest, TestAppendTimestampType) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
 [0, "1970-01-01 00:00:01", "1970-01-01 00:00:00.001", "1970-01-01 00:00:00.000001", "1970-01-01 00:00:00.000000001", "1970-01-01 00:00:02", "1970-01-01 00:00:00.002", "1970-01-01 00:00:00.000002", "1970-01-01 00:00:00.000000002"],
@@ -521,7 +521,7 @@ TEST_P(WriteAndReadInteTest, TestPkTimestampType) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
 [0, "1970-01-01 00:00:01", "1969-01-01 00:00:00.003", "1970-01-01 00:00:00.000001", "1970-01-01 00:00:00.000000003", "1970-01-01 00:00:04", "1970-01-01 00:00:00.004", "1970-01-01 00:00:00.000004", "1970-01-01 00:00:00.000000004", 0],

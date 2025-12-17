@@ -51,7 +51,7 @@ struct DeletionFile;
 /// otherwise, it must be present in the read path.
 ///
 /// Readers Overview: (ConcatBatchReader across
-/// splits)->CompleteRowKindBatchReader->(PredicateBatchReader)
+/// splits)->(CompleteIndexScoreBatchReader)->CompleteRowKindBatchReader->(PredicateBatchReader)
 /// ->ConcatBatchReader across files->DataEvolutionFileReader->(ConcatBatchReader across blob files)
 /// ->FieldMappingReader->(CompleteRowTrackingFieldsBatchReader)
 /// ->(DelegatingPrefetchReader)->(PrefetchFileBatchReader)->FormatReader
@@ -67,11 +67,9 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
                            const std::shared_ptr<MemoryPool>& memory_pool,
                            const std::shared_ptr<Executor>& executor);
 
-    Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& split) override;
+    Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
-    Result<bool> Match(const std::shared_ptr<DataSplit>& data_split,
-                       bool force_keep_delete) const override;
+    Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
     Result<std::unique_ptr<BatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
@@ -79,6 +77,7 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::vector<Range>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 
  private:
@@ -129,6 +128,9 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
     };
 
  private:
+    Result<std::unique_ptr<BatchReader>> InnerCreateReader(
+        const std::shared_ptr<DataSplit>& data_split, const std::vector<Range>& row_ranges) const;
+
     static Result<std::vector<std::shared_ptr<DataEvolutionSplitRead::FieldBunch>>>
     SplitFieldBunches(const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
                       const std::function<Result<int32_t>(const std::shared_ptr<DataFileMeta>&)>&
@@ -137,10 +139,13 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
     static Result<std::vector<std::vector<std::shared_ptr<DataFileMeta>>>> MergeRangesAndSort(
         std::vector<std::shared_ptr<DataFileMeta>>&& files);
 
+    static bool HasIndexScoreField(const std::shared_ptr<arrow::Schema>& read_schema);
+
  private:
     Result<std::unique_ptr<DataEvolutionFileReader>> CreateUnionReader(
         const BinaryRow& partition,
         const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
+        const std::vector<Range>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 };
 

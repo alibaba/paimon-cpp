@@ -115,6 +115,9 @@ class MockFileBatchReader : public FileBatchReader {
             }
             int32_t batch_end_pos = std::min(read_end_pos_, current_pos_ + actual_batch_size);
             auto slice = data_->Slice(current_pos_, batch_end_pos - current_pos_);
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                std::shared_ptr<arrow::Array> concat_slice,
+                arrow::Concatenate({slice}, arrow::default_memory_pool()));
             RoaringBitmap32 bitmap;
             for (auto iter = bitmap_.EqualOrLarger(current_pos_);
                  iter != bitmap_.End() && *iter < batch_end_pos; ++iter) {
@@ -128,7 +131,7 @@ class MockFileBatchReader : public FileBatchReader {
             std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
             std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                arrow::ExportArray(*slice, c_array.get(), c_schema.get()));
+                arrow::ExportArray(*concat_slice, c_array.get(), c_schema.get()));
             return std::make_pair(std::make_pair(std::move(c_array), std::move(c_schema)),
                                   std::move(bitmap));
         }

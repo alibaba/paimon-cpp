@@ -15,6 +15,7 @@
  */
 #include "paimon/utils/range.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "fmt/format.h"
@@ -25,6 +26,64 @@ Range::Range(int64_t _from, int64_t _to) : from(_from), to(_to) {
 
 int64_t Range::Count() const {
     return to - from + 1;
+}
+
+std::vector<Range> Range::SortAndMergeOverlap(const std::vector<Range>& ranges, bool adjacent) {
+    if (ranges.empty() || ranges.size() == 1) {
+        return ranges;
+    }
+    // sort
+    std::vector<Range> sorted_ranges = ranges;
+    std::sort(sorted_ranges.begin(), sorted_ranges.end(),
+              [](const Range& left, const Range& right) { return left.from < right.from; });
+
+    std::vector<Range> results;
+    Range current = sorted_ranges[0];
+
+    for (size_t i = 1; i < sorted_ranges.size(); ++i) {
+        Range next = sorted_ranges[i];
+        // Check if current and next overlap (not just adjacent)
+        if (current.to + (adjacent ? 1 : 0) >= next.from) {
+            // Merge: extend current range
+            current = Range(current.from, std::max(current.to, next.to));
+        } else {
+            // No overlap: add current to result and move to next
+            results.push_back(current);
+            current = next;
+        }
+    }
+    // Add the last range
+    results.push_back(current);
+    return results;
+}
+
+std::vector<Range> Range::And(const std::vector<Range>& left, const std::vector<Range>& right) {
+    if (left.empty() || right.empty()) {
+        return {};
+    }
+    std::vector<Range> results;
+    size_t i = 0;
+    size_t j = 0;
+
+    while (i < left.size() && j < right.size()) {
+        const Range& lhs = left[i];
+        const Range& rhs = right[j];
+
+        // Compute intersection of current ranges
+        std::optional<Range> intersect = Range::Intersection(lhs, rhs);
+        if (intersect) {
+            results.push_back(intersect.value());
+        }
+
+        // Advance the pointer of the range that ends earlier
+        if (lhs.to <= rhs.to) {
+            i++;
+        } else {
+            j++;
+        }
+    }
+
+    return results;
 }
 
 std::optional<Range> Range::Intersection(const Range& left, const Range& right) {

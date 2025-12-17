@@ -17,7 +17,9 @@
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/bitmap/bitmap_global_index_factory.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
@@ -109,7 +111,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         return file_store_commit->Commit(commit_msgs);
     }
 
-    Result<std::shared_ptr<DataSplit>> ScanData(
+    Result<std::shared_ptr<DataSplitImpl>> ScanData(
         const std::string& table_path,
         const std::vector<std::map<std::string, std::string>>& partition_filters) const {
         ScanContextBuilder scan_context_builder(table_path);
@@ -118,7 +120,89 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
         EXPECT_EQ(result_plan->Splits().size(), 1);
-        return result_plan->Splits()[0];
+        return std::dynamic_pointer_cast<DataSplitImpl>(result_plan->Splits()[0]);
+    }
+
+    Result<std::vector<std::shared_ptr<Split>>> CreateReadSplit(
+        const std::vector<std::shared_ptr<Split>>& splits, const std::vector<Range>& row_ranges,
+        std::map<int64_t, float> id_to_score) const {
+        if (row_ranges.empty()) {
+            return splits;
+        }
+        // TODO(xinyu.lxy): mv to DataEvolutionBatchScan
+        std::vector<Range> sorted_row_ranges =
+            Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
+        std::vector<std::shared_ptr<Split>> indexed_splits;
+        indexed_splits.reserve(splits.size());
+        for (const auto& split : splits) {
+            auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+            if (!data_split) {
+                return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
+            }
+            std::vector<Range> file_ranges;
+            file_ranges.reserve(data_split->DataFiles().size());
+            for (const auto& meta : data_split->DataFiles()) {
+                PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
+                file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
+            }
+            auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
+            std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
+            std::vector<float> scores;
+            if (!id_to_score.empty()) {
+                for (const auto& range : expected) {
+                    for (int64_t i = range.from; i <= range.to; i++) {
+                        scores.push_back(id_to_score[i]);
+                    }
+                }
+            }
+            indexed_splits.push_back(
+                std::make_shared<IndexedSplitImpl>(data_split, expected, scores));
+        }
+        return indexed_splits;
+    }
+
+    Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
+                       const std::shared_ptr<arrow::Array>& expected_array,
+                       const std::shared_ptr<Predicate>& predicate,
+                       const std::vector<Range>& row_ranges,
+                       const std::map<int64_t, float>& id_to_score) const {
+        // scan
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.SetPredicate(predicate).SetRowRanges(row_ranges);
+        PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
+        if (!expected_array) {
+            if (!result_plan->Splits().empty()) {
+                return Status::Invalid("check_scan_plan_when_empty_result but plan is not empty");
+            }
+        }
+
+        // read
+        auto splits = result_plan->Splits();
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
+                               read_context_builder.Finish());
+        PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
+        PAIMON_ASSIGN_OR_RAISE(auto read_splits, CreateReadSplit(splits, row_ranges, id_to_score));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(read_splits));
+        PAIMON_ASSIGN_OR_RAISE(auto read_result,
+                               ReadResultCollector::CollectResult(batch_reader.get()));
+
+        if (!expected_array) {
+            if (read_result) {
+                return Status::Invalid("expected array is empty, but read result is not empty");
+            }
+            return Status::OK();
+        }
+        auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_array);
+        if (!expected_chunk_array->ApproxEquals(*read_result)) {
+            std::cout << "result=" << read_result->ToString() << std::endl
+                      << "expected=" << expected_chunk_array->ToString() << std::endl;
+            return Status::Invalid("expected array and result array not equal");
+        }
+        return Status::OK();
     }
 
  private:
@@ -168,7 +252,9 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
     ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                    table_path, "f1", "lumina", split, Range(0, 3),
+                                                    table_path, "f1", "lumina",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 3)})),
                                                     /*options=*/lumina_options, pool_));
     auto index_commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
     ASSERT_TRUE(index_commit_msg_impl);
@@ -210,9 +296,11 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg,
-                         RowRangeGlobalIndexWriter::WriteIndex(table_path, "f0", "bitmap", split,
-                                                               Range(0, 7), /*options=*/{}, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+                                                    table_path, "f0", "bitmap",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 7)})),
+                                                    /*options=*/{}, pool_));
     auto index_commit_msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
     ASSERT_TRUE(index_commit_msg_impl);
 
@@ -264,9 +352,12 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
         [&](const std::vector<std::map<std::string, std::string>>& partition,
             const Range& expected_range, const BinaryRow& expected_partition_row) {
             ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, partition));
-            ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                            table_path, "f0", "bitmap", split,
-                                                            expected_range, /*options=*/{}, pool_));
+            ASSERT_OK_AND_ASSIGN(
+                auto index_commit_msg,
+                RowRangeGlobalIndexWriter::WriteIndex(
+                    table_path, "f0", "bitmap",
+                    std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                    /*options=*/{}, pool_));
             auto index_commit_msg_impl =
                 std::dynamic_pointer_cast<CommitMessageImpl>(index_commit_msg);
             ASSERT_TRUE(index_commit_msg_impl);
@@ -308,8 +399,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                          GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
-    ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-    ASSERT_EQ(ranges, std::set<Range>({Range(0, 7)}));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
     // test index reader
     // test f0 field
@@ -458,8 +549,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
                          GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
-    ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-    ASSERT_EQ(ranges, std::set<Range>({Range(0, 7)}));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
     // test index reader
     // test f0 field
@@ -509,7 +600,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
                          GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
-    ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_TRUE(ranges.empty());
 
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
@@ -537,8 +628,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
                          GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
-    ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-    ASSERT_EQ(ranges, std::set<Range>({Range(0, 7)}));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     {
         ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 3)));
         // test index reader
@@ -585,8 +676,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                                  GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
                                                          partitions, /*options=*/{},
                                                          /*file_system=*/nullptr, pool_));
-            ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-            ASSERT_EQ(ranges, std::set<Range>({Range(0, 4)}));
+            ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+            ASSERT_EQ(ranges, std::vector<Range>({Range(0, 4)}));
             ASSERT_OK_AND_ASSIGN(auto range_scanner,
                                  global_index_scan->CreateRangeScan(Range(0, 4)));
             // test index reader
@@ -680,17 +771,19 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg,
-                         RowRangeGlobalIndexWriter::WriteIndex(table_path, "f0", "bitmap", split,
-                                                               Range(0, 7), /*options=*/{}, pool_));
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+                                                    table_path, "f0", "bitmap",
+                                                    std::make_shared<IndexedSplitImpl>(
+                                                        split, std::vector<Range>({Range(0, 7)})),
+                                                    /*options=*/{}, pool_));
     ASSERT_OK(Commit(table_path, {index_commit_msg}));
 
     ASSERT_OK_AND_ASSIGN(auto global_index_scan,
                          GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
-    ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-    ASSERT_EQ(ranges, std::set<Range>({Range(0, 7)}));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
     ASSERT_OK_AND_ASSIGN(auto index_result,
@@ -728,14 +821,20 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 
         ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{partition}));
         // write bitmap index
-        ASSERT_OK_AND_ASSIGN(auto bitmap_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                         table_path, "f0", "bitmap", split,
-                                                         expected_range, /*options=*/{}, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto bitmap_commit_msg,
+            RowRangeGlobalIndexWriter::WriteIndex(
+                table_path, "f0", "bitmap",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                /*options=*/{}, pool_));
         ASSERT_OK(Commit(table_path, {bitmap_commit_msg}));
         // write and commit lumina index
-        ASSERT_OK_AND_ASSIGN(auto lumina_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
-                                                         table_path, "f1", "lumina", split,
-                                                         expected_range, lumina_options, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto lumina_commit_msg,
+            RowRangeGlobalIndexWriter::WriteIndex(
+                table_path, "f1", "lumina",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
+                lumina_options, pool_));
         ASSERT_OK(Commit(table_path, {lumina_commit_msg}));
     };
 
@@ -764,15 +863,17 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 
     auto scan_and_check_result =
         [&](const std::map<std::string, std::string>& partition, const Range& expected_range,
-            GlobalIndexReader::TopKPreFilter filter, int32_t k, const std::string bitmap_result,
-            const std::string lumina_result) {
+            GlobalIndexReader::TopKPreFilter filter, int32_t k, const std::string& bitmap_result,
+            const std::string& lumina_result, const std::vector<Range>& read_row_ranges,
+            const std::shared_ptr<arrow::Array>& expected_array,
+            const std::map<int64_t, float>& id_to_score) {
             std::vector<std::map<std::string, std::string>> partitions = {partition};
             ASSERT_OK_AND_ASSIGN(auto global_index_scan,
                                  GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
                                                          partitions, lumina_options,
                                                          /*file_system=*/nullptr, pool_));
-            ASSERT_OK_AND_ASSIGN(std::set<Range> ranges, global_index_scan->GetRowRangeList());
-            ASSERT_EQ(ranges, std::set<Range>({expected_range}));
+            ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+            ASSERT_EQ(ranges, std::vector<Range>({expected_range}));
 
             ASSERT_OK_AND_ASSIGN(auto range_scanner,
                                  global_index_scan->CreateRangeScan(expected_range));
@@ -799,15 +900,44 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
             ASSERT_OK_AND_ASSIGN(auto topk_result, lumina_reader->VisitTopK(k, query, filter,
                                                                             /*predicate*/ nullptr));
             ASSERT_EQ(topk_result->ToString(), lumina_result);
+
+            // check read array
+            std::vector<std::string> read_field_names = schema->field_names();
+            read_field_names.push_back("_INDEX_SCORE");
+            ASSERT_OK(ScanAndRead(table_path, read_field_names, expected_array,
+                                  /*predicate=*/nullptr, read_row_ranges, id_to_score));
         };
 
-    auto filter1 = [](int64_t id) -> bool { return id == 0; };
-    scan_and_check_result({{"f2", "10"}}, Range(0, 3), filter1, /*k=*/2, "{0}",
-                          "row ids: {0}, scores: {4.21}");
-    auto filter2 = [](int64_t id) -> bool { return id == 7 || id == 8; };
-    scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter2, /*k=*/1, "{7,8}",
-                          "row ids: {8}, scores: {322.21}");
-
+    auto result_fields = fields;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    result_fields.push_back(SpecialFields::IndexScore().ArrowField());
+    std::map<int64_t, float> id_to_score = {{0, 4.21f},   {1, 2.01f},   {2, 2.21f},
+                                            {3, 0.01f},   {4, 322.21f}, {5, 360.01f},
+                                            {6, 360.21f}, {7, 398.01},  {8, 322.21f}};
+    {
+        // test scan and read for f2=10
+        auto filter = [](int64_t id) -> bool { return id == 0; };
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({{"f2", "10"}}, Range(0, 3), filter, /*k=*/2, "{0}",
+                              "row ids: {0}, scores: {4.21}", {Range(0, 0)}, expected_array,
+                              id_to_score);
+    }
+    {
+        // test scan and read for f2=20
+        auto filter = [](int64_t id) -> bool { return id == 7 || id == 8; };
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, 322.21]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter, /*k=*/1, "{7,8}",
+                              "row ids: {8}, scores: {322.21}", {Range(8, 8)}, expected_array,
+                              id_to_score);
+    }
     {
         // test invalid range input
         ASSERT_OK_AND_ASSIGN(auto global_index_scan,
@@ -816,6 +946,117 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                                      /*file_system=*/nullptr, pool_));
         ASSERT_NOK_WITH_MSG(global_index_scan->CreateRangeScan(Range(0, 8)),
                             "input range contain multiple partitions, fail to create range scan");
+    }
+}
+
+TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.dimension", "4"},
+        {"lumina.indextype", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "encoding.rawf32"},
+        {"lumina.search.threadcount", "10"}};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1],
+["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
+["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
+["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
+["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
+["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+    ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
+
+    // write and commit lumina index
+    ASSERT_OK_AND_ASSIGN(auto lumina_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+                                                     table_path, "f1", "lumina",
+                                                     std::make_shared<IndexedSplitImpl>(
+                                                         split, std::vector<Range>({Range(0, 8)})),
+                                                     lumina_options, pool_));
+    ASSERT_OK(Commit(table_path, {lumina_commit_msg}));
+
+    auto scan_and_check_result = [&](const std::vector<Range>& read_row_ranges,
+                                     const std::shared_ptr<arrow::Array>& expected_array,
+                                     const std::map<int64_t, float>& id_to_score) {
+        // check read array
+        std::vector<std::string> read_field_names = schema->field_names();
+        read_field_names.push_back("_INDEX_SCORE");
+        ASSERT_OK(ScanAndRead(table_path, read_field_names, expected_array,
+                              /*predicate=*/nullptr, read_row_ranges, id_to_score));
+    };
+
+    auto result_fields = fields;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    result_fields.push_back(SpecialFields::IndexScore().ArrowField());
+    std::map<int64_t, float> id_to_score = {{0, 4.21f},   {1, 2.01f},   {2, 2.21f},
+                                            {3, 0.01f},   {4, 322.21f}, {5, 360.01f},
+                                            {6, 360.21f}, {7, 398.01},  {8, 322.21f}};
+    {
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21],
+[0, "Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1, 2.01],
+[0, "Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1, 2.21],
+[0, "Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1, 0.01],
+[0, "Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1, 322.21],
+[0, "Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1, 360.01],
+[0, "Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1, 360.21],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1, 398.01],
+[0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, 322.21]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({Range(0, 8)}, expected_array, id_to_score);
+    }
+    {
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1, 2.21],
+[0, "Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1, 0.01],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1, 398.01],
+[0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, 322.21]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({Range(2, 3), Range(7, 8)}, expected_array, id_to_score);
+    }
+    {
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1, 360.01]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({Range(5, 5)}, expected_array, id_to_score);
+    }
+    {
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1, null],
+[0, "Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1, null],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1, null],
+[0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, null]
+    ])")
+                .ValueOrDie();
+        scan_and_check_result({Range(2, 3), Range(7, 8)}, expected_array, /*id_to_score=*/{});
     }
 }
 

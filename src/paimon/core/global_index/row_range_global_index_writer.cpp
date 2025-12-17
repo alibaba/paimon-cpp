@@ -70,23 +70,20 @@ Result<std::shared_ptr<GlobalIndexWriter>> CreateGlobalIndexWriter(
     return indexer->CreateWriter(field.Name(), &c_arrow_schema, index_file_manager, pool);
 }
 
-Result<std::unique_ptr<BatchReader>> CreateBatchReader(const std::string& table_path,
-                                                       const std::string& field_name,
-                                                       const std::shared_ptr<DataSplit>& split,
-                                                       const Range& range,
-                                                       const CoreOptions& core_options,
-                                                       const std::shared_ptr<MemoryPool>& pool) {
+Result<std::unique_ptr<BatchReader>> CreateBatchReader(
+    const std::string& table_path, const std::string& field_name,
+    const std::shared_ptr<IndexedSplit>& indexed_split, const CoreOptions& core_options,
+    const std::shared_ptr<MemoryPool>& pool) {
     ReadContextBuilder read_context_builder(table_path);
     read_context_builder.SetOptions(core_options.ToMap())
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
-        .SetReadSchema({field_name})
-        .SetRowRanges({range});
+        .SetReadSchema({field_name});
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
                            TableRead::Create(std::move(read_context)));
-    return table_read->CreateReader(split);
+    return table_read->CreateReader(indexed_split);
 }
 
 Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
@@ -109,10 +106,8 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
         if (fields.empty()) {
             return Status::Invalid("array read from batch reader only contains row kind");
         }
-        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            std::shared_ptr<arrow::StructArray> new_array,
-            arrow::StructArray::Make(fields, {field_name}, struct_array->null_bitmap(),
-                                     struct_array->null_count(), struct_array->offset()));
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> new_array,
+                                          arrow::StructArray::Make(fields, {field_name}));
         ::ArrowArray c_new_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*new_array, &c_new_array));
         PAIMON_RETURN_NOT_OK(global_index_writer->AddBatch(&c_new_array));
@@ -147,13 +142,19 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
 }  // namespace
 Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
     const std::string& table_path, const std::string& field_name, const std::string& index_type,
-    const std::shared_ptr<DataSplit>& split, const Range& range,
+    const std::shared_ptr<IndexedSplit>& indexed_split,
     const std::map<std::string, std::string>& options,
     const std::shared_ptr<MemoryPool>& memory_pool) {
-    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(indexed_split->GetDataSplit());
     if (!data_split) {
         return Status::Invalid("split cannot be casted to data split");
     }
+    const auto& ranges = indexed_split->RowRanges();
+    if (ranges.size() != 1) {
+        return Status::Invalid(
+            "RowRangeGlobalIndexWriter only supports a single contiguous range.");
+    }
+    const auto& range = ranges[0];
     std::shared_ptr<MemoryPool> pool = memory_pool ? memory_pool : GetDefaultPool();
 
     // load schema
@@ -186,7 +187,7 @@ Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
     // create batch reader
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<BatchReader> batch_reader,
-        CreateBatchReader(table_path, field_name, split, range, core_options, pool));
+        CreateBatchReader(table_path, field_name, indexed_split, core_options, pool));
 
     // read from data split and write to index writer
     PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> global_index_io_metas,

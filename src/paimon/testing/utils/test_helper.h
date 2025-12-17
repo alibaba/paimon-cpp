@@ -141,9 +141,9 @@ class TestHelper {
         return commit_messages;
     }
 
-    Result<std::vector<std::shared_ptr<DataSplit>>> NewScan(StartupMode startup_mode,
-                                                            std::optional<int64_t> snapshot_id,
-                                                            bool is_streaming = true) {
+    Result<std::vector<std::shared_ptr<Split>>> NewScan(StartupMode startup_mode,
+                                                        std::optional<int64_t> snapshot_id,
+                                                        bool is_streaming = true) {
         ScanContextBuilder scan_context_builder(table_path_);
         scan_context_builder.WithStreamingMode(is_streaming)
             .SetOptions(options_)
@@ -157,7 +157,7 @@ class TestHelper {
         return Scan();
     }
 
-    Result<std::vector<std::shared_ptr<DataSplit>>> Scan() {
+    Result<std::vector<std::shared_ptr<Split>>> Scan() {
         if (scan_ == nullptr) {
             return Status::Invalid("need call NewScan first");
         }
@@ -246,8 +246,7 @@ class TestHelper {
 
     Result<bool> ReadAndCheckResultForBlobTable(
         const std::shared_ptr<arrow::Schema>& all_columns_schema,
-        const std::vector<std::shared_ptr<DataSplit>>& splits,
-        const std::string& main_expected_json,
+        const std::vector<std::shared_ptr<Split>>& splits, const std::string& main_expected_json,
         const std::vector<PAIMON_UNIQUE_PTR<Bytes>>& expected_blob_descriptors) {
         ReadContextBuilder read_context_builder(table_path_);
         read_context_builder.SetOptions(options_);
@@ -302,7 +301,7 @@ class TestHelper {
     }
 
     Result<bool> ReadAndCheckResult(const std::shared_ptr<arrow::DataType>& data_type,
-                                    const std::vector<std::shared_ptr<DataSplit>>& splits,
+                                    const std::vector<std::shared_ptr<Split>>& splits,
                                     const std::string& expected_result) {
         ReadContextBuilder read_context_builder(table_path_);
         read_context_builder.SetOptions(options_);

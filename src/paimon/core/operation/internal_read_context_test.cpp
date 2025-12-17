@@ -63,24 +63,25 @@ TEST(InternalReadContext, TestReadWithSpecifiedSchema) {
     ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
 }
 
-TEST(InternalReadContext, TestReadWithRowTrackingFields) {
+TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
     {
         // test simple
         std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
         ReadContextBuilder context_builder(path);
-        context_builder.SetReadSchema({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER"});
+        context_builder.SetReadSchema({"f3", "f0", "_ROW_ID", "_SEQUENCE_NUMBER", "_INDEX_SCORE"});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
         auto new_options = table_schema->Options();
         new_options[Options::ROW_TRACKING_ENABLED] = "true";
+        new_options[Options::DATA_EVOLUTION_ENABLED] = "true";
         ASSERT_OK_AND_ASSIGN(
             auto internal_context,
             InternalReadContext::Create(std::move(read_context), table_schema, new_options));
-        std::vector<DataField> read_fields = {DataField(3, arrow::field("f3", arrow::float64())),
-                                              DataField(0, arrow::field("f0", arrow::utf8())),
-                                              SpecialFields::RowId(),
-                                              SpecialFields::SequenceNumber()};
+        std::vector<DataField> read_fields = {
+            DataField(3, arrow::field("f3", arrow::float64())),
+            DataField(0, arrow::field("f0", arrow::utf8())), SpecialFields::RowId(),
+            SpecialFields::SequenceNumber(), SpecialFields::IndexScore()};
         auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
         ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
     }
@@ -95,6 +96,18 @@ TEST(InternalReadContext, TestReadWithRowTrackingFields) {
         ASSERT_NOK_WITH_MSG(InternalReadContext::Create(std::move(read_context), table_schema,
                                                         table_schema->Options()),
                             "Get field _ROW_ID failed: not exist in table schema");
+    }
+    {
+        // test invalid case: disable data evolution while read score fields
+        std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+        ReadContextBuilder context_builder(path);
+        context_builder.SetReadSchema({"f3", "f0", "_INDEX_SCORE"});
+        ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+        SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+        ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+        ASSERT_NOK_WITH_MSG(InternalReadContext::Create(std::move(read_context), table_schema,
+                                                        table_schema->Options()),
+                            "Get field _INDEX_SCORE failed: not exist in table schema");
     }
 }
 

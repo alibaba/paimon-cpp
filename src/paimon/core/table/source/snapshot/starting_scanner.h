@@ -42,7 +42,7 @@ class StartingScanner {
             return plan_->SnapshotId().value();
         }
 
-        const std::vector<std::shared_ptr<DataSplit>>& Splits() const {
+        const std::vector<std::shared_ptr<Split>>& Splits() const {
             return plan_->Splits();
         }
 

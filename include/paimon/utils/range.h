@@ -17,6 +17,7 @@
 #pragma once
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "paimon/visibility.h"
 
@@ -28,8 +29,22 @@ struct PAIMON_EXPORT Range {
     /// Returns the number of integers in the range [from, to].
     int64_t Count() const;
 
+    /// Computes the intersection of two ranges.
     static std::optional<Range> Intersection(const Range& left, const Range& right);
+
+    /// Checks whether two ranges have any overlap.
     static bool HasIntersection(const Range& left, const Range& right);
+
+    /// Sorts a list of ranges by `from`, then merges overlapping or adjacent ranges.
+    /// @param ranges Input vector of ranges to merge.
+    /// @param adjacent If true, also merges ranges that are adjacent (e.g., [1,3] and [4,5] →
+    /// [1,5]).
+    ///                 If false, only merges strictly overlapping ranges.
+    /// @return A new vector of non-overlapping, sorted ranges.
+    static std::vector<Range> SortAndMergeOverlap(const std::vector<Range>& ranges, bool adjacent);
+
+    /// Computes the set intersection of two collections of disjoint, sorted ranges.
+    static std::vector<Range> And(const std::vector<Range>& left, const std::vector<Range>& right);
 
     bool operator==(const Range& other) const;
     bool operator<(const Range& other) const;

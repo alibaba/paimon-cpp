@@ -18,10 +18,14 @@
 
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/file_index/bitmap/apply_bitmap_index_batch_reader.h"
+#include "paimon/common/global_index/complete_index_score_batch_reader.h"
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/range_helper.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/global_index/indexed_split_impl.h"
+
 namespace paimon {
 Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta>& file) {
     if (!BlobUtils::IsBlobFile(file->file_name)) {
@@ -102,9 +106,35 @@ DataEvolutionSplitRead::DataEvolutionSplitRead(
                                                         context->GetCoreOptions().GetBranch()),
                         memory_pool, executor) {}
 
+bool DataEvolutionSplitRead::HasIndexScoreField(const std::shared_ptr<arrow::Schema>& read_schema) {
+    return read_schema->GetFieldIndex(SpecialFields::IndexScore().Name()) != -1;
+}
+
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
-    const std::shared_ptr<DataSplit>& split) {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
+    const std::shared_ptr<Split>& split) {
+    if (auto indexed_split = std::dynamic_pointer_cast<IndexedSplitImpl>(split)) {
+        PAIMON_RETURN_NOT_OK(indexed_split->Validate());
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<BatchReader> batch_reader,
+            InnerCreateReader(indexed_split->GetDataSplit(), indexed_split->RowRanges()));
+        if (HasIndexScoreField(raw_read_schema_)) {
+            return std::make_unique<CompleteIndexScoreBatchReader>(std::move(batch_reader),
+                                                                   indexed_split->Scores(), pool_);
+        }
+        return batch_reader;
+    } else if (auto data_split = std::dynamic_pointer_cast<DataSplit>(split)) {
+        if (HasIndexScoreField(raw_read_schema_)) {
+            return Status::Invalid(
+                "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
+        }
+        return InnerCreateReader(data_split, /*row_ranges=*/{});
+    }
+    return Status::Invalid("Invalid Split, cannot cast to IndexedSplit or DataSplit");
+}
+
+Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
+    const std::shared_ptr<DataSplit>& data_split, const std::vector<Range>& row_ranges) const {
+    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
     if (split_impl == nullptr) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }
@@ -124,13 +154,13 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
                 std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
                 CreateRawFileReaders(split_impl->Partition(), need_merge_files, raw_read_schema_,
                                      /*predicate=*/nullptr,
-                                     /*deletion_file_map=*/{}, data_file_path_factory));
+                                     /*deletion_file_map=*/{}, row_ranges, data_file_path_factory));
             assert(raw_file_readers.size() == 1);
             sub_readers.push_back(std::move(raw_file_readers[0]));
         } else {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<DataEvolutionFileReader> evolution_reader,
                                    CreateUnionReader(split_impl->Partition(), need_merge_files,
-                                                     data_file_path_factory));
+                                                     row_ranges, data_file_path_factory));
             sub_readers.push_back(std::move(evolution_reader));
         }
     }
@@ -140,12 +170,12 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
         ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), context_->GetPredicate()));
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
 }
-
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::vector<Range>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (!deletion_file_map.empty()) {
         return Status::Invalid("DataEvolutionSplitRead do not support deletion vector");
@@ -156,7 +186,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvRead
         return Status::Invalid("DataEvolutionSplitRead do not support predicate");
     }
     PAIMON_ASSIGN_OR_RAISE(std::optional<RoaringBitmap32> selection_row_ids,
-                           file->ToFileSelection(context_->GetRowRanges()));
+                           file->ToFileSelection(row_ranges));
     ::ArrowSchema c_read_schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*read_schema, &c_read_schema));
     PAIMON_RETURN_NOT_OK(
@@ -211,6 +241,7 @@ DataEvolutionSplitRead::SplitFieldBunches(
 
 Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateUnionReader(
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
+    const std::vector<Range>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     auto blob_field_to_field_id =
         [&](const std::shared_ptr<DataFileMeta>& file_meta) -> Result<int32_t> {
@@ -232,12 +263,12 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::shared_ptr<DataEvolutionSplitRead::FieldBunch>> fields_files,
         SplitFieldBunches(need_merge_files, blob_field_to_field_id,
-                          /*has_row_ranges_selection=*/!context_->GetRowRanges().empty()));
+                          /*has_row_ranges_selection=*/!row_ranges.empty()));
 
     assert(!fields_files.empty());
     int64_t row_count = fields_files[0]->RowCount();
     PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, fields_files[0]->Files()[0]->NonNullFirstRowId());
-    if (context_->GetRowRanges().empty()) {
+    if (row_ranges.empty()) {
         for (const auto& bunch : fields_files) {
             if (bunch->RowCount() != row_count) {
                 return Status::Invalid(
@@ -302,7 +333,7 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
             PAIMON_ASSIGN_OR_RAISE(
                 std::vector<std::unique_ptr<BatchReader>> file_readers,
                 CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
-                                     /*predicate=*/nullptr, /*deletion_file_map=*/{},
+                                     /*predicate=*/nullptr, /*deletion_file_map=*/{}, row_ranges,
                                      data_file_path_factory));
             if (file_readers.size() == 1) {
                 file_batch_readers[file_idx] = std::move(file_readers[0]);
@@ -319,30 +350,9 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
                                            field_offsets, pool_);
 }
 
-Result<bool> DataEvolutionSplitRead::Match(const std::shared_ptr<DataSplit>& data_split,
+Result<bool> DataEvolutionSplitRead::Match(const std::shared_ptr<Split>& split,
                                            bool force_keep_delete) const {
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
-    if (split_impl == nullptr) {
-        return Status::Invalid("Unexpected error, split cast to impl failed");
-    }
-    const auto& files = split_impl->DataFiles();
-    if (files.size() < 2) {
-        return false;
-    }
-    std::set<int64_t> first_row_ids;
-    for (const auto& file : files) {
-        if (BlobUtils::IsBlobFile(file->file_name)) {
-            return true;
-        }
-        std::optional<int64_t> first_row_id = file->first_row_id;
-        if (first_row_id == std::nullopt || file->file_source == std::nullopt ||
-            file->file_source.value() != FileSource::Append()) {
-            return false;
-        }
-        first_row_ids.insert(first_row_id.value());
-    }
-    // If all files have a distinct first row id, we don't need to merge fields
-    return first_row_ids.size() != files.size();
+    return true;
 }
 
 Result<std::vector<std::vector<std::shared_ptr<DataFileMeta>>>>

@@ -54,9 +54,8 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteColsAndExternalPath) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-72b62a5f-d698-4db5-b51a-04c0dc027702-0.orc", /*file_size=*/961, /*row_count=*/5,
@@ -100,8 +99,7 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteColsAndExternalPath) {
             .Build()
             .value());
     ASSERT_EQ(*result_data_split, *expected_data_split) << result_data_split->ToString();
-    ASSERT_OK_AND_ASSIGN(std::string serialize_bytes,
-                         DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK_AND_ASSIGN(std::string serialize_bytes, Split::Serialize(result_data_split, pool));
     ASSERT_EQ(serialize_bytes, std::string(split_bytes.data(), split_bytes.size()));
 }
 
@@ -119,9 +117,8 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteCols) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-aa87291d-2a90-4846-b106-1bb4c76d74db-0.orc", /*file_size=*/961, /*row_count=*/5,
@@ -164,8 +161,7 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteCols) {
             .Build()
             .value());
     ASSERT_EQ(*result_data_split, *expected_data_split) << result_data_split->ToString();
-    ASSERT_OK_AND_ASSIGN(std::string serialize_bytes,
-                         DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK_AND_ASSIGN(std::string serialize_bytes, Split::Serialize(result_data_split, pool));
     ASSERT_EQ(serialize_bytes, std::string(split_bytes.data(), split_bytes.size()));
 }
 
@@ -184,9 +180,8 @@ TEST(DataSplitTest, TestDeserializeVersion7WithFirstRowId) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-92480a4b-ec0b-4585-883a-a99679870c4d-0.orc", /*file_size=*/653, /*row_count=*/5,
@@ -218,7 +213,7 @@ TEST(DataSplitTest, TestDeserializeVersion7WithFirstRowId) {
                                                                             .Build()
                                                                             .value());
     ASSERT_EQ(*result_data_split, *expected_data_split);
-    ASSERT_OK(DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK(Split::Serialize(result_data_split, pool));
 }
 
 TEST(DataSplitTest, TestDeserializeVersion7WithNullFirstRowId) {
@@ -235,9 +230,8 @@ TEST(DataSplitTest, TestDeserializeVersion7WithNullFirstRowId) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-16bd83f7-282a-479a-9968-0868436516b0-0.orc", /*file_size=*/567, /*row_count=*/1,
@@ -268,7 +262,7 @@ TEST(DataSplitTest, TestDeserializeVersion7WithNullFirstRowId) {
                                                                             .Build()
                                                                             .value());
     ASSERT_EQ(*result_data_split, *expected_data_split);
-    ASSERT_OK(DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK(Split::Serialize(result_data_split, pool));
 }
 
 TEST(DataSplitTest, TestDeserializeVersion6PkWithTotalBuckets) {
@@ -284,9 +278,8 @@ TEST(DataSplitTest, TestDeserializeVersion6PkWithTotalBuckets) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-d7725088-6bd4-4e70-9ce6-714ae93b47cc-0.orc", /*file_size=*/863, /*row_count=*/1,
@@ -317,7 +310,7 @@ TEST(DataSplitTest, TestDeserializeVersion6PkWithTotalBuckets) {
                                                                             .Build()
                                                                             .value());
     ASSERT_EQ(*result_data_split, *expected_data_split);
-    ASSERT_OK(DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK(Split::Serialize(result_data_split, pool));
 }
 
 TEST(DataSplitTest, TestDeserializeVersion5PkWithExternalPath) {
@@ -332,9 +325,8 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithExternalPath) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-80110e15-97b5-4bcf-ac09-6ca2659a4950-0.orc", /*file_size=*/645, /*row_count=*/5,
@@ -366,7 +358,7 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithExternalPath) {
          /*creation_time=*/Timestamp(1737111915429ll, 0), /*delete_row_count=*/0})};
     ASSERT_EQ(file_list, result_data_split->GetFileList());
 
-    ASSERT_OK(DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK(Split::Serialize(result_data_split, pool));
 }
 
 TEST(DataSplitTest, TestDeserializeVersion5PkWithEmptyExternalPath) {
@@ -381,9 +373,8 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithEmptyExternalPath) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-64d93fc3-eaf2-4253-9cff-a9faa701e207-0.orc", /*file_size=*/645, /*row_count=*/5,
@@ -408,7 +399,7 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithEmptyExternalPath) {
     ASSERT_EQ(*result_data_split, *expected_data_split);
     ASSERT_EQ(5, expected_data_split->PartialMergedRowCount());
 
-    ASSERT_OK(DataSplit::Serialize(result_data_split, pool));
+    ASSERT_OK(Split::Serialize(result_data_split, pool));
 }
 
 TEST(DataSplitTest, TestDeserializeVersion4PkWithSnapshot4WithDvCardinality) {
@@ -424,9 +415,8 @@ TEST(DataSplitTest, TestDeserializeVersion4PkWithSnapshot4WithDvCardinality) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-2ffe7ae9-2cf7-41e9-944b-2065585cde31-0.orc", /*file_size=*/1318, /*row_count=*/7,
@@ -479,9 +469,8 @@ TEST(DataSplitTest, TestDeserializeVersion3AppendWithSnapshot1) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -519,9 +508,8 @@ TEST(DataSplitTest, TestDeserializeVersion3AppendWithSnapshot1WithStatsDenseStor
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -557,9 +545,8 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot1) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -596,9 +583,8 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot3) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta1 = std::make_shared<DataFileMeta>(
@@ -667,9 +653,8 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot5) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -707,9 +692,8 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot2) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -758,9 +742,8 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfSingleFile) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -807,9 +790,8 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfMultiFiles) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta1 = std::make_shared<DataFileMeta>(
@@ -901,9 +883,8 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot8) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta = std::make_shared<DataFileMeta>(
@@ -951,9 +932,8 @@ TEST(DataSplitTest, TestDeserializePk10WithSnapshot6) {
     ASSERT_OK(input_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Split> result,
+                         Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
 
     auto file_meta1 = std::make_shared<DataFileMeta>(

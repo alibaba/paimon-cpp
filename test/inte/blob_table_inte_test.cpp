@@ -40,9 +40,11 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/stats/simple_stats.h"
+#include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/core/utils/file_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/data/blob.h"
@@ -156,6 +158,36 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         return file_store_commit->Commit(commit_msgs);
     }
 
+    Result<std::vector<std::shared_ptr<Split>>> CreateReadSplit(
+        const std::vector<std::shared_ptr<Split>>& splits,
+        const std::vector<Range>& row_ranges) const {
+        if (row_ranges.empty()) {
+            return splits;
+        }
+        // TODO(xinyu.lxy): mv to DataEvolutionBatchScan
+        std::vector<Range> sorted_row_ranges =
+            Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
+        std::vector<std::shared_ptr<Split>> indexed_splits;
+        indexed_splits.reserve(splits.size());
+        for (const auto& split : splits) {
+            auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+            if (!data_split) {
+                return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
+            }
+            std::vector<Range> file_ranges;
+            file_ranges.reserve(data_split->DataFiles().size());
+            for (const auto& meta : data_split->DataFiles()) {
+                PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
+                file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
+            }
+            auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
+            std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
+            // TODO(xinyu.lxy): add scores
+            indexed_splits.push_back(std::make_shared<IndexedSplitImpl>(data_split, expected));
+        }
+        return indexed_splits;
+    }
+
     Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
                        const std::shared_ptr<arrow::StructArray>& expected_array,
                        const std::shared_ptr<Predicate>& predicate = nullptr,
@@ -173,13 +205,12 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         // read
         auto splits = result_plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema)
-            .SetPredicate(predicate)
-            .SetRowRanges(row_ranges);
+        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
+        PAIMON_ASSIGN_OR_RAISE(auto read_splits, CreateReadSplit(splits, row_ranges));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(read_splits));
         PAIMON_ASSIGN_OR_RAISE(auto read_result,
                                ReadResultCollector::CollectResult(batch_reader.get()));
 
@@ -326,7 +357,7 @@ TEST_P(BlobTableInteTest, TestAppendTableWriteWithBlobAsDescriptorTrue) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto schema_with_row_kind = arrow::schema(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
         [0, "str_0", null],
@@ -377,7 +408,7 @@ TEST_P(BlobTableInteTest, TestAppendTableWriteWithBlobAsDescriptorFalse) {
     fields_with_row_kind.insert(fields_with_row_kind.begin(),
                                 arrow::field("_VALUE_KIND", arrow::int8()));
     auto data_type = arrow::struct_(fields_with_row_kind);
-    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<DataSplit>> data_splits,
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     std::string expected_data = R"([
         [0, "str_0", null, "apple"],

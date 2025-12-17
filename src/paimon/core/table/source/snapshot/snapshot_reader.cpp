@@ -42,16 +42,16 @@ Result<std::shared_ptr<Plan>> SnapshotReader::Read() const {
     FileStoreScan::RawPlan::GroupFiles files =
         FileStoreScan::RawPlan::GroupByPartFiles(raw_plan->Files(FileKind::Add()));
     PAIMON_ASSIGN_OR_RAISE(
-        std::vector<std::shared_ptr<DataSplit>> data_splits,
+        std::vector<std::shared_ptr<Split>> data_splits,
         GenerateSplits(snapshot, scan_mode_ != ScanMode::ALL, split_generator_, std::move(files)));
     return std::make_shared<PlanImpl>(raw_plan->SnapshotId(), data_splits);
 }
 
-Result<std::vector<std::shared_ptr<DataSplit>>> SnapshotReader::GenerateSplits(
+Result<std::vector<std::shared_ptr<Split>>> SnapshotReader::GenerateSplits(
     const std::optional<Snapshot>& snapshot, bool is_streaming,
     const std::unique_ptr<SplitGenerator>& split_generator,
     FileStoreScan::RawPlan::GroupFiles&& grouped_manifest_entries) const {
-    std::vector<std::shared_ptr<DataSplit>> splits;
+    std::vector<std::shared_ptr<Split>> splits;
     // Read deletion indexes at once to reduce file IO
     std::unordered_map<std::pair<BinaryRow, int32_t>, std::vector<std::shared_ptr<IndexFileMeta>>>
         deletion_index_files_map;

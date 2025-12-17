@@ -20,9 +20,11 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/global_index/indexed_split_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/global_index/indexed_split.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/result.h"
@@ -120,6 +122,36 @@ class DataEvolutionTableTest : public ::testing::Test,
         return file_store_commit->Commit(commit_msgs);
     }
 
+    Result<std::vector<std::shared_ptr<Split>>> CreateReadSplit(
+        const std::vector<std::shared_ptr<Split>>& splits,
+        const std::vector<Range>& row_ranges) const {
+        if (row_ranges.empty()) {
+            return splits;
+        }
+        // TODO(xinyu.lxy): mv to DataEvolutionBatchScan
+        std::vector<Range> sorted_row_ranges =
+            Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
+        std::vector<std::shared_ptr<Split>> indexed_splits;
+        indexed_splits.reserve(splits.size());
+        for (const auto& split : splits) {
+            auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+            if (!data_split) {
+                return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
+            }
+            std::vector<Range> file_ranges;
+            file_ranges.reserve(data_split->DataFiles().size());
+            for (const auto& meta : data_split->DataFiles()) {
+                PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
+                file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
+            }
+            auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
+            std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
+            // TODO(xinyu.lxy): add scores
+            indexed_splits.push_back(std::make_shared<IndexedSplitImpl>(data_split, expected));
+        }
+        return indexed_splits;
+    }
+
     Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
                        const std::shared_ptr<arrow::StructArray>& expected_array,
                        const std::shared_ptr<Predicate>& predicate = nullptr,
@@ -140,13 +172,12 @@ class DataEvolutionTableTest : public ::testing::Test,
         // read
         auto splits = result_plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema)
-            .SetPredicate(predicate)
-            .SetRowRanges(row_ranges);
+        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
+        PAIMON_ASSIGN_OR_RAISE(auto read_splits, CreateReadSplit(splits, row_ranges));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(read_splits));
         PAIMON_ASSIGN_OR_RAISE(auto read_result,
                                ReadResultCollector::CollectResult(batch_reader.get()));
 
@@ -285,6 +316,13 @@ TEST_P(DataEvolutionTableTest, TestBasic) {
 
         ASSERT_OK(ScanAndRead(table_path, {"f1", "f0", "_SEQUENCE_NUMBER", "_ROW_ID", "f2"},
                               expected_row_tracking_array));
+
+        // read score but not indexed split
+        ASSERT_NOK_WITH_MSG(
+            ScanAndRead(table_path, {"f0", "f1", "_INDEX_SCORE"}, expected_row_tracking_array,
+                        /*predicate=*/nullptr,
+                        /*row_ranges=*/{}),
+            "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
     }
 }
 
@@ -713,18 +751,17 @@ TEST_P(DataEvolutionTableTest, TestOnlyRowTrackingEnabled) {
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     {
-        // test with row ids
+        // test with row ids, as only data evolution mode support read with row ranges
         std::vector<Range> row_ranges = {Range(1l, 1l)};
-        CheckScanResult(table_path, /*predicate=*/nullptr, /*row_ranges=*/row_ranges,
-                        /*expected_first_row_ids=*/{0}, /*expected_row_counts=*/{2});
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
         [2, "c", "d"]
     ])")
                 .ValueOrDie());
-        ASSERT_OK(ScanAndRead(table_path, schema->field_names(), expected_array,
-                              /*predicate=*/nullptr,
-                              /*row_ranges=*/row_ranges));
+        ASSERT_NOK_WITH_MSG(ScanAndRead(table_path, schema->field_names(), expected_array,
+                                        /*predicate=*/nullptr,
+                                        /*row_ranges=*/row_ranges),
+                            "unexpected error, split cast to impl failed");
     }
     if (GetParam() != "lance") {
         // read with row tracking
@@ -1461,21 +1498,28 @@ TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
     }
     {
         // f2 has bitmap index, data evolution scan will ignore index => not empty plan
-        // but raw file split read will not ignore index => empty read batch
+        // data evolution split read will also ignore index => not empty read batch
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(203));
+        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, R"([
+        [null, null, 202, 6.1],
+        [null, null, 204, 7.1]
+    ])")
+                .ValueOrDie());
         ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
-                              /*expected_array=*/nullptr, predicate,
+                              expected_array, predicate,
                               /*row_ranges=*/{},
-                              /*check_scan_plan_when_empty_result=*/false));
+                              /*check_scan_plan_when_empty_result=*/true));
     }
     {
-        // f2 has bitmap index, raw file split read will not ignore index
+        // f2 has bitmap index, data evolution split read will ignore index
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(202));
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, R"([
-        [null, null, 202, 6.1]
+        [null, null, 202, 6.1],
+        [null, null, 204, 7.1]
     ])")
                 .ValueOrDie());
         ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
@@ -1515,13 +1559,14 @@ TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
     {
         // test row id with predicate
         std::vector<Range> row_ranges = {Range(4l, 5l)};
-        // row id = {4, 5}, while raw file split read will skip row 4 for bitmap index
+        // row id = {4, 5}, data evolution split read will ignore bitmap index
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(204));
         CheckScanResult(table_path, /*predicate=*/predicate, /*row_ranges=*/row_ranges,
                         /*expected_first_row_ids=*/{4}, /*expected_row_counts=*/{2});
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, R"([
+        [null, null, 202, 6.1],
         [null, null, 204, 7.1]
     ])")
                 .ValueOrDie());

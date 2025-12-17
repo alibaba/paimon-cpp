@@ -33,9 +33,9 @@ class SplitRead {
     virtual ~SplitRead() = default;
 
     virtual Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& data_split) = 0;
+        const std::shared_ptr<Split>& split) = 0;
 
-    virtual Result<bool> Match(const std::shared_ptr<DataSplit>& data_split,
+    virtual Result<bool> Match(const std::shared_ptr<Split>& split,
                                bool force_keep_delete) const = 0;
 };
 

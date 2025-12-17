@@ -74,7 +74,7 @@ class ReadInteWithIndexTest : public testing::Test,
     void TearDown() override {}
 
     void CheckResult(const std::string& table_path,
-                     const std::vector<std::shared_ptr<DataSplit>> data_splits,
+                     const std::vector<std::shared_ptr<Split>> splits,
                      const std::shared_ptr<Predicate>& predicate,
                      const std::shared_ptr<arrow::ChunkedArray>& expected_array) const {
         auto [file_format, enable_prefetch] = GetParam();
@@ -87,7 +87,7 @@ class ReadInteWithIndexTest : public testing::Test,
         }
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_splits));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
 
         ASSERT_OK_AND_ASSIGN(auto result_array,
                              ReadResultCollector::CollectResult(batch_reader.get()));
@@ -104,7 +104,7 @@ class ReadInteWithIndexTest : public testing::Test,
 
     void CheckResultForBitmap(const std::string& path,
                               const std::shared_ptr<arrow::DataType>& arrow_data_type,
-                              const std::shared_ptr<DataSplit> data_split) const {
+                              const std::shared_ptr<Split> split) const {
         {
             // test with non predicate
             std::shared_ptr<arrow::ChunkedArray> expected_array;
@@ -121,7 +121,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, /*predicate=*/nullptr, expected_array);
+            CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
         }
         {
             // test equal predicate for f0
@@ -136,7 +136,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test not equal predicate for f0
@@ -155,7 +155,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test equal predicate for f1
@@ -170,7 +170,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test equal predicate for f2
@@ -186,7 +186,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test is null predicate
@@ -199,7 +199,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test is not null predicate
@@ -218,7 +218,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test in predicate
@@ -237,7 +237,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test not in predicate
@@ -254,7 +254,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test and predicate
@@ -272,7 +272,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test or predicate
@@ -293,19 +293,19 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test predicate push down
             auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
                                                            FieldType::INT, Literal(30));
-            CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+            CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
         }
         {
             // test non-result
             auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                      FieldType::INT, Literal(30));
-            CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+            CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
         }
         {
             // test early stopping
@@ -319,15 +319,15 @@ class ReadInteWithIndexTest : public testing::Test,
 
             ASSERT_OK_AND_ASSIGN(auto predicate,
                                  PredicateBuilder::And({f1_predicate, f2_predicate, f0_predicate}));
-            CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+            CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
         }
     }
 
     void CheckResultForBitmapWithSingleRowGroup(
         const std::string& path, const std::shared_ptr<arrow::DataType>& arrow_data_type,
-        const std::shared_ptr<DataSplit> data_split) const {
+        const std::shared_ptr<Split> split) const {
         // test bitmap index takes effective
-        CheckResultForBitmap(path, arrow_data_type, data_split);
+        CheckResultForBitmap(path, arrow_data_type, split);
 
         // test no index take effective
         {
@@ -348,7 +348,7 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test predicate on f3 (do not have index)
@@ -368,13 +368,13 @@ class ReadInteWithIndexTest : public testing::Test,
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
     }
 
     void CheckResultForBsi(const std::string& path,
                            const std::shared_ptr<arrow::DataType>& arrow_data_type,
-                           const std::shared_ptr<DataSplit> data_split) const {
+                           const std::shared_ptr<Split> split) const {
         {
             // test with non predicate
             std::shared_ptr<arrow::ChunkedArray> expected_array;
@@ -391,7 +391,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, /*predicate=*/nullptr, expected_array);
+            CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
         }
         {
             // test is null predicate for f4
@@ -404,7 +404,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test equal predicate for f1
@@ -418,7 +418,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test not equal predicate for f2
@@ -435,7 +435,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test greater than predicate for f1
@@ -450,7 +450,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test greater or equal predicate for f2
@@ -466,7 +466,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test less than predicate for f4
@@ -483,7 +483,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test less or equal predicate for f4, as timestamp is normalized to long (micros),
@@ -503,7 +503,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test in for f2
@@ -520,7 +520,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test not in for f1
@@ -537,7 +537,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test and predicate
@@ -555,7 +555,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test or predicate
@@ -579,7 +579,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test and predicate for is not null
@@ -602,7 +602,7 @@ class ReadInteWithIndexTest : public testing::Test,
 ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
     }
 
@@ -655,7 +655,7 @@ TEST_P(ReadInteWithIndexTest, TestSimple) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
     auto predicate =
@@ -679,7 +679,7 @@ TEST_P(ReadInteWithIndexTest, TestSimple) {
     }
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_split));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(split));
     ASSERT_OK_AND_ASSIGN(auto result_array, ReadResultCollector::CollectResult(batch_reader.get()));
     ASSERT_TRUE(result_array);
     ASSERT_TRUE(result_array->Equals(*expected_array));
@@ -729,7 +729,7 @@ TEST_P(ReadInteWithIndexTest, TestReadWithLimits) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
     auto predicate =
@@ -746,7 +746,7 @@ TEST_P(ReadInteWithIndexTest, TestReadWithLimits) {
     }
     ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(data_split));
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(split));
     // simulate read limits, only read 3 batches
     for (int32_t i = 0; i < 3; i++) {
         ASSERT_OK_AND_ASSIGN(BatchReader::ReadBatch batch, batch_reader->NextBatch());
@@ -833,9 +833,9 @@ TEST_P(ReadInteWithIndexTest, TestEmbeddingBitmapIndex) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
-    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, data_split);
+    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, split);
 }
 
 TEST_P(ReadInteWithIndexTest, TestBitmapWithV1) {
@@ -896,9 +896,9 @@ TEST_P(ReadInteWithIndexTest, TestBitmapWithV1) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
-    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, data_split);
+    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, split);
 }
 
 TEST_P(ReadInteWithIndexTest, TestNoEmbeddingBitmapIndex) {
@@ -935,9 +935,9 @@ TEST_P(ReadInteWithIndexTest, TestNoEmbeddingBitmapIndex) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
-    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, data_split);
+    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, split);
 }
 
 TEST_P(ReadInteWithIndexTest, TestNoEmbeddingBitmapIndexWithExternalPath) {
@@ -981,9 +981,9 @@ TEST_P(ReadInteWithIndexTest, TestNoEmbeddingBitmapIndexWithExternalPath) {
         /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
-    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, data_split);
+    CheckResultForBitmapWithSingleRowGroup(path, arrow_data_type, split);
 }
 
 TEST_P(ReadInteWithIndexTest, TestBitmapIndexWithDv) {
@@ -1025,11 +1025,11 @@ TEST_P(ReadInteWithIndexTest, TestBitmapIndexWithDv) {
                                /*offset=*/1, /*length=*/24, /*cardinality=*/2);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split, builder.WithSnapshot(4)
-                                              .WithDataDeletionFiles({deletion_file})
-                                              .IsStreaming(false)
-                                              .RawConvertible(true)
-                                              .Build());
+    ASSERT_OK_AND_ASSIGN(auto split, builder.WithSnapshot(4)
+                                         .WithDataDeletionFiles({deletion_file})
+                                         .IsStreaming(false)
+                                         .RawConvertible(true)
+                                         .Build());
     {
         // test with non predicate
         std::shared_ptr<arrow::ChunkedArray> expected_array;
@@ -1043,7 +1043,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapIndexWithDv) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, /*predicate=*/nullptr, expected_array);
+        CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
     }
     {
         // test equal, Alice with key 0 is removed by dv
@@ -1056,14 +1056,14 @@ TEST_P(ReadInteWithIndexTest, TestBitmapIndexWithDv) {
         ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test equal, Lucy is removed by dv
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Lucy", 4));
-        CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+        CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
     }
     {
         // test or predicate
@@ -1083,7 +1083,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapIndexWithDv) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
 }
 
@@ -1185,7 +1185,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "/bucket-0/",
                                    {data_file_meta1, data_file_meta2});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(2).IsStreaming(false).RawConvertible(true).Build());
     {
         // test with non predicate
@@ -1206,7 +1206,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, /*predicate=*/nullptr, expected_array);
+        CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
     }
     {
         // test equal predicate for f1
@@ -1223,7 +1223,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test not equal predicate for f1
@@ -1240,7 +1240,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test equal predicate for f4
@@ -1255,7 +1255,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test not equal predicate for f4
@@ -1276,7 +1276,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test equal predicate for f3, only do predicate push down
@@ -1295,7 +1295,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test is null predicate for f5
@@ -1315,7 +1315,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test is_not_null predicate for f5
@@ -1339,7 +1339,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test greater than predicate for f1, do not take effective in bitmap index
@@ -1362,7 +1362,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test in predicate
@@ -1382,7 +1382,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test not in predicate
@@ -1398,7 +1398,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test and predicate
@@ -1414,7 +1414,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test or predicate
@@ -1433,7 +1433,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test early stop
@@ -1446,13 +1446,13 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
             PredicateBuilder::IsNotNull(/*field_index=*/3, /*field_name=*/"f5", FieldType::INT);
         ASSERT_OK_AND_ASSIGN(auto predicate,
                              PredicateBuilder::And({f4_predicate, f1_predicate, f5_predicate}));
-        CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+        CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
     }
     {
         // test non result
         auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
                                                  FieldType::BIGINT, Literal(40l));
-        CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+        CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
     }
     {
         auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f1",
@@ -1474,7 +1474,7 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
 ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
 }
 
@@ -1512,7 +1512,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBsiIndex) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
     {
         // test equal predicate for f0, take no effective as bsi does not support string
@@ -1532,9 +1532,9 @@ TEST_P(ReadInteWithIndexTest, TestWithBsiIndex) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
-    CheckResultForBsi(path, arrow_data_type, {data_split});
+    CheckResultForBsi(path, arrow_data_type, {split});
 }
 
 TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
@@ -1572,7 +1572,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
     std::shared_ptr<arrow::ChunkedArray> all_array;
@@ -1590,123 +1590,123 @@ TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
     ASSERT_TRUE(array_status.ok());
     {
         // test with non predicate
-        CheckResult(path, {data_split}, /*predicate=*/nullptr, all_array);
+        CheckResult(path, {split}, /*predicate=*/nullptr, all_array);
     }
     {
         // test equal predicate for f0
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test equal predicate for f0, where literal does not exist
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice2", 6));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test equal predicate for f1
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(200));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test equal predicate for f1, where literal does not exist
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(201));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test equal predicate for f2
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(-1));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test equal predicate for f2, where literal does not exist
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(0));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test equal predicate for f3
         auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                  FieldType::DOUBLE, Literal(13.1));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test equal predicate for f3, where literal does not exist
         auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                  FieldType::DOUBLE, Literal(13.2));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test equal predicate for f4
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/4, /*field_name=*/"f4", FieldType::TIMESTAMP,
                                     Literal(Timestamp(1745542902000l, 123000)));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test equal predicate for f4, where literal does not exist
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/4, /*field_name=*/"f4", FieldType::TIMESTAMP,
                                     Literal(Timestamp(1745542502000l, 123000)));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test not equal predicate for f1
         auto predicate = PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(200));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test is null predicate for f2
         auto predicate =
             PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test is not null predicate for f2
         auto predicate =
             PredicateBuilder::IsNotNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test greater than predicate for f1
         auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
                                                        FieldType::INT, Literal(200));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test in for f2
         auto predicate =
             PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
                                  {Literal(-1), Literal(2), Literal(100)});
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test in for f2, where literals do not exist
         auto predicate =
             PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
                                  {Literal(-1000), Literal(0), Literal(1000)});
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test not in for f3
         auto predicate =
             PredicateBuilder::NotIn(/*field_index=*/3, /*field_name=*/"f3", FieldType::DOUBLE,
                                     {Literal(11.1), Literal(12.1), Literal(13.1)});
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test not in for f3, where literals do not exist
         auto predicate =
             PredicateBuilder::NotIn(/*field_index=*/3, /*field_name=*/"f3", FieldType::DOUBLE,
                                     {Literal(11.12), Literal(12.12), Literal(13.12)});
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test and predicate
@@ -1716,7 +1716,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
             PredicateBuilder::Equal(/*field_index=*/4, /*field_name=*/"f4", FieldType::TIMESTAMP,
                                     Literal(Timestamp(1745542902000l, 123000)));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f1_predicate, f4_predicate}));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
     {
         // test and predicate
@@ -1726,7 +1726,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
             PredicateBuilder::Equal(/*field_index=*/4, /*field_name=*/"f4", FieldType::TIMESTAMP,
                                     Literal(Timestamp(-1728l, 123000)));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f1_predicate, f4_predicate}));
-        CheckResult(path, {data_split}, predicate, nullptr);
+        CheckResult(path, {split}, predicate, nullptr);
     }
     {
         // test or predicate
@@ -1736,7 +1736,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBloomFilterIndex) {
             PredicateBuilder::Equal(/*field_index=*/4, /*field_name=*/"f4", FieldType::TIMESTAMP,
                                     Literal(Timestamp(-1728l, 123000)));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f1_predicate, f4_predicate}));
-        CheckResult(path, {data_split}, predicate, all_array);
+        CheckResult(path, {split}, predicate, all_array);
     }
 }
 
@@ -1778,11 +1778,11 @@ TEST_P(ReadInteWithIndexTest, TestBitmapPushDownWithMultiStripes) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
     // test bitmap index takes effective
-    CheckResultForBitmap(path, arrow_data_type, data_split);
+    CheckResultForBitmap(path, arrow_data_type, split);
 
     // test predicate push down takes effective
     {
@@ -1798,7 +1798,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapPushDownWithMultiStripes) {
         ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test predicate on f3 (do not have index), but predicates can be pushdown
@@ -1810,7 +1810,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapPushDownWithMultiStripes) {
         ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test and predicate, although the bitmap index cannot handle the LessThan
@@ -1827,7 +1827,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapPushDownWithMultiStripes) {
         ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test or predicate, although the bitmap index cannot handle the LessOrEqual
@@ -1849,7 +1849,7 @@ TEST_P(ReadInteWithIndexTest, TestBitmapPushDownWithMultiStripes) {
         ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
 }
 
@@ -1888,10 +1888,10 @@ TEST_P(ReadInteWithIndexTest, TestWithBitmapAndBsiAndBloomFilterIndex) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
-    CheckResultForBsi(path, arrow_data_type, data_split);
+    CheckResultForBsi(path, arrow_data_type, split);
     {
         // test equal predicate for f3, only bloom filter take effective
         auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
@@ -1909,13 +1909,13 @@ TEST_P(ReadInteWithIndexTest, TestWithBitmapAndBsiAndBloomFilterIndex) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
     {
         // test equal predicate for f3, only bloom filter take effective
         auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                  FieldType::DOUBLE, Literal(14.13));
-        CheckResult(path, {data_split}, predicate, /*expected_array=*/nullptr);
+        CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
     }
     {
         // test equal predicate for f0, bitmap index takes effective
@@ -1929,7 +1929,7 @@ TEST_P(ReadInteWithIndexTest, TestWithBitmapAndBsiAndBloomFilterIndex) {
     ])"},
                                                                              &expected_array);
         ASSERT_TRUE(array_status.ok());
-        CheckResult(path, {data_split}, predicate, expected_array);
+        CheckResult(path, {split}, predicate, expected_array);
     }
 }
 
@@ -1970,7 +1970,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
     {
         // only bitmap is registered
@@ -1999,7 +1999,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test and predicate, only f1_equals takes effective
@@ -2017,7 +2017,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
     }
     {
@@ -2048,7 +2048,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
         {
             // test and predicate, as bsi is registered f1_equals and f2_greater_than all take
@@ -2066,7 +2066,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
     ])"},
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
-            CheckResult(path, {data_split}, predicate, expected_array);
+            CheckResult(path, {split}, predicate, expected_array);
         }
     }
 }
@@ -2105,7 +2105,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIOException) {
         /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
                                    /*bucket_path=*/path + "bucket-0/", {data_file_meta});
-    ASSERT_OK_AND_ASSIGN(auto data_split,
+    ASSERT_OK_AND_ASSIGN(auto split,
                          builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
 
     auto predicate =
@@ -2134,8 +2134,7 @@ TEST_P(ReadInteWithIndexTest, TestWithIOException) {
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         Result<std::unique_ptr<TableRead>> table_read = TableRead::Create(std::move(read_context));
         CHECK_HOOK_STATUS(table_read.status(), i);
-        Result<std::unique_ptr<BatchReader>> batch_reader =
-            table_read.value()->CreateReader(data_split);
+        Result<std::unique_ptr<BatchReader>> batch_reader = table_read.value()->CreateReader(split);
         CHECK_HOOK_STATUS(batch_reader.status(), i);
         auto result = ReadResultCollector::CollectResult(batch_reader.value().get());
         CHECK_HOOK_STATUS(result.status(), i);

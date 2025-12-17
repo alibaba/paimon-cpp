@@ -34,7 +34,6 @@ TEST(ReadContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetReadSchema().empty());
     ASSERT_TRUE(ctx->GetOptions().empty());
     ASSERT_FALSE(ctx->GetPredicate());
-    ASSERT_TRUE(ctx->GetRowRanges().empty());
     ASSERT_FALSE(ctx->EnablePredicateFilter());
     ASSERT_FALSE(ctx->EnablePrefetch());
     ASSERT_EQ(600, ctx->GetPrefetchBatchCount());
@@ -52,8 +51,6 @@ TEST(ReadContextTest, TestSetContent) {
     auto predicate =
         PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f1", FieldType::INT);
     builder.SetPredicate(predicate);
-    std::vector<Range> row_ranges = {Range(1, 2), Range(4, 5)};
-    builder.SetRowRanges(row_ranges);
     builder.EnablePredicateFilter(true);
     builder.EnablePrefetch(true);
     builder.SetPrefetchBatchCount(1200);
@@ -70,7 +67,6 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_TRUE(ctx->GetExecutor());
     ASSERT_EQ(ctx->GetReadSchema(), std::vector<std::string>({"f1", "f2"}));
     ASSERT_EQ(*predicate, *(ctx->GetPredicate()));
-    ASSERT_EQ(ctx->GetRowRanges(), row_ranges);
     ASSERT_TRUE(ctx->EnablePredicateFilter());
     ASSERT_TRUE(ctx->EnablePrefetch());
     ASSERT_EQ(1200, ctx->GetPrefetchBatchCount());

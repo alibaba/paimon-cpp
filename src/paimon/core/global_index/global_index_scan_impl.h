@@ -34,7 +34,7 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
         const Range& range) override;
 
-    Result<std::set<Range>> GetRowRangeList() override;
+    Result<std::vector<Range>> GetRowRangeList() override;
 
  private:
     Status Scan();

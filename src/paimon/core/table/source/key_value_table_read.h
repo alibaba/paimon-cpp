@@ -27,7 +27,7 @@
 #include "paimon/table/source/table_read.h"
 
 namespace paimon {
-class DataSplit;
+class Split;
 class Executor;
 class FileStorePathFactory;
 class InternalReadContext;
@@ -40,8 +40,7 @@ class KeyValueTableRead : public TableRead {
         const std::shared_ptr<InternalReadContext>& context,
         const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
 
-    Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& data_split) override;
+    Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
  private:
     KeyValueTableRead(std::vector<std::unique_ptr<SplitRead>>&& split_reads,

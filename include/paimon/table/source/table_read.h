@@ -24,15 +24,14 @@
 #include "paimon/read_context.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
-#include "paimon/table/source/data_split.h"
+#include "paimon/table/source/split.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
-class DataSplit;
 class MemoryPool;
 class ReadContext;
 
-/// Given a `DataSplit` or a list of `DataSplit`, generate a reader for batch reading.
+/// Given a `Split` or a list of `Split`, generate a reader for batch reading.
 class PAIMON_EXPORT TableRead {
  public:
     virtual ~TableRead() = default;
@@ -46,21 +45,21 @@ class PAIMON_EXPORT TableRead {
     /// Creates a `BatchReader` instance for reading data.
     ///
     /// This method creates a BatchReader that will be responsible for reading data from the
-    /// provided data splits.
+    /// provided splits.
     ///
-    /// @param data_splits A vector of shared pointers to `DataSplit` instances representing the
+    /// @param splits A vector of shared pointers to `Split` instances representing the
     ///                    data to be read.
     /// @return A Result containing a unique pointer to the `BatchReader` instance.
     virtual Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::vector<std::shared_ptr<DataSplit>>& data_splits);
+        const std::vector<std::shared_ptr<Split>>& splits);
 
-    /// Creates a `BatchReader` instance for a single data split.
+    /// Creates a `BatchReader` instance for a single split.
     ///
-    /// @param data_split A shared pointer to the `DataSplit` instance that defines the data to be
+    /// @param split A shared pointer to the `Split` instance that defines the data to be
     ///                   read.
     /// @return A Result containing a unique pointer to the `BatchReader` instance.
     virtual Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& data_split) = 0;
+        const std::shared_ptr<Split>& split) = 0;
 
  protected:
     explicit TableRead(const std::shared_ptr<MemoryPool>& memory_pool);

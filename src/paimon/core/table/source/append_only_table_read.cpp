@@ -38,17 +38,18 @@ AppendOnlyTableRead::AppendOnlyTableRead(const std::shared_ptr<FileStorePathFact
         // add data evolution first
         split_reads_.push_back(
             std::make_unique<DataEvolutionSplitRead>(path_factory, context, memory_pool, executor));
+    } else {
+        split_reads_.push_back(
+            std::make_unique<RawFileSplitRead>(path_factory, context, memory_pool, executor));
     }
-    split_reads_.push_back(
-        std::make_unique<RawFileSplitRead>(path_factory, context, memory_pool, executor));
 }
 
 Result<std::unique_ptr<BatchReader>> AppendOnlyTableRead::CreateReader(
-    const std::shared_ptr<DataSplit>& data_split) {
+    const std::shared_ptr<Split>& split) {
     for (const auto& read : split_reads_) {
-        PAIMON_ASSIGN_OR_RAISE(bool matched, read->Match(data_split, /*force_keep_delete=*/false));
+        PAIMON_ASSIGN_OR_RAISE(bool matched, read->Match(split, /*force_keep_delete=*/false));
         if (matched) {
-            return read->CreateReader(data_split);
+            return read->CreateReader(split);
         }
     }
     return Status::Invalid("create reader failed, not read match with data split.");
