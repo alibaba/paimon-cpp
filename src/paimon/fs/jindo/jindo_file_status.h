@@ -17,8 +17,9 @@
 #pragma once
 
 #include <string>
+#include <utility>
 
-#include "JdoFileInfo.hpp"
+#include "JdoFileInfo.hpp"  // NOLINT(build/include_subdir)
 #include "paimon/fs/file_system.h"
 
 namespace paimon::jindo {

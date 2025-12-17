@@ -47,11 +47,13 @@
 
 #include <unistd.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <vector>
 
 #include "paimon/common/utils/string_utils.h"
@@ -109,6 +111,13 @@ std::map<std::string, std::string> GetJindoTestOptions() {
 std::string GetJindoTestDir() {
     static const std::string dir = "oss://paimon-unittest/temp/";
     return dir;
+}
+
+int32_t RandomNumber(int32_t min, int32_t max) {
+    static thread_local std::mt19937 generator(
+        std::random_device{}());  // NOLINT(whitespace/braces)
+    std::uniform_int_distribution<int32_t> distribution(min, max);
+    return distribution(generator);
 }
 
 std::string GetPidStr() {

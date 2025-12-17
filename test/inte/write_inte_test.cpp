@@ -240,10 +240,10 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
             for (const auto& meta : data_increment.NewFiles()) {
                 const auto& creation_time = meta->creation_time;
                 ASSERT_OK_AND_ASSIGN(int64_t utc_creation_time, meta->CreationTimeEpochMillis());
-                ASSERT_TRUE(creation_time.GetMillisecond() - utc_creation_time == 28800000l);
+                ASSERT_EQ(creation_time.GetMillisecond() - utc_creation_time, 28800000l);
                 // creation time > 2023-09-28 and < 2223-09-28
-                ASSERT_TRUE(creation_time.GetMillisecond() > 1695866400000l);
-                ASSERT_TRUE(creation_time.GetMillisecond() < 8007213600000l);
+                ASSERT_GT(creation_time.GetMillisecond(), 1695866400000l);
+                ASSERT_LT(creation_time.GetMillisecond(), 8007213600000l);
             }
         }
     }
@@ -2330,7 +2330,8 @@ TEST_P(WriteInteTest, TestWriteAndCommitIOException) {
     ASSERT_TRUE(write_run_complete);
 
     bool commit_run_complete = false;
-    for (size_t i = 0; i < 400; i += rand() % 10 + 5) {
+    uint32_t seed = static_cast<uint32_t>(time(nullptr));
+    for (size_t i = 0; i < 400; i += RandomNumber(5, 15)) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         CommitContextBuilder commit_context_builder(table_path, "commit_user_1");
@@ -3237,7 +3238,7 @@ TEST_P(WriteInteTest, TestWriteMemoryUse) {
         ASSERT_EQ(commit_messages.size(), 1);
     }
     // check all memory is released
-    ASSERT_TRUE(write_pool->MaxMemoryUsage() > 0);
+    ASSERT_GT(write_pool->MaxMemoryUsage(), 0);
     ASSERT_EQ(write_pool->CurrentUsage(), 0);
 }
 

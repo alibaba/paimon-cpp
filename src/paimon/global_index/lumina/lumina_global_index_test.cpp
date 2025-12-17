@@ -420,7 +420,7 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
 
     auto search_with_filter = [&]() {
-        int32_t k = rand() % 100;
+        int32_t k = RandomNumber(0, 99);
         auto filter = [](int64_t id) -> bool { return id % 2; };
         ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(k, query_, filter,
                                                                  /*predicate*/ nullptr));
@@ -430,7 +430,7 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
     };
 
     auto search = [&]() {
-        int32_t k = rand() % 100;
+        int32_t k = RandomNumber(0, 99);
         ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(k, query_, /*filter=*/nullptr,
                                                                  /*predicate*/ nullptr));
         auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(topk_result);

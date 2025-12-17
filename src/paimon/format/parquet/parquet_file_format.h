@@ -17,7 +17,9 @@
 #pragma once
 
 #include <cassert>
+#include <map>
 #include <memory>
+#include <string>
 
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"

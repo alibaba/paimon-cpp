@@ -16,6 +16,8 @@
 
 #include "paimon/global_index/lumina/lumina_global_index.h"
 
+#include <utility>
+
 #include "arrow/c/bridge.h"
 #include "lumina/api/Dataset.h"
 #include "lumina/api/LuminaBuilder.h"

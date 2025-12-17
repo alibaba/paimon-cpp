@@ -16,6 +16,9 @@
 
 #include "paimon/global_index/lumina/lumina_global_index_factory.h"
 
+#include <map>
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "paimon/global_index/lumina/lumina_global_index.h"

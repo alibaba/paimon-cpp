@@ -182,8 +182,9 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
                              input_stream->Read(split_bytes.data(), split_bytes.size()));
         EXPECT_OK(input_stream->Close());
 
-        EXPECT_OK_AND_ASSIGN(
-            auto split, Split::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool_));
+        EXPECT_OK_AND_ASSIGN(auto split,
+                             Split::Deserialize(reinterpret_cast<char*>(split_bytes.data()),
+                                                split_bytes.size(), pool_));
         return std::dynamic_pointer_cast<Split>(split);
     }
 
@@ -368,10 +369,10 @@ TEST_P(ReadInteTest, TestReadWithLimits) {
         auto read_metrics = batch_reader->GetReaderMetrics();
         ASSERT_TRUE(read_metrics);
         ASSERT_OK_AND_ASSIGN(uint64_t io_count, read_metrics->GetCounter("orc.read.io.count"));
-        ASSERT_TRUE(io_count > 0);
+        ASSERT_GT(io_count, 0);
         ASSERT_OK_AND_ASSIGN(uint64_t latency,
                              read_metrics->GetCounter("orc.read.inclusive.latency.us"));
-        ASSERT_TRUE(latency > 0);
+        ASSERT_GT(latency, 0);
     }
 }
 
@@ -503,7 +504,7 @@ TEST_P(ReadInteTest, TestAppendReadWithPredicate) {
         auto predicate,
         PredicateBuilder::Or(
             {PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f3",
-                                           FieldType::DOUBLE, Literal((double)15.0)),
+                                           FieldType::DOUBLE, Literal(static_cast<double>(15.0))),
              PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f1", FieldType::INT,
                                      Literal(20))}));
 
@@ -579,10 +580,10 @@ TEST_P(ReadInteTest, TestAppendReadWithPredicate) {
         auto read_metrics = batch_reader->GetReaderMetrics();
         ASSERT_TRUE(read_metrics);
         ASSERT_OK_AND_ASSIGN(uint64_t io_count, read_metrics->GetCounter("orc.read.io.count"));
-        ASSERT_TRUE(io_count > 0);
+        ASSERT_GT(io_count, 0);
         ASSERT_OK_AND_ASSIGN(uint64_t latency,
                              read_metrics->GetCounter("orc.read.inclusive.latency.us"));
-        ASSERT_TRUE(latency > 0);
+        ASSERT_GT(latency, 0);
     }
 }
 
@@ -678,7 +679,7 @@ TEST_P(ReadInteTest, TestAppendReadWithPredicateOnlyPushdown) {
         auto predicate,
         PredicateBuilder::Or(
             {PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f3",
-                                           FieldType::DOUBLE, Literal((double)15.0)),
+                                           FieldType::DOUBLE, Literal(static_cast<double>(15.0))),
              PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f3", FieldType::DOUBLE)}));
 
     auto param = GetParam();
@@ -2025,9 +2026,7 @@ TEST_P(ReadInteTest, TestReadWithPKFallBackBranch) {
         context_builder.EnablePrefetch(param.enable_prefetch)
             .AddOption(Options::FILE_FORMAT, param.file_format)
             .AddOption("test.enable-adaptive-prefetch-strategy",
-                       param.enable_adaptive_prefetch_strategy)
-
-            ;
+                       param.enable_adaptive_prefetch_strategy);
         if (specific_table_schema) {
             context_builder.SetTableSchema(specific_table_schema.value());
         }

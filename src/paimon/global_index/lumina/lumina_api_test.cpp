@@ -51,8 +51,8 @@ class LuminaInterfaceTest : public ::testing::Test {
             auto status = writer.InsertBatch(data_vec_.data(), row_ids.data(), 4);
             ASSERT_TRUE(status.IsOk());
             // check memory paimon_pool
-            ASSERT_TRUE(paimon_pool->CurrentUsage() > 0);
-            ASSERT_TRUE(paimon_pool->MaxMemoryUsage() > 0);
+            ASSERT_GT(paimon_pool->CurrentUsage(), 0);
+            ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
             // dump index
             ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                                  fs->Create(index_path, /*overwrite=*/false));
@@ -60,8 +60,8 @@ class LuminaInterfaceTest : public ::testing::Test {
             ASSERT_TRUE(writer.Dump(std::move(file_writer), ::lumina::api::IOOptions()).IsOk());
         }
         // check memory paimon_pool
-        ASSERT_TRUE(paimon_pool->CurrentUsage() == 0);
-        ASSERT_TRUE(paimon_pool->MaxMemoryUsage() > 0);
+        ASSERT_EQ(paimon_pool->CurrentUsage(), 0);
+        ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
     }
 
     void Search(const std::string& index_path, int32_t topk,
@@ -92,8 +92,8 @@ class LuminaInterfaceTest : public ::testing::Test {
             ASSERT_EQ(meta.count, 4);
 
             // check memory paimon_pool
-            ASSERT_TRUE(paimon_pool->CurrentUsage() > 0);
-            ASSERT_TRUE(paimon_pool->MaxMemoryUsage() > 0);
+            ASSERT_GT(paimon_pool->CurrentUsage(), 0);
+            ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
 
             auto search = [&](int32_t parallel_number) {
                 ::lumina::api::Query query(query_.data(), query_.size());
@@ -117,8 +117,8 @@ class LuminaInterfaceTest : public ::testing::Test {
 
                 // TODO(xinyu.lxy): check memory paimon_pool, current memory use = query mem +
                 // reader mem
-                ASSERT_TRUE(paimon_pool->CurrentUsage() > 0);
-                ASSERT_TRUE(paimon_pool->MaxMemoryUsage() > 0);
+                ASSERT_GT(paimon_pool->CurrentUsage(), 0);
+                ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
             };
 
             // single thread search result
@@ -128,8 +128,8 @@ class LuminaInterfaceTest : public ::testing::Test {
             search(4);
         }
         // check memory paimon_pool
-        ASSERT_TRUE(paimon_pool->CurrentUsage() == 0);
-        ASSERT_TRUE(paimon_pool->MaxMemoryUsage() > 0);
+        ASSERT_EQ(paimon_pool->CurrentUsage(), 0);
+        ASSERT_GT(paimon_pool->MaxMemoryUsage(), 0);
     }
 
     void CheckResult(const std::vector<::lumina::api::LuminaSearcher::SearchHit>& search_result,

@@ -1874,7 +1874,7 @@ TEST_P(ScanAndReadInteTest, TestMemoryUse) {
         ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
     }
     // check all memory is released
-    ASSERT_TRUE(read_pool->MaxMemoryUsage() > 0);
+    ASSERT_GT(read_pool->MaxMemoryUsage(), 0);
     ASSERT_EQ(read_pool->CurrentUsage(), 0);
 }
 

@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/orc/orc_file_batch_reader.h"
 #include "paimon/format/orc/orc_format_defs.h"

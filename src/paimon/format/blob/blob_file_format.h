@@ -16,7 +16,9 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <string>
 
 #include "arrow/c/bridge.h"
 #include "paimon/common/utils/arrow/status_utils.h"

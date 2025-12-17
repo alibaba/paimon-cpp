@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "avro/GenericDatum.hh"
 #include "paimon/common/data/internal_array.h"
 #include "paimon/common/data/internal_row.h"
@@ -137,7 +141,7 @@ class AvroDatumDataGetter {
                                                const std::shared_ptr<MemoryPool>& pool) {
         assert(datum.type() == ::avro::AVRO_RECORD);
         const auto& record = datum.value<::avro::GenericRecord>();
-        assert(record.fieldCount() == (size_t)num_fields);
+        assert(record.fieldCount() == static_cast<size_t>(num_fields));
         return std::make_shared<AvroRecordDataGetter>(record, pool);
     }
 };

@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <string>
+
 #include "fmt/format.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"

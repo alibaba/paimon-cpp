@@ -16,6 +16,7 @@
 
 #include "paimon/format/blob/blob_file_batch_reader.h"
 
+#include <algorithm>
 #include <future>
 #include <numeric>
 

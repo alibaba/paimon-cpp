@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include <limits>
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/memory_pool.h"

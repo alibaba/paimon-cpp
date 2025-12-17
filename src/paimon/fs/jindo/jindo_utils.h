@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "JdoStatus.hpp"
+#include "JdoStatus.hpp"  // NOLINT(build/include_subdir)
 #include "paimon/status.h"
 
 namespace paimon::jindo {

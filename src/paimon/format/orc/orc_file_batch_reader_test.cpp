@@ -16,6 +16,13 @@
 
 #include "paimon/format/orc/orc_file_batch_reader.h"
 
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
@@ -354,10 +361,10 @@ TEST_P(OrcFileBatchReaderTest, TestNextBatchSimple) {
         auto reader_metrics = orc_batch_reader->GetReaderMetrics();
         ASSERT_OK_AND_ASSIGN(uint64_t io_count,
                              reader_metrics->GetCounter(OrcMetrics::READ_IO_COUNT));
-        ASSERT_TRUE(io_count > 0);
+        ASSERT_GT(io_count, 0);
         ASSERT_OK_AND_ASSIGN(uint64_t latency,
                              reader_metrics->GetCounter(OrcMetrics::READ_INCLUSIVE_LATENCY_US));
-        ASSERT_TRUE(latency > 0);
+        ASSERT_GT(latency, 0);
     }
 }
 

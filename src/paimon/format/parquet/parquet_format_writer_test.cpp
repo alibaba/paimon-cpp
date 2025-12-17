@@ -102,7 +102,7 @@ class ParquetFormatWriterTest : public ::testing::Test {
             } else {
                 EXPECT_TRUE(int_builder->Append(i).ok());
             }
-            EXPECT_TRUE(bool_builder->Append(bool(i % 2)).ok());
+            EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
         }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(struct_builder.Finish(&array).ok());
@@ -119,7 +119,7 @@ class ParquetFormatWriterTest : public ::testing::Test {
             /*partition=*/std::map<std::string, std::string>(), /*bucket=*/-1,
             /*row_kinds=*/std::vector<RecordBatch::RowKind>(), arrow_array.get());
         ASSERT_OK(format_writer->AddBatch(batch->GetData()));
-    };
+    }
 
     void CheckResult(const std::string& file_path, int32_t row_count) const {
         auto file = arrow::io::ReadableFile::Open(file_path, arrow_pool_.get());
@@ -234,7 +234,7 @@ TEST_F(ParquetFormatWriterTest, TestWriteMultipleTimes) {
     // add batch first time, 6 rows
     AddRecordBatchOnce(format_writer, struct_type, 6, 0);
     ASSERT_OK_AND_ASSIGN(uint64_t estimate_len1, format_writer->GetEstimateLength());
-    ASSERT_TRUE(estimate_len1 > 0);
+    ASSERT_GT(estimate_len1, 0);
 
     // add batch second times, 10 rows
     AddRecordBatchOnce(format_writer, struct_type, 10, 6);
@@ -276,7 +276,7 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
     // add batch first time, 1 row
     AddRecordBatchOnce(format_writer, struct_type, 1, 0);
     ASSERT_OK_AND_ASSIGN(uint64_t estimate_len1, format_writer->GetEstimateLength());
-    ASSERT_TRUE(estimate_len1 > 0);
+    ASSERT_GT(estimate_len1, 0);
 
     // add batch second times, 9998 rows
     AddRecordBatchOnce(format_writer, struct_type, 9998, 1);

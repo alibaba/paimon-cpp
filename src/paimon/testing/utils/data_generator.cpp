@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "data_generator.h"
+#include "paimon/testing/utils/data_generator.h"
 
 #include <algorithm>
 #include <cassert>

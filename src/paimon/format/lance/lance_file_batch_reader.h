@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "lance_lib/lance_api.h"
 #include "paimon/metrics.h"

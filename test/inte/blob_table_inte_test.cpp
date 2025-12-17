@@ -1066,7 +1066,7 @@ TEST_P(BlobTableInteTest, TestIOException) {
     // write and commit with I/O exception
     bool write_run_complete = false;
     auto io_hook = IOHook::GetInstance();
-    for (size_t i = 0; i < 2000; i += rand() % 10 + 20) {
+    for (size_t i = 0; i < 2000; i += RandomNumber(20, 30)) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         dir_ = UniqueTestDirectory::Create("local");
         CreateTable();

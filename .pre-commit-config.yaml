@@ -84,6 +84,6 @@ repos:
         exclude: |
           (?x)^(
             (third_party)/.*|
-            (test)/.*|
-            (src)/.*
+            (src/paimon/common)/.*|
+            (src/paimon/core)/.*
           )$

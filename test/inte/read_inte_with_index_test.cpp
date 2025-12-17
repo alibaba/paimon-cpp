@@ -688,10 +688,10 @@ TEST_P(ReadInteWithIndexTest, TestSimple) {
     if (file_format == "orc") {
         auto read_metrics = batch_reader->GetReaderMetrics();
         ASSERT_OK_AND_ASSIGN(uint64_t io_count, read_metrics->GetCounter("orc.read.io.count"));
-        ASSERT_TRUE(io_count > 0);
+        ASSERT_GT(io_count, 0);
         ASSERT_OK_AND_ASSIGN(uint64_t latency,
                              read_metrics->GetCounter("orc.read.inclusive.latency.us"));
-        ASSERT_TRUE(latency > 0);
+        ASSERT_GT(latency, 0);
     }
     batch_reader->Close();
 }
@@ -762,10 +762,10 @@ TEST_P(ReadInteWithIndexTest, TestReadWithLimits) {
         auto read_metrics = batch_reader->GetReaderMetrics();
         ASSERT_TRUE(read_metrics);
         ASSERT_OK_AND_ASSIGN(uint64_t io_count, read_metrics->GetCounter("orc.read.io.count"));
-        ASSERT_TRUE(io_count > 0);
+        ASSERT_GT(io_count, 0);
         ASSERT_OK_AND_ASSIGN(uint64_t latency,
                              read_metrics->GetCounter("orc.read.inclusive.latency.us"));
-        ASSERT_TRUE(latency > 0);
+        ASSERT_GT(latency, 0);
     }
 }
 

@@ -18,6 +18,11 @@
 
 #include <unistd.h>
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "arrow/compute/api.h"

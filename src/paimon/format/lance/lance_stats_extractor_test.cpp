@@ -57,7 +57,7 @@ class LanceStatsExtractorTest : public ::testing::Test {
         ASSERT_OK(writer->Finish());
         auto fs = std::make_shared<LocalFileSystem>();
         ASSERT_OK_AND_ASSIGN(auto file_status, fs->GetFileStatus(file_path));
-        ASSERT_TRUE(file_status->GetLen() > 0);
+        ASSERT_GT(file_status->GetLen(), 0);
     }
 };
 

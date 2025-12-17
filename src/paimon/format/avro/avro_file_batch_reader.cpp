@@ -16,6 +16,10 @@
 
 #include "paimon/format/avro/avro_file_batch_reader.h"
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "avro/Generic.hh"
 #include "avro/GenericDatum.hh"

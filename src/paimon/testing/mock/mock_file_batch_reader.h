@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/metrics/metrics_impl.h"

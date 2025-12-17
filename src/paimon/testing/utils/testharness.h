@@ -67,6 +67,8 @@ std::string GetDataDir();
 std::map<std::string, std::string> GetJindoTestOptions();
 std::string GetJindoTestDir();
 
+int32_t RandomNumber(int32_t min, int32_t max);
+
 ::testing::AssertionResult AssertStatus(const char* s_expr, const Status& s);
 
 #define ASSERT_OK(expr)                                                                  \

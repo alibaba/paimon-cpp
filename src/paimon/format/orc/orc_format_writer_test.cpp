@@ -102,7 +102,7 @@ class OrcFormatWriterTest : public ::testing::Test {
             /*partition=*/std::map<std::string, std::string>(), /*bucket=*/-1,
             /*row_kinds=*/std::vector<RecordBatch::RowKind>(), arrow_array.get());
         ASSERT_OK(format_writer->AddBatch(batch->GetData()));
-    };
+    }
 
     void CheckResult(const std::string& file_name, int32_t batch_size) const {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
@@ -195,7 +195,7 @@ TEST_F(OrcFormatWriterTest, TestWriteWithVariousBatchSize) {
             auto writer_metrics = format_writer->GetWriterMetrics();
             ASSERT_OK_AND_ASSIGN(uint64_t io_count,
                                  writer_metrics->GetCounter(OrcMetrics::WRITE_IO_COUNT));
-            ASSERT_TRUE(io_count > 0);
+            ASSERT_GT(io_count, 0);
         }
     }
 }

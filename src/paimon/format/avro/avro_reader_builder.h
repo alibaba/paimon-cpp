@@ -16,8 +16,10 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "avro/DataFile.hh"
 #include "paimon/format/avro/avro_file_batch_reader.h"

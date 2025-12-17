@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "arrow/api.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/result.h"

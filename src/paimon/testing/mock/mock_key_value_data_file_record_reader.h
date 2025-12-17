@@ -15,6 +15,10 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <utility>
+
 #include "paimon/core/io/key_value_data_file_record_reader.h"
 
 namespace paimon::test {
