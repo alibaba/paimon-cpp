@@ -424,7 +424,7 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshotWithIOException) {
     bool drop_partition_scanned_all_io_hook = false;
     bool expire_snapshot_scanned_all_io_hook = false;
     auto io_hook = IOHook::GetInstance();
-    for (size_t i = 0; i < 1000; i += RandomNumber(5, 15)) {
+    for (size_t i = 0; i < 1000; i += paimon::test::RandomNumber(5, 15)) {
         ::ArrowSchema arrow_schema;
         ASSERT_TRUE(arrow::ExportSchema(*schema, &arrow_schema).ok());
         auto dir = UniqueTestDirectory::Create();
@@ -900,7 +900,7 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithIOException) {
 
     bool scanned_all_io_hook = true;
     auto io_hook = IOHook::GetInstance();
-    for (size_t i = 0; i < 500; i += RandomNumber(5, 15)) {
+    for (size_t i = 0; i < 500; i += paimon::test::RandomNumber(5, 15)) {
         scanned_all_io_hook = true;
         write_orphan_files(root_path);
         {

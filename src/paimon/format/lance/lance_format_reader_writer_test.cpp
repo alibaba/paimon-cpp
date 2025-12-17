@@ -297,7 +297,7 @@ TEST_F(LanceFileReaderWriterTest, TestBulkData) {
         // force add one item to ret
         ret.push_back(0);
         for (int32_t i = 1; i < count; i++) {
-            int32_t visit = RandomNumber(0, 1);
+            int32_t visit = paimon::test::RandomNumber(0, 1);
             if (visit == 1) {
                 ret.push_back(i);
             }
@@ -314,7 +314,8 @@ TEST_F(LanceFileReaderWriterTest, TestDictionary) {
     int32_t dictionary_size = 300;
     std::vector<std::string> dictionary;
     for (int32_t i = 0; i < dictionary_size; i++) {
-        dictionary.push_back(std::to_string(RandomNumber(0, 10000)) + "_" + std::to_string(i));
+        dictionary.push_back(std::to_string(paimon::test::RandomNumber(0, 10000)) + "_" +
+                             std::to_string(i));
     }
     int32_t write_batch_size = 4000;
     auto schema = arrow::schema(fields);
@@ -348,7 +349,7 @@ TEST_F(LanceFileReaderWriterTest, TestReachTargetSize) {
         std::string data_str = "[";
         for (int32_t i = 0; i < write_batch_size; i++) {
             data_str.append("[");
-            int32_t base_value = RandomNumber(0, 10000);
+            int32_t base_value = paimon::test::RandomNumber(0, 10000);
             if (base_value % 3 == 0) {
                 data_str.append("null,");
             } else if (base_value % 3 == 1) {

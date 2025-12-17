@@ -2331,7 +2331,7 @@ TEST_P(WriteInteTest, TestWriteAndCommitIOException) {
 
     bool commit_run_complete = false;
     uint32_t seed = static_cast<uint32_t>(time(nullptr));
-    for (size_t i = 0; i < 400; i += RandomNumber(5, 15)) {
+    for (size_t i = 0; i < 400; i += paimon::test::RandomNumber(5, 15)) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         CommitContextBuilder commit_context_builder(table_path, "commit_user_1");
