@@ -1,0 +1,14 @@
+build/*
+build-debug/*
+build-release/*
+test_data/*
+third_party/*
+build_support/*
+scripts/*
+cmake_modules/*
+.codespell_ignore
+.gitignore
+rat-report.txt
+requirements.txt
+.gitattributes
+.*\.svg$
