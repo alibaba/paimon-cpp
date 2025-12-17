@@ -15,8 +15,11 @@
  */
 
 #pragma once
-
+#include <algorithm>
 #include <functional>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "paimon/file_index/file_index_reader.h"
 #include "paimon/global_index/global_index_reader.h"

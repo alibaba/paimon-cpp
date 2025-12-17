@@ -75,7 +75,7 @@ class BitSliceIndexRoaringBitmapTest : public ::testing::Test {
 
     int64_t GenerateNextValueExceptMinMax() const {
         // return a value in the range (1, VALUE_BOUND)
-        return 2 + rand() % (VALUE_BOUND - 2);
+        return 2 + paimon::test::RandomNumber(0, (VALUE_BOUND - 2) - 1);
     }
 
     static constexpr int32_t NUM_OF_ROWS = 100000;

@@ -277,8 +277,8 @@ TEST(DateTimeUtilsTest, TestGetCurrentTime) {
     TimezoneGuard guard("Asia/Shanghai");
     uint64_t utc_ts = DateTimeUtils::GetCurrentUTCTimeUs();
     uint64_t local_ts = DateTimeUtils::GetCurrentLocalTimeUs().value();
-    ASSERT_TRUE(local_ts > utc_ts);
-    ASSERT_TRUE(local_ts - utc_ts >= 28800000000l);
+    ASSERT_GT(local_ts, utc_ts);
+    ASSERT_GE(local_ts - utc_ts, 28800000000l);
 }
 
 TEST(DateTimeUtilsTest, TestToUTCTimestamp) {

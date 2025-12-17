@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "arrow/array/array_nested.h"
 #include "arrow/c/bridge.h"
 #include "arrow/util/checked_cast.h"

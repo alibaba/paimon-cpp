@@ -28,7 +28,7 @@
 #include "paimon/defs.h"
 #include "paimon/file_index/file_index_result.h"
 #include "paimon/status.h"
-#include "xxhash.h"
+#include "xxhash/xxhash.h"
 
 namespace paimon {
 Result<FastHash::HashFunction> FastHash::GetHashFunction(

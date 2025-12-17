@@ -40,7 +40,7 @@ class BitmapIndexResultTest : public ::testing::Test {
         auto typed_result = std::dynamic_pointer_cast<BitmapIndexResult>(result);
         ASSERT_TRUE(typed_result);
         ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap32::From(expected));
-    };
+    }
 };
 
 TEST_F(BitmapIndexResultTest, TestSimple) {

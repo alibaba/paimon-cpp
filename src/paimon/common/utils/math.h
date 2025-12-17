@@ -41,8 +41,8 @@ inline T EndianSwapValue(T v) {
                   "floating-point types).");
     if constexpr (sizeof(T) == 1) {
         return v;
-    } else if constexpr (std::is_same_v<T, float> || std::is_same_v<T, double> ||
-                         std::is_integral_v<T>) {
+    } else if constexpr (std::is_same_v<T, float> ||  // NOLINT(readability/braces)
+                         std::is_same_v<T, double> || std::is_integral_v<T>) {
         using UintType = std::conditional_t<
             sizeof(T) == 2, uint16_t,
             std::conditional_t<sizeof(T) == 4, uint32_t,

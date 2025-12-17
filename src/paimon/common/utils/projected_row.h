@@ -68,7 +68,7 @@ class ProjectedRow : public InternalRow {
     }
 
     bool IsNullAt(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         if (mapping_[pos] < 0) {
             return true;
         }
@@ -76,22 +76,22 @@ class ProjectedRow : public InternalRow {
     }
 
     bool GetBoolean(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetBoolean(mapping_[pos]);
     }
 
     char GetByte(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetByte(mapping_[pos]);
     }
 
     int16_t GetShort(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetShort(mapping_[pos]);
     }
 
     int32_t GetInt(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetInt(mapping_[pos]);
     }
 
@@ -100,57 +100,57 @@ class ProjectedRow : public InternalRow {
     }
 
     int64_t GetLong(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetLong(mapping_[pos]);
     }
 
     float GetFloat(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetFloat(mapping_[pos]);
     }
 
     double GetDouble(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetDouble(mapping_[pos]);
     }
 
     BinaryString GetString(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetString(mapping_[pos]);
     }
 
     std::string_view GetStringView(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetStringView(mapping_[pos]);
     }
 
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetDecimal(mapping_[pos], precision, scale);
     }
 
     Timestamp GetTimestamp(int32_t pos, int32_t precision) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetTimestamp(mapping_[pos], precision);
     }
 
     std::shared_ptr<Bytes> GetBinary(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetBinary(mapping_[pos]);
     }
 
     std::shared_ptr<InternalArray> GetArray(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetArray(mapping_[pos]);
     }
 
     std::shared_ptr<InternalMap> GetMap(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetMap(mapping_[pos]);
     }
 
     std::shared_ptr<InternalRow> GetRow(int32_t pos, int32_t num_fields) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         return row_->GetRow(mapping_[pos], num_fields);
     }
 

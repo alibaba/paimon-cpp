@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "field_type_utils.h"
+#include "paimon/common/utils/field_type_utils.h"
 
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"

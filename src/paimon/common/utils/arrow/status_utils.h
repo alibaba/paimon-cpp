@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 
 #include "arrow/status.h"
 #include "paimon/macros.h"

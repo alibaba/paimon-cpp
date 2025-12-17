@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+
 #include "paimon/global_index/global_indexer_factory.h"
 
 namespace paimon {

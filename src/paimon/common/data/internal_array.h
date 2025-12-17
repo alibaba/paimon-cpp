@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <string>
+#include <vector>
+
 #include "paimon/common/data/data_getters.h"
 #include "paimon/result.h"
 #include "paimon/visibility.h"

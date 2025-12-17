@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/api.h"
 #include "paimon/metrics.h"
 #include "paimon/reader/batch_reader.h"

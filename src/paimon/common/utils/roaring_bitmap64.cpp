@@ -23,7 +23,7 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/result.h"
-#include "roaring.hh"
+#include "roaring.hh"  // NOLINT(build/include_subdir)
 
 namespace paimon {
 namespace {

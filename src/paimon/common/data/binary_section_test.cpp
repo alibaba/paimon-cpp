@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "binary_section.h"
+#include "paimon/common/data/binary_section.h"
 
 #include "gtest/gtest.h"
 #include "paimon/memory/memory_pool.h"

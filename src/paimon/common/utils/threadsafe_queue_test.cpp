@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "threadsafe_queue.h"
+#include "paimon/common/utils/threadsafe_queue.h"
 
 #include <string>
 #include <utility>

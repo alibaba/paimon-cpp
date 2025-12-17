@@ -113,10 +113,10 @@ std::string GetJindoTestDir() {
     return dir;
 }
 
-int32_t RandomNumber(int32_t min, int32_t max) {
+int64_t RandomNumber(int64_t min, int64_t max) {
     static thread_local std::mt19937 generator(
         std::random_device{}());  // NOLINT(whitespace/braces)
-    std::uniform_int_distribution<int32_t> distribution(min, max);
+    std::uniform_int_distribution<int64_t> distribution(min, max);
     return distribution(generator);
 }
 

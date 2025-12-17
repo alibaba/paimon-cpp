@@ -14,9 +14,15 @@
  * limitations under the License.
  */
 
+#pragma once
+
+#include <algorithm>
 #include <cassert>
 #include <limits>
+#include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "arrow/c/abi.h"
 #include "fmt/format.h"

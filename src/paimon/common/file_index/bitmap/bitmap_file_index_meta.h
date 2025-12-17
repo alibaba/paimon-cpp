@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/file_index/file_index_result.h"

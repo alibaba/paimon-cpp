@@ -38,8 +38,9 @@ Status DataOutputStream::WriteValue(const T& value) {
         write_value = EndianSwapValue(value);
     }
     int32_t write_length = sizeof(T);
-    PAIMON_ASSIGN_OR_RAISE(int32_t actual_write_length,
-                           output_stream_->Write((char*)&write_value, write_length));
+    PAIMON_ASSIGN_OR_RAISE(
+        int32_t actual_write_length,
+        output_stream_->Write(reinterpret_cast<char*>(&write_value), write_length));
     PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
     return Status::OK();
 }

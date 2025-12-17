@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -48,7 +49,7 @@ TEST(MemorySegmentTest, TestByteAccess) {
     bool* occupied = new bool[page_size];
     std::memset(occupied, 0, page_size * sizeof(bool));
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t pos = std::rand() % page_size;
+        int32_t pos = paimon::test::RandomNumber(0, page_size - 1);
         if (occupied[pos]) {
             continue;
         } else {
@@ -63,7 +64,7 @@ TEST(MemorySegmentTest, TestByteAccess) {
     std::memset(occupied, 0, page_size * sizeof(bool));
 
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t pos = std::rand() % page_size;
+        int32_t pos = paimon::test::RandomNumber(0, page_size - 1);
 
         if (occupied[pos]) {
             continue;
@@ -86,13 +87,13 @@ TEST(MemorySegmentTest, TestBooleanAccess) {
     bool* occupied = new bool[page_size];
     std::memset(occupied, 0, page_size * sizeof(bool));
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t pos = std::rand() % page_size;
+        int32_t pos = paimon::test::RandomNumber(0, page_size - 1);
         if (occupied[pos]) {
             continue;
         } else {
             occupied[pos] = true;
         }
-        segment.PutValue<bool>(pos, static_cast<bool>(std::rand()) % 2);
+        segment.PutValue<bool>(pos, static_cast<bool>(paimon::test::RandomNumber(0, 1)));
     }
     delete[] occupied;
 
@@ -101,14 +102,14 @@ TEST(MemorySegmentTest, TestBooleanAccess) {
     std::memset(occupied, 0, page_size * sizeof(bool));
 
     for (int32_t i = 0; i < 1000; i++) {
-        int32_t pos = std::rand() % page_size;
+        int32_t pos = paimon::test::RandomNumber(0, page_size - 1);
         if (occupied[pos]) {
             continue;
         } else {
             occupied[pos] = true;
         }
 
-        ASSERT_EQ(segment.GetValue<bool>(pos), (bool)std::rand() % 2)
+        ASSERT_EQ(segment.GetValue<bool>(pos), static_cast<bool>(paimon::test::RandomNumber(0, 1)))
             << "seed: " << seed << ", idx: " << pos;
     }
     delete[] occupied;
@@ -124,7 +125,7 @@ TEST(MemorySegmentTest, TestEqualTo) {
     seg1.Put(0, reference_array);
     seg2.Put(0, reference_array);
 
-    int32_t i = std::rand() % (page_size - 8);
+    int32_t i = paimon::test::RandomNumber(0, (page_size - 8) - 1);
     seg1.Put(i, static_cast<char>(10));
     ASSERT_FALSE(seg1.EqualTo(seg2, i, i, 9)) << "rand value:" << i;
 
@@ -145,16 +146,16 @@ TEST(MemorySegmentTest, TestCompare) {
     seg1.Put(0, reference_array);
     seg2.Put(0, reference_array);
 
-    int32_t i = std::rand() % (page_size - 8);
+    int32_t i = paimon::test::RandomNumber(0, (page_size - 8) - 1);
     seg1.Put(i, static_cast<char>(10));
-    ASSERT_TRUE(seg1.Compare(seg2, i, i, 9, 9) > 0);
+    ASSERT_GT(seg1.Compare(seg2, i, i, 9, 9), 0);
 
     seg1.Put(i, static_cast<char>(0));
-    ASSERT_TRUE(seg1.Compare(seg2, i, i, 9, 9) == 0);
+    ASSERT_EQ(seg1.Compare(seg2, i, i, 9, 9), 0);
 
     seg2.Put(i + 8, static_cast<char>(10));
-    ASSERT_TRUE(seg1.Compare(seg2, i, i, 7, 7) == 0);
-    ASSERT_TRUE(seg1.Compare(seg2, i, i, 9, 9) < 0);
+    ASSERT_EQ(seg1.Compare(seg2, i, i, 7, 7), 0);
+    ASSERT_LT(seg1.Compare(seg2, i, i, 9, 9), 0);
 }
 
 TEST(MemorySegmentTest, TestSwapBytes) {
@@ -164,8 +165,8 @@ TEST(MemorySegmentTest, TestSwapBytes) {
     test_string1.reserve(str_size);
     test_string2.reserve(str_size);
     for (int32_t j = 0; j < str_size; j++) {
-        test_string1 += rand() % 26 + 'a';
-        test_string2 += rand() % 26 + 'a';
+        test_string1 += paimon::test::RandomNumber(0, 25) + 'a';
+        test_string2 += paimon::test::RandomNumber(0, 25) + 'a';
     }
     std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(test_string1, pool.get());
     std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(test_string2, pool.get());
@@ -351,7 +352,10 @@ TEST(MemorySegmentTest, TestIntAccess) {
 TEST(MemorySegmentTest, TestLongAccess) {
     auto pool = paimon::GetDefaultPool();
     auto lrand = []() -> int64_t {
-        return (static_cast<int64_t>(rand()) << (sizeof(int32_t) * 8)) | std::rand();
+        return (static_cast<int64_t>(
+                    paimon::test::RandomNumber(0, std::numeric_limits<int64_t>::max()))
+                << (sizeof(int32_t) * 8)) |
+               std::rand();
     };
     int32_t page_size = 64 * 1024;
     MemorySegment segment = MemorySegment::AllocateHeapMemory(page_size, pool.get());
@@ -480,7 +484,10 @@ TEST(MemorySegmentTest, TestFloatAccess) {
 TEST(MemorySegmentTest, TestDoubleAccess) {
     auto pool = paimon::GetDefaultPool();
     auto lrand = []() -> int64_t {
-        return (static_cast<int64_t>(rand()) << (sizeof(int32_t) * 8)) | std::rand();
+        return (static_cast<int64_t>(
+                    paimon::test::RandomNumber(0, std::numeric_limits<int64_t>::max()))
+                << (sizeof(int32_t) * 8)) |
+               std::rand();
     };
     auto drand = [&]() -> int64_t {
         return (static_cast<double>(lrand()) /

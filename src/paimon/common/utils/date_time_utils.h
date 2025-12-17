@@ -22,6 +22,8 @@
 #include <cstdint>
 #include <ctime>
 #include <limits>
+#include <memory>
+#include <string>
 #include <utility>
 
 #include "arrow/api.h"

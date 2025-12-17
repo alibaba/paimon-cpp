@@ -43,7 +43,7 @@ class BinaryRowTest : public testing::Test {
     void AssertTestWriterRow(const BinaryRow& row) {
         ASSERT_EQ(row.GetString(0).ToString(), "1");
         ASSERT_EQ(row.GetInt(8), 88);
-        ASSERT_EQ(row.GetShort(11), (short)292);
+        ASSERT_EQ(row.GetShort(11), (int16_t)292);
         ASSERT_EQ(row.GetLong(10), 284);
         ASSERT_EQ(row.GetByte(2), (char)99);
         ASSERT_EQ(row.GetDouble(6), (double)87.1);
@@ -101,7 +101,7 @@ TEST_F(BinaryRowTest, TestSetAndGet) {
 
     ASSERT_EQ(row.GetInt(1), 11);
     ASSERT_TRUE(row.IsNullAt(0));
-    ASSERT_EQ(row.GetShort(5), (short)55);
+    ASSERT_EQ(row.GetShort(5), (int16_t)55);
     ASSERT_EQ(row.GetLong(2), 22L);
     ASSERT_TRUE(row.GetBoolean(4));
     ASSERT_EQ(row.GetByte(6), (char)66);
@@ -433,7 +433,7 @@ TEST_F(BinaryRowTest, TestZeroOutPaddingString) {
 
     writer.Reset();
     for (int32_t i = 0; i < bytes_size; i++) {
-        (*bytes)[i] = rand() % 256;
+        (*bytes)[i] = paimon::test::RandomNumber(0, 255);
     }
     writer.WriteBinary(0, *bytes);
     writer.Reset();
@@ -443,7 +443,7 @@ TEST_F(BinaryRowTest, TestZeroOutPaddingString) {
 
     writer.Reset();
     for (int32_t i = 0; i < bytes_size; i++) {
-        (*bytes)[i] = rand() % 256;
+        (*bytes)[i] = paimon::test::RandomNumber(0, 255);
     }
     writer.WriteBinary(0, *bytes);
     writer.Reset();
@@ -557,15 +557,15 @@ TEST_F(BinaryRowTest, TestBinaryRowSerializer) {
     int32_t bytes_size = 1024;
     std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(1024, pool.get());
     for (int32_t i = 0; i < bytes_size; i++) {
-        (*bytes)[i] = rand() % 256;
+        (*bytes)[i] = paimon::test::RandomNumber(0, 255);
     }
     int32_t str_size = 1024;
     std::string test_string1, test_string2;
     test_string1.reserve(str_size);
     test_string2.reserve(str_size);
     for (int32_t j = 0; j < str_size; j++) {
-        test_string1 += rand() % 26 + 'a';
-        test_string2 += rand() % 26 + 'a';
+        test_string1 += paimon::test::RandomNumber(0, 25) + 'a';
+        test_string2 += paimon::test::RandomNumber(0, 25) + 'a';
     }
     std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(test_string1, pool.get());
     std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(test_string2, pool.get());

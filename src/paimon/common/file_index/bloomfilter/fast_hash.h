@@ -15,9 +15,11 @@
  */
 
 #pragma once
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <memory>
 
 #include "arrow/type.h"
 #include "paimon/file_index/file_index_result.h"

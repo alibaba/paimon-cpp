@@ -79,7 +79,8 @@ class DataDefine {
                     return arg ? "true" : "false";
                 } else if constexpr (std::is_same_v<T, std::shared_ptr<Bytes>>) {
                     return std::string(arg->data(), arg->size());
-                } else if constexpr (std::is_same_v<T, BinaryString> ||
+                } else if constexpr (std::is_same_v<T,  // NOLINT(readability/braces)
+                                                    BinaryString> ||
                                      std::is_same_v<T, Timestamp> || std::is_same_v<T, Decimal>) {
                     return arg.ToString();
                 } else if constexpr (std::is_same_v<T, std::shared_ptr<InternalRow>>) {

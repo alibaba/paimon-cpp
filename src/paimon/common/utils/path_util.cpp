@@ -116,13 +116,10 @@ Result<Path> PathUtil::ToPath(const std::string& path) noexcept {
 std::string PathUtil::GetParentDirPath(const std::string& path) noexcept {
     std::string::const_reverse_iterator it;
     for (it = path.rbegin(); it != path.rend() && *it == '/'; it++) {
-        ;
     }
     for (; it != path.rend() && *it != '/'; it++) {
-        ;
     }
     for (; it != path.rend() && *it == '/'; it++) {
-        ;
     }
     return path.substr(0, path.rend() - it);
 }
@@ -132,7 +129,6 @@ std::string PathUtil::GetName(const std::string& path) noexcept {
     TrimLastDelim(&dir_path);
     std::string::const_reverse_iterator it;
     for (it = dir_path.rbegin(); it != dir_path.rend() && *it != '/'; it++) {
-        ;
     }
     return dir_path.substr(dir_path.rend() - it);
 }

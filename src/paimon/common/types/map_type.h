@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "arrow/api.h"
 #include "paimon/common/types/data_type.h"
 #include "paimon/common/utils/rapidjson_util.h"

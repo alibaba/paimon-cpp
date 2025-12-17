@@ -154,7 +154,7 @@ class DataConverterUtils {
                 return Status::NotImplemented(
                     fmt::format("Do not support type {} in partition binary row",
                                 arrow::internal::ToString(type)));
-        };
+        }
         return converter;
     }
 
@@ -269,7 +269,7 @@ class DataConverterUtils {
                 return Status::NotImplemented(
                     fmt::format("Do not support arrow {} in partition binary row",
                                 arrow::internal::ToString(type)));
-        };
+        }
         return converter;
     }
 };

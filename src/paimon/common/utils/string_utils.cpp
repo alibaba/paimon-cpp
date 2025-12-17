@@ -95,7 +95,7 @@ std::vector<std::string> StringUtils::Split(const std::string& text, const std::
         if (n != std::string::npos) {
             if (!ignore_empty || n != old) {
                 vec.emplace_back(text.substr(old, n - old));
-            };
+            }
             n += sep_str.length();
             old = n;
         }

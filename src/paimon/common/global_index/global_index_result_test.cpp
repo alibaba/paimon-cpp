@@ -85,9 +85,9 @@ TEST_F(GlobalIndexResultTest, TestSerializeAndDeserializeSimple) {
         48, 3, 0, 5,  0,   0,   5, 0,  255, 127, 0, 0,  0,   128, 2, 0, 245, 133, 0, 0, 37,
         0,  0, 0, 47, 0,   0,   0, 49, 0,   0,   0, 55, 0,   0,   0, 2, 0,   1,   0, 4, 0,
         10, 0, 0, 0,  255, 255, 1, 0,  0,   0,   2, 0,  255, 224, 0, 0, 0,   0};
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexResult> index_result,
-        GlobalIndexResult::Deserialize((char*)byte_buffer.data(), byte_buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> index_result,
+                         GlobalIndexResult::Deserialize(reinterpret_cast<char*>(byte_buffer.data()),
+                                                        byte_buffer.size(), pool));
     auto typed_result = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(index_result);
     ASSERT_TRUE(typed_result);
 
@@ -109,9 +109,9 @@ TEST_F(GlobalIndexResultTest, TestSerializeAndDeserializeWithScore) {
         245, 133, 0,   0,   40, 0,   0,  0,  42, 0,  0,   0,   44,  0,   0,   0, 50, 0,   0,   0,
         10,  0,   255, 255, 1,  0,   3,  0,  5,  0,  255, 224, 0,   0,   0,   6, 63, 129, 71,  174,
         191, 168, 245, 195, 64, 135, 92, 41, 66, 74, 245, 195, 194, 200, 128, 0, 64, 6,   102, 102};
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<GlobalIndexResult> index_result,
-        GlobalIndexResult::Deserialize((char*)byte_buffer.data(), byte_buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> index_result,
+                         GlobalIndexResult::Deserialize(reinterpret_cast<char*>(byte_buffer.data()),
+                                                        byte_buffer.size(), pool));
     auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(index_result);
     ASSERT_TRUE(typed_result);
 

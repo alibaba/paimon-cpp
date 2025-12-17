@@ -15,9 +15,11 @@
  */
 
 #pragma once
+
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "paimon/common/file_index/bitmap/bitmap_file_index_meta.h"
 #include "paimon/result.h"

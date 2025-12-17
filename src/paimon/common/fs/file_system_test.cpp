@@ -121,10 +121,10 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
                 actual_dirs.insert(RemoveLastSlashInPath(file_status->GetPath()));
             } else {
                 actual_files.insert(file_status->GetPath());
-                ASSERT_TRUE(file_status->GetLen() > 0);
+                ASSERT_GT(file_status->GetLen(), 0);
                 int64_t modification_time = file_status->GetModificationTime();
-                ASSERT_TRUE(modification_time > 10000000000L);     // MIN_VALID_FILE_MODIFICATION_MS
-                ASSERT_TRUE(modification_time < 10000000000000L);  // MAX_VALID_FILE_MODIFICATION_MS
+                ASSERT_GT(modification_time, 10000000000L);     // MIN_VALID_FILE_MODIFICATION_MS
+                ASSERT_LT(modification_time, 10000000000000L);  // MAX_VALID_FILE_MODIFICATION_MS
             }
         }
         std::set<std::string> normalized_expected_dirs;
@@ -315,8 +315,8 @@ TEST_P(FileSystemTest, TestWriteEmptyFile) {
     ASSERT_FALSE(st->IsDir());
     ASSERT_EQ(st->GetLen(), 0);
     auto modification_time = st->GetModificationTime();
-    ASSERT_TRUE(modification_time > 10000000000L);
-    ASSERT_TRUE(modification_time < 10000000000000L);
+    ASSERT_GT(modification_time, 10000000000L);
+    ASSERT_LT(modification_time, 10000000000000L);
 
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
@@ -1116,8 +1116,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_EQ(RemoveLastSlashInPath(st->GetPath()), RemoveLastSlashInPath(dir_path));
         ASSERT_TRUE(st->IsDir());
         auto modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
 
         std::string file_path = test_root_ + "/file_dir/file.data";
         ASSERT_OK(fs_->WriteFile(file_path, "content", /*overwrite=*/false));
@@ -1129,8 +1129,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_EQ(RemoveLastSlashInPath(st->GetPath()), RemoveLastSlashInPath(dir_path));
         ASSERT_TRUE(st->IsDir());
         modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
     }
     {
         // test non-exist dir
@@ -1152,8 +1152,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_FALSE(st->IsDir());
         ASSERT_EQ(st->GetLen(), content.size());
         auto modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
     }
     {
         // test non-exist file

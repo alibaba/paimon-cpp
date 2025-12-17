@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "arrow/array/array_base.h"
 #include "paimon/common/data/internal_array.h"
 #include "paimon/common/data/internal_row.h"

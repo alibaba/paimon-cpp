@@ -33,7 +33,7 @@ TEST(BloomFilter64Test, TestSimple) {
     int32_t items = 10000;
     auto pool = GetDefaultPool();
     BloomFilter64 bloom_filter(items, 0.02, pool);
-    std::mt19937_64 engine(std::random_device{}());
+    std::mt19937_64 engine(std::random_device{}());  // NOLINT(whitespace/braces)
     std::uniform_int_distribution<int64_t> distribution(std::numeric_limits<int64_t>::min(),
                                                         std::numeric_limits<int64_t>::max());
     std::set<int64_t> test_data;

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/common/data/internal_array.h"
 #include "paimon/visibility.h"
 

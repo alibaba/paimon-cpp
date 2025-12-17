@@ -2330,7 +2330,6 @@ TEST_P(WriteInteTest, TestWriteAndCommitIOException) {
     ASSERT_TRUE(write_run_complete);
 
     bool commit_run_complete = false;
-    uint32_t seed = static_cast<uint32_t>(time(nullptr));
     for (size_t i = 0; i < 400; i += paimon::test::RandomNumber(5, 15)) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);

@@ -18,8 +18,11 @@
 
 #include <functional>
 #include <future>
+#include <memory>
 #include <stdexcept>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 #include "paimon/executor.h"
 #include "paimon/result.h"

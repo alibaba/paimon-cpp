@@ -64,7 +64,7 @@ class PredicateBatchReaderTest : public ::testing::Test {
             EXPECT_TRUE(struct_builder.Append().ok());
             EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
             EXPECT_TRUE(big_int_builder->Append(i).ok());
-            EXPECT_TRUE(bool_builder->Append(bool(i % 2)).ok());
+            EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
         }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(struct_builder.Finish(&array).ok());

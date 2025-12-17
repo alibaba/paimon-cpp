@@ -148,21 +148,30 @@ TEST(DataConverterUtilsTest, TestDataToBinaryRowConverterWithNoLegacyPartitionNa
 }
 
 TEST(DataConverterUtilsTest, TestValueToStringSimple) {
-    ASSERT_EQ("233.0", DataConverterUtils::FloatValueToString<float>(float(233), 6));
-    ASSERT_EQ("3.0E-4", DataConverterUtils::FloatValueToString<float>(float(0.0003), 6));
-    ASSERT_EQ("3.478589E10", DataConverterUtils::FloatValueToString<float>(float(34785895352), 6));
-    ASSERT_EQ("1.0E9", DataConverterUtils::FloatValueToString<float>(float(1000000000), 6));
-    ASSERT_EQ("1000000.0", DataConverterUtils::FloatValueToString<float>(float(1000000), 6));
-    ASSERT_EQ("467.6647", DataConverterUtils::FloatValueToString<float>(float(467.6647), 6));
+    ASSERT_EQ("233.0", DataConverterUtils::FloatValueToString<float>(static_cast<float>(233), 6));
+    ASSERT_EQ("3.0E-4",
+              DataConverterUtils::FloatValueToString<float>(static_cast<float>(0.0003), 6));
+    ASSERT_EQ("3.478589E10",
+              DataConverterUtils::FloatValueToString<float>(static_cast<float>(34785895352), 6));
+    ASSERT_EQ("1.0E9",
+              DataConverterUtils::FloatValueToString<float>(static_cast<float>(1000000000), 6));
+    ASSERT_EQ("1000000.0",
+              DataConverterUtils::FloatValueToString<float>(static_cast<float>(1000000), 6));
+    ASSERT_EQ("467.6647",
+              DataConverterUtils::FloatValueToString<float>(static_cast<float>(467.6647), 6));
 
-    ASSERT_EQ("233.0", DataConverterUtils::FloatValueToString<double>(double(233), 15));
+    ASSERT_EQ("233.0",
+              DataConverterUtils::FloatValueToString<double>(static_cast<double>(233), 15));
     ASSERT_EQ("3.4785895352E10",
-              DataConverterUtils::FloatValueToString<double>(double(34785895352), 15));
-    ASSERT_EQ("1.0E9", DataConverterUtils::FloatValueToString<double>(double(1000000000), 15));
-    ASSERT_EQ("1000000.0", DataConverterUtils::FloatValueToString<double>(double(1000000), 15));
-    ASSERT_EQ("467.66472", DataConverterUtils::FloatValueToString<double>(double(467.66472), 6));
-    ASSERT_EQ("123456.123456",
-              DataConverterUtils::FloatValueToString<double>(double(123456.123456), 6));
+              DataConverterUtils::FloatValueToString<double>(static_cast<double>(34785895352), 15));
+    ASSERT_EQ("1.0E9",
+              DataConverterUtils::FloatValueToString<double>(static_cast<double>(1000000000), 15));
+    ASSERT_EQ("1000000.0",
+              DataConverterUtils::FloatValueToString<double>(static_cast<double>(1000000), 15));
+    ASSERT_EQ("467.66472",
+              DataConverterUtils::FloatValueToString<double>(static_cast<double>(467.66472), 6));
+    ASSERT_EQ("123456.123456", DataConverterUtils::FloatValueToString<double>(
+                                   static_cast<double>(123456.123456), 6));
 }
 
 }  // namespace paimon::test
