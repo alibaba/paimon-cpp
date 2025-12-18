@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "arrow/api.h"
+#include "arrow/c/bridge.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -331,6 +332,13 @@ bool TableSchema::CrossPartitionUpdate() const {
 
     // If any partition key is not in primary keys, return true
     return !ObjectUtils::ContainsAll(primary_keys_, partition_keys_);
+}
+
+Result<std::unique_ptr<::ArrowSchema>> TableSchema::GetArrowSchema() const {
+    std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields_);
+    auto arrow_schema = std::make_unique<::ArrowSchema>();
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, arrow_schema.get()));
+    return arrow_schema;
 }
 
 }  // namespace paimon
