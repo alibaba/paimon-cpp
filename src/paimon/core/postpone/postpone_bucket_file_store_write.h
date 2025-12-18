@@ -16,7 +16,12 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
 #include <random>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/core/operation/abstract_file_store_write.h"

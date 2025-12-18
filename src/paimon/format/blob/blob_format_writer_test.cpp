@@ -16,6 +16,9 @@
 
 #include "paimon/format/blob/blob_format_writer.h"
 
+#include <string>
+#include <utility>
+
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -71,7 +74,7 @@ class BlobFormatWriterTest : public ::testing::Test, public ::testing::WithParam
         auto c_array = std::make_unique<ArrowArray>();
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*blob_array, c_array.get()));
         return format_writer->AddBatch(c_array.get());
-    };
+    }
 
  private:
     bool blob_as_descriptor_;

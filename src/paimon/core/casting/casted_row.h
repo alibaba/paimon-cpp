@@ -85,7 +85,7 @@ class CastedRow : public InternalRow {
 
     template <typename T>
     T GetValue(int32_t pos, const std::shared_ptr<arrow::DataType>& target_type) const {
-        assert((size_t)pos < field_getters_.size());
+        assert(static_cast<size_t>(pos) < field_getters_.size());
         auto value = field_getters_[pos](*row_);
         if (!cast_executors_[pos]) {
             return DataDefine::GetVariantValue<T>(value);
@@ -109,7 +109,7 @@ class CastedRow : public InternalRow {
 
     template <typename T>
     T GetNestedValue(int32_t pos) const {
-        assert((size_t)pos < field_getters_.size());
+        assert(static_cast<size_t>(pos) < field_getters_.size());
         auto value = field_getters_[pos](*row_);
         assert(!cast_executors_[pos]);
         return DataDefine::GetVariantValue<T>(value);
@@ -121,7 +121,7 @@ class CastedRow : public InternalRow {
 
     char GetByte(int32_t pos) const override {
         // TODO(liancheng.lsz): use char rather than int8_t
-        assert((size_t)pos < field_getters_.size());
+        assert(static_cast<size_t>(pos) < field_getters_.size());
         auto value = field_getters_[pos](*row_);
         if (!cast_executors_[pos]) {
             return DataDefine::GetVariantValue<char>(value);
@@ -154,7 +154,7 @@ class CastedRow : public InternalRow {
     }
 
     BinaryString GetString(int32_t pos) const override {
-        assert((size_t)pos < field_getters_.size());
+        assert(static_cast<size_t>(pos) < field_getters_.size());
         auto value = field_getters_[pos](*row_);
         if (!cast_executors_[pos]) {
             return DataDefine::GetVariantValue<BinaryString>(value);
@@ -183,7 +183,7 @@ class CastedRow : public InternalRow {
     }
 
     std::shared_ptr<Bytes> GetBinary(int32_t pos) const override {
-        assert((size_t)pos < field_getters_.size());
+        assert(static_cast<size_t>(pos) < field_getters_.size());
         auto value = field_getters_[pos](*row_);
         if (!cast_executors_[pos]) {
             return DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(value);

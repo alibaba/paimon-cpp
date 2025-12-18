@@ -74,14 +74,10 @@ Result<BlobUtils::SeparatedStructArrays> BlobUtils::SeparateBlobArray(
     }
 
     SeparatedStructArrays result;
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        result.main_array,
-        arrow::StructArray::Make(remaining_arrays, remaining_fields, struct_array->null_bitmap(),
-                                 struct_array->null_count(), struct_array->offset()));
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        result.blob_array,
-        arrow::StructArray::Make(blob_arrays, blob_fields, struct_array->null_bitmap(),
-                                 struct_array->null_count(), struct_array->offset()));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(result.main_array,
+                                      arrow::StructArray::Make(remaining_arrays, remaining_fields));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(result.blob_array,
+                                      arrow::StructArray::Make(blob_arrays, blob_fields));
     return result;
 }
 

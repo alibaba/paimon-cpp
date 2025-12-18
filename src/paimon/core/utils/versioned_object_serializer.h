@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/core/utils/object_serializer.h"
 #include "paimon/core/utils/offset_row.h"
 

@@ -16,16 +16,15 @@
 
 #include "paimon/fs/jindo/jindo_file_system.h"
 
-#include <jdo_error.h>
-
-#include <JdoFileInfo.hpp>
-#include <JdoFileSystem.hpp>
 #include <cassert>
 #include <utility>
 
-#include "JdoListResult.hpp"
-#include "JdoStatus.hpp"
+#include "JdoFileInfo.hpp"    // NOLINT(build/include_subdir)
+#include "JdoFileSystem.hpp"  // NOLINT(build/include_subdir)
+#include "JdoListResult.hpp"  // NOLINT(build/include_subdir)
+#include "JdoStatus.hpp"      // NOLINT(build/include_subdir)
 #include "fmt/format.h"
+#include "jdo_error.h"  // NOLINT(build/include_subdir)
 #include "paimon/fs/jindo/jindo_file_status.h"
 #include "paimon/fs/jindo/jindo_utils.h"
 

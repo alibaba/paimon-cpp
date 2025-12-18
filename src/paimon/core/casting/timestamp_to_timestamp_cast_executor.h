@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/core/casting/cast_executor.h"
 
 namespace paimon {

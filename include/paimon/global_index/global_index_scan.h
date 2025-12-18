@@ -15,8 +15,13 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
 #include <optional>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "paimon/global_index/row_range_global_index_scanner.h"
 #include "paimon/utils/range.h"
@@ -63,14 +68,15 @@ class PAIMON_EXPORT GlobalIndexScan {
     virtual Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
         const Range& range) = 0;
 
-    /// Returns the set of row ID ranges covered by this global index.
+    /// Returns row ID ranges covered by this global index (sorted and non-overlapping
+    /// ranges).
     ///
     /// Each `Range` represents a contiguous segment of row IDs for which global index
     /// data exists. This allows the query engine to parallelize scanning and be aware
     /// of ranges that are not covered by any global index.
     ///
-    /// @return A `Result` containing a set of non-overlapping `Range` objects.
-    virtual Result<std::set<Range>> GetRowRangeList() = 0;
+    /// @return A `Result` containing sorted and non-overlapping `Range` objects.
+    virtual Result<std::vector<Range>> GetRowRangeList() = 0;
 };
 
 }  // namespace paimon

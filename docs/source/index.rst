@@ -12,13 +12,94 @@
 .. See the License for the specific language governing permissions and
 .. limitations under the License.
 
-:html_theme.sidebar_secondary.remove:
+.. _implementations:
 
-C++ Paimon
-============
+C++ Paimon Documentation
+========================
+
+Paimon C++ is a high-performance C++ implementation of Apache Paimon. We aim to
+provide a native, high-performance and extensible implementation that allows
+native engines to access the Paimon datalake format with maximum efficiency.
+
+.. grid:: 1 2 2 2
+   :gutter: 4
+   :padding: 2 2 0 0
+   :class-container: sd-text-center
+
+   .. grid-item-card:: Getting started
+      :class-card: contrib-card
+      :shadow: none
+
+      Start here to gain a basic understanding of Paimon with
+      an installation and linking guide, basic concepts etc.
+
+      +++
+
+      .. button-link:: getting_started.html
+         :click-parent:
+         :color: primary
+         :expand:
+
+         To Getting started
+
+   .. grid-item-card:: User Guide
+      :class-card: contrib-card
+      :shadow: none
+
+      Explore more specific topics and underlying concepts
+      of Paimon C++
+
+      +++
+
+      .. button-link:: user_guide.html
+         :click-parent:
+         :color: primary
+         :expand:
+
+         To the User Guide
+
+.. grid:: 1 2 2 2
+   :gutter: 4
+   :padding: 2 2 0 0
+   :class-container: sd-text-center
+
+   .. grid-item-card:: Examples
+      :class-card: contrib-card
+      :shadow: none
+
+      Find the description and location of the examples
+      using Paimon C++ library
+
+      +++
+
+      .. button-link:: examples/index.html
+         :click-parent:
+         :color: primary
+         :expand:
+
+         To the Examples
+
+   .. grid-item-card:: API Reference
+      :class-card: contrib-card
+      :shadow: none
+
+      Explore Paimon‘s API reference documentation
+
+      +++
+
+      .. button-link:: api.html
+         :click-parent:
+         :color: primary
+         :expand:
+
+         To the API Reference
+
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
-   implementations/index
+   getting_started
+   user_guide
+   Examples <examples/index>
+   api

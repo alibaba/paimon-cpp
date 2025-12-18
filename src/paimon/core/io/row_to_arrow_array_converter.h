@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/data/internal_array.h"
@@ -172,7 +176,7 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
             assert(false);
             return Status::Invalid(fmt::format("Do not support type {} in RowToArrowArrayConverter",
                                                array_builder->type()->ToString()));
-    };
+    }
     return Status::OK();
 }
 
@@ -238,7 +242,7 @@ Status RowToArrowArrayConverter<T, R>::Accumulate(const arrow::Array* array, int
             assert(false);
             return Status::Invalid(fmt::format("Do not support type {} in RowToArrowArrayConverter",
                                                array->type()->ToString()));
-    };
+    }
     return Status::OK();
 }
 
@@ -481,7 +485,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                     ARROW_RETURN_NOT_OK(struct_builder->Append());
                     auto sub_row = data_getter.GetRow(pos, sub_funcs.size());
                     assert(sub_row);
-                    assert(sub_funcs.size() == (size_t)struct_builder->num_fields());
+                    assert(sub_funcs.size() == static_cast<size_t>(struct_builder->num_fields()));
                     for (size_t i = 0; i < sub_funcs.size(); i++) {
                         ARROW_RETURN_NOT_OK(sub_funcs[i](*sub_row, i));
                     }
@@ -491,7 +495,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
         default:
             return Status::Invalid(fmt::format("Do not support type {} in RowToArrowArrayConverter",
                                                array_builder->type()->ToString()));
-    };
+    }
 }
 
 }  // namespace paimon

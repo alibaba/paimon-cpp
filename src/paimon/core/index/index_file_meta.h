@@ -15,6 +15,10 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <string>
+
 #include "arrow/api.h"
 #include "fmt/core.h"
 #include "fmt/format.h"

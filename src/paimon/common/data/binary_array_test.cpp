@@ -38,7 +38,7 @@ TEST(BinaryArrayTest, TestBinaryArraySimple) {
     std::srand(seed);
     std::vector<int64_t> values(100, 0);
     for (auto& value : values) {
-        value = rand() % 10000000 + 1;
+        value = paimon::test::RandomNumber(0, 10000000);
     }
     auto binary_array = BinaryArray::FromLongArray(values, pool.get());
     ASSERT_EQ(values.size(), binary_array.Size()) << "seed:" << seed;

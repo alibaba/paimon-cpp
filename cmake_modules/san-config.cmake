@@ -10,11 +10,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License. See accompanying LICENSE file.
 
-# Clang does not support using ASAN and TSAN simultaneously.
-if("${PAIMON_USE_ASAN}" AND "${PAIMON_USE_TSAN}")
-    message(SEND_ERROR "Can only enable one of ASAN or TSAN at a time")
-endif()
-
 add_library(paimon_sanitizer_flags INTERFACE)
 
 if(PAIMON_USE_ASAN)
@@ -25,17 +20,6 @@ if(PAIMON_USE_ASAN)
         message(STATUS "Address Sanitizer enabled")
     else()
         message(WARNING "Address Sanitizer is only supported for GCC and Clang compilers")
-    endif()
-endif()
-
-if(PAIMON_USE_TSAN)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(paimon_sanitizer_flags INTERFACE -fsanitize=thread
-                                                                -fno-omit-frame-pointer)
-        target_link_options(paimon_sanitizer_flags INTERFACE -fsanitize=thread)
-        message(STATUS "Thread Sanitizer enabled")
-    else()
-        message(WARNING "Thread Sanitizer is only supported for GCC and Clang compilers")
     endif()
 endif()
 

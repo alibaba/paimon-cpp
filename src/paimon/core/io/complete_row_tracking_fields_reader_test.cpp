@@ -16,6 +16,9 @@
 
 #include "paimon/core/io/complete_row_tracking_fields_reader.h"
 
+#include <memory>
+#include <utility>
+
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
 #include "arrow/array/array_nested.h"

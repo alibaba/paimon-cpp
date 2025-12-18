@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <vector>
+
 #include "paimon/common/predicate/compound_function.h"
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/predicate/compound_predicate.h"

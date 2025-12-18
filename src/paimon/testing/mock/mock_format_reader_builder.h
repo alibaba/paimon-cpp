@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "arrow/type.h"
 #include "paimon/format/reader_builder.h"

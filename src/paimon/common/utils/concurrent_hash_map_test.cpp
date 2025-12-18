@@ -23,6 +23,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -71,14 +72,14 @@ TEST(ConcurrentHashMapTest, TestMultiThreadInsertAndFindAndDelete) {
     int32_t map_size = 1000;
     auto insert_task = [&](ConcurrentHashMap<int32_t, std::string>& hash_map) {
         for (int32_t i = 0; i < map_size; i++) {
-            usleep(rand() % 10);
+            usleep(paimon::test::RandomNumber(0, 9));
             hash_map.Insert(i, std::to_string(i + 1));
         }
     };
     auto find_task = [&](ConcurrentHashMap<int32_t, std::string>& hash_map) {
         int32_t found = 0, not_found = 0;
         for (int32_t i = 0; i < map_size; i++) {
-            usleep(rand() % 10);
+            usleep(paimon::test::RandomNumber(0, 9));
             auto value = hash_map.Find(i);
             if (value) {
                 ASSERT_EQ(value.value(), std::to_string(i + 1));
@@ -92,7 +93,7 @@ TEST(ConcurrentHashMapTest, TestMultiThreadInsertAndFindAndDelete) {
 
     auto delete_task = [&](ConcurrentHashMap<int32_t, std::string>& hash_map) {
         for (int32_t i = 0; i < map_size; i++) {
-            usleep(rand() % 10);
+            usleep(paimon::test::RandomNumber(0, 9));
             hash_map.Erase(i);
         }
     };

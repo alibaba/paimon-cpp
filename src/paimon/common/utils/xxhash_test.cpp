@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "xxhash.h"
+#include "xxhash.h"  // NOLINT(build/include_subdir)
 
 #include <memory>
 #include <string>

@@ -15,12 +15,14 @@
  */
 
 #pragma once
+
 #include <map>
+#include <memory>
 #include <string>
 
+#include "paimon/global_index/indexed_split.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
-#include "paimon/table/source/data_split.h"
 #include "paimon/utils/range.h"
 #include "paimon/visibility.h"
 
@@ -35,8 +37,8 @@ class PAIMON_EXPORT RowRangeGlobalIndexWriter {
     /// @param table_path   Path to the table root directory where index files are stored.
     /// @param field_name   Name of the indexed column (must be present in the table schema).
     /// @param index_type   Type of global index to build (e.g., "bitmap", "lumina").
-    /// @param split        The data split (e.g., Parquet file) containing the actual data.
-    /// @param range        Row ID range [from, to] for data to build index.
+    /// @param index_split  The indexed split containing the actual data (e.g., Parquet file) and
+    //                      row id range [from, to] for data to build index.
     ///                     The range must be fully contained within the data covered
     ///                     by the given `split`.
     /// @param options      Index-specific configuration (e.g., false positive rate for bloom
@@ -47,7 +49,7 @@ class PAIMON_EXPORT RowRangeGlobalIndexWriter {
     ///         or an error if indexing fails (e.g., unsupported type, I/O error).
     static Result<std::shared_ptr<CommitMessage>> WriteIndex(
         const std::string& table_path, const std::string& field_name, const std::string& index_type,
-        const std::shared_ptr<DataSplit>& split, const Range& range,
+        const std::shared_ptr<IndexedSplit>& indexed_split,
         const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
 };
 

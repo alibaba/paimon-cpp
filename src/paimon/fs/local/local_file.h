@@ -47,7 +47,7 @@ class LocalFile {
     Status Delete() const;
     const std::string& GetAbsolutePath() const;
     LocalFile GetParentFile() const;
-    Status Mkdir() const;
+    Result<bool> Mkdir() const;
     Result<std::unique_ptr<LocalFileStatus>> GetFileStatus() const;
     Result<uint64_t> Length() const;
     Result<int64_t> LastModifiedTimeMs() const;
@@ -68,8 +68,6 @@ class LocalFile {
     }
 
  private:
-    Status MkNestDir(const std::string& dir_name) const;
-
     const std::string path_;
     FILE* file_ = nullptr;
     IOHook* hook_;

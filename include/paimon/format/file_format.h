@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "paimon/format/format_stats_extractor.h"
 #include "paimon/format/reader_builder.h"
 #include "paimon/format/writer_builder.h"

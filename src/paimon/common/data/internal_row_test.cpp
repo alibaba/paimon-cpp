@@ -89,12 +89,12 @@ TEST(InternalRowTest, TestCreateFieldGetter) {
     }
 
     ASSERT_EQ(getters[0](row), VariantType(true));
-    ASSERT_EQ(getters[1](row), VariantType((char)1));
-    ASSERT_EQ(getters[2](row), VariantType((int16_t)2));
-    ASSERT_EQ(getters[3](row), VariantType((int32_t)3));
-    ASSERT_EQ(getters[4](row), VariantType((int64_t)4));
-    ASSERT_EQ(getters[5](row), VariantType((float)5.1));
-    ASSERT_EQ(getters[6](row), VariantType((double)6.12));
+    ASSERT_EQ(getters[1](row), VariantType(static_cast<char>(1)));
+    ASSERT_EQ(getters[2](row), VariantType(static_cast<int16_t>(2)));
+    ASSERT_EQ(getters[3](row), VariantType(static_cast<int32_t>(3)));
+    ASSERT_EQ(getters[4](row), VariantType(static_cast<int64_t>(4)));
+    ASSERT_EQ(getters[5](row), VariantType(static_cast<float>(5.1)));
+    ASSERT_EQ(getters[6](row), VariantType(static_cast<double>(6.12)));
     auto string_view7 = DataDefine::GetVariantValue<std::string_view>(getters[7](row));
     ASSERT_EQ(std::string(string_view7), "abc");
     auto string_view8 = DataDefine::GetVariantValue<std::string_view>(getters[8](row));

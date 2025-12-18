@@ -26,7 +26,6 @@
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
-#include "paimon/utils/range.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -43,8 +42,8 @@ class PAIMON_EXPORT ReadContext {
  public:
     ReadContext(const std::string& path, const std::string& branch,
                 const std::vector<std::string>& read_schema,
-                const std::shared_ptr<Predicate>& predicate, const std::vector<Range>& row_ranges,
-                bool enable_predicate_filter, bool enable_prefetch, uint32_t prefetch_batch_count,
+                const std::shared_ptr<Predicate>& predicate, bool enable_predicate_filter,
+                bool enable_prefetch, uint32_t prefetch_batch_count,
                 uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
                 uint32_t row_to_batch_thread_number, const std::optional<std::string>& table_schema,
                 const std::shared_ptr<MemoryPool>& memory_pool,
@@ -75,10 +74,6 @@ class PAIMON_EXPORT ReadContext {
 
     const std::shared_ptr<Predicate>& GetPredicate() const {
         return predicate_;
-    }
-
-    const std::vector<Range>& GetRowRanges() const {
-        return row_ranges_;
     }
 
     bool EnablePredicateFilter() const {
@@ -114,7 +109,6 @@ class PAIMON_EXPORT ReadContext {
     std::string branch_;
     std::vector<std::string> read_schema_;
     std::shared_ptr<Predicate> predicate_;
-    std::vector<Range> row_ranges_;
     bool enable_predicate_filter_;
     bool enable_prefetch_;
     uint32_t prefetch_batch_count_;
@@ -272,18 +266,6 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`).
     ReadContextBuilder& WithFileSystemSchemeToIdentifierMap(
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map);
-
-    /// Set specific row ranges to read for targeted data access.
-    ///
-    /// This is primarily used in data evolution scenarios where only specific rows
-    /// need to be read. File ranges that do not intersect with the specified row ranges
-    /// will be filtered out, improving performance by avoiding unnecessary I/O.
-    ///
-    /// @param row_ranges Vector of specific row ranges to read.
-    /// @return Reference to this builder for method chaining.
-    /// @note If not set, all rows in the selected files will be returned.
-    /// @note This is commonly used in data evolution mode for selective reading.
-    ReadContextBuilder& SetRowRanges(const std::vector<Range>& row_ranges);
 
     /// Build and return a `ReadContext` instance with input validation.
     /// @return Result containing the constructed `ReadContext` or an error status.

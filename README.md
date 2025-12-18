@@ -30,7 +30,7 @@ Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://p
 * Memory pool interfaces and a default implementation.
 * Thread pool executor interfaces and a default implementation.
 * Compatible with Java Paimon format and communication protocol (e.g., commit message, data splits, manifests).
-* Only support x86 platform.
+* Note: The current implementation only supports the x86_64 architecture.
 
 ## Write And Commit Example
 
@@ -127,6 +127,16 @@ $ cd build
 $ cmake ..
 $ make
 ```
+## Contributing
+
+Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!
+Before contributing, you are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
+
+If you have suggestions, feedback, want to report a bug or request a feature, please open an [issue](https://github.com/alibaba/paimon-cpp/issues/new).
+Pull requests are also very welcome!
+
+We value respectful and open collaboration, and appreciate everyone who helps make paimon-cpp better. Thank you for your support!
+
 ### Linting
 
 Install the python package `pre-commit` and run once `pre-commit install`.

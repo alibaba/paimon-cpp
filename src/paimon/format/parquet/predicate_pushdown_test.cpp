@@ -399,40 +399,43 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
     std::shared_ptr<arrow::Array> expected_array = struct_array_;
     {
         // f2 < 6 and f1 == 4 and f3 == true, has data
-        ASSERT_OK_AND_ASSIGN(auto predicate,
-                             PredicateBuilder::And(
-                                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)4.0)),
-                                  PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
-                                                          FieldType::BOOLEAN, Literal(true))}));
+        ASSERT_OK_AND_ASSIGN(
+            auto predicate,
+            PredicateBuilder::And(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(4.0))),
+                 PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
+                                         Literal(true))}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, expected_array);
     }
     {
         // f2 < 6 and f1 == 4 and f3 is null, no data
-        ASSERT_OK_AND_ASSIGN(auto predicate,
-                             PredicateBuilder::And(
-                                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)4.0)),
-                                  PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",
-                                                           FieldType::BOOLEAN)}));
+        ASSERT_OK_AND_ASSIGN(
+            auto predicate,
+            PredicateBuilder::And(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(4.0))),
+                 PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",
+                                          FieldType::BOOLEAN)}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
     {
         // f2 < 6 and f1 == 4 and f5 is null, no data
-        ASSERT_OK_AND_ASSIGN(auto predicate,
-                             PredicateBuilder::And(
-                                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)4.0)),
-                                  PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
-                                                           FieldType::BINARY)}));
+        ASSERT_OK_AND_ASSIGN(
+            auto predicate,
+            PredicateBuilder::And(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(4.0))),
+                 PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
+                                          FieldType::BINARY)}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
@@ -444,7 +447,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
                                             FieldType::BIGINT, Literal(6l)),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
-                                         Literal((float)4.0)),
+                                         Literal(static_cast<float>(4.0))),
                  PredicateBuilder::Equal(/*field_index=*/5, /*field_name=*/"f5", FieldType::BINARY,
                                          Literal(FieldType::BINARY, "zoo", 3))}));
         ASSERT_TRUE(predicate);
@@ -452,14 +455,15 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
     }
     {
         // f2 < 6 and f1 == 5 and f5 is null, no data
-        ASSERT_OK_AND_ASSIGN(auto predicate,
-                             PredicateBuilder::And(
-                                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)5.0)),
-                                  PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
-                                                           FieldType::BINARY)}));
+        ASSERT_OK_AND_ASSIGN(
+            auto predicate,
+            PredicateBuilder::And(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(5.0))),
+                 PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
+                                          FieldType::BINARY)}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
@@ -467,10 +471,11 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
         // f2 < 6 or f1 == 4, has data
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)4.0))}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(4.0)))}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, expected_array);
     }
@@ -478,10 +483,11 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
         // f2 < 6 or f1 == 5, has data
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(6l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)5.0))}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(6l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(5.0)))}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, expected_array);
     }
@@ -512,12 +518,13 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
         // f2 < 2 or f1 == 4 or f3 == false, has data
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(2l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)4.0)),
-                                  PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
-                                                          FieldType::BOOLEAN, Literal(false))}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(2l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(4.0))),
+                 PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
+                                         Literal(false))}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, expected_array);
     }
@@ -525,12 +532,13 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
         // f2 < 2 or f1 == 5 or f3 is null, no data
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(2l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::FLOAT, Literal((float)5.0)),
-                                  PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",
-                                                           FieldType::BOOLEAN)}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(2l)),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
+                                         Literal(static_cast<float>(5.0))),
+                 PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",
+                                          FieldType::BOOLEAN)}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }

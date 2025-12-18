@@ -15,6 +15,11 @@
  */
 #include "paimon/common/global_index/bitmap/bitmap_global_index.h"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
@@ -111,7 +116,7 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap64::From(expected))
             << "result=" << (typed_result->GetBitmap().value())->ToString()
             << ", expected=" << RoaringBitmap64::From(expected).ToString();
-    };
+    }
 
     std::shared_ptr<GlobalIndexReader> CreateGlobalIndexReader(
         const std::string& index_root, const std::shared_ptr<arrow::DataType>& type,
@@ -366,7 +371,7 @@ TEST_F(BitmapGlobalIndexTest, TestHighCardinality) {
 
         for (int32_t i = 0; i < 100000; i++) {
             EXPECT_TRUE(struct_builder.Append().ok());
-            int64_t idx = rand() % unique_values.size();
+            int64_t idx = paimon::test::RandomNumber(0, unique_values.size() - 1);
             EXPECT_TRUE(string_builder->Append(unique_values[idx].data()).ok());
             expected_bitmaps[idx].push_back(i);
         }

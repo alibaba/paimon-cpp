@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "scope_guard.h"
+#include "paimon/common/utils/scope_guard.h"
 
 #include <memory>
 

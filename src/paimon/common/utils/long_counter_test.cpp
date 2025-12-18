@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "long_counter.h"
+#include "paimon/common/utils/long_counter.h"
 
 #include "gtest/gtest.h"
 

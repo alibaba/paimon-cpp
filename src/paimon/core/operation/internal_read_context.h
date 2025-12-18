@@ -65,9 +65,6 @@ class InternalReadContext {
     const std::shared_ptr<Predicate>& GetPredicate() const {
         return read_context_->GetPredicate();
     }
-    const std::vector<Range>& GetRowRanges() const {
-        return read_context_->GetRowRanges();
-    }
     bool EnablePredicateFilter() const {
         return read_context_->EnablePredicateFilter();
     }

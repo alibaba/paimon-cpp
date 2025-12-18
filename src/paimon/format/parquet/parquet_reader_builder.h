@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include <map>
 #include <memory>
+#include <string>
+#include <utility>
 
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/parquet/parquet_file_batch_reader.h"

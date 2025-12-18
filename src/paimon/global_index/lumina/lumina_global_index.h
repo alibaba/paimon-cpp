@@ -15,6 +15,13 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "arrow/api.h"
 #include "lumina/api/Options.h"
 #include "lumina/extensions/SearchWithFilterExtension.h"

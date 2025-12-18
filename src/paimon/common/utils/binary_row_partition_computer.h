@@ -56,7 +56,7 @@ class BinaryRowPartitionComputer {
         const BinaryRow& partition) const;
     const std::vector<std::string>& GetPartitionKeys() const {
         return partition_keys_;
-    };
+    }
 
  private:
     BinaryRowPartitionComputer(const std::vector<std::string>& partition_keys,

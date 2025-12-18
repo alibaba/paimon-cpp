@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "preconditions.h"
+#include "paimon/common/utils/preconditions.h"
 
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"

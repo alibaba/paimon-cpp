@@ -144,10 +144,10 @@ Result<std::unique_ptr<TableRead>> TableRead::Create(std::unique_ptr<ReadContext
 }
 
 Result<std::unique_ptr<BatchReader>> TableRead::CreateReader(
-    const std::vector<std::shared_ptr<DataSplit>>& data_splits) {
+    const std::vector<std::shared_ptr<Split>>& splits) {
     std::vector<std::unique_ptr<BatchReader>> batch_readers;
-    batch_readers.reserve(data_splits.size());
-    for (const auto& split : data_splits) {
+    batch_readers.reserve(splits.size());
+    for (const auto& split : splits) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader, CreateReader(split));
         batch_readers.emplace_back(std::move(reader));
     }

@@ -260,7 +260,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::DoubleType>*>(p6_array.get())
                 ->Value(0),
-            (double)6.21);
+            static_cast<double>(6.21));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p5_array, mapping_reader->GenerateSinglePartitionArray(
@@ -268,7 +268,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::FloatType>*>(p5_array.get())
                 ->Value(0),
-            (float)5.1);
+            static_cast<float>(5.1));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p4_array, mapping_reader->GenerateSinglePartitionArray(
@@ -276,7 +276,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int64Type>*>(p4_array.get())
                 ->Value(0),
-            (int64_t)4);
+            static_cast<int64_t>(4));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p3_array, mapping_reader->GenerateSinglePartitionArray(
@@ -284,7 +284,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int32Type>*>(p3_array.get())
                 ->Value(0),
-            (int32_t)3);
+            static_cast<int32_t>(3));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p2_array, mapping_reader->GenerateSinglePartitionArray(
@@ -300,7 +300,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int8Type>*>(p1_array.get())
                 ->Value(0),
-            (int64_t)1);
+            static_cast<int64_t>(1));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p0_array, mapping_reader->GenerateSinglePartitionArray(

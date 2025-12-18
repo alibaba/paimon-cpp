@@ -36,8 +36,7 @@ class FallbackTableRead : public TableRead {
           main_table_(std::move(main_table)),
           fallback_table_(std::move(fallback_table)) {}
 
-    Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& data_split) override;
+    Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
 
  private:
     std::unique_ptr<TableRead> main_table_;

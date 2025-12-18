@@ -15,7 +15,7 @@
 Prefetch
 ========
 
-.. image:: ../../_static/prefetch.svg
+.. image:: ../_static/prefetch.svg
    :alt: File Layout
    :align: center
    :width: 100%

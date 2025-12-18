@@ -16,6 +16,8 @@
 
 #include "paimon/core/stats/simple_stats.h"
 
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"

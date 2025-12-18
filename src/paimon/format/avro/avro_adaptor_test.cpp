@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "avro_adaptor.h"
+#include "paimon/format/avro/avro_adaptor.h"
 
 #include <utility>
 

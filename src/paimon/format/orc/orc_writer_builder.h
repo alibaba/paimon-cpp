@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "paimon/format/orc/orc_format_writer.h"
 #include "paimon/format/orc/orc_output_stream_impl.h"
 #include "paimon/format/writer_builder.h"

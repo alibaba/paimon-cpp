@@ -88,7 +88,7 @@ Result<BatchReader::ReadBatchWithBitmap> PredicateBatchReader::NextBatchWithBitm
 Result<RoaringBitmap32> PredicateBatchReader::Filter(
     const std::shared_ptr<arrow::Array>& array) const {
     PAIMON_ASSIGN_OR_RAISE(std::vector<char> result, predicate_filter_->Test(*array));
-    assert(result.size() == (size_t)array->length());
+    assert(result.size() == static_cast<size_t>(array->length()));
     RoaringBitmap32 is_valid;
     for (int32_t i = 0; i < static_cast<int32_t>(result.size()); i++) {
         if (result[i]) {

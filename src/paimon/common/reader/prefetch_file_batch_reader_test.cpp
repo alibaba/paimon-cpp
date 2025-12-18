@@ -16,6 +16,8 @@
 
 #include "paimon/common/reader/prefetch_file_batch_reader.h"
 
+#include <set>
+
 #include "arrow/compute/api.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
@@ -62,7 +64,7 @@ class PrefetchFileBatchReaderTest : public ::testing::Test,
             EXPECT_TRUE(struct_builder.Append().ok());
             EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
             EXPECT_TRUE(big_int_builder->Append(i).ok());
-            EXPECT_TRUE(bool_builder->Append(bool(i % 2)).ok());
+            EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
         }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(struct_builder.Finish(&array).ok());
@@ -631,7 +633,7 @@ TEST_F(PrefetchFileBatchReaderTest, TestPrefetchWithBitmap) {
     auto data_array = PrepareArray(10000);
     std::set<int32_t> valid_row_ids;
     for (int32_t i = 0; i < 5120; i++) {
-        valid_row_ids.insert(rand() % data_array->length());
+        valid_row_ids.insert(paimon::test::RandomNumber(0, data_array->length() - 1));
     }
     std::vector<int32_t> bitmap_data(valid_row_ids.begin(), valid_row_ids.end());
     auto bitmap = RoaringBitmap32::From(bitmap_data);

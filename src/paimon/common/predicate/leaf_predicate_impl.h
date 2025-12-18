@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "arrow/api.h"
 #include "paimon/common/predicate/compound_function.h"
 #include "paimon/common/predicate/leaf_function.h"

@@ -16,6 +16,11 @@
 
 #include "paimon/core/global_index/row_range_global_index_scanner_impl.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "paimon/core/global_index/global_index_evaluator_impl.h"
 #include "paimon/global_index/global_indexer.h"

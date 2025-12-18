@@ -70,43 +70,48 @@ TEST(FieldSumAggTest, TestVariantType) {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int8()));
         auto agg_ret = field_sum_agg->Agg(static_cast<char>(100), static_cast<char>(15));
         ASSERT_EQ(DataDefine::GetVariantValue<char>(agg_ret), 115);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract((char)100, (char)15));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret,
+                             field_sum_agg->Retract(static_cast<char>(100), static_cast<char>(15)));
         ASSERT_EQ(DataDefine::GetVariantValue<char>(retract_ret), 85);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int16()));
         auto agg_ret = field_sum_agg->Agg(static_cast<int16_t>(100), static_cast<int16_t>(15));
         ASSERT_EQ(DataDefine::GetVariantValue<int16_t>(agg_ret), 115);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract((int16_t)100, (int16_t)15));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract(static_cast<int16_t>(100),
+                                                                      static_cast<int16_t>(15)));
         ASSERT_EQ(DataDefine::GetVariantValue<int16_t>(retract_ret), 85);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int32()));
         auto agg_ret = field_sum_agg->Agg(static_cast<int32_t>(100), static_cast<int32_t>(15));
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(agg_ret), 115);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract((int32_t)100, (int32_t)15));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract(static_cast<int32_t>(100),
+                                                                      static_cast<int32_t>(15)));
         ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(retract_ret), 85);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::int64()));
         auto agg_ret = field_sum_agg->Agg(static_cast<int64_t>(100), static_cast<int64_t>(15));
         ASSERT_EQ(DataDefine::GetVariantValue<int64_t>(agg_ret), 115);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract((int64_t)100, (int64_t)15));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract(static_cast<int64_t>(100),
+                                                                      static_cast<int64_t>(15)));
         ASSERT_EQ(DataDefine::GetVariantValue<int64_t>(retract_ret), 85);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::float32()));
         auto agg_ret = field_sum_agg->Agg(static_cast<float>(100.2), static_cast<float>(15.1));
         ASSERT_NEAR(DataDefine::GetVariantValue<float>(agg_ret), 115.3, 0.0001);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract((float)100.2, (float)15.1));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract(static_cast<float>(100.2),
+                                                                      static_cast<float>(15.1)));
         ASSERT_NEAR(DataDefine::GetVariantValue<float>(retract_ret), 85.1, 0.0001);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto field_sum_agg, FieldSumAgg::Create(arrow::float64()));
         auto agg_ret = field_sum_agg->Agg(100.23, 15.11);
         ASSERT_NEAR(DataDefine::GetVariantValue<double>(agg_ret), 115.34, 0.0001);
-        ASSERT_OK_AND_ASSIGN(auto retract_ret,
-                             field_sum_agg->Retract((double)100.23, (double)15.11));
+        ASSERT_OK_AND_ASSIGN(auto retract_ret, field_sum_agg->Retract(static_cast<double>(100.23),
+                                                                      static_cast<double>(15.11)));
         ASSERT_NEAR(DataDefine::GetVariantValue<double>(retract_ret), 85.12, 0.0001);
     }
     {

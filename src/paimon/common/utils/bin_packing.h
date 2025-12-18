@@ -15,8 +15,10 @@
  */
 
 #pragma once
+
 #include <cstdint>
 #include <functional>
+#include <utility>
 #include <vector>
 
 namespace paimon {

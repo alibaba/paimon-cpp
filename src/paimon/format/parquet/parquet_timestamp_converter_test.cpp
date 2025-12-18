@@ -16,6 +16,8 @@
 
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
 
+#include <memory>
+
 #include "arrow/api.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"

@@ -71,6 +71,7 @@ class AbstractSplitRead : public SplitRead {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::vector<Range>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
@@ -87,6 +88,7 @@ class AbstractSplitRead : public SplitRead {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::vector<Range>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const = 0;
 
     // 1. project write cols to data schema
@@ -110,6 +112,7 @@ class AbstractSplitRead : public SplitRead {
         const BinaryRow& partition, const ReaderBuilder* reader_builder,
         const FieldMappingBuilder* field_mapping_builder,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::vector<Range>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     static bool NeedCompleteRowTrackingFields(bool row_tracking_enabled,

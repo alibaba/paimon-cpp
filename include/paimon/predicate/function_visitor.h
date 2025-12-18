@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 #include "paimon/predicate/leaf_predicate.h"
 #include "paimon/predicate/literal.h"

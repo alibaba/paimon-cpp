@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/common/utils/concurrent_hash_map.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats_evolution.h"

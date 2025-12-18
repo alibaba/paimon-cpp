@@ -16,6 +16,8 @@
 
 #include "paimon/core/casting/casting_utils.h"
 
+#include <memory>
+
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/mem_utils.h"

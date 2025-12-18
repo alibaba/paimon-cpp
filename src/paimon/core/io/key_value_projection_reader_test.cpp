@@ -145,7 +145,7 @@ class KeyValueProjectionReaderTest : public testing::Test,
                 auto& consumer = typed_projection_reader->key_value_consumer_;
                 ASSERT_EQ(consumer->reserved_sizes_.size(), expected_reserve_count);
                 for (const auto& reserved_size : consumer->reserved_sizes_) {
-                    ASSERT_TRUE(reserved_size > 0);
+                    ASSERT_GT(reserved_size, 0);
                 }
             }
         }

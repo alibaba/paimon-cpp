@@ -16,6 +16,8 @@
 
 #include "paimon/format/blob/blob_format_writer.h"
 
+#include <algorithm>
+
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/data/blob_utils.h"

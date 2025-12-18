@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <memory>
 #include <memory_resource>
 
 #include "paimon/memory/memory_pool.h"

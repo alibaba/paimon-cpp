@@ -67,7 +67,7 @@ or multiple data files and each data file belongs to exactly one sorted run.
 Records within a data file are sorted by their primary keys. Within a sorted run,
 ranges of primary keys of data files never overlap.
 
-.. image:: ../../_static/sorted-runs.png
+.. image:: ../_static/sorted-runs.png
    :alt: Sorted Runs
    :align: center
    :width: 100%

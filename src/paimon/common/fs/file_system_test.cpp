@@ -121,10 +121,10 @@ class FileSystemTest : public ::testing::Test, public ::testing::WithParamInterf
                 actual_dirs.insert(RemoveLastSlashInPath(file_status->GetPath()));
             } else {
                 actual_files.insert(file_status->GetPath());
-                ASSERT_TRUE(file_status->GetLen() > 0);
+                ASSERT_GT(file_status->GetLen(), 0);
                 int64_t modification_time = file_status->GetModificationTime();
-                ASSERT_TRUE(modification_time > 10000000000L);     // MIN_VALID_FILE_MODIFICATION_MS
-                ASSERT_TRUE(modification_time < 10000000000000L);  // MAX_VALID_FILE_MODIFICATION_MS
+                ASSERT_GT(modification_time, 10000000000L);     // MIN_VALID_FILE_MODIFICATION_MS
+                ASSERT_LT(modification_time, 10000000000000L);  // MAX_VALID_FILE_MODIFICATION_MS
             }
         }
         std::set<std::string> normalized_expected_dirs;
@@ -315,8 +315,8 @@ TEST_P(FileSystemTest, TestWriteEmptyFile) {
     ASSERT_FALSE(st->IsDir());
     ASSERT_EQ(st->GetLen(), 0);
     auto modification_time = st->GetModificationTime();
-    ASSERT_TRUE(modification_time > 10000000000L);
-    ASSERT_TRUE(modification_time < 10000000000000L);
+    ASSERT_GT(modification_time, 10000000000L);
+    ASSERT_LT(modification_time, 10000000000000L);
 
     // read process
     ASSERT_OK_AND_ASSIGN(auto in_stream, fs_->Open(file_path));
@@ -979,16 +979,17 @@ TEST_P(FileSystemTest, TestMkdirsFailsWithExistingParentFile) {
 }
 
 TEST_P(FileSystemTest, TestMkdir) {
-    std::string path = PathUtil::JoinPath(test_root_, "/tmp.txt/tmpB");
-    ASSERT_OK(fs_->Mkdirs(path));
+    ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp.txt/tmpB"));
+    ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmpA/tmpB/"));
+
+    ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp/local/f/1"));
+    ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1"));
+    ASSERT_OK(fs_->Mkdirs(test_root_ + "/tmp1/f2/"));
+    ASSERT_OK(fs_->Mkdirs("/"));
+    ASSERT_NOK_WITH_MSG(fs_->Mkdirs(""), "path is an empty string.");
 }
 
 TEST_P(FileSystemTest, TestMkdir2) {
-    std::string path = PathUtil::JoinPath(test_root_, "/tmpA/tmpB/");
-    ASSERT_OK(fs_->Mkdirs(path));
-}
-
-TEST_P(FileSystemTest, TestMkdir3) {
     {
         std::string dir_path = test_root_ + "/file_dir/";
         ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
@@ -1012,7 +1013,8 @@ TEST_P(FileSystemTest, TestMkdir3) {
     }
 }
 
-TEST_P(FileSystemTest, TestMkdirMultiThread) {
+// test for create multi dir such as "/table/partition1/bucket1" and "/table/partition1/bucket2"
+TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameNonExistParentDir) {
     uint32_t runs_count = 10;
     uint32_t thread_count = 10;
     auto executor = CreateDefaultExecutor(thread_count);
@@ -1029,6 +1031,50 @@ TEST_P(FileSystemTest, TestMkdirMultiThread) {
                 ASSERT_FALSE(is_exist);
                 ASSERT_OK(fs_->Mkdirs(dir_path));
                 ASSERT_OK_AND_ASSIGN(is_exist, fs_->Exists(dir_path));
+                ASSERT_TRUE(is_exist);
+            }));
+        }
+        Wait(futures);
+    }
+}
+
+// test for create multi dir such as "/table/partition1" and "/table/partition1"
+TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameName) {
+    uint32_t runs_count = 10;
+    uint32_t thread_count = 10;
+    auto executor = CreateDefaultExecutor(thread_count);
+
+    for (uint32_t i = 0; i < runs_count; i++) {
+        std::string uuid;
+        ASSERT_TRUE(UUID::Generate(&uuid));
+        std::vector<std::future<void>> futures;
+        for (uint32_t thread_idx = 0; thread_idx < thread_count; thread_idx++) {
+            futures.push_back(Via(executor.get(), [this, &uuid]() -> void {
+                std::string dir_path = PathUtil::JoinPath(test_root_, uuid);
+                ASSERT_OK(fs_->Mkdirs(dir_path));
+                ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
+                ASSERT_TRUE(is_exist);
+            }));
+        }
+        Wait(futures);
+    }
+}
+
+// test for create multi dir such as "partition1" and "partition1" (relative path)
+TEST_P(FileSystemTest, TestMkdirMultiThreadWithSameNameWithRelativePath) {
+    uint32_t runs_count = 10;
+    uint32_t thread_count = 10;
+    auto executor = CreateDefaultExecutor(thread_count);
+
+    for (uint32_t i = 0; i < runs_count; i++) {
+        std::string uuid;
+        ASSERT_TRUE(UUID::Generate(&uuid));
+        std::vector<std::future<void>> futures;
+        for (uint32_t thread_idx = 0; thread_idx < thread_count; thread_idx++) {
+            futures.push_back(Via(executor.get(), [this, &uuid]() -> void {
+                std::string dir_path = uuid;
+                ASSERT_OK(fs_->Mkdirs(dir_path));
+                ASSERT_OK_AND_ASSIGN(bool is_exist, fs_->Exists(dir_path));
                 ASSERT_TRUE(is_exist);
             }));
         }
@@ -1070,8 +1116,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_EQ(RemoveLastSlashInPath(st->GetPath()), RemoveLastSlashInPath(dir_path));
         ASSERT_TRUE(st->IsDir());
         auto modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
 
         std::string file_path = test_root_ + "/file_dir/file.data";
         ASSERT_OK(fs_->WriteFile(file_path, "content", /*overwrite=*/false));
@@ -1083,8 +1129,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_EQ(RemoveLastSlashInPath(st->GetPath()), RemoveLastSlashInPath(dir_path));
         ASSERT_TRUE(st->IsDir());
         modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
     }
     {
         // test non-exist dir
@@ -1106,8 +1152,8 @@ TEST_P(FileSystemTest, TestGetFileStatus1) {
         ASSERT_FALSE(st->IsDir());
         ASSERT_EQ(st->GetLen(), content.size());
         auto modification_time = st->GetModificationTime();
-        ASSERT_TRUE(modification_time > 10000000000L);
-        ASSERT_TRUE(modification_time < 10000000000000L);
+        ASSERT_GT(modification_time, 10000000000L);
+        ASSERT_LT(modification_time, 10000000000000L);
     }
     {
         // test non-exist file

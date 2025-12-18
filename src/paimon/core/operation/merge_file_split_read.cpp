@@ -126,7 +126,7 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
 }
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
-    const std::shared_ptr<DataSplit>& split) {
+    const std::shared_ptr<Split>& split) {
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
     if (!data_split) {
         return Status::Invalid("cannot cast split to data_split in MergeFileSplitRead");
@@ -154,6 +154,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIf
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::vector<Range>& ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     // merge read does not use index
     PAIMON_UNIQUE_PTR<DeletionVector> deletion_vector;
@@ -208,7 +209,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
         std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
         CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(), read_schema,
                              only_filter_key ? predicate_for_keys_ : context_->GetPredicate(),
-                             deletion_file_map, data_file_path_factory));
+                             deletion_file_map, /*row_ranges=*/{}, data_file_path_factory));
 
     auto concat_batch_reader =
         std::make_unique<ConcatBatchReader>(std::move(raw_file_readers), pool_);
@@ -414,9 +415,10 @@ Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderFo
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     // no overlap in a run
     const auto& data_files = sorted_run.Files();
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
-                           CreateRawFileReaders(partition, data_files, read_schema_, predicate,
-                                                deletion_file_map, data_file_path_factory));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+        CreateRawFileReaders(partition, data_files, read_schema_, predicate, deletion_file_map,
+                             /*row_ranges=*/{}, data_file_path_factory));
 
     assert(data_files.size() == raw_file_readers.size());
     // KeyValueDataFileRecordReader converts arrow array from format reader to KeyValue objects
@@ -445,10 +447,10 @@ Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeRead
     return Status::Invalid("only support loser-tree or min-heap sort engine");
 }
 
-Result<bool> MergeFileSplitRead::Match(const std::shared_ptr<DataSplit>& data_split,
+Result<bool> MergeFileSplitRead::Match(const std::shared_ptr<Split>& split,
                                        bool force_keep_delete) const {
     // TODO(yonghao.fyh): just pass split impl
-    auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
+    auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
     if (split_impl == nullptr) {
         return Status::Invalid("unexpected error, split cast to impl failed");
     }

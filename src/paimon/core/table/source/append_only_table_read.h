@@ -29,7 +29,6 @@
 namespace paimon {
 
 class SplitRead;
-class DataSplit;
 class Executor;
 class FileStorePathFactory;
 class InternalReadContext;
@@ -43,7 +42,7 @@ class AppendOnlyTableRead : public TableRead {
                         const std::shared_ptr<Executor>& executor);
 
     Result<std::unique_ptr<BatchReader>> CreateReader(
-        const std::shared_ptr<DataSplit>& data_split) override;
+        const std::shared_ptr<Split>& data_split) override;
 
  private:
     std::vector<std::unique_ptr<SplitRead>> split_reads_;

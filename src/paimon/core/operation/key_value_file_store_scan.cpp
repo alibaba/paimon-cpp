@@ -129,7 +129,7 @@ Result<bool> KeyValueFileStoreScan::IsValueFilterEnabled() const {
             return false;
         default:
             return Status::NotImplemented("only support ALL and DELTA scan mode");
-    };
+    }
 }
 
 Result<bool> KeyValueFileStoreScan::FilterByValueFilter(const ManifestEntry& entry) const {

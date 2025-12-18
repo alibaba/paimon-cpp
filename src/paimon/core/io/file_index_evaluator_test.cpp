@@ -75,7 +75,7 @@ class FileIndexEvaluatorTest : public ::testing::Test {
         ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap32::From(expected))
             << "result:" << typed_result->GetBitmap().value()->ToString()
             << ", expected:" << RoaringBitmap32::From(expected).ToString();
-    };
+    }
 
     void CheckResult(const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
                      const std::shared_ptr<DataFileMeta>& data_file_meta) const {

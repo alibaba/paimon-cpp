@@ -98,7 +98,7 @@ TEST(DecimalTest, TestCompatibleWithJava) {
     auto file_system = std::make_unique<LocalFileSystem>();
     auto file_name = paimon::test::GetDataDir() + "/decimal_bytes.data";
     uint64_t file_length = file_system->GetFileStatus(file_name).value()->GetLen();
-    ASSERT_TRUE(file_length > 0);
+    ASSERT_GT(file_length, 0);
     ASSERT_OK_AND_ASSIGN(auto input_stream, file_system->Open(file_name));
     auto data_bytes = Bytes::AllocateBytes(file_length, pool.get());
     ASSERT_OK(input_stream->Read(data_bytes->data(), file_length));
@@ -136,22 +136,22 @@ TEST(DecimalTest, TestCompareTo) {
         ASSERT_EQ(decimal1, decimal1);
 
         ASSERT_EQ(decimal1.CompareTo(decimal2), -1);
-        ASSERT_TRUE(decimal1 < decimal2);
+        ASSERT_LT(decimal1, decimal2);
         ASSERT_EQ(decimal2.CompareTo(decimal1), 1);
-        ASSERT_TRUE(decimal2 > decimal1);
+        ASSERT_GT(decimal2, decimal1);
         auto decimal3 = decimal1;
         ASSERT_EQ(decimal3.CompareTo(decimal1), 0);
-        ASSERT_TRUE(decimal3 == decimal1);
+        ASSERT_EQ(decimal3, decimal1);
 
         Decimal negative_decimal1(decimal1.Precision(), decimal1.Scale(), -decimal1.Value());
         Decimal negative_decimal2(decimal2.Precision(), decimal2.Scale(), -decimal2.Value());
         ASSERT_EQ(negative_decimal1.CompareTo(negative_decimal2), 1);
-        ASSERT_TRUE(negative_decimal1 > negative_decimal2);
+        ASSERT_GT(negative_decimal1, negative_decimal2);
         ASSERT_EQ(negative_decimal2.CompareTo(negative_decimal1), -1);
-        ASSERT_TRUE(negative_decimal2 < negative_decimal1);
+        ASSERT_LT(negative_decimal2, negative_decimal1);
         auto negative_decimal3 = negative_decimal1;
         ASSERT_EQ(negative_decimal3.CompareTo(negative_decimal1), 0);
-        ASSERT_TRUE(negative_decimal3 == negative_decimal1);
+        ASSERT_EQ(negative_decimal3, negative_decimal1);
     };
 
     auto CheckEqual = [](const Decimal& decimal1, const Decimal& decimal2) {

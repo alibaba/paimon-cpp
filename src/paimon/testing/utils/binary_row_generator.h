@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
 #include <variant>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_array_writer.h"

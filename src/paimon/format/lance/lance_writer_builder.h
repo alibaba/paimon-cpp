@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+
 #include "paimon/format/lance/lance_format_writer.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/memory/memory_pool.h"

@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "arrow/compute/api.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"

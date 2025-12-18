@@ -268,7 +268,7 @@ Result<int64_t> MergeTreeWriter::EstimateMemoryUse(const std::shared_ptr<arrow::
             assert(false);
             return Status::Invalid(fmt::format("Do not support type {} in EstimateMemoryUse",
                                                array->type()->ToString()));
-    };
+    }
 }
 
 }  // namespace paimon

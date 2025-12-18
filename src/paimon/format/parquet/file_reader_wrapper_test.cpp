@@ -95,7 +95,7 @@ class FileReaderWrapperTest : public ::testing::Test {
             } else {
                 EXPECT_TRUE(int_builder->Append(i).ok());
             }
-            EXPECT_TRUE(bool_builder->Append(bool(i % 2)).ok());
+            EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
         }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(struct_builder.Finish(&array).ok());
@@ -112,7 +112,7 @@ class FileReaderWrapperTest : public ::testing::Test {
             /*partition=*/std::map<std::string, std::string>(), /*bucket=*/-1,
             /*row_kinds=*/std::vector<RecordBatch::RowKind>(), arrow_array.get());
         ASSERT_OK(format_writer->AddBatch(batch->GetData()));
-    };
+    }
 
     Result<std::unique_ptr<FileReaderWrapper>> PrepareReaderWrapper(const std::string& file_path) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs_->Open(file_path));

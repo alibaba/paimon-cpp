@@ -65,6 +65,7 @@ Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFi
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::vector<Range>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (data_files.empty()) {
         return std::vector<std::unique_ptr<BatchReader>>();
@@ -83,7 +84,7 @@ Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFi
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<BatchReader> file_reader,
             CreateFieldMappingReader(data_file_path, file, partition, reader_builder.get(),
-                                     field_mapping_builder.get(), deletion_file_map,
+                                     field_mapping_builder.get(), deletion_file_map, row_ranges,
                                      data_file_path_factory));
         if (file_reader) {
             raw_file_readers.push_back(std::move(file_reader));
@@ -169,6 +170,7 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::CreateFieldMappingReader
     const BinaryRow& partition, const ReaderBuilder* reader_builder,
     const FieldMappingBuilder* field_mapping_builder,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::vector<Range>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<TableSchema> data_schema;
     if (file_meta->schema_id == context_->GetTableSchema()->Id()) {
@@ -209,7 +211,7 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::CreateFieldMappingReader
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> final_reader,
                            ApplyIndexAndDvReaderIfNeeded(
                                std::move(file_reader), file_meta, all_data_schema, read_schema,
-                               predicate, deletion_file_map, data_file_path_factory));
+                               predicate, deletion_file_map, row_ranges, data_file_path_factory));
     if (!final_reader) {
         // file is skipped by index or dv
         return std::unique_ptr<BatchReader>();

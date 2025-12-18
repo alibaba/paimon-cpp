@@ -16,6 +16,8 @@
 
 #include "paimon/core/casting/timestamp_to_timestamp_cast_executor.h"
 
+#include <memory>
+
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/casting/casting_utils.h"
 

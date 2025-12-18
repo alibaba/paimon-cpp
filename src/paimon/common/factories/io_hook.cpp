@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "io_hook.h"
+#include "paimon/common/factories/io_hook.h"
 
 #include <atomic>
 #include <stdexcept>

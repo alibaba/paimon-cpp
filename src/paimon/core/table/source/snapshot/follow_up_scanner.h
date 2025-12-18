@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 namespace paimon {
 /// Helper class for the follow-up planning of `StreamTableScan`.

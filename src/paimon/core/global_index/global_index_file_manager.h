@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "paimon/common/utils/uuid.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/file_system.h"

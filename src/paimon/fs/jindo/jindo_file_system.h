@@ -23,7 +23,7 @@
 #include <string_view>
 #include <vector>
 
-#include "JdoFileSystem.hpp"
+#include "JdoFileSystem.hpp"  // NOLINT(build/include_subdir)
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 #include "paimon/status.h"

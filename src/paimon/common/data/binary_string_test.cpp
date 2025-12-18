@@ -371,8 +371,8 @@ TEST_F(BinaryStringTest, TestCopy) {
     std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(s, pool.get());
     BinaryString binary_string = BinaryString::FromBytes(bytes, 0, 6);
     BinaryString copy_binary_string = binary_string.Copy(pool.get());
-    ASSERT_TRUE(binary_string == copy_binary_string);
-    ASSERT_TRUE(copy_binary_string.ByteAt(2) == 'h');
+    ASSERT_EQ(binary_string, copy_binary_string);
+    ASSERT_EQ(copy_binary_string.ByteAt(2), 'h');
 }
 
 TEST_F(BinaryStringTest, TestByteAt) {
@@ -384,8 +384,8 @@ TEST_F(BinaryStringTest, TestByteAt) {
     std::vector<MemorySegment> mem_segs({MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
     auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/2,
                                                    /*num_bytes=*/str1.length() + str2.length() - 2);
-    ASSERT_TRUE(binary_string.ByteAt(0) == 'l');
-    ASSERT_TRUE(binary_string.ByteAt(5) == 'r');
+    ASSERT_EQ(binary_string.ByteAt(0), 'l');
+    ASSERT_EQ(binary_string.ByteAt(5), 'r');
 }
 
 TEST_F(BinaryStringTest, TestNumChars) {

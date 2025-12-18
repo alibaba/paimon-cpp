@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/result.h"
 
 struct ArrowArray;

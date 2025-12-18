@@ -16,6 +16,12 @@
 
 #pragma once
 
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"

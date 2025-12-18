@@ -16,6 +16,10 @@
 
 #include "paimon/format/parquet/parquet_timestamp_converter.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"

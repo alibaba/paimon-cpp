@@ -208,7 +208,7 @@ Result<FieldsComparator::FieldComparatorFunc> FieldsComparator::CompareField(
         default:
             return Status::NotImplemented(fmt::format("Do not support comparing {} type in idx {}",
                                                       input_type->ToString(), field_idx));
-    };
+    }
 }
 
 }  // namespace paimon

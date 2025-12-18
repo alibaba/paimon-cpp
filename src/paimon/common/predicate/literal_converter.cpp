@@ -99,7 +99,7 @@ Result<Literal> LiteralConverter::ConvertLiteralsFromString(const FieldType& typ
         default:
             return Status::Invalid(
                 fmt::format("Do not support type {}", FieldTypeUtils::FieldTypeToString(type)));
-    };
+    }
 }
 
 Result<Literal> LiteralConverter::ConvertLiteralsFromRow(

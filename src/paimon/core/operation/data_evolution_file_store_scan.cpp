@@ -16,6 +16,9 @@
 
 #include "paimon/core/operation/data_evolution_file_store_scan.h"
 
+#include <map>
+#include <string>
+
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/reader/data_evolution_array.h"
 #include "paimon/common/reader/data_evolution_row.h"

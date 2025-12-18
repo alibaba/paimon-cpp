@@ -55,7 +55,7 @@ class BitSliceIndexBitmapIndexReaderTest : public ::testing::Test {
         ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap32::From(expected))
             << "result=" << typed_result->GetBitmap().value()->ToString()
             << ", expected=" << RoaringBitmap32::From(expected).ToString();
-    };
+    }
 
  private:
     std::shared_ptr<MemoryPool> pool_;

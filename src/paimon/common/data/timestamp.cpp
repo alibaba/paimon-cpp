@@ -42,12 +42,14 @@ std::string Timestamp::ToString() const {
         seconds -= 1;
         ns += 1000000000l;
     }
-    std::tm tm_info = *gmtime(&seconds);
+
+    std::tm tm_info;
+    ::gmtime_r(&seconds, &tm_info);
     out << std::put_time(&tm_info, "%Y-%m-%d %H:%M:%S") << '.' << std::setfill('0') << std::setw(9)
         << ns;
     // for year with less than 4 digits, year str is not 4 digits in put_time(), e.g., year 1 is "1"
     // rather than "0001"
-    const static int32_t MAX_STR_LENGTH = 29;
+    static const int32_t MAX_STR_LENGTH = 29;
     std::string ret = out.str();
     if (ret.length() < MAX_STR_LENGTH) {
         ret.insert(0, MAX_STR_LENGTH - ret.length(), '0');

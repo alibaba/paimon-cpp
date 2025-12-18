@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/blob/blob_file_batch_reader.h"

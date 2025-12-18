@@ -39,13 +39,17 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     std::vector<DataField> read_data_fields;
     read_data_fields.reserve(context->GetReadSchema().size());
     for (const auto& name : context->GetReadSchema()) {
-        // if enable row tracking, check special fields
+        // if enable row tracking or data evolution, check special fields
         if (core_options.RowTrackingEnabled() && name == SpecialFields::RowId().Name()) {
             read_data_fields.push_back(SpecialFields::RowId());
             continue;
         }
         if (core_options.RowTrackingEnabled() && name == SpecialFields::SequenceNumber().Name()) {
             read_data_fields.push_back(SpecialFields::SequenceNumber());
+            continue;
+        }
+        if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {
+            read_data_fields.push_back(SpecialFields::IndexScore());
             continue;
         }
         PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(name));

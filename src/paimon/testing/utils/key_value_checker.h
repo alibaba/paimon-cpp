@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/key_value.h"

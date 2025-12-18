@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/table/source/snapshot/continuous_from_snapshot_full_starting_scanner.h"
 #include "paimon/core/table/source/snapshot/continuous_from_snapshot_starting_scanner.h"

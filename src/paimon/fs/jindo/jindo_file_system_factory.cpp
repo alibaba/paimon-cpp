@@ -16,10 +16,10 @@
 
 #include "paimon/fs/jindo/jindo_file_system_factory.h"
 
-#include <JdoConfig.hpp>
-#include <JdoFileSystem.hpp>
 #include <utility>
 
+#include "JdoConfig.hpp"      // NOLINT(build/include_subdir)
+#include "JdoFileSystem.hpp"  // NOLINT(build/include_subdir)
 #include "fmt/format.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/factories/factory.h"

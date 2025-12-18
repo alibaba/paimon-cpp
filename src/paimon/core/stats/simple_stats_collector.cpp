@@ -202,7 +202,7 @@ Status SimpleStatsCollector::Collect(const BinaryRow& row) {
             default:
                 return Status::NotImplemented(
                     fmt::format("Do not support arrow type {}", static_cast<int32_t>(type)));
-        };
+        }
     }
     return Status::OK();
 }

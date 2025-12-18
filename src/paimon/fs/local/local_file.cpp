@@ -123,68 +123,9 @@ Status LocalFile::Delete() const {
     return Status::OK();
 }
 
-Status LocalFile::MkNestDir(const std::string& dir_name) const {
+Result<bool> LocalFile::Mkdir() const {
     CHECK_HOOK();
-    size_t pos = dir_name.rfind('/');
-    if (pos == std::string::npos) {
-        if (mkdir(dir_name.c_str(), 0755) < 0) {
-            if (errno != EEXIST) {
-                int32_t cur_errno = errno;
-                return Status::IOError(fmt::format("MkNestDir path '{}' fail, ec: {}", path_,
-                                                   std::strerror(cur_errno)));
-            }
-        }
-        return Status::OK();
-    }
-
-    std::string parent_dir = dir_name.substr(0, pos);
-    if (!parent_dir.empty() && access(parent_dir.c_str(), F_OK) != 0) {
-        PAIMON_RETURN_NOT_OK(MkNestDir(parent_dir));
-    }
-
-    if (mkdir(dir_name.c_str(), 0755) < 0) {
-        if (errno != EEXIST) {
-            int32_t cur_errno = errno;
-            return Status::IOError(
-                fmt::format("MkNestDir path '{}' fail, ec: {}", path_, std::strerror(cur_errno)));
-        }
-    }
-    return Status::OK();
-}
-
-Status LocalFile::Mkdir() const {
-    CHECK_HOOK();
-    std::string dir = path_;
-    size_t len = dir.size();
-    if (dir[len - 1] == '/') {
-        if (len == 1) {
-            return Status::Exist(fmt::format("directory '{}' already exist", dir));
-        } else {
-            dir.resize(len - 1);
-        }
-    }
-    if (access(dir.c_str(), F_OK) == 0) {
-        return Status::Exist(fmt::format("directory '{}' already exist", dir));
-    }
-    size_t pos = dir.rfind('/');
-    if (pos == std::string::npos) {
-        if (mkdir(dir.c_str(), 0755) < 0) {
-            int32_t cur_errno = errno;
-            return Status::IOError(
-                fmt::format("Mkdir path '{}' fail, ec: {}", dir, std::strerror(cur_errno)));
-        }
-        return Status::OK();
-    }
-    std::string parent_dir = dir.substr(0, pos);
-    if (!parent_dir.empty() && access(parent_dir.c_str(), F_OK) != 0) {
-        PAIMON_RETURN_NOT_OK(MkNestDir(parent_dir));
-    }
-    if (mkdir(dir.c_str(), 0755) < 0) {
-        int32_t cur_errno = errno;
-        return Status::IOError(
-            fmt::format("create directory '{}' failed, ec: {}", dir, std::strerror(cur_errno)));
-    }
-    return Status::OK();
+    return mkdir(path_.c_str(), 0755) == 0;
 }
 
 Result<std::unique_ptr<LocalFileStatus>> LocalFile::GetFileStatus() const {
@@ -349,13 +290,6 @@ Status LocalFile::OpenFile(bool is_read_file) {
         CHECK_HOOK();
         file_ = fopen(path_.c_str(), "r");
     } else {
-        LocalFile parent_dir = GetParentFile();
-        if (!parent_dir.GetAbsolutePath().empty()) {
-            PAIMON_ASSIGN_OR_RAISE(bool is_exist, parent_dir.Exists());
-            if (!is_exist) {
-                PAIMON_RETURN_NOT_OK(parent_dir.Mkdir());
-            }
-        }
         CHECK_HOOK();
         file_ = fopen(path_.c_str(), "w");
     }

@@ -51,8 +51,8 @@ TEST(FallbackDataSplitTest, TestDeserialize) {
 
     auto pool = GetDefaultPool();
     ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+        std::shared_ptr<Split> result,
+        Split::Deserialize(reinterpret_cast<char*>(split_bytes.data()), split_bytes.size(), pool));
     auto fallback_data_split = std::dynamic_pointer_cast<FallbackDataSplit>(result);
     ASSERT_TRUE(fallback_data_split);
     // not fallback branch
@@ -121,8 +121,8 @@ TEST(FallbackDataSplitTest, TestDeserialize2) {
 
     auto pool = GetDefaultPool();
     ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<DataSplit> result,
-        DataSplit::Deserialize((char*)split_bytes.data(), split_bytes.size(), pool));
+        std::shared_ptr<Split> result,
+        Split::Deserialize(reinterpret_cast<char*>(split_bytes.data()), split_bytes.size(), pool));
     auto fallback_data_split = std::dynamic_pointer_cast<FallbackDataSplit>(result);
     ASSERT_TRUE(fallback_data_split);
     // is fallback branch

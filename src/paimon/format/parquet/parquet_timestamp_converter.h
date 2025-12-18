@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "arrow/api.h"
 #include "paimon/result.h"
 

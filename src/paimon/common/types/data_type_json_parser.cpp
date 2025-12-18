@@ -441,9 +441,8 @@ Result<bool> TokenParser::ParseNullability() {
         PAIMON_RETURN_NOT_OK(NextToken(Keyword::NOT));
         PAIMON_RETURN_NOT_OK(NextToken(Keyword::NULL_));
         return false;
-    }
-    // explicit "NULL"
-    else if (HasNextToken({Keyword::NULL_})) {
+    } else if (HasNextToken({Keyword::NULL_})) {
+        // explicit "NULL"
         PAIMON_RETURN_NOT_OK(NextToken(Keyword::NULL_));
         return true;
     }

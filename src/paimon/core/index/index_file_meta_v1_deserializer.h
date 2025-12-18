@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "paimon/common/data/internal_array.h"
 #include "paimon/common/utils/linked_hash_map.h"
 #include "paimon/core/index/index_file_meta.h"

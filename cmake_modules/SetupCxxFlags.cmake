@@ -297,8 +297,8 @@ if(NOT WIN32 AND NOT APPLE)
         # won't find it when invoked directly from make/ninja (which is typically
         # done outside devtoolset).
         execute_process(COMMAND which ld.gold
-                        OUTPUT_VARIABLE GOLD_LOCATION OUTPUT_STRIP_TRAILING_WHITESPACE
-                                        ERROR_QUIET)
+                        OUTPUT_VARIABLE GOLD_LOCATION
+                        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
         if("${GOLD_LOCATION}" MATCHES "^/opt/rh/devtoolset")
             message("Skipping optional gold linker (version ${GOLD_VERSION}) because "
                     "it's in devtoolset")

@@ -24,20 +24,19 @@
 #include "paimon/table/source/plan.h"
 
 namespace paimon {
-class DataSplit;
 
 /// An implementation of `Plan`.
 class PlanImpl : public Plan {
  public:
     PlanImpl(const std::optional<int64_t>& snapshot_id,
-             const std::vector<std::shared_ptr<DataSplit>>& splits)
+             const std::vector<std::shared_ptr<Split>>& splits)
         : snapshot_id_(snapshot_id), splits_(splits) {}
 
     std::optional<int64_t> SnapshotId() const override {
         return snapshot_id_;
     }
 
-    const std::vector<std::shared_ptr<DataSplit>>& Splits() const override {
+    const std::vector<std::shared_ptr<Split>>& Splits() const override {
         return splits_;
     }
 
@@ -45,6 +44,6 @@ class PlanImpl : public Plan {
 
  private:
     std::optional<int64_t> snapshot_id_;
-    std::vector<std::shared_ptr<DataSplit>> splits_;
+    std::vector<std::shared_ptr<Split>> splits_;
 };
 }  // namespace paimon

@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/c/bridge.h"
 #include "arrow/type.h"
 #include "paimon/common/reader/prefetch_file_batch_reader.h"

@@ -74,13 +74,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion11) {
 
     std::vector<char> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -103,7 +103,7 @@ TEST(CommitMessageTest, TestCompatibleWithVersion11) {
     // check result
     ASSERT_EQ(res_msgs, expected_msgs);
     ASSERT_OK_AND_ASSIGN(std::string serialized_bytes, CommitMessage::SerializeList(ret, pool));
-    ASSERT_EQ(serialized_bytes, std::string((char*)buffer.data(), buffer.size()));
+    ASSERT_EQ(serialized_bytes, std::string(reinterpret_cast<char*>(buffer.data()), buffer.size()));
 }
 
 TEST(CommitMessageTest, TestCompatibleWithVersion10) {
@@ -119,13 +119,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion10) {
 
     std::vector<char> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -181,13 +181,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion9) {
 
     std::vector<char> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -244,13 +244,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion9WithExternalPathForIndex) {
 
     std::vector<char> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -310,13 +310,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion8) {
 
     std::vector<uint8_t> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -375,13 +375,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion7) {
     auto buffer_length = file_system->GetFileStatus(data_path).value()->GetLen();
     std::vector<uint8_t> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -443,13 +443,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion6) {
     auto buffer_length = file_system->GetFileStatus(data_path).value()->GetLen();
     std::vector<uint8_t> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -487,13 +487,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion5) {
     auto buffer_length = file_system->GetFileStatus(data_path).value()->GetLen();
     std::vector<uint8_t> buffer(buffer_length, 0);
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -584,13 +584,13 @@ TEST(CommitMessageTest, TestCompatibleWithVersion4) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -671,13 +671,13 @@ TEST(CommitMessageTest, TestCompatibleWithJavaPaimon10WithStatsDenseStore) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -751,13 +751,13 @@ TEST(CommitMessageTest, TestCompatibleWith09JavaPaimon1) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -836,13 +836,13 @@ TEST(CommitMessageTest, TestCompatibleWith09JavaPaimon2) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -905,13 +905,13 @@ TEST(CommitMessageTest, TestCompatibleWith09JavaPaimon3) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -955,13 +955,13 @@ TEST(CommitMessageTest, TestPkTableCompatibleWithJavaPaimon09) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);
@@ -1027,7 +1027,7 @@ TEST(CommitMessageTest, TestInvalidMessages) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size() - 200));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size() - 200));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
@@ -1045,13 +1045,13 @@ TEST(CommitMessageTest, TestCompatibleWithComplexDataType) {
     std::vector<uint8_t> buffer(buffer_length, 0);
 
     ASSERT_OK_AND_ASSIGN(auto in_stream, file_system->Open(data_path));
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
-    ASSERT_OK_AND_ASSIGN(
-        std::vector<std::shared_ptr<CommitMessage>> ret,
-        CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<CommitMessage>> ret,
+                         CommitMessage::DeserializeList(
+                             version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
     std::vector<CommitMessageImpl> res_msgs;
     for (const auto& msg : ret) {
         auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(msg);

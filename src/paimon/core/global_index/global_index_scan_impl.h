@@ -15,6 +15,12 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/manifest/index_manifest_entry.h"
 #include "paimon/core/schema/table_schema.h"
@@ -34,7 +40,7 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
     Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
         const Range& range) override;
 
-    Result<std::set<Range>> GetRowRangeList() override;
+    Result<std::vector<Range>> GetRowRangeList() override;
 
  private:
     Status Scan();

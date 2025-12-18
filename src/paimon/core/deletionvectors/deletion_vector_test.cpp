@@ -28,7 +28,7 @@ namespace paimon::test {
 TEST(DeletionVectorTest, TestSimple) {
     std::set<int32_t> to_deleted;
     for (int32_t i = 0; i < 10000; i++) {
-        to_deleted.insert(rand() % 100000000l);
+        to_deleted.insert(paimon::test::RandomNumber(0, 100000000l));
     }
     std::set<int32_t> not_deleted;
     for (int32_t i = 0; i < 10000; i++) {

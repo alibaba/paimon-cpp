@@ -16,6 +16,10 @@
 
 #include "paimon/format/avro/avro_file_batch_reader.h"
 
+#include <memory>
+#include <string>
+#include <utility>
+
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/api.h"

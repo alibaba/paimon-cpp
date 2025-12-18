@@ -16,6 +16,13 @@
 
 #include "paimon/format/orc/orc_file_batch_reader.h"
 
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
 #include "orc/OrcFile.hh"

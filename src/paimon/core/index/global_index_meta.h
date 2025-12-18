@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "arrow/api.h"
 #include "fmt/format.h"

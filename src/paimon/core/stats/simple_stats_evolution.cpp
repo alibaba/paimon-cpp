@@ -78,7 +78,7 @@ class NullCountsEvoArray : public InternalArray {
         return mapping_.size();
     }
     bool IsNullAt(int32_t pos) const override {
-        assert((size_t)pos < mapping_.size());
+        assert(static_cast<size_t>(pos) < mapping_.size());
         if (mapping_[pos] < 0) {
             return false;
         }

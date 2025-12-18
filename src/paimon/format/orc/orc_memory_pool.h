@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "orc/MemoryPool.hh"
 #include "paimon/common/utils/concurrent_hash_map.h"
 #include "paimon/memory/memory_pool.h"

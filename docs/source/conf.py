@@ -111,25 +111,17 @@ html_sidebars = {
 }
 
 # The master toctree document.
-master_doc = "implementations/index"
+master_doc = "index"
 
 version = "0.9.0"
-
-switcher_version = version
-if ".dev" in version:
-    switcher_version = "dev/"
-else:
-    # If we are not building dev version of the docs, we are building
-    # docs for the stable version
-    switcher_version = ""
 
 html_theme_options = {
     "show_toc_level": 2,
     "show_nav_level": 2,
     "use_edit_page_button": True,
-    "header_links_before_dropdown": 3,
+    "header_links_before_dropdown": 4,
     "navbar_align": "left",
-    "navbar_end": ["version-switcher", "theme-switcher", "navbar-icon-links"],
+    "navbar_end": ["theme-switcher", "navbar-icon-links"],
     "icon_links": [
         {
             "name": "GitHub",
@@ -141,10 +133,6 @@ html_theme_options = {
         "text": "Paimon C++",
     },
     "show_version_warning_banner": True,
-    "switcher": {
-        "json_url": "/docs/source/_static/versions.json",
-        "version_match": switcher_version,
-    },
 }
 
 html_context = {

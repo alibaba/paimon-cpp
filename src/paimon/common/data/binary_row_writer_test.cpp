@@ -205,12 +205,12 @@ TEST(BinaryRowWriterTest, TestFieldSetter) {
                                                         /*use_view=*/true));
 
     ASSERT_EQ(DataDefine::GetVariantValue<bool>(getter0(row)), true);
-    ASSERT_EQ(DataDefine::GetVariantValue<char>(getter1(row)), (char)1);
-    ASSERT_EQ(DataDefine::GetVariantValue<int16_t>(getter2(row)), (int16_t)2);
-    ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(getter3(row)), (int32_t)3);
-    ASSERT_EQ(DataDefine::GetVariantValue<int64_t>(getter4(row)), (int64_t)4);
-    ASSERT_EQ(DataDefine::GetVariantValue<float>(getter5(row)), (float)5.5);
-    ASSERT_EQ(DataDefine::GetVariantValue<double>(getter6(row)), (double)6.66);
+    ASSERT_EQ(DataDefine::GetVariantValue<char>(getter1(row)), static_cast<char>(1));
+    ASSERT_EQ(DataDefine::GetVariantValue<int16_t>(getter2(row)), static_cast<int16_t>(2));
+    ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(getter3(row)), static_cast<int32_t>(3));
+    ASSERT_EQ(DataDefine::GetVariantValue<int64_t>(getter4(row)), static_cast<int64_t>(4));
+    ASSERT_EQ(DataDefine::GetVariantValue<float>(getter5(row)), static_cast<float>(5.5));
+    ASSERT_EQ(DataDefine::GetVariantValue<double>(getter6(row)), static_cast<double>(6.66));
 
     ASSERT_EQ(DataDefine::GetVariantValue<BinaryString>(getter7(row)).ToString(), data);
     ASSERT_EQ(*DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(getter8(row)),

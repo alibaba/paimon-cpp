@@ -23,7 +23,7 @@
 
 namespace paimon {
 Result<std::unique_ptr<BatchReader>> FallbackTableRead::CreateReader(
-    const std::shared_ptr<DataSplit>& split) {
+    const std::shared_ptr<Split>& split) {
     auto fallback_data_split = std::dynamic_pointer_cast<FallbackDataSplit>(split);
     if (fallback_data_split) {
         if (fallback_data_split->IsFallback()) {

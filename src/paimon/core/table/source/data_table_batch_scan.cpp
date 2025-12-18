@@ -70,8 +70,8 @@ Result<std::shared_ptr<Plan>> DataTableBatchScan::ApplyPushDownLimit(
     if (push_down_limit_ == std::nullopt) {
         return current_scan_result->GetPlan();
     }
-    std::vector<std::shared_ptr<DataSplit>> splits = current_scan_result->Splits();
-    std::vector<std::shared_ptr<DataSplit>> limited_data_splits;
+    std::vector<std::shared_ptr<Split>> splits = current_scan_result->Splits();
+    std::vector<std::shared_ptr<Split>> limited_data_splits;
     limited_data_splits.reserve(splits.size());
     int64_t scanned_row_count = 0;
     for (const auto& split : splits) {

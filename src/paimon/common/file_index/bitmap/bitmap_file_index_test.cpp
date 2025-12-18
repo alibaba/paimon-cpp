@@ -59,7 +59,7 @@ class BitmapIndexTest : public ::testing::Test {
         ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap32::From(expected))
             << "result=" << (typed_result->GetBitmap().value())->ToString()
             << ", expected=" << RoaringBitmap32::From(expected).ToString();
-    };
+    }
 
     Result<PAIMON_UNIQUE_PTR<Bytes>> WriteIndex(const std::shared_ptr<arrow::DataType>& type,
                                                 int32_t version,
@@ -644,10 +644,10 @@ TEST_F(BitmapIndexTest, TestHighCardinalityForCompatibility) {
     };
 
     // test v1 version
-    check_result(paimon::test::GetDataDir() + "/fileindex/bitmap-index-v1");
+    check_result(paimon::test::GetDataDir() + "/file_index/bitmap-index-v1");
 
     // test v2 version
-    check_result(paimon::test::GetDataDir() + "/fileindex/bitmap-index-v2");
+    check_result(paimon::test::GetDataDir() + "/file_index/bitmap-index-v2");
 }
 
 TEST_F(BitmapIndexTest, TestHighCardinalityForWriteAndRead) {
@@ -673,7 +673,7 @@ TEST_F(BitmapIndexTest, TestHighCardinalityForWriteAndRead) {
 
         for (int32_t i = 0; i < 100000; i++) {
             EXPECT_TRUE(struct_builder.Append().ok());
-            int32_t idx = rand() % unique_values.size();
+            int32_t idx = paimon::test::RandomNumber(0, unique_values.size() - 1);
             EXPECT_TRUE(string_builder->Append(unique_values[idx].data()).ok());
             expected_bitmaps[idx].push_back(i);
         }

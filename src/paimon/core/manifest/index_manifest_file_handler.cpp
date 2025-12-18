@@ -16,6 +16,9 @@
 
 #include "paimon/core/manifest/index_manifest_file_handler.h"
 
+#include <set>
+#include <utility>
+
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 namespace paimon {
 std::vector<IndexManifestEntry> IndexManifestFileHandler::GlobalFileNameCombiner::Combine(

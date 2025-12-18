@@ -73,7 +73,7 @@ class GenericRow : public InternalRow {
     /// GenericRow is corrupted. See `InternalRow` for more information about internal data
     /// structures. The field value can be null for representing nullability.
     void SetField(int32_t pos, const VariantType& value) {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         fields_[pos] = value;
     }
 
@@ -82,7 +82,7 @@ class GenericRow : public InternalRow {
     /// for more information about internal data structures.
     /// The returned field value can be null for representing nullability.
     const VariantType& GetField(int32_t pos) const {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return fields_[pos];
     }
 
@@ -99,7 +99,7 @@ class GenericRow : public InternalRow {
     }
 
     bool IsNullAt(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::IsVariantNull(fields_[pos]);
     }
 
@@ -108,22 +108,22 @@ class GenericRow : public InternalRow {
     }
 
     bool GetBoolean(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<bool>(fields_[pos]);
     }
 
     char GetByte(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<char>(fields_[pos]);
     }
 
     int16_t GetShort(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<int16_t>(fields_[pos]);
     }
 
     int32_t GetInt(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<int32_t>(fields_[pos]);
     }
 
@@ -132,57 +132,57 @@ class GenericRow : public InternalRow {
     }
 
     int64_t GetLong(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<int64_t>(fields_[pos]);
     }
 
     float GetFloat(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<float>(fields_[pos]);
     }
 
     double GetDouble(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<double>(fields_[pos]);
     }
 
     BinaryString GetString(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<BinaryString>(fields_[pos]);
     }
 
     std::string_view GetStringView(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<std::string_view>(fields_[pos]);
     }
 
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<Decimal>(fields_[pos]);
     }
 
     Timestamp GetTimestamp(int32_t pos, int32_t precision) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<Timestamp>(fields_[pos]);
     }
 
     std::shared_ptr<Bytes> GetBinary(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(fields_[pos]);
     }
 
     std::shared_ptr<InternalArray> GetArray(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<std::shared_ptr<InternalArray>>(fields_[pos]);
     }
 
     std::shared_ptr<InternalMap> GetMap(int32_t pos) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<std::shared_ptr<InternalMap>>(fields_[pos]);
     }
 
     std::shared_ptr<InternalRow> GetRow(int32_t pos, int32_t num_fields) const override {
-        assert((size_t)pos < fields_.size());
+        assert(static_cast<size_t>(pos) < fields_.size());
         return DataDefine::GetVariantValue<std::shared_ptr<InternalRow>>(fields_[pos]);
     }
 

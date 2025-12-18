@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "avro/DataFile.hh"
 #include "paimon/format/avro/avro_record_converter.h"
 #include "paimon/memory/memory_pool.h"

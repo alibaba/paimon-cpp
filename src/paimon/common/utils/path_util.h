@@ -39,6 +39,8 @@ class PAIMON_EXPORT PathUtil {
     ~PathUtil() = delete;
 
     static std::string JoinPath(const std::string& path, const std::string& name) noexcept;
+    // TODO(jinli.zjw): should pass `Path.path` and normalize; otherwise if path is
+    // "oss://bucket1/", GetParentDirPath will return "oss:"
     static std::string GetParentDirPath(const std::string& path) noexcept;
     static std::string GetName(const std::string& path) noexcept;
     static void TrimLastDelim(std::string* dir_path) noexcept;

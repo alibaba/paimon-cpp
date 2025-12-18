@@ -16,10 +16,13 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/data_define.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
+
 namespace paimon {
 class Bytes;
 class Decimal;

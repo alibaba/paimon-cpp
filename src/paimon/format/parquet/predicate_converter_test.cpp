@@ -153,7 +153,7 @@ TEST(PredicateConverterTest, TestSimple) {
 }
 
 TEST(PredicateConverterTest, TestCompound) {
-    //"struct<f0:bigint,f1:float,f2:string,f3:boolean,f4:date,f5:timestamp,f6:decimal(6,2),f7:binary>";
+    // "struct<f0:bigint,f1:float,f2:string,f3:boolean,f4:date,f5:timestamp,f6:decimal(6,2),f7:binary>";
     {
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
@@ -161,7 +161,7 @@ TEST(PredicateConverterTest, TestCompound) {
                 PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
                                         Literal(3l)),
                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
-                                        Literal((float)5.0)),
+                                        Literal(static_cast<float>(5.0))),
                 PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::STRING,
                                         Literal(FieldType::STRING, "apple", 5)),
                 PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
@@ -190,7 +190,7 @@ TEST(PredicateConverterTest, TestCompound) {
                 PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
                                         Literal(3l)),
                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
-                                        Literal((float)5.0)),
+                                        Literal(static_cast<float>(5.0))),
                 PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::STRING,
                                         Literal(FieldType::STRING, "apple", 5)),
                 PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
@@ -215,7 +215,8 @@ TEST(PredicateConverterTest, TestCompound) {
                      {PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                               FieldType::BOOLEAN, Literal(false)),
                       PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                 FieldType::FLOAT, Literal((float)3.1))})
+                                                 FieldType::FLOAT,
+                                                 Literal(static_cast<float>(3.1)))})
                      .value()}));
         ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
                                                   predicate, /*predicate_node_count_limit=*/100));
@@ -238,7 +239,8 @@ TEST(PredicateConverterTest, TestCompound) {
                      {PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                               FieldType::BOOLEAN, Literal(false)),
                       PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                 FieldType::FLOAT, Literal((float)3.1))})
+                                                 FieldType::FLOAT,
+                                                 Literal(static_cast<float>(3.1)))})
                      .value()}));
         ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
                                                   predicate, /*predicate_node_count_limit=*/100));

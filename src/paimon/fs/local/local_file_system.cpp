@@ -76,7 +76,7 @@ Status LocalFileSystem::Mkdirs(const std::string& path) const {
 }
 
 Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
-    // Important: The 'Exists()' check above must come before the 'IsDirectory()'
+    // Important: The 'Exists()' check above must come before the 'IsDir()'
     // check to be safe when multiple parallel instances try to create the directory
     PAIMON_ASSIGN_OR_RAISE(bool is_exist, file.Exists());
     if (is_exist) {
@@ -90,7 +90,20 @@ Status LocalFileSystem::MkdirsInternal(const LocalFile& file) const {
         }
     }
 
-    PAIMON_RETURN_NOT_OK(file.Mkdir());
+    auto parent = file.GetParentFile();
+    if (!parent.IsEmpty()) {
+        PAIMON_RETURN_NOT_OK(MkdirsInternal(parent));
+    }
+    PAIMON_ASSIGN_OR_RAISE(bool success, file.Mkdir());
+    if (!success) {
+        PAIMON_ASSIGN_OR_RAISE(bool is_dir, file.IsDir());
+        if (is_dir) {
+            return Status::OK();
+        } else {
+            return Status::IOError(
+                fmt::format("create directory '{}' failed", file.GetAbsolutePath()));
+        }
+    }
     return Status::OK();
 }
 
@@ -210,17 +223,7 @@ Status LocalFileSystem::Rename(const std::string& src, const std::string& dst) c
     }
     PAIMON_ASSIGN_OR_RAISE(LocalFile dst_file, ToFile(dst));
     auto parent = dst_file.GetParentFile();
-    if (!parent.GetAbsolutePath().empty()) {
-        PAIMON_ASSIGN_OR_RAISE(bool is_exist, parent.Exists());
-        if (is_exist) {
-            // pass
-        } else {
-            Status status = parent.Mkdir();
-            if (!status.ok() && !status.IsExist()) {
-                return status;
-            }
-        }
-    }
+    PAIMON_RETURN_NOT_OK(Mkdirs(parent.GetAbsolutePath()));
     if (::rename(src.c_str(), dst.c_str()) != 0) {
         int32_t cur_errno = errno;
         return Status::IOError(err_msg, std::strerror(cur_errno));

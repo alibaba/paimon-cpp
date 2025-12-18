@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator.h"
 
 namespace paimon {

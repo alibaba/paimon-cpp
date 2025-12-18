@@ -356,7 +356,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerFullCompaction) {
                              input, /*manifest_target_file_size=*/5000,
                              /*full_compaction_file_size=*/100, manifest_file_.get(), &new_metas));
     ASSERT_NE(std::nullopt, merged);
-    ASSERT_TRUE(new_metas.size() > 0);
+    ASSERT_GT(new_metas.size(), 0);
 
     std::vector<std::pair<std::string, FileKind>> entry_file_expected;
     for (int i = 0; i < 14; i++) {

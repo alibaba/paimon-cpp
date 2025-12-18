@@ -18,9 +18,9 @@
 
 #include <utility>
 
-#include "commit_message_impl.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/common/memory/memory_segment_utils.h"
+#include "paimon/core/table/sink/commit_message_impl.h"
 #include "paimon/core/table/sink/commit_message_serializer.h"
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/io/data_input_stream.h"

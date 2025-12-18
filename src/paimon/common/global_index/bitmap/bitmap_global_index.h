@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "paimon/common/file_index/bitmap/bitmap_file_index.h"
 #include "paimon/global_index/global_indexer.h"
 

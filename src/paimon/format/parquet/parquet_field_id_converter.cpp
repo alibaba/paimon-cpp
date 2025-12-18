@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
