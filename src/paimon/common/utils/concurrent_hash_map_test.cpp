@@ -141,7 +141,7 @@ TEST(ConcurrentHashMapTest, TestMultiThreadInsertAndFindAndDelete) {
         thread3.join();
 
         // check final states
-        ASSERT_TRUE(hash_map.Size() >= 0 && hash_map.Size() <= (size_t)map_size);
+        ASSERT_TRUE(hash_map.Size() >= 0 && hash_map.Size() <= static_cast<size_t>(map_size));
         for (int32_t i = 0; i < map_size; i++) {
             auto value = hash_map.Find(i);
             if (value) {

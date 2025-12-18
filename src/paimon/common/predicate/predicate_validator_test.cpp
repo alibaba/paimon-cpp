@@ -150,7 +150,7 @@ TEST(PredicateValidatorTest, TestValidateSchema) {
                 PredicateBuilder::Equal(/*field_index=*/7, /*field_name=*/"f7", FieldType::BINARY,
                                         Literal(FieldType::BINARY, str.data(), str.size())),
                 PredicateBuilder::Equal(/*field_index=*/8, /*field_name=*/"f8", FieldType::TINYINT,
-                                        Literal((int8_t)20)),
+                                        Literal(static_cast<int8_t>(20))),
             }));
         ASSERT_OK(PredicateValidator::ValidatePredicateWithSchema(*schema, predicate,
                                                                   /*validate_field_idx=*/true));

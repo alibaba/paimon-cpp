@@ -85,13 +85,13 @@ TEST(ProjectedRowTest, TestSimple) {
     ASSERT_TRUE(projected_row.IsNullAt(16));
 
     ASSERT_EQ(projected_row.GetBoolean(15), true);
-    ASSERT_EQ(projected_row.GetByte(14), (char)1);
-    ASSERT_EQ(projected_row.GetShort(13), (int16_t)2);
-    ASSERT_EQ(projected_row.GetInt(12), (int32_t)3);
-    ASSERT_EQ(projected_row.GetDate(12), (int32_t)3);
-    ASSERT_EQ(projected_row.GetLong(11), (int64_t)4);
-    ASSERT_EQ(projected_row.GetFloat(10), (float)5.1);
-    ASSERT_EQ(projected_row.GetDouble(9), (double)6.12);
+    ASSERT_EQ(projected_row.GetByte(14), static_cast<char>(1));
+    ASSERT_EQ(projected_row.GetShort(13), static_cast<int16_t>(2));
+    ASSERT_EQ(projected_row.GetInt(12), static_cast<int32_t>(3));
+    ASSERT_EQ(projected_row.GetDate(12), static_cast<int32_t>(3));
+    ASSERT_EQ(projected_row.GetLong(11), static_cast<int64_t>(4));
+    ASSERT_EQ(projected_row.GetFloat(10), static_cast<float>(5.1));
+    ASSERT_EQ(projected_row.GetDouble(9), static_cast<double>(6.12));
     ASSERT_EQ(projected_row.GetString(8), str);
     ASSERT_EQ(*projected_row.GetBinary(7), *bytes);
     ASSERT_EQ(std::string(projected_row.GetStringView(6)), str9);

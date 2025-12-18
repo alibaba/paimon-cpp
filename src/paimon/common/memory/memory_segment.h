@@ -73,16 +73,16 @@ class PAIMON_EXPORT MemorySegment {
     template <typename T>
     inline void Get(int32_t index, T* dst, int32_t offset, int32_t length) const {
         // check the byte array offset and length and the status
-        assert((int32_t)dst->size() >= (offset + length));
-        assert((int32_t)heap_memory_->size() >= (index + length));
+        assert(static_cast<int32_t>(dst->size()) >= (offset + length));
+        assert(static_cast<int32_t>(heap_memory_->size()) >= (index + length));
         std::memcpy(const_cast<char*>(dst->data()) + offset, heap_memory_->data() + index, length);
     }
 
     template <typename T>
     inline void Put(int32_t index, const T& src, int32_t offset, int32_t length) {
         // check the byte array offset and length
-        assert((int32_t)src.size() >= (offset + length));
-        assert((int32_t)heap_memory_->size() >= (index + length));
+        assert(static_cast<int32_t>(src.size()) >= (offset + length));
+        assert(static_cast<int32_t>(heap_memory_->size()) >= (index + length));
         std::memcpy(heap_memory_->data() + index, src.data() + offset, length);
     }
 

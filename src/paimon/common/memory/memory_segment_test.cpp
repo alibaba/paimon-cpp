@@ -40,7 +40,8 @@ TEST(MemorySegmentTest, TestByteAccess) {
     }
     std::srand(seed);
     for (int32_t i = 0; i < page_size; i++) {
-        ASSERT_EQ(segment.Get(i), (char)std::rand()) << "seed: " << seed << ", idx: " << i;
+        ASSERT_EQ(segment.Get(i), static_cast<char>(std::rand()))
+            << "seed: " << seed << ", idx: " << i;
     }
 
     // test expected correct behavior, random access
@@ -72,7 +73,8 @@ TEST(MemorySegmentTest, TestByteAccess) {
             occupied[pos] = true;
         }
 
-        ASSERT_EQ(segment.Get(pos), (char)std::rand()) << "seed: " << seed << ", idx: " << pos;
+        ASSERT_EQ(segment.Get(pos), static_cast<char>(std::rand()))
+            << "seed: " << seed << ", idx: " << pos;
     }
     delete[] occupied;
 }
@@ -197,7 +199,7 @@ TEST(MemorySegmentTest, TestCharAccess) {
 
     std::srand(seed);
     for (int32_t i = 0; i <= page_size - 2; i += 2) {
-        ASSERT_EQ(segment.GetValue<char16_t>(i), (char)(std::rand() % (CHAR_MAX)))
+        ASSERT_EQ(segment.GetValue<char16_t>(i), static_cast<char>(std::rand() % (CHAR_MAX)))
             << "seed: " << seed << ", idx: " << i;
     }
 
@@ -231,7 +233,7 @@ TEST(MemorySegmentTest, TestCharAccess) {
             occupied[pos + 1] = true;
         }
 
-        ASSERT_EQ(segment.GetValue<char16_t>(pos), (char)(std::rand() % (CHAR_MAX)))
+        ASSERT_EQ(segment.GetValue<char16_t>(pos), static_cast<char>(std::rand() % (CHAR_MAX)))
             << "seed: " << seed << ", idx:" << pos;
     }
     delete[] occupied;
@@ -251,7 +253,7 @@ TEST(MemorySegmentTest, TestShortAccess) {
 
     std::srand(seed);
     for (int32_t i = 0; i <= page_size - 2; i += 2) {
-        ASSERT_EQ(segment.GetValue<int16_t>(i), (int16_t)std::rand())
+        ASSERT_EQ(segment.GetValue<int16_t>(i), static_cast<int16_t>(std::rand()))
             << "seed: " << seed << ", idx:" << i;
     }
 
@@ -285,7 +287,7 @@ TEST(MemorySegmentTest, TestShortAccess) {
             occupied[pos + 1] = true;
         }
 
-        ASSERT_EQ(segment.GetValue<int16_t>(pos), (int16_t)std::rand())
+        ASSERT_EQ(segment.GetValue<int16_t>(pos), static_cast<int16_t>(std::rand()))
             << "seed: " << seed << ", idx:" << pos;
     }
     delete[] occupied;
@@ -305,7 +307,7 @@ TEST(MemorySegmentTest, TestIntAccess) {
 
     std::srand(seed);
     for (int32_t i = 0; i <= page_size - 4; i += 4) {
-        ASSERT_EQ(segment.GetValue<int32_t>(i), (int32_t)std::rand())
+        ASSERT_EQ(segment.GetValue<int32_t>(i), static_cast<int32_t>(std::rand()))
             << "seed: " << seed << ", idx:" << i;
     }
 
@@ -343,7 +345,7 @@ TEST(MemorySegmentTest, TestIntAccess) {
             occupied[pos + 3] = true;
         }
 
-        ASSERT_EQ(segment.GetValue<int32_t>(pos), (int32_t)std::rand())
+        ASSERT_EQ(segment.GetValue<int32_t>(pos), static_cast<int32_t>(std::rand()))
             << "seed: " << seed << ", idx:" << pos;
     }
     delete[] occupied;

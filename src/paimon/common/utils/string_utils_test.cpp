@@ -307,10 +307,11 @@ TEST_F(StringUtilsTest, TestSplit) {
 }
 
 TEST_F(StringUtilsTest, TestStringToValueSimple) {
-    ASSERT_EQ((int32_t)233, StringUtils::StringToValue<int32_t>("233").value());
-    ASSERT_EQ((int8_t)10, StringUtils::StringToValue<int8_t>("10").value());
+    ASSERT_EQ(static_cast<int32_t>(233), StringUtils::StringToValue<int32_t>("233").value());
+    ASSERT_EQ(static_cast<int8_t>(10), StringUtils::StringToValue<int8_t>("10").value());
     ASSERT_EQ(std::nullopt, StringUtils::StringToValue<int8_t>("1024"));
-    ASSERT_EQ((int64_t)34785895352ll, StringUtils::StringToValue<int64_t>("34785895352").value());
+    ASSERT_EQ(static_cast<int64_t>(34785895352),
+              StringUtils::StringToValue<int64_t>("34785895352").value());
     ASSERT_EQ(std::nullopt, StringUtils::StringToValue<int32_t>("abc"));
     ASSERT_EQ(std::nullopt, StringUtils::StringToValue<int32_t>(""));
 

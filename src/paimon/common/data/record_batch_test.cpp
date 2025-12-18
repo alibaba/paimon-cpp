@@ -58,7 +58,7 @@ TEST(RecordBatchTest, TestSimple) {
         ASSERT_TRUE(struct_builder.Append().ok());
         ASSERT_TRUE(string_builder->Append("20240813").ok());
         ASSERT_TRUE(int_builder->Append(23).ok());
-        ASSERT_TRUE(long_builder->Append((int64_t)1722848484308ll + i).ok());
+        ASSERT_TRUE(long_builder->Append(static_cast<int64_t>(1722848484308ll + i)).ok());
         ASSERT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
     }
     std::shared_ptr<arrow::Array> array;

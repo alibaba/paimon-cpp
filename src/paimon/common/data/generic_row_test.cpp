@@ -78,13 +78,13 @@ TEST(GenericRowTest, TestSimple) {
     // test get
     ASSERT_FALSE(row.IsNullAt(0));
     ASSERT_EQ(row.GetBoolean(0), true);
-    ASSERT_EQ(row.GetByte(1), (char)1);
-    ASSERT_EQ(row.GetShort(2), (int16_t)2);
-    ASSERT_EQ(row.GetInt(3), (int32_t)3);
-    ASSERT_EQ(row.GetDate(3), (int32_t)3);
-    ASSERT_EQ(row.GetLong(4), (int64_t)4);
-    ASSERT_EQ(row.GetFloat(5), (float)5.1);
-    ASSERT_EQ(row.GetDouble(6), (double)6.12);
+    ASSERT_EQ(row.GetByte(1), static_cast<char>(1));
+    ASSERT_EQ(row.GetShort(2), static_cast<int16_t>(2));
+    ASSERT_EQ(row.GetInt(3), static_cast<int32_t>(3));
+    ASSERT_EQ(row.GetDate(3), static_cast<int32_t>(3));
+    ASSERT_EQ(row.GetLong(4), static_cast<int64_t>(4));
+    ASSERT_EQ(row.GetFloat(5), static_cast<float>(5.1));
+    ASSERT_EQ(row.GetDouble(6), static_cast<double>(6.12));
     ASSERT_EQ(row.GetString(7), str);
     ASSERT_EQ(*row.GetBinary(8), *bytes);
     ASSERT_EQ(std::string(row.GetStringView(9)), str9);

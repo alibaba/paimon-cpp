@@ -56,7 +56,7 @@ TEST(BloomFilter64Test, TestSimple) {
             false_positives++;
         }
     }
-    ASSERT_TRUE((double)false_positives / num < 0.03);
+    ASSERT_TRUE(static_cast<double>(false_positives) / num < 0.03);
 }
 
 TEST(BloomFilter64Test, TestCompatibleWithJava) {

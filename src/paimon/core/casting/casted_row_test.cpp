@@ -61,14 +61,14 @@ TEST(CastedRowTest, TestSimpleWithNoCasting) {
     ASSERT_EQ(casted_row->GetFieldCount(), 10);
     ASSERT_EQ(casted_row->GetRowKind().value(), RowKind::Insert());
     ASSERT_EQ(casted_row->GetBoolean(0), true);
-    ASSERT_EQ(casted_row->GetByte(1), (char)0);
-    ASSERT_EQ(casted_row->GetShort(2), (int16_t)32767);
+    ASSERT_EQ(casted_row->GetByte(1), static_cast<char>(0));
+    ASSERT_EQ(casted_row->GetShort(2), static_cast<int16_t>(32767));
     ASSERT_FALSE(casted_row->IsNullAt(3));
-    ASSERT_EQ(casted_row->GetInt(3), (int32_t)2147483647);
+    ASSERT_EQ(casted_row->GetInt(3), static_cast<int32_t>(2147483647));
     ASSERT_TRUE(casted_row->IsNullAt(4));
-    ASSERT_EQ(casted_row->GetLong(5), (int64_t)4294967295);
-    ASSERT_EQ(casted_row->GetFloat(6), (float)0.5);
-    ASSERT_EQ(casted_row->GetDouble(7), (double)1.141592659);
+    ASSERT_EQ(casted_row->GetLong(5), static_cast<int64_t>(4294967295));
+    ASSERT_EQ(casted_row->GetFloat(6), static_cast<float>(0.5));
+    ASSERT_EQ(casted_row->GetDouble(7), static_cast<double>(1.141592659));
     ASSERT_EQ(casted_row->GetString(8).ToString(), "2025-03-27");
     ASSERT_EQ(*casted_row->GetBinary(9), Bytes("banana", pool.get()));
 

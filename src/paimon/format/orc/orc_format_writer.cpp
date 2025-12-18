@@ -129,11 +129,11 @@ Status OrcFormatWriter::AddBatch(ArrowArray* batch) {
     assert(batch);
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
                                       arrow::ImportArray(batch, data_type_));
-    if (PAIMON_UNLIKELY((uint64_t)arrow_array->length() > orc_batch_->capacity)) {
+    if (PAIMON_UNLIKELY(static_cast<uint64_t>(arrow_array->length()) > orc_batch_->capacity)) {
         PAIMON_RETURN_NOT_OK(ExpandBatch(arrow_array->length()));
     }
     PAIMON_RETURN_NOT_OK(OrcAdapter::WriteBatch(arrow_array, orc_batch_.get()));
-    assert(orc_batch_->numElements == (uint64_t)arrow_array->length());
+    assert(orc_batch_->numElements == static_cast<uint64_t>(arrow_array->length()));
     PAIMON_RETURN_NOT_OK(Flush());
     return Status::OK();
 }

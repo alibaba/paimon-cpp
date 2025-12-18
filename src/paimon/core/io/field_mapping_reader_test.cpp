@@ -292,7 +292,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
         ASSERT_EQ(
             arrow::internal::checked_cast<arrow::NumericArray<arrow::Int16Type>*>(p2_array.get())
                 ->Value(0),
-            (int16_t)2);
+            static_cast<int16_t>(2));
     }
     {
         ASSERT_OK_AND_ASSIGN(auto p1_array, mapping_reader->GenerateSinglePartitionArray(

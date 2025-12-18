@@ -77,7 +77,7 @@ repos:
         args:
           - "--quiet"
           - "--verbose=2"
-          - "--filter=-whitespace/line_length,-whitespace/parens,-whitespace/indent_namespace,-build/include_what_you_use,-build/c++11,-readability/nolint,-runtime/references"
+          - "--filter=-whitespace/line_length,-whitespace/parens,-whitespace/indent_namespace,-build/include_what_you_use,-build/c++11,-build/c++17,-readability/nolint,-runtime/references"
 
         types_or:
           - c++

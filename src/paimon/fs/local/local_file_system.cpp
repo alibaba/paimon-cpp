@@ -288,7 +288,7 @@ void LocalInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offset,
     if (!read_size.ok()) {
         status = read_size.status();
     } else {
-        assert(read_size.value() == (int32_t)size);
+        assert(read_size.value() == static_cast<int32_t>(size));
     }
     callback(status);
 }
