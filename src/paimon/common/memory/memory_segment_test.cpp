@@ -352,10 +352,7 @@ TEST(MemorySegmentTest, TestIntAccess) {
 TEST(MemorySegmentTest, TestLongAccess) {
     auto pool = paimon::GetDefaultPool();
     auto lrand = []() -> int64_t {
-        return (static_cast<int64_t>(
-                    paimon::test::RandomNumber(0, std::numeric_limits<int32_t>::max()))
-                << (sizeof(int32_t) * 8)) |
-               std::rand();
+        return (static_cast<int64_t>(std::rand()) << (sizeof(int32_t) * 8)) | std::rand();
     };
     int32_t page_size = 64 * 1024;
     MemorySegment segment = MemorySegment::AllocateHeapMemory(page_size, pool.get());
@@ -484,10 +481,7 @@ TEST(MemorySegmentTest, TestFloatAccess) {
 TEST(MemorySegmentTest, TestDoubleAccess) {
     auto pool = paimon::GetDefaultPool();
     auto lrand = []() -> int64_t {
-        return (static_cast<int64_t>(
-                    paimon::test::RandomNumber(0, std::numeric_limits<int32_t>::max()))
-                << (sizeof(int32_t) * 8)) |
-               std::rand();
+        return (static_cast<int64_t>(std::rand()) << (sizeof(int32_t) * 8)) | std::rand();
     };
     auto drand = [&]() -> int64_t {
         return (static_cast<double>(lrand()) /
