@@ -225,13 +225,6 @@ Override only a single dependency (fmt):
 
 .. note::
 
-  - The exact fetch behaviour (how the mirror prefix is concatenated, or
-  whether the helper expects a full URL vs. a prefix) is implemented in
-  ``cmake_modules/ThirdpartyToolchain.cmake``. Consult that file when you
-  need a custom setup.
-  - Unset an environment variable to revert to the default upstream download
-  locations, for example:
-
-.. code-block:: shell
-
-   unset PAIMON_THIRDPARTY_MIRROR_URL
+  The exact fetch behaviour (how the mirror prefix is concatenated, or whether the helper expects a full URL vs. a prefix)
+  is implemented in ``cmake_modules/ThirdpartyToolchain.cmake``. Consult that file when you need a custom setup.
+  Unset an environment variable to revert to the default upstream download locations: ``unset PAIMON_THIRDPARTY_MIRROR_URL``
