@@ -62,7 +62,7 @@ TEST(IndexedSplitTest, TestSimple) {
     auto meta3 = std::make_shared<DataFileMeta>(
         "file3.orc", 102l, 200l, BinaryRow::EmptyRow(), BinaryRow::EmptyRow(),
         SimpleStats::EmptyStats(), SimpleStats::EmptyStats(), 1000l, 1199l, 0, 0,
-        std::vector<std::optional<std::string>>(), Timestamp(1765535214349, 0), 0, nullptr,
+        std::vector<std::optional<std::string>>(), Timestamp(1765535214349l, 0), 0, nullptr,
         FileSource::Append(), std::nullopt, std::nullopt, 1000l, std::nullopt);
 
     DataSplitImpl::Builder builder(
