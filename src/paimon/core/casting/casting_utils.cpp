@@ -13,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "paimon/core/casting/casting_utils.h"
+
+#include <memory>
 
 namespace paimon {
 Result<std::shared_ptr<arrow::Array>> CastingUtils::Cast(

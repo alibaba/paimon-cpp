@@ -397,7 +397,7 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     // check metrics
     metrics = merge_writer->GetMetrics();
     ASSERT_OK_AND_ASSIGN(uint64_t write_io_count2, metrics->GetCounter("orc.write.io.count"));
-    ASSERT_TRUE(write_io_count2 > write_io_count);
+    ASSERT_GT(write_io_count2, write_io_count);
 
     ASSERT_OK(merge_writer->Close());
 

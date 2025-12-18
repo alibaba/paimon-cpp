@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "file_entry.h"
+#include "paimon/core/manifest/file_entry.h"
 
 #include <cassert>
 #include <list>

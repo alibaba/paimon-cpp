@@ -74,7 +74,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayI
     }
     auto* struct_array = arrow::internal::checked_cast<arrow::StructArray*>(src_array.get());
     int32_t field_count = struct_array->num_fields();
-    assert((size_t)field_count == non_partition_info_.cast_executors.size());
+    assert(static_cast<size_t>(field_count) == non_partition_info_.cast_executors.size());
     arrow::ArrayVector casted_array;
     std::vector<std::string> casted_field_names;
     casted_array.reserve(field_count);

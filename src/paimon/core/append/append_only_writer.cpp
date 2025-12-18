@@ -168,7 +168,7 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
     const BlobUtils::SeparatedSchemas& schemas) const {
     if (schemas.blob_schema->num_fields() > RollingBlobFileWriter::EXPECTED_BLOB_FIELD_COUNT) {
         return Status::Invalid("Limit exactly one blob field in one paimon table yet.");
-    };
+    }
     // use a specialized writer that writes blob data to a separate rolling file.
     ::ArrowSchema arrow_schema;
     ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });

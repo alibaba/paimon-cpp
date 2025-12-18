@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+
 #include "arrow/api.h"
 #include "fmt/format.h"
 #include "paimon/common/data/data_define.h"

@@ -18,6 +18,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "paimon/core/core_options.h"
 #include "paimon/core/manifest/index_manifest_entry.h"

@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <cstdint>
+#include <memory>
+#include <string>
+
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/index/index_file_meta.h"
 #include "paimon/core/manifest/file_kind.h"

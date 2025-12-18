@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/core/key_value.h"
 #include "paimon/metrics.h"
 namespace paimon {

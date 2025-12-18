@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "paimon/core/io/async_key_value_producer_and_consumer.h"
 #include "paimon/core/io/key_value_projection_consumer.h"
 #include "paimon/reader/batch_reader.h"

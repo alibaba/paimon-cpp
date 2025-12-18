@@ -41,12 +41,14 @@ class IndexFileMetaSerializerTest : public testing::Test {
     std::shared_ptr<IndexFileMeta> GetRandomDeletionVectorIndexFile() {
         LinkedHashMap<std::string, DeletionVectorMeta> deletion_vectors_ranges;
         deletion_vectors_ranges.insert_or_assign(
-            "my_file_name1", DeletionVectorMeta("my_file_name1", rand(), rand(), std::nullopt));
+            "my_file_name1",
+            DeletionVectorMeta("my_file_name1", std::rand(), std::rand(), std::nullopt));
         deletion_vectors_ranges.insert_or_assign(
-            "my_file_name2", DeletionVectorMeta("my_file_name2", rand(), rand(), std::nullopt));
+            "my_file_name2",
+            DeletionVectorMeta("my_file_name2", std::rand(), std::rand(), std::nullopt));
         return std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "deletion_vectors_index_file_name" + std::to_string(rand()), rand(),
-            rand(), deletion_vectors_ranges, /*external_path=*/std::nullopt);
+            "DELETION_VECTORS", "deletion_vectors_index_file_name" + std::to_string(std::rand()),
+            std::rand(), rand(), deletion_vectors_ranges, /*external_path=*/std::nullopt);
     }
 
     const int32_t TRIES = 100;

@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "arrow/api.h"
 #include "paimon/common/data/serializer/binary_row_serializer.h"
 #include "paimon/common/io/memory_segment_output_stream.h"

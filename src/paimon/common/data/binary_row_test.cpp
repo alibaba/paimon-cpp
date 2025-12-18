@@ -330,7 +330,7 @@ TEST_F(BinaryRowTest, TestSingleSegmentBinaryRowHashCode) {
         writer2.Complete();
         hash_codes.insert(row2.HashCode());
     }
-    ASSERT_TRUE(hash_codes.size() > (size_t)(count * 0.997));
+    ASSERT_GT(hash_codes.size(), static_cast<size_t>(count * 0.997));
 }
 
 TEST_F(BinaryRowTest, TestHeader) {
@@ -579,7 +579,7 @@ TEST_F(BinaryRowTest, TestBinaryRowSerializer) {
     PAIMON_UNIQUE_PTR<Bytes> bytes_serialize =
         MemorySegmentUtils::CopyToBytes(out.Segments(), 0, out.CurrentSize(), pool.get());
     std::string str_serialize = std::string(bytes_serialize->data(), bytes_serialize->size());
-    ASSERT_TRUE(str_serialize.size() >= bytes_size + test_string1.size() + test_string2.size());
+    ASSERT_GE(str_serialize.size(), bytes_size + test_string1.size() + test_string2.size());
     std::string str_serialize1 = str_serialize.substr(
         str_serialize.size() - test_string1.size() - test_string2.size(), test_string1.size());
     std::string str_serialize2 =

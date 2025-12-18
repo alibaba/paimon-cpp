@@ -15,6 +15,12 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/manifest/index_manifest_entry.h"

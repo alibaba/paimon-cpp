@@ -163,7 +163,7 @@ Result<std::shared_ptr<arrow::Array>> ManifestMetaReader::AlignArrayWithSchema(
             }
         default:
             return src_array;
-    };
+    }
 }
 
 }  // namespace paimon

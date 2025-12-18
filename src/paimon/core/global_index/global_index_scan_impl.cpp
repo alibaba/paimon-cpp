@@ -16,6 +16,10 @@
 
 #include "paimon/core/global_index/global_index_scan_impl.h"
 
+#include <string>
+#include <unordered_set>
+#include <utility>
+
 #include "paimon/core/global_index/row_range_global_index_scanner_impl.h"
 #include "paimon/core/index/index_file_handler.h"
 #include "paimon/core/utils/snapshot_manager.h"

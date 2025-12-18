@@ -15,6 +15,11 @@
  */
 
 #pragma once
+
+#include <limits>
+#include <memory>
+#include <utility>
+
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "paimon/common/data/internal_row.h"

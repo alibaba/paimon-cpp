@@ -16,6 +16,10 @@
 
 #include "paimon/core/index/global_index_meta.h"
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "fmt/format.h"
 #include "fmt/ranges.h"
 #include "paimon/common/data/binary_array.h"

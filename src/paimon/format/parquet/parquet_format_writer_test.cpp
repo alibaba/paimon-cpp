@@ -285,7 +285,7 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
 
     AddRecordBatchOnce(format_writer, struct_type, 100000, 9999);
     ASSERT_OK_AND_ASSIGN(uint64_t estimate_len3, format_writer->GetEstimateLength());
-    ASSERT_TRUE(estimate_len3 > estimate_len2);
+    ASSERT_GT(estimate_len3, estimate_len2);
     ASSERT_TRUE(format_writer->Finish().ok());
 }
 

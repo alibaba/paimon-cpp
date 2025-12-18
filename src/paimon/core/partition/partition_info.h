@@ -16,6 +16,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <memory>
+#include <vector>
+
 #include "arrow/type.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/predicate/predicate_filter.h"

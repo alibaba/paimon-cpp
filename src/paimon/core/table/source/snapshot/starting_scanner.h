@@ -15,6 +15,10 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <vector>
+
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 namespace paimon {
 

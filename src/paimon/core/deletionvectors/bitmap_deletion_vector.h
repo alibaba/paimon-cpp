@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/io/byte_array_input_stream.h"

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/core/table/source/snapshot/follow_up_scanner.h"
 
 namespace paimon {

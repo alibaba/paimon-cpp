@@ -21,6 +21,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 
 #include "arrow/c/abi.h"
 #include "arrow/c/helpers.h"

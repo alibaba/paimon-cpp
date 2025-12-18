@@ -16,6 +16,12 @@
 
 #pragma once
 #include <functional>
+#include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/global_index/global_index_evaluator.h"

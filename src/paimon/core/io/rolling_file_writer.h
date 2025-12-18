@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "arrow/c/bridge.h"

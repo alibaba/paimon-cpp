@@ -15,6 +15,10 @@
  */
 
 #pragma once
+
+#include <memory>
+#include <string>
+
 #include "paimon/core/index/index_file_meta.h"
 
 namespace paimon {

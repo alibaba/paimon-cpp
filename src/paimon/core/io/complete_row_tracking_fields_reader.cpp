@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "paimon/core/io/complete_row_tracking_fields_reader.h"
+
+#include <memory>
+#include <string>
+#include <utility>
 
 #include "arrow/array/array_base.h"
 #include "arrow/c/abi.h"

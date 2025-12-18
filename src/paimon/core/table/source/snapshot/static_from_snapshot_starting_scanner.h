@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <memory>
+
 #include "paimon/core/table/source/snapshot/starting_scanner.h"
 
 namespace paimon {

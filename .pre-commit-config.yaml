@@ -83,6 +83,5 @@ repos:
           - c++
         exclude: |
           (?x)^(
-            (third_party)/.*|
-            (src/paimon/core)/.*
+            (third_party)/.*
           )$

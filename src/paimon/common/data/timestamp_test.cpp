@@ -66,17 +66,17 @@ TEST_F(TimestampTest, EqualityOperator) {
     Timestamp ts1(1622547800000, 123456);
     Timestamp ts2(1622547800000, 123456);
     Timestamp ts3(1622547800000, 654321);
-    ASSERT_TRUE(ts1 == ts1);
-    ASSERT_TRUE(ts1 == ts2);
-    ASSERT_FALSE(ts1 == ts3);
+    ASSERT_EQ(ts1, ts1);
+    ASSERT_EQ(ts1, ts2);
+    ASSERT_NE(ts1, ts3);
 }
 
 TEST_F(TimestampTest, LessThanOperator) {
     Timestamp ts1(1622547800000, 123456);
     Timestamp ts2(1622547800000, 654321);
     Timestamp ts3(1622547800001, 123456);
-    ASSERT_TRUE(ts1 < ts2);
-    ASSERT_TRUE(ts1 < ts3);
+    ASSERT_LT(ts1, ts2);
+    ASSERT_LT(ts1, ts3);
     ASSERT_FALSE(ts2 < ts1);
     ASSERT_FALSE(ts3 < ts1);
 }

@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"

@@ -19,6 +19,8 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"

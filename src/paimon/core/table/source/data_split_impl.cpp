@@ -16,6 +16,11 @@
 
 #include "paimon/core/table/source/data_split_impl.h"
 
+#include <algorithm>
+#include <memory>
+#include <string>
+#include <vector>
+
 namespace paimon {
 
 bool DataSplit::SimpleDataFileMeta::operator==(const SimpleDataFileMeta& other) const {

@@ -251,13 +251,14 @@ class FileStoreCommitImplTest : public testing::Test {
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<InputStream> in_stream, file_system->Open(path));
         EXPECT_TRUE(in_stream);
         EXPECT_OK_AND_ASSIGN([[maybe_unused]] int32_t length,
-                             in_stream->Read((char*)buffer.data(), buffer.size()))
+                             in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()))
         EXPECT_OK(in_stream->Close());
         auto pool = GetDefaultPool();
 
         EXPECT_OK_AND_ASSIGN(
             std::vector<std::shared_ptr<CommitMessage>> ret,
-            CommitMessage::DeserializeList(version, (char*)buffer.data(), buffer.size(), pool));
+            CommitMessage::DeserializeList(version, reinterpret_cast<char*>(buffer.data()),
+                                           buffer.size(), pool));
         return ret;
     }
 
@@ -286,7 +287,7 @@ TEST_F(FileStoreCommitImplTest, TestCommit) {
         GetCommitMessages(paimon::test::GetDataDir() +
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_OK(commit->Commit(msgs));
     ASSERT_NOK_WITH_MSG(commit->GetLastCommitTableRequest(),
                         "renaming snapshot commit do not support get last commit table request");
@@ -316,7 +317,7 @@ TEST_F(FileStoreCommitImplTest, TestRESTCatalogCommit) {
         GetCommitMessages(paimon::test::GetDataDir() +
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_NOK_WITH_MSG(commit->GetLastCommitTableRequest(),
                         "Should call Commit first before GetLastCommitTableRequest.");
     ASSERT_OK(commit->Commit(msgs));
@@ -396,7 +397,7 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryT
         GetCommitMessages(paimon::test::GetDataDir() +
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_NOK(commit->Commit(msgs));
 }
 
@@ -449,7 +450,7 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryO
         GetCommitMessages(paimon::test::GetDataDir() +
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_OK(commit->Commit(msgs));
     std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
     ASSERT_TRUE(metrics);
@@ -492,7 +493,7 @@ TEST_F(FileStoreCommitImplTest,
         GetCommitMessages(paimon::test::GetDataDir() +
                               "/orc/append_09.db/append_09/commit_messages/commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_NOK(commit->Commit(msgs, /*commit_identifier=*/1));
     ASSERT_OK_AND_ASSIGN(
         bool exist, file_system_->Exists(PathUtil::JoinPath(table_path, "snapshot/snapshot-6")));
@@ -543,7 +544,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithSameMsgs) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -560,7 +561,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithSameMsgs) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -577,7 +578,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithSameMsgs) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_NOK(commit->Commit(msgs));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -606,7 +607,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitMultipleTimes) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/0, /*watermark=*/10));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -626,7 +627,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitMultipleTimes) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-02",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/1));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -646,7 +647,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitMultipleTimes) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-03",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs, /*commit_identifier=*/2, /*watermark=*/9));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -676,7 +677,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitAndOverwriteWithNoPartitionKey) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs, 1));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -693,7 +694,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitAndOverwriteWithNoPartitionKey) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-02",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
             std::shared_ptr<FileStoreCommit>(std::move(commit)));
         ASSERT_OK(commit_impl->Overwrite({}, msgs, 2));
@@ -722,7 +723,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitSuccessAfterIOException) {
                               "/orc/append_09.db/append_09/commit_messages/"
                               "commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     ASSERT_OK(commit->Commit(msgs));
     std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
     ASSERT_TRUE(metrics);
@@ -779,7 +780,7 @@ TEST_F(FileStoreCommitImplTest, TestCleanUpTmpManifests) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-01",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -796,7 +797,7 @@ TEST_F(FileStoreCommitImplTest, TestCleanUpTmpManifests) {
                                   "/orc/append_09.db/append_09/commit_messages/"
                                   "commit_messages-02",
                               /*version=*/3);
-        ASSERT_TRUE(msgs.size() > 0);
+        ASSERT_GT(msgs.size(), 0);
         ASSERT_OK(commit->Commit(msgs));
         std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();
         ASSERT_TRUE(metrics);
@@ -1614,7 +1615,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithIOException) {
                               "/orc/append_09.db/append_09/commit_messages/"
                               "commit_messages-01",
                           /*version=*/3);
-    ASSERT_TRUE(msgs.size() > 0);
+    ASSERT_GT(msgs.size(), 0);
     // commit first snapshot
     ASSERT_OK(commit->Commit(msgs));
     std::shared_ptr<Metrics> metrics = commit->GetCommitMetrics();

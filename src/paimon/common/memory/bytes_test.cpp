@@ -76,10 +76,10 @@ TEST(BytesTest, TestCompare) {
     PAIMON_UNIQUE_PTR<Bytes> bytes2 = Bytes::AllocateBytes("abcdf", pool.get());
     ASSERT_EQ(*bytes1, *bytes1);
     ASSERT_EQ(*bytes2, *bytes2);
-    ASSERT_TRUE(*bytes1 == *bytes1);
-    ASSERT_TRUE(*bytes2 == *bytes2);
+    ASSERT_EQ(*bytes1, *bytes1);
+    ASSERT_EQ(*bytes2, *bytes2);
     ASSERT_FALSE(*bytes1 == *bytes2);
-    ASSERT_TRUE(*bytes1 < *bytes2);
+    ASSERT_LT(*bytes1, *bytes2);
     ASSERT_FALSE(*bytes1 < *bytes1);
 }
 }  // namespace paimon::test

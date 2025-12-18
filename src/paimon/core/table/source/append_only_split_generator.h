@@ -15,6 +15,12 @@
  */
 
 #pragma once
+
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "paimon/common/utils/bin_packing.h"
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 #include "paimon/core/table/bucket_mode.h"

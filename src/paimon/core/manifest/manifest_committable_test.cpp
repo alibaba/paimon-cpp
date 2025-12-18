@@ -58,13 +58,15 @@ class ManifestCommittableTest : public testing::Test {
         std::vector<uint8_t> buffer(buffer_length, 0);
 
         EXPECT_OK_AND_ASSIGN(auto in_stream, file_system->Open(path));
-        EXPECT_OK_AND_ASSIGN([[maybe_unused]] int32_t read_bytes,
-                             in_stream->Read((char*)buffer.data(), buffer.size()));
+        EXPECT_OK_AND_ASSIGN(
+            [[maybe_unused]] int32_t read_bytes,
+            in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
         EXPECT_OK(in_stream->Close());
 
         auto pool = GetDefaultPool();
-        EXPECT_OK_AND_ASSIGN(auto ret, CommitMessage::DeserializeList(version, (char*)buffer.data(),
-                                                                      buffer.size(), pool));
+        EXPECT_OK_AND_ASSIGN(
+            auto ret, CommitMessage::DeserializeList(
+                          version, reinterpret_cast<char*>(buffer.data()), buffer.size(), pool));
         return ret;
     }
 

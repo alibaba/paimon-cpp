@@ -88,9 +88,9 @@ TEST(RangeTest, TestCompare) {
     Range r2(15, 25);
     Range r3(10, 30);
     ASSERT_EQ(r1, r1);
-    ASSERT_TRUE(r1 < r2);
-    ASSERT_TRUE(r1 < r3);
-    ASSERT_TRUE(r3 < r2);
+    ASSERT_LT(r1, r2);
+    ASSERT_LT(r1, r3);
+    ASSERT_LT(r3, r2);
 }
 
 TEST(RangeTest, TestSortAndMergeOverlap) {

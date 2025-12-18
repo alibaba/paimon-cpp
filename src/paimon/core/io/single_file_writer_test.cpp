@@ -72,7 +72,7 @@ TEST(SingleFileWriterTest, TestSimple) {
     ASSERT_NOK_WITH_MSG(writer.GetAbortExecutor(), "Writer should be closed");
     ASSERT_OK(writer.Close());
     ASSERT_OK_AND_ASSIGN(auto file_status, file_system->GetFileStatus(file_path));
-    ASSERT_TRUE(file_status->GetLen() > 0);
+    ASSERT_GT(file_status->GetLen(), 0);
     ASSERT_OK_AND_ASSIGN(auto abort_executor, writer.GetAbortExecutor());
     abort_executor.Abort();
     ASSERT_OK_AND_ASSIGN(auto exist, file_system->Exists(file_path));

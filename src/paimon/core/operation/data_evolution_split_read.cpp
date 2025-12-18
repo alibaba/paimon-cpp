@@ -16,6 +16,9 @@
 
 #include "paimon/core/operation/data_evolution_split_read.h"
 
+#include <map>
+#include <utility>
+
 #include "paimon/common/data/blob_utils.h"
 #include "paimon/common/file_index/bitmap/apply_bitmap_index_batch_reader.h"
 #include "paimon/common/global_index/complete_index_score_batch_reader.h"

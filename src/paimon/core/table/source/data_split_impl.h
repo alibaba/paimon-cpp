@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/preconditions.h"

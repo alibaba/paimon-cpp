@@ -42,13 +42,14 @@ TEST(CommitMessageImplTest, TestToString) {
 
     auto in_stream = file_system->Open(data_path).value_or(nullptr);
     ASSERT_TRUE(in_stream);
-    ASSERT_OK(in_stream->Read((char*)buffer.data(), buffer.size()));
+    ASSERT_OK(in_stream->Read(reinterpret_cast<char*>(buffer.data()), buffer.size()));
     ASSERT_OK(in_stream->Close());
 
     auto pool = GetDefaultPool();
     ASSERT_OK_AND_ASSIGN(
         auto commit_messages,
-        CommitMessage::DeserializeList(/*version=*/6, (char*)buffer.data(), buffer.size(), pool));
+        CommitMessage::DeserializeList(/*version=*/6, reinterpret_cast<char*>(buffer.data()),
+                                       buffer.size(), pool));
     ASSERT_EQ(1, commit_messages.size());
     auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(commit_messages[0]);
     ASSERT_TRUE(msg_impl);

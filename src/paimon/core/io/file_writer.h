@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include "paimon/type_fwd.h"
 
 namespace paimon {

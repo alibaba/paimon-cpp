@@ -401,7 +401,7 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     uint64_t write_io_count = 0;
     if (file_format == "orc") {
         ASSERT_OK_AND_ASSIGN(write_io_count, metrics->GetCounter("orc.write.io.count"));
-        ASSERT_TRUE(write_io_count > 0);
+        ASSERT_GT(write_io_count, 0);
     }
 
     // write batch 2, batch size = 2
@@ -419,7 +419,7 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     metrics = postpone_bucket_writer->GetMetrics();
     if (file_format == "orc") {
         ASSERT_OK_AND_ASSIGN(uint64_t write_io_count2, metrics->GetCounter("orc.write.io.count"));
-        ASSERT_TRUE(write_io_count2 > write_io_count);
+        ASSERT_GT(write_io_count2, write_io_count);
     }
 
     ASSERT_OK(postpone_bucket_writer->Close());
