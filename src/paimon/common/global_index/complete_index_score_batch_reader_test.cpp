@@ -110,7 +110,7 @@ TEST_F(CompleteIndexScoreBatchReaderTest, TestWithBitmap) {
         ["Alice", 10, null, 0],
         ["Bob", 11, null, 1],
         ["Cathy", 12, null, 2],
-        ["Davlid", 13, null, 4]
+        ["David", 13, null, 4]
     ])")
                          .ValueOrDie();
 
@@ -125,7 +125,7 @@ TEST_F(CompleteIndexScoreBatchReaderTest, TestWithBitmap) {
     auto array_status =
         arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow::struct_(fields), {R"([
         ["Alice", 10, 1.23, 0],
-        ["Davlid", 13, -19.12, 4]
+        ["David", 13, -19.12, 4]
 ])"},
                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());

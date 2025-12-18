@@ -97,7 +97,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> GlobalIndexResult::Serialize(
     } else {
         return Status::Invalid(
             "invalid GlobalIndexResult, must be BitmapGlobalIndexResult or "
-            "BitmapTopkGlobalIndexResult");
+            "BitmapTopKGlobalIndexResult");
     }
     return MemorySegmentUtils::CopyToBytes(out.Segments(), 0, out.CurrentSize(), pool.get());
 }
@@ -108,8 +108,7 @@ Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexResult::Deserialize(
     DataInputStream in(input_stream);
     PAIMON_ASSIGN_OR_RAISE(int32_t version, in.ReadValue<int32_t>());
     if (version != VERSION) {
-        return Status::Invalid(
-            fmt::format(fmt::format("invalid version {} for GlobalIndexResult", version)));
+        return Status::Invalid(fmt::format("invalid version {} for GlobalIndexResult", version));
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t bitmap_bytes_len, in.ReadValue<int32_t>());
     auto bitmap_bytes = Bytes::AllocateBytes(bitmap_bytes_len, pool.get());

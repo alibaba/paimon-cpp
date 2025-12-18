@@ -111,7 +111,7 @@ bool DataSplitImpl::TEST_Equal(const DataSplitImpl& other) const {
 
 int64_t DataSplitImpl::PartialMergedRowCount() const {
     if (!raw_convertible_) {
-        return 0l;
+        return 0;
     }
     int64_t sum = 0;
     for (size_t i = 0; i < data_files_.size(); i++) {

@@ -131,6 +131,6 @@ TEST_F(GlobalIndexResultTest, TestInvalidSerialize) {
     auto result = std::make_shared<FakeGlobalIndexResult>(std::vector<int64_t>({1, 3, 5, 100}));
     ASSERT_NOK_WITH_MSG(GlobalIndexResult::Serialize(result, pool),
                         "invalid GlobalIndexResult, must be BitmapGlobalIndexResult or "
-                        "BitmapTopkGlobalIndexResult");
+                        "BitmapTopKGlobalIndexResult");
 }
 }  // namespace paimon::test

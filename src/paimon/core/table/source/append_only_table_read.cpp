@@ -52,7 +52,7 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyTableRead::CreateReader(
             return read->CreateReader(split);
         }
     }
-    return Status::Invalid("create reader failed, not read match with data split.");
+    return Status::Invalid("create reader failed, not read match with split.");
 }
 
 }  // namespace paimon
