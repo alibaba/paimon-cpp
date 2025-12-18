@@ -68,7 +68,7 @@ TEST_F(TimestampTest, EqualityOperator) {
     Timestamp ts3(1622547800000, 654321);
     ASSERT_EQ(ts1, ts1);
     ASSERT_EQ(ts1, ts2);
-    ASSERT_NE(ts1, ts3);
+    ASSERT_FALSE(ts1 == ts3);
 }
 
 TEST_F(TimestampTest, LessThanOperator) {
