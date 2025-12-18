@@ -43,10 +43,10 @@ class CompleteIndexScoreBatchReaderTest : public ::testing::Test {
     }
 
     std::unique_ptr<BatchReader> PrepareCompleteIndexScoreBatchReader(
-        const std::shared_ptr<arrow::Array>& src_array, const RoaringBitmap32& seleced_bitmap,
+        const std::shared_ptr<arrow::Array>& src_array, const RoaringBitmap32& selected_bitmap,
         const std::vector<float>& scores, int32_t batch_size) const {
         auto file_batch_reader = std::make_unique<MockFileBatchReader>(src_array, src_array->type(),
-                                                                       seleced_bitmap, batch_size);
+                                                                       selected_bitmap, batch_size);
         return std::make_unique<CompleteIndexScoreBatchReader>(std::move(file_batch_reader), scores,
                                                                pool_);
     }
