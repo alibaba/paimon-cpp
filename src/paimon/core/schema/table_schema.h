@@ -92,11 +92,13 @@ class TableSchema : public Jsonizable<TableSchema> {
 
     Result<std::vector<std::string>> TrimmedPrimaryKeys() const;
 
-    std::optional<std::string> Commit() const {
+    std::optional<std::string> Comment() const {
         return comment_;
     }
 
     bool CrossPartitionUpdate() const;
+
+    Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const;
 
  private:
     JSONIZABLE_FRIEND_AND_DEFAULT_CTOR(TableSchema);

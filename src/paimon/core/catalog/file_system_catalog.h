@@ -49,6 +49,8 @@ class FileSystemCatalog : public Catalog {
 
     Result<std::vector<std::string>> ListDatabases() const override;
     Result<std::vector<std::string>> ListTables(const std::string& database_names) const override;
+    Result<std::optional<std::shared_ptr<Schema>>> LoadTableSchema(
+        const Identifier& identifier) const override;
 
  private:
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);
