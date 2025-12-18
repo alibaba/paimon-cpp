@@ -401,9 +401,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(common_factories_test
@@ -537,9 +535,7 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(fs_test

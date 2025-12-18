@@ -16,90 +16,70 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(blob_table_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(data_evolution_table_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(global_index_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(write_and_read_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(clean_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(read_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(scan_and_read_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(scan_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(write_inte_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(read_inte_with_index_test
                     STATIC_LINK_LIBS
                     paimon_shared
-                    "-Wl,--whole-archive"
                     ${TEST_STATIC_LINK_LIBS}
-                    "-Wl,--no-whole-archive"
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 endif()

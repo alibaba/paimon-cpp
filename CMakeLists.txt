@@ -326,39 +326,41 @@ if(PAIMON_BUILD_TESTS)
     include_directories("${CMAKE_SOURCE_DIR}/test/")
 
     set(TEST_STATIC_LINK_LIBS
+        "-Wl,--whole-archive"
         paimon_file_index_static
         paimon_global_index_static
         paimon_local_file_system_static
         paimon_mock_file_format_static
-        -Wl,--no-as-needed
+        "-Wl,--no-whole-archive"
+        "-Wl,--no-as-needed"
         paimon_parquet_file_format_shared
         paimon_blob_file_format_shared
-        -Wl,--as-needed)
+        "-Wl,--as-needed")
 
     if(PAIMON_ENABLE_LANCE)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--no-as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
         list(APPEND TEST_STATIC_LINK_LIBS paimon_lance_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
     if(PAIMON_ENABLE_ORC)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--no-as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
         list(APPEND TEST_STATIC_LINK_LIBS paimon_orc_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
     if(PAIMON_ENABLE_AVRO)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--no-as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
         list(APPEND TEST_STATIC_LINK_LIBS paimon_avro_file_format_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
     if(PAIMON_ENABLE_JINDO)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--no-as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
         list(APPEND TEST_STATIC_LINK_LIBS paimon_jindo_file_system_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
     if(PAIMON_ENABLE_LUMINA)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--no-as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--no-as-needed")
         list(APPEND TEST_STATIC_LINK_LIBS paimon_lumina_index_shared)
-        list(APPEND TEST_STATIC_LINK_LIBS -Wl,--as-needed)
+        list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
 
 endif()
