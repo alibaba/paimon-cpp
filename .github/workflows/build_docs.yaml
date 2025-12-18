@@ -21,7 +21,6 @@ on:
     paths:
       - 'apidoc/**'
       - 'docs/**'
-      - 'src/**'
       - 'include/**'
 
 concurrency:
