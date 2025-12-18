@@ -43,10 +43,10 @@ class BinaryRowTest : public testing::Test {
     void AssertTestWriterRow(const BinaryRow& row) {
         ASSERT_EQ(row.GetString(0).ToString(), "1");
         ASSERT_EQ(row.GetInt(8), 88);
-        ASSERT_EQ(row.GetShort(11), (int16_t)292);
+        ASSERT_EQ(row.GetShort(11), static_cast<int16_t>(292));
         ASSERT_EQ(row.GetLong(10), 284);
-        ASSERT_EQ(row.GetByte(2), (char)99);
-        ASSERT_EQ(row.GetDouble(6), (double)87.1);
+        ASSERT_EQ(row.GetByte(2), static_cast<char>(99));
+        ASSERT_EQ(row.GetDouble(6), static_cast<double>(87.1));
         ASSERT_EQ(row.GetFloat(7), 26.1f);
         ASSERT_TRUE(row.GetBoolean(1));
         ASSERT_EQ(row.GetString(3).ToString(), "1234567");
@@ -101,12 +101,12 @@ TEST_F(BinaryRowTest, TestSetAndGet) {
 
     ASSERT_EQ(row.GetInt(1), 11);
     ASSERT_TRUE(row.IsNullAt(0));
-    ASSERT_EQ(row.GetShort(5), (int16_t)55);
+    ASSERT_EQ(row.GetShort(5), static_cast<int16_t>(55));
     ASSERT_EQ(row.GetLong(2), 22L);
     ASSERT_TRUE(row.GetBoolean(4));
-    ASSERT_EQ(row.GetByte(6), (char)66);
-    ASSERT_EQ(row.GetFloat(7), (float)77);
-    ASSERT_EQ(row.GetDouble(3), (double)33);
+    ASSERT_EQ(row.GetByte(6), static_cast<char>(66));
+    ASSERT_EQ(row.GetFloat(7), static_cast<float>(77));
+    ASSERT_EQ(row.GetDouble(3), static_cast<double>(33));
 }
 
 TEST_F(BinaryRowTest, TestHeaderSize) {
