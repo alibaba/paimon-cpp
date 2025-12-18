@@ -223,8 +223,7 @@ Override only a single dependency (fmt):
    cd build
    cmake ..
 
-Notes
------
+.. note::
 
 - The exact fetch behaviour (how the mirror prefix is concatenated, or
   whether the helper expects a full URL vs. a prefix) is implemented in
