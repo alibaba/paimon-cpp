@@ -107,7 +107,7 @@ struct DataFileMeta {
 
     // empty row_ranges indicates all rows in the file are needed, return null bitmap
     Result<std::optional<RoaringBitmap32>> ToFileSelection(
-        const std::vector<Range>& row_ranges) const;
+        const std::optional<std::vector<Range>>& row_ranges) const;
 
     static int64_t GetMaxSequenceNumber(
         const std::vector<std::shared_ptr<DataFileMeta>>& file_metas);

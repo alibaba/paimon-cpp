@@ -105,12 +105,17 @@ class FileStoreScan {
         return this;
     }
 
-    virtual FileStoreScan* EnableValueFilter() {
+    FileStoreScan* OnlyReadRealBuckets() {
+        only_read_real_buckets_ = true;
         return this;
     }
 
-    FileStoreScan* OnlyReadRealBuckets() {
-        only_read_real_buckets_ = true;
+    FileStoreScan* WithRowRanges(const std::vector<Range>& row_ranges) {
+        row_ranges_ = row_ranges;
+        return this;
+    }
+
+    virtual FileStoreScan* EnableValueFilter() {
         return this;
     }
 
@@ -120,6 +125,14 @@ class FileStoreScan {
 
     const CoreOptions& GetCoreOptions() const {
         return core_options_;
+    }
+
+    std::shared_ptr<PredicateFilter> GetNonPartitionPredicate() const {
+        return predicates_;
+    }
+
+    std::shared_ptr<PredicateFilter> GetPartitionPredicate() const {
+        return partition_filter_;
     }
 
     class RawPlan {
@@ -190,6 +203,11 @@ class FileStoreScan {
                              const std::shared_ptr<arrow::Schema>& arrow_schema,
                              const std::shared_ptr<ScanFilter>& scan_filters);
 
+    static Result<std::shared_ptr<PredicateFilter>> CreatePartitionPredicate(
+        const std::vector<std::string>& partition_keys, const std::string& partition_default_name,
+        const std::shared_ptr<arrow::Schema>& arrow_schema,
+        const std::vector<std::map<std::string, std::string>>& partition_filters);
+
  private:
     Status ReadManifests(std::optional<Snapshot>* snapshot_ptr,
                          std::vector<ManifestFileMeta>* manifests_ptr) const;
@@ -214,18 +232,13 @@ class FileStoreScan {
     Status ReadManifestFileMeta(const ManifestFileMeta& manifest,
                                 std::vector<ManifestEntry>* entries) const;
 
-    static Result<std::shared_ptr<PredicateFilter>> CreatePartitionPredicate(
-        const std::vector<std::string>& partition_keys, const std::string& partition_default_name,
-        const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const std::vector<std::map<std::string, std::string>>& partition_filters);
-
  protected:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<SchemaManager> schema_manager_;
     std::shared_ptr<PredicateFilter> predicates_;
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<TableSchema> table_schema_;
-    std::vector<Range> row_ranges_;
+    std::optional<std::vector<Range>> row_ranges_;
 
     ScanMode scan_mode_ = ScanMode::ALL;
     CoreOptions core_options_;

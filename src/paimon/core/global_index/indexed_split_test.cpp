@@ -137,25 +137,35 @@ TEST(IndexedSplitTest, TestIndexedSplitWithScore) {
 }
 
 TEST(IndexedSplitTest, TestValidate) {
+    auto meta = std::make_shared<DataFileMeta>(
+        "file.orc", 1l, 200l, BinaryRow::EmptyRow(), BinaryRow::EmptyRow(),
+        SimpleStats::EmptyStats(), SimpleStats::EmptyStats(), 1000l, 1199l, 0, 0,
+        std::vector<std::optional<std::string>>(), Timestamp(0l, 0), 0, nullptr,
+        FileSource::Append(), std::nullopt, std::nullopt, 1000l, std::nullopt);
+
+    DataSplitImpl::Builder builder(
+        /*partition=*/BinaryRow::EmptyRow(),
+        /*bucket=*/0, /*bucket_path=*/
+        "data/test_table/bucket-0", std::vector<std::shared_ptr<DataFileMeta>>({meta}));
+
+    auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(
+        builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build().value());
+
     {
         std::vector<Range> row_ranges = {Range(10, 20), Range(30, 40)};
-        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges);
+        IndexedSplitImpl split(data_split, row_ranges);
         ASSERT_OK(split.Validate());
     }
     {
         std::vector<Range> row_ranges = {Range(10, 12), Range(30, 31)};
         std::vector<float> scores = {10.01f, 10.11f, 10.21f, -30.01f, -30.11f};
-        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges, scores);
+        IndexedSplitImpl split(data_split, row_ranges, scores);
         ASSERT_OK(split.Validate());
-    }
-    {
-        IndexedSplitImpl split(/*data_split=*/nullptr, /*row_ranges=*/std::vector<Range>());
-        ASSERT_NOK_WITH_MSG(split.Validate(), "IndexedSplit must have non-empty row ranges");
     }
     {
         std::vector<Range> row_ranges = {Range(10, 12), Range(30, 31)};
         std::vector<float> scores = {10.01f, 10.11f, 10.21f, -30.01f};
-        IndexedSplitImpl split(/*data_split=*/nullptr, row_ranges, scores);
+        IndexedSplitImpl split(data_split, row_ranges, scores);
         ASSERT_NOK_WITH_MSG(split.Validate(),
                             "Scores length does not match row ranges in indexed split.");
     }

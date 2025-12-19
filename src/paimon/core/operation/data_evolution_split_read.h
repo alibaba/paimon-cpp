@@ -77,7 +77,7 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         const std::shared_ptr<arrow::Schema>& read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-        const std::vector<Range>& row_ranges,
+        const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 
  private:
@@ -129,7 +129,8 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
 
  private:
     Result<std::unique_ptr<BatchReader>> InnerCreateReader(
-        const std::shared_ptr<DataSplit>& data_split, const std::vector<Range>& row_ranges) const;
+        const std::shared_ptr<DataSplit>& data_split,
+        const std::optional<std::vector<Range>>& row_ranges) const;
 
     static Result<std::vector<std::shared_ptr<DataEvolutionSplitRead::FieldBunch>>>
     SplitFieldBunches(const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
@@ -145,7 +146,7 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
     Result<std::unique_ptr<DataEvolutionFileReader>> CreateUnionReader(
         const BinaryRow& partition,
         const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
-        const std::vector<Range>& row_ranges,
+        const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 };
 

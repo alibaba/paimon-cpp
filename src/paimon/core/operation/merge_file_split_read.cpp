@@ -154,7 +154,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIf
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::vector<Range>& ranges,
+    const std::optional<std::vector<Range>>& ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     // merge read does not use index
     PAIMON_UNIQUE_PTR<DeletionVector> deletion_vector;
@@ -276,10 +276,7 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
         PrimaryKeyTableUtils::CreateSequenceFieldsComparator(value_fields, options));
     // 5. complete key fields to all trimmed primary key
     key_fields.clear();
-    for (const auto& key_name : trimmed_key_fields) {
-        PAIMON_ASSIGN_OR_RAISE(DataField key_field, table_schema.GetField(key_name));
-        key_fields.emplace_back(key_field);
-    }
+    PAIMON_ASSIGN_OR_RAISE(key_fields, table_schema.GetFields(trimmed_key_fields));
     PAIMON_ASSIGN_OR_RAISE(
         *key_comparator, FieldsComparator::Create(key_fields,
                                                   /*is_ascending_order=*/true, /*use_view=*/true));

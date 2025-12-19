@@ -133,4 +133,29 @@ Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexResult::Deserialize(
     return std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));
 }
 
+Result<std::vector<Range>> GlobalIndexResult::ToRanges() const {
+    std::vector<Range> ranges;
+    PAIMON_ASSIGN_OR_RAISE(bool empty, IsEmpty());
+    if (empty) {
+        return ranges;
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<Iterator> iter, CreateIterator());
+    int64_t range_start = iter->Next();
+    int64_t range_end = range_start;
+    while (iter->HasNext()) {
+        int64_t current = iter->Next();
+        if (current == range_end + 1) {
+            // Extend the current range
+            range_end = current;
+        } else {
+            ranges.push_back(Range(range_start, range_end));
+            range_start = current;
+            range_end = current;
+        }
+    }
+    // Add the last range
+    ranges.push_back(Range(range_start, range_end));
+    return ranges;
+}
+
 }  // namespace paimon

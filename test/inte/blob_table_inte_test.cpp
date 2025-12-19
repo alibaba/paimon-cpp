@@ -52,6 +52,7 @@
 #include "paimon/file_store_write.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
@@ -158,43 +159,17 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         return file_store_commit->Commit(commit_msgs);
     }
 
-    Result<std::vector<std::shared_ptr<Split>>> CreateReadSplit(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::vector<Range>& row_ranges) const {
-        if (row_ranges.empty()) {
-            return splits;
-        }
-        // TODO(xinyu.lxy): mv to DataEvolutionBatchScan
-        std::vector<Range> sorted_row_ranges =
-            Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
-        std::vector<std::shared_ptr<Split>> indexed_splits;
-        indexed_splits.reserve(splits.size());
-        for (const auto& split : splits) {
-            auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
-            if (!data_split) {
-                return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
-            }
-            std::vector<Range> file_ranges;
-            file_ranges.reserve(data_split->DataFiles().size());
-            for (const auto& meta : data_split->DataFiles()) {
-                PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
-                file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
-            }
-            auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
-            std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
-            // TODO(xinyu.lxy): add scores
-            indexed_splits.push_back(std::make_shared<IndexedSplitImpl>(data_split, expected));
-        }
-        return indexed_splits;
-    }
-
     Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
                        const std::shared_ptr<arrow::StructArray>& expected_array,
                        const std::shared_ptr<Predicate>& predicate = nullptr,
                        const std::vector<Range>& row_ranges = {}) const {
         // scan
         ScanContextBuilder scan_context_builder(table_path);
-        scan_context_builder.SetPredicate(predicate).SetRowRanges(row_ranges);
+        scan_context_builder.SetPredicate(predicate);
+        if (!row_ranges.empty()) {
+            auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
+            scan_context_builder.SetGlobalIndexResult(global_index_result);
+        }
         PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
@@ -209,8 +184,7 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(auto read_splits, CreateReadSplit(splits, row_ranges));
-        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(read_splits));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
         PAIMON_ASSIGN_OR_RAISE(auto read_result,
                                ReadResultCollector::CollectResult(batch_reader.get()));
 

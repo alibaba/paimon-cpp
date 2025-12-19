@@ -101,6 +101,43 @@ bool Range::HasIntersection(const Range& left, const Range& right) {
     return intersection_start <= intersection_end;
 }
 
+std::vector<Range> Range::Exclude(const std::vector<Range>& ranges) const {
+    if (ranges.empty()) {
+        return {*this};
+    }
+
+    // Sort ranges by from
+    std::vector<Range> sorted = ranges;
+    std::sort(sorted.begin(), sorted.end(),
+              [](const Range& left, const Range& right) { return left.from < right.from; });
+
+    std::vector<Range> result;
+    int64_t current = from;
+
+    for (const auto& exclude : sorted) {
+        // Compute intersection with the current range
+        auto intersect = Range::Intersection(Range(current, to), exclude);
+        if (!intersect) {
+            continue;
+        }
+        // Add the part before the intersection (if any)
+        if (current < intersect.value().from) {
+            result.push_back(Range(current, intersect.value().from - 1));
+        }
+        // Move current position past the intersection
+        current = intersect.value().to + 1;
+        if (current > to) {
+            break;
+        }
+    }
+    // Add the remaining part after all exclusions (if any)
+    if (current <= to) {
+        result.push_back(Range(current, to));
+    }
+
+    return result;
+}
+
 bool Range::operator==(const Range& other) const {
     if (this == &other) {
         return true;

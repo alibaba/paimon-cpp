@@ -89,9 +89,9 @@ class DataEvolutionFileStoreScan : public FileStoreScan {
     Result<bool> FilterByStatsWithSameRowId(const std::vector<ManifestEntry>& entries) const;
 
     static bool FilterManifestByRowRanges(const ManifestFileMeta& manifest,
-                                          const std::vector<Range>& row_ranges);
+                                          const std::optional<std::vector<Range>>& row_ranges);
     static Result<bool> FilterEntryByRowRanges(const ManifestEntry& entry,
-                                               const std::vector<Range>& row_ranges);
+                                               const std::optional<std::vector<Range>>& row_ranges);
 
     static Result<std::pair<int64_t, SimpleStatsEvolution::EvolutionStats>> EvolutionStats(
         const std::vector<ManifestEntry>& entries, const std::shared_ptr<TableSchema>& table_schema,

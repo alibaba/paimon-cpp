@@ -164,14 +164,18 @@ TEST_F(BitmapGlobalIndexResultTest, TestInvalidBitmapResult) {
     ASSERT_TRUE(result->ToString().find("Invalid: invalid supplier") != std::string::npos);
 }
 
-TEST_F(BitmapGlobalIndexResultTest, TestFromRange) {
+TEST_F(BitmapGlobalIndexResultTest, TestFromRanges) {
     {
-        auto result = BitmapGlobalIndexResult::FromRange(Range(0, 5));
+        auto result = BitmapGlobalIndexResult::FromRanges({Range(0, 5)});
         ASSERT_EQ(result->ToString(), "{0,1,2,3,4,5}");
     }
     {
-        auto result = BitmapGlobalIndexResult::FromRange(Range(10, 10));
+        auto result = BitmapGlobalIndexResult::FromRanges({Range(10, 10)});
         ASSERT_EQ(result->ToString(), "{10}");
+    }
+    {
+        auto result = BitmapGlobalIndexResult::FromRanges({Range(0, 5), Range(10, 10)});
+        ASSERT_EQ(result->ToString(), "{0,1,2,3,4,5,10}");
     }
 }
 }  // namespace paimon::test

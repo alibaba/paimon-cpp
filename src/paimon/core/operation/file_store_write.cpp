@@ -138,8 +138,10 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             return Status::Invalid(
                 fmt::format("not support bucket {} in key value table", options.GetBucket()));
         }
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
+                               schema->TrimmedPrimaryKeys());
         PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> trimmed_primary_key_fields,
-                               schema->TrimmedPrimaryKeyFields());
+                               schema->GetFields(trimmed_primary_keys));
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(trimmed_primary_key_fields,
                                                         options.SequenceFieldSortOrderIsAscending(),

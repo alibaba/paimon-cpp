@@ -78,9 +78,9 @@ class PAIMON_EXPORT BitmapGlobalIndexResult : public GlobalIndexResult {
     ///       bitmap is not actually required. **Not thread-safe**.
     Result<const RoaringBitmap64*> GetBitmap() const;
 
-    /// @return A shared pointer to a new BitmapGlobalIndexResult instance representing the given
-    ///         inclusive range [from, to].
-    static std::shared_ptr<BitmapGlobalIndexResult> FromRange(const Range& range);
+    /// Creates `BitmapGlobalIndexResult` for all row ids in the given ranges.
+    /// @note Overlapping or unsorted ranges are accepted.
+    static std::shared_ptr<BitmapGlobalIndexResult> FromRanges(const std::vector<Range>& ranges);
 
  private:
     mutable bool initialized_ = false;

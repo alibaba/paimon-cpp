@@ -13,31 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "paimon/core/global_index/global_index_scan_impl.h"
 
 #include <string>
 #include <unordered_set>
 #include <utility>
 
+#include "paimon/common/executor/future.h"
 #include "paimon/core/global_index/row_range_global_index_scanner_impl.h"
 #include "paimon/core/index/index_file_handler.h"
-#include "paimon/core/utils/snapshot_manager.h"
-
+#include "paimon/global_index/bitmap_global_index_result.h"
 namespace paimon {
-GlobalIndexScanImpl::GlobalIndexScanImpl(
-    const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
-    const std::optional<int64_t>& snapshot_id,
-    const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool)
+GlobalIndexScanImpl::GlobalIndexScanImpl(const std::string& root_path,
+                                         const std::shared_ptr<TableSchema>& table_schema,
+                                         const Snapshot& snapshot,
+                                         const std::shared_ptr<PredicateFilter>& partitions,
+                                         const CoreOptions& options,
+                                         const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       root_path_(root_path),
       table_schema_(table_schema),
-      snapshot_id_(snapshot_id),
+      snapshot_(snapshot),
       partitions_(partitions),
-      options_(options) {
-    assert(!partitions || !partitions.value().empty());
-}
+      options_(options) {}
 
 Result<std::shared_ptr<RowRangeGlobalIndexScanner>> GlobalIndexScanImpl::CreateRangeScan(
     const Range& range) {
@@ -65,22 +63,26 @@ Result<std::shared_ptr<RowRangeGlobalIndexScanner>> GlobalIndexScanImpl::CreateR
     return std::make_shared<RowRangeGlobalIndexScannerImpl>(table_schema_, index_file_path_factory,
                                                             filtered_entries, options_, pool_);
 }
+
 Result<std::vector<Range>> GlobalIndexScanImpl::GetRowRangeList() {
     PAIMON_RETURN_NOT_OK(Scan());
-    std::map<std::string, std::vector<Range>> index_ranges;
+    std::map<std::string, std::vector<Range>> index_type_to_ranges;
+    std::vector<Range> index_ranges;
+    index_ranges.reserve(entries_.size());
     for (const auto& entry : entries_) {
         const auto& global_index_meta = entry.index_file->GetGlobalIndexMeta();
         assert(global_index_meta);
         const auto& index_meta = global_index_meta.value();
-        index_ranges[entry.index_file->IndexType()].emplace_back(index_meta.row_range_start,
-                                                                 index_meta.row_range_end);
+        Range range(index_meta.row_range_start, index_meta.row_range_end);
+        index_ranges.push_back(range);
+        index_type_to_ranges[entry.index_file->IndexType()].push_back(range);
     }
     std::string check_index_type;
     std::vector<Range> check_ranges;
     // check all type index have same shard ranges
     // If index a has [1,10],[20,30] and index b has [1,10],[20,25], it's inconsistent, because
     // it is hard to handle the [26,30] range.
-    for (const auto& [type, ranges] : index_ranges) {
+    for (const auto& [type, ranges] : index_type_to_ranges) {
         if (check_index_type.empty()) {
             check_index_type = type;
             check_ranges = Range::SortAndMergeOverlap(ranges, /*adjacent=*/true);
@@ -93,8 +95,7 @@ Result<std::vector<Range>> GlobalIndexScanImpl::GetRowRangeList() {
             }
         }
     }
-
-    return check_ranges;
+    return Range::SortAndMergeOverlap(index_ranges, /*adjacent=*/false);
 }
 
 Status GlobalIndexScanImpl::Scan() {
@@ -118,40 +119,80 @@ Status GlobalIndexScanImpl::Scan() {
     auto index_file_handler = std::make_unique<IndexFileHandler>(
         std::move(index_manifest_file), std::make_shared<IndexFilePathFactories>(path_factory_));
 
-    // prepare snapshot
-    std::optional<Snapshot> snapshot;
-    SnapshotManager snapshot_manager(options_.GetFileSystem(), root_path_);
-    if (snapshot_id_) {
-        PAIMON_ASSIGN_OR_RAISE(snapshot, snapshot_manager.LoadSnapshot(snapshot_id_.value()));
-    } else {
-        PAIMON_ASSIGN_OR_RAISE(snapshot, snapshot_manager.LatestSnapshot());
-    }
-    if (!snapshot) {
-        return Status::Invalid("not found latest snapshot");
-    }
-
-    // prepare filter
-    std::unordered_set<BinaryRow> partitions_set;
-    if (partitions_) {
-        for (const auto& partition : partitions_.value()) {
-            PAIMON_ASSIGN_OR_RAISE(BinaryRow partition_row, path_factory_->ToBinaryRow(partition));
-            partitions_set.insert(partition_row);
-        }
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
+                           table_schema_->GetFields(table_schema_->PartitionKeys()));
+    auto partition_schema = DataField::ConvertDataFieldsToArrowSchema(partition_fields);
     std::function<Result<bool>(const IndexManifestEntry&)> filter =
-        [&](const IndexManifestEntry& entry) -> bool {
-        if (!partitions_set.empty() &&
-            partitions_set.find(entry.partition) == partitions_set.end()) {
-            return false;
+        [&](const IndexManifestEntry& entry) -> Result<bool> {
+        if (partitions_) {
+            PAIMON_ASSIGN_OR_RAISE(bool saved,
+                                   partitions_->Test(partition_schema, entry.partition));
+            if (!saved) {
+                return false;
+            }
         }
         if (!entry.index_file->GetGlobalIndexMeta()) {
             return false;
         }
         return true;
     };
-    PAIMON_ASSIGN_OR_RAISE(entries_, index_file_handler->Scan(snapshot.value(), filter));
+    PAIMON_ASSIGN_OR_RAISE(entries_, index_file_handler->Scan(snapshot_, filter));
     initialized_ = true;
     return Status::OK();
 }
 
+Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::ParallelScan(
+    const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
+    const std::shared_ptr<Executor>& executor) {
+    std::vector<std::shared_ptr<RowRangeGlobalIndexScanner>> range_scanners;
+    range_scanners.reserve(ranges.size());
+    for (const auto& range : ranges) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RowRangeGlobalIndexScanner> scanner,
+                               CreateRangeScan(range));
+        range_scanners.push_back(scanner);
+    }
+
+    std::vector<std::future<Result<std::optional<std::shared_ptr<GlobalIndexResult>>>>> futures;
+    for (const auto& scanner : range_scanners) {
+        auto search_index =
+            [&scanner, &predicate]() -> Result<std::optional<std::shared_ptr<GlobalIndexResult>>> {
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
+                                   scanner->CreateIndexEvaluator());
+            return evaluator->Evaluate(predicate);
+        };
+        futures.push_back(Via(executor.get(), search_index));
+    }
+    auto collected_results = CollectAll(futures);
+
+    // collect inner result and check all null
+    bool all_null = true;
+    std::vector<std::optional<std::shared_ptr<GlobalIndexResult>>> results;
+    for (auto& result : collected_results) {
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> inner_result,
+                               result);
+        if (inner_result) {
+            all_null = false;
+        }
+        results.push_back(std::move(inner_result));
+    }
+    if (all_null) {
+        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+    }
+
+    // union result from multiple ranges
+    std::shared_ptr<GlobalIndexResult> final_global_index_result =
+        BitmapGlobalIndexResult::FromRanges({});
+
+    for (size_t i = 0; i < results.size(); ++i) {
+        if (results[i]) {
+            PAIMON_ASSIGN_OR_RAISE(final_global_index_result,
+                                   final_global_index_result->Or(results[i].value()));
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(
+                final_global_index_result,
+                final_global_index_result->Or(BitmapGlobalIndexResult::FromRanges({ranges[i]})));
+        }
+    }
+    return std::optional<std::shared_ptr<GlobalIndexResult>>(final_global_index_result);
+}
 }  // namespace paimon

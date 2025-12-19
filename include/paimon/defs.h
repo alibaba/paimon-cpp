@@ -282,6 +282,8 @@ struct PAIMON_EXPORT Options {
     /// "blob-as-descriptor" - Read and write blob field using blob descriptor rather than blob
     /// bytes. Default value is "false".
     static const char BLOB_AS_DESCRIPTOR[];
+    /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
+    static const char GLOBAL_INDEX_ENABLED[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

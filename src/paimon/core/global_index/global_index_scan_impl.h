@@ -21,9 +21,11 @@
 #include <string>
 #include <vector>
 
+#include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/manifest/index_manifest_entry.h"
 #include "paimon/core/schema/table_schema.h"
+#include "paimon/core/snapshot.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/global_index/global_index_scan.h"
@@ -31,27 +33,34 @@
 namespace paimon {
 class GlobalIndexScanImpl : public GlobalIndexScan {
  public:
-    GlobalIndexScanImpl(
-        const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
-        const std::optional<int64_t>& snapshot_id,
-        const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
+    GlobalIndexScanImpl(const std::string& root_path,
+                        const std::shared_ptr<TableSchema>& table_schema, const Snapshot& snapshot,
+                        const std::shared_ptr<PredicateFilter>& partitions,
+                        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
         const Range& range) override;
 
     Result<std::vector<Range>> GetRowRangeList() override;
 
+    const Snapshot& GetSnapshot() const {
+        return snapshot_;
+    }
+
  private:
     Status Scan();
+
+    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> ParallelScan(
+        const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
+        const std::shared_ptr<Executor>& executor);
 
  private:
     bool initialized_ = false;
     std::shared_ptr<MemoryPool> pool_;
     std::string root_path_;
     std::shared_ptr<TableSchema> table_schema_;
-    std::optional<int64_t> snapshot_id_;
-    std::optional<std::vector<std::map<std::string, std::string>>> partitions_;
+    Snapshot snapshot_;
+    std::shared_ptr<PredicateFilter> partitions_;
     CoreOptions options_;
     std::shared_ptr<FileStorePathFactory> path_factory_;
     std::vector<IndexManifestEntry> entries_;

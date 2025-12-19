@@ -26,9 +26,9 @@
 #include "paimon/common/utils/range_helper.h"
 namespace paimon {
 Result<bool> DataEvolutionFileStoreScan::FilterEntryByRowRanges(
-    const ManifestEntry& entry, const std::vector<Range>& row_ranges) {
+    const ManifestEntry& entry, const std::optional<std::vector<Range>>& row_ranges) {
     // If row ranges is null, all entries should be kept
-    if (row_ranges.empty()) {
+    if (!row_ranges) {
         return true;
     }
     // If firstRowId does not exist, keep the entry
@@ -41,7 +41,7 @@ Result<bool> DataEvolutionFileStoreScan::FilterEntryByRowRanges(
     int64_t end_row_id = first_row_id.value() + entry.File()->row_count - 1;
     Range file_range(first_row_id.value(), end_row_id);
 
-    for (const auto& row_range : row_ranges) {
+    for (const auto& row_range : row_ranges.value()) {
         if (Range::HasIntersection(file_range, row_range)) {
             return true;
         }
@@ -56,7 +56,7 @@ Result<bool> DataEvolutionFileStoreScan::FilterByStats(const ManifestEntry& entr
 
 std::vector<ManifestFileMeta> DataEvolutionFileStoreScan::PostFilterManifests(
     std::vector<ManifestFileMeta>&& manifests) const {
-    if (row_ranges_.empty()) {
+    if (!row_ranges_) {
         return std::move(manifests);
     }
     std::vector<ManifestFileMeta> result_metas;
@@ -101,9 +101,9 @@ Result<std::vector<ManifestEntry>> DataEvolutionFileStoreScan::PostFilterManifes
     return result_entries;
 }
 
-bool DataEvolutionFileStoreScan::FilterManifestByRowRanges(const ManifestFileMeta& manifest,
-                                                           const std::vector<Range>& row_ranges) {
-    if (row_ranges.empty()) {
+bool DataEvolutionFileStoreScan::FilterManifestByRowRanges(
+    const ManifestFileMeta& manifest, const std::optional<std::vector<Range>>& row_ranges) {
+    if (!row_ranges) {
         return true;
     }
     std::optional<int64_t> min = manifest.MinRowId();
@@ -113,7 +113,7 @@ bool DataEvolutionFileStoreScan::FilterManifestByRowRanges(const ManifestFileMet
     }
 
     Range manifest_range(min.value(), max.value());
-    for (const auto& range : row_ranges) {
+    for (const auto& range : row_ranges.value()) {
         if (Range::HasIntersection(manifest_range, range)) {
             return true;
         }

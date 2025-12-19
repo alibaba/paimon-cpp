@@ -79,5 +79,5 @@ const char Options::ROW_TRACKING_ENABLED[] = "row-tracking.enabled";
 const char Options::DATA_EVOLUTION_ENABLED[] = "data-evolution.enabled";
 const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
-
+const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 }  // namespace paimon

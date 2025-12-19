@@ -29,6 +29,7 @@ class Predicate;
 ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
                          std::optional<int32_t> limit,
                          const std::shared_ptr<ScanFilter>& scan_filter,
+                         const std::shared_ptr<GlobalIndexResult>& global_index_result,
                          const std::shared_ptr<MemoryPool>& memory_pool,
                          const std::shared_ptr<Executor>& executor,
                          const std::map<std::string, std::string>& options)
@@ -36,6 +37,7 @@ ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
       is_streaming_mode_(is_streaming_mode),
       limit_(limit),
       scan_filters_(scan_filter),
+      global_index_result_(global_index_result),
       memory_pool_(memory_pool),
       executor_(executor),
       options_(options) {}
@@ -52,7 +54,7 @@ class ScanContextBuilder::Impl {
         bucket_filter_ = std::nullopt;
         partition_filters_.clear();
         predicates_.reset();
-        row_ranges_.clear();
+        global_index_result_.reset();
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
         options_.clear();
@@ -65,7 +67,7 @@ class ScanContextBuilder::Impl {
     std::optional<int32_t> bucket_filter_;
     std::vector<std::map<std::string, std::string>> partition_filters_;
     std::shared_ptr<Predicate> predicates_;
-    std::vector<Range> row_ranges_;
+    std::shared_ptr<GlobalIndexResult> global_index_result_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
     std::map<std::string, std::string> options_;
@@ -102,8 +104,9 @@ ScanContextBuilder& ScanContextBuilder::SetPredicate(const std::shared_ptr<Predi
     return *this;
 }
 
-ScanContextBuilder& ScanContextBuilder::SetRowRanges(const std::vector<Range>& row_ranges) {
-    impl_->row_ranges_ = row_ranges;
+ScanContextBuilder& ScanContextBuilder::SetGlobalIndexResult(
+    const std::shared_ptr<GlobalIndexResult>& global_index_result) {
+    impl_->global_index_result_ = global_index_result;
     return *this;
 }
 
@@ -138,8 +141,8 @@ Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
     auto ctx = std::make_unique<ScanContext>(
         impl_->path_, impl_->is_streaming_mode_, impl_->limit_,
         std::make_shared<ScanFilter>(impl_->predicates_, impl_->partition_filters_,
-                                     impl_->bucket_filter_, impl_->row_ranges_),
-        impl_->memory_pool_, impl_->executor_, impl_->options_);
+                                     impl_->bucket_filter_),
+        impl_->global_index_result_, impl_->memory_pool_, impl_->executor_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

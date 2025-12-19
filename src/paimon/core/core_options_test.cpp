@@ -86,6 +86,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.RowTrackingEnabled());
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
+    ASSERT_TRUE(core_options.GlobalIndexEnabled());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -142,6 +143,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::ROW_TRACKING_ENABLED, "true"},
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
+        {Options::GLOBAL_INDEX_ENABLED, "false"},
     };
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
@@ -209,6 +211,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.RowTrackingEnabled());
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
+    ASSERT_FALSE(core_options.GlobalIndexEnabled());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {

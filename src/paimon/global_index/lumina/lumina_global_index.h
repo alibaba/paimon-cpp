@@ -94,58 +94,58 @@ class LuminaIndexReader : public GlobalIndexReader {
         const std::shared_ptr<Predicate>& predicate) override;
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNull() override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessOrEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterOrEqual(
         const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitStartsWith(const Literal& prefix) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEndsWith(const Literal& suffix) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRange(range_);
+        return BitmapGlobalIndexResult::FromRanges({range_});
     }
 
  private:

@@ -37,6 +37,18 @@ class DataTableBatchScan : public AbstractTableScan {
 
     Result<std::shared_ptr<Plan>> CreatePlan() override;
 
+    std::shared_ptr<PredicateFilter> GetNonPartitionPredicate() const {
+        return snapshot_reader_->GetNonPartitionPredicate();
+    }
+    std::shared_ptr<PredicateFilter> GetPartitionPredicate() const {
+        return snapshot_reader_->GetPartitionPredicate();
+    }
+
+    DataTableBatchScan* WithRowRanges(const std::vector<Range>& row_ranges) {
+        snapshot_reader_->WithRowRanges(row_ranges);
+        return this;
+    }
+
  private:
     Result<std::shared_ptr<Plan>> ApplyPushDownLimit(
         const std::shared_ptr<StartingScanner::ScanResult>& scan_result) const;

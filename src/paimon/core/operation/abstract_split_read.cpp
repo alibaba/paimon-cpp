@@ -65,7 +65,7 @@ Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFi
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::vector<Range>& row_ranges,
+    const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (data_files.empty()) {
         return std::vector<std::unique_ptr<BatchReader>>();
@@ -170,7 +170,7 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::CreateFieldMappingReader
     const BinaryRow& partition, const ReaderBuilder* reader_builder,
     const FieldMappingBuilder* field_mapping_builder,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::vector<Range>& row_ranges,
+    const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<TableSchema> data_schema;
     if (file_meta->schema_id == context_->GetTableSchema()->Id()) {

@@ -112,7 +112,7 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::vector<Range>& ranges,
+    const std::optional<std::vector<Range>>& ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<FileIndexResult> file_index_result;
     if (options_.FileIndexReadEnabled()) {

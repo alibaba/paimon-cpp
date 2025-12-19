@@ -24,6 +24,7 @@
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/indexed_split.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
@@ -122,36 +123,6 @@ class DataEvolutionTableTest : public ::testing::Test,
         return file_store_commit->Commit(commit_msgs);
     }
 
-    Result<std::vector<std::shared_ptr<Split>>> CreateReadSplit(
-        const std::vector<std::shared_ptr<Split>>& splits,
-        const std::vector<Range>& row_ranges) const {
-        if (row_ranges.empty()) {
-            return splits;
-        }
-        // TODO(xinyu.lxy): mv to DataEvolutionBatchScan
-        std::vector<Range> sorted_row_ranges =
-            Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
-        std::vector<std::shared_ptr<Split>> indexed_splits;
-        indexed_splits.reserve(splits.size());
-        for (const auto& split : splits) {
-            auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
-            if (!data_split) {
-                return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");
-            }
-            std::vector<Range> file_ranges;
-            file_ranges.reserve(data_split->DataFiles().size());
-            for (const auto& meta : data_split->DataFiles()) {
-                PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, meta->NonNullFirstRowId());
-                file_ranges.emplace_back(first_row_id, first_row_id + meta->row_count - 1);
-            }
-            auto sorted_file_ranges = Range::SortAndMergeOverlap(file_ranges, /*adjacent=*/true);
-            std::vector<Range> expected = Range::And(sorted_file_ranges, sorted_row_ranges);
-            // TODO(xinyu.lxy): add scores
-            indexed_splits.push_back(std::make_shared<IndexedSplitImpl>(data_split, expected));
-        }
-        return indexed_splits;
-    }
-
     Status ScanAndRead(const std::string& table_path, const std::vector<std::string>& read_schema,
                        const std::shared_ptr<arrow::StructArray>& expected_array,
                        const std::shared_ptr<Predicate>& predicate = nullptr,
@@ -159,7 +130,11 @@ class DataEvolutionTableTest : public ::testing::Test,
                        bool check_scan_plan_when_empty_result = true) const {
         // scan
         ScanContextBuilder scan_context_builder(table_path);
-        scan_context_builder.SetPredicate(predicate).SetRowRanges(row_ranges);
+        scan_context_builder.SetPredicate(predicate);
+        if (!row_ranges.empty()) {
+            auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
+            scan_context_builder.SetGlobalIndexResult(global_index_result);
+        }
         PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
@@ -176,8 +151,7 @@ class DataEvolutionTableTest : public ::testing::Test,
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
-        PAIMON_ASSIGN_OR_RAISE(auto read_splits, CreateReadSplit(splits, row_ranges));
-        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(read_splits));
+        PAIMON_ASSIGN_OR_RAISE(auto batch_reader, table_read->CreateReader(splits));
         PAIMON_ASSIGN_OR_RAISE(auto read_result,
                                ReadResultCollector::CollectResult(batch_reader.get()));
 
@@ -222,7 +196,11 @@ class DataEvolutionTableTest : public ::testing::Test,
                          const std::vector<int64_t>& expected_row_counts) {
         ASSERT_EQ(expected_first_row_ids.size(), expected_row_counts.size());
         ScanContextBuilder scan_context_builder(table_path);
-        scan_context_builder.SetPredicate(predicate).SetRowRanges(row_ranges);
+        scan_context_builder.SetPredicate(predicate);
+        if (!row_ranges.empty()) {
+            auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
+            scan_context_builder.SetGlobalIndexResult(global_index_result);
+        }
         ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
         ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
@@ -232,7 +210,12 @@ class DataEvolutionTableTest : public ::testing::Test,
             return;
         }
         ASSERT_EQ(result_splits.size(), 1);
-        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(result_splits[0]);
+        std::shared_ptr<DataSplitImpl> data_split;
+        if (auto indexed_split = std::dynamic_pointer_cast<IndexedSplit>(result_splits[0])) {
+            data_split = std::dynamic_pointer_cast<DataSplitImpl>(indexed_split->GetDataSplit());
+        } else {
+            data_split = std::dynamic_pointer_cast<DataSplitImpl>(result_splits[0]);
+        }
         ASSERT_TRUE(data_split);
         std::vector<std::optional<int64_t>> result_first_row_ids;
         std::vector<int64_t> result_row_counts;
@@ -750,19 +733,6 @@ TEST_P(DataEvolutionTableTest, TestOnlyRowTrackingEnabled) {
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols0, src_array0));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
-    {
-        // test with row ids, as only data evolution mode support read with row ranges
-        std::vector<Range> row_ranges = {Range(1l, 1l)};
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
-        [2, "c", "d"]
-    ])")
-                .ValueOrDie());
-        ASSERT_NOK_WITH_MSG(ScanAndRead(table_path, schema->field_names(), expected_array,
-                                        /*predicate=*/nullptr,
-                                        /*row_ranges=*/row_ranges),
-                            "unexpected error, split cast to impl failed");
-    }
     if (GetParam() != "lance") {
         // read with row tracking
         auto expected_row_tracking_array = std::dynamic_pointer_cast<arrow::StructArray>(
@@ -1326,32 +1296,16 @@ TEST_P(DataEvolutionTableTest, TestReadCompactFiles) {
     std::shared_ptr<arrow::DataType> arrow_data_type =
         DataField::ConvertDataFieldsToArrowStructType(read_fields);
 
-    {
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, R"([
+    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, R"([
         ["Lily", 2, 12, 2.1, 0, 1],
         ["Alice", 3, 13, 3.1, 1, 1],
         ["Bob", 4, 14, 4.1, 2, 2],
         ["David", 5, 15, 5.1, 3, 2]
     ])")
-                .ValueOrDie());
-        ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
-                              expected_array));
-    }
-    {
-        // test with row ids
-        std::vector<Range> row_ranges = {Range(1l, 1l)};
-        // as after compact, first row id in data file meta is null, read will fail
-        CheckScanResult(table_path, /*predicate=*/nullptr, /*row_ranges=*/row_ranges,
-                        /*expected_first_row_ids=*/{std::nullopt}, /*expected_row_counts=*/{4});
-        auto read_status =
-            ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
-                        /*expected_array=*/nullptr,
-                        /*predicate=*/nullptr,
-                        /*row_ranges=*/row_ranges, /*check_scan_plan_when_empty_result=*/false);
-        ASSERT_NOK_WITH_MSG(read_status, "First row id of ");
-        ASSERT_NOK_WITH_MSG(read_status, "should not be null");
-    }
+            .ValueOrDie());
+    ASSERT_OK(ScanAndRead(table_path, arrow::schema(arrow_data_type->fields())->field_names(),
+                          expected_array));
 }
 
 TEST_P(DataEvolutionTableTest, TestReadTableWithDenseStats) {

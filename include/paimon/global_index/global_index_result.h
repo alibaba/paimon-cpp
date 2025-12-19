@@ -23,6 +23,7 @@
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
+#include "paimon/utils/range.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -54,6 +55,9 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
 
     /// Creates a new iterator over the selected global row ids.
     virtual Result<std::unique_ptr<Iterator>> CreateIterator() const = 0;
+
+    /// Returns non-overlapping, sorted ranges covering all row ids in `GlobalIndexResult`.
+    Result<std::vector<Range>> ToRanges() const;
 
     /// Computes the logical AND (intersection) between current result and another.
     virtual Result<std::shared_ptr<GlobalIndexResult>> And(

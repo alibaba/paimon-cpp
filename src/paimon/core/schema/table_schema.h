@@ -84,12 +84,12 @@ class TableSchema : public Jsonizable<TableSchema> {
     const std::vector<DataField>& Fields() const {
         return fields_;
     }
-    Result<std::vector<DataField>> TrimmedPrimaryKeyFields() const;
 
     Result<DataField> GetField(const std::string& field_name) const;
 
     Result<DataField> GetField(int32_t field_id) const;
 
+    Result<std::vector<DataField>> GetFields(const std::vector<std::string>& field_names) const;
     Result<std::vector<std::string>> TrimmedPrimaryKeys() const;
 
     std::optional<std::string> Comment() const {

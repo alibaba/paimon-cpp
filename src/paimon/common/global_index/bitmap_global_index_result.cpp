@@ -74,10 +74,13 @@ std::string BitmapGlobalIndexResult::ToString() const {
     return bitmap.value()->ToString();
 }
 
-std::shared_ptr<BitmapGlobalIndexResult> BitmapGlobalIndexResult::FromRange(const Range& range) {
-    BitmapGlobalIndexResult::BitmapSupplier supplier = [range]() -> Result<RoaringBitmap64> {
+std::shared_ptr<BitmapGlobalIndexResult> BitmapGlobalIndexResult::FromRanges(
+    const std::vector<Range>& ranges) {
+    BitmapGlobalIndexResult::BitmapSupplier supplier = [ranges]() -> Result<RoaringBitmap64> {
         RoaringBitmap64 bitmap;
-        bitmap.AddRange(range.from, range.to + 1);
+        for (const auto& range : ranges) {
+            bitmap.AddRange(range.from, range.to + 1);
+        }
         return bitmap;
     };
     return std::make_shared<BitmapGlobalIndexResult>(supplier);

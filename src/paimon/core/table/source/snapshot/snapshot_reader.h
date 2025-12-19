@@ -80,8 +80,21 @@ class SnapshotReader {
         return this;
     }
 
+    SnapshotReader* WithRowRanges(const std::vector<Range>& row_ranges) {
+        scan_->WithRowRanges(row_ranges);
+        return this;
+    }
+
     const std::shared_ptr<SnapshotManager>& GetSnapshotManager() const {
         return scan_->GetSnapshotManager();
+    }
+
+    std::shared_ptr<PredicateFilter> GetNonPartitionPredicate() const {
+        return scan_->GetNonPartitionPredicate();
+    }
+
+    std::shared_ptr<PredicateFilter> GetPartitionPredicate() const {
+        return scan_->GetPartitionPredicate();
     }
 
     /// Get splits from `FileKind::ADD` files.

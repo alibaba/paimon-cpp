@@ -37,7 +37,7 @@ class PAIMON_EXPORT GlobalIndexScan {
     ///
     /// @param table_path     Root directory of the table.
     /// @param snapshot_id    Optional snapshot ID to read from; if not provided, uses the latest.
-    /// @param partitions     Optional list of partition specs to restrict the scan scope.
+    /// @param partitions     Optional list of specific partitions to restrict the scan scope.
     ///                       Each map represents one partition (e.g., {"dt": "2024-06-01"}).
     ///                       If omitted, scans all partitions.
     /// @param options        Index-specific configuration.
@@ -52,6 +52,16 @@ class PAIMON_EXPORT GlobalIndexScan {
         const std::optional<std::vector<std::map<std::string, std::string>>>& partitions,
         const std::map<std::string, std::string>& options,
         const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<MemoryPool>& pool);
+
+    /// Creates a `GlobalIndexScan` instance for the specified table and context.
+    ///
+    /// @param partition_filters Optional specific partition predicates.
+    static Result<std::unique_ptr<GlobalIndexScan>> Create(
+        const std::string& root_path, const std::optional<int64_t>& snapshot_id,
+        const std::shared_ptr<Predicate>& partition_filters,
+        const std::map<std::string, std::string>& options,
+        const std::shared_ptr<FileSystem>& file_system,
+        const std::shared_ptr<MemoryPool>& memory_pool);
 
     virtual ~GlobalIndexScan() = default;
 

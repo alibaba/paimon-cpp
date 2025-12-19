@@ -38,7 +38,9 @@
 #include "paimon/core/schema/schema_validation.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/bucket_mode.h"
+#include "paimon/core/table/source/abstract_table_scan.h"
 #include "paimon/core/table/source/append_only_split_generator.h"
+#include "paimon/core/table/source/data_evolution_batch_scan.h"
 #include "paimon/core/table/source/data_evolution_split_generator.h"
 #include "paimon/core/table/source/data_table_batch_scan.h"
 #include "paimon/core/table/source/data_table_stream_scan.h"
@@ -119,8 +121,10 @@ class TableScanImpl {
                 source_split_target_size, source_split_open_file_cost, bucket_mode);
         } else {
             // TODO(liancheng.lsz): support evolution
+            PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
+                                   table_schema->TrimmedPrimaryKeys());
             PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> trimmed_pk_fields,
-                                   table_schema->TrimmedPrimaryKeyFields());
+                                   table_schema->GetFields(trimmed_primary_keys));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<FieldsComparator> key_comparator,
                 FieldsComparator::Create(trimmed_pk_fields, /*is_ascending_order=*/true,
@@ -222,8 +226,15 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     if (context->IsStreamingMode()) {
         return std::make_unique<DataTableStreamScan>(core_options, snapshot_reader);
     }
-    return std::make_unique<DataTableBatchScan>(/*pk_table=*/!table_schema->PrimaryKeys().empty(),
-                                                core_options, snapshot_reader, context->GetLimit());
+    auto batch_scan =
+        std::make_unique<DataTableBatchScan>(/*pk_table=*/!table_schema->PrimaryKeys().empty(),
+                                             core_options, snapshot_reader, context->GetLimit());
+    if (!core_options.DataEvolutionEnabled()) {
+        return batch_scan;
+    }
+    return std::make_unique<DataEvolutionBatchScan>(
+        context->GetPath(), snapshot_reader, std::move(batch_scan), context->GetGlobalIndexResult(),
+        core_options, context->GetMemoryPool(), context->GetExecutor());
 }
 
 }  // namespace paimon

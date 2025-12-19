@@ -253,4 +253,129 @@ TEST(RangeTest, TestAnd) {
         ASSERT_EQ(result, expected);
     }
 }
+
+TEST(RangeTest, TestExclude) {
+    {
+        // test basic
+        // [0, 10000] exclude [1000,2000],[3000,4000],[5000,6000]
+        // Expected: [0, 999],[2001,2999],[4001,4999],[6001, 10000]
+        Range range(0, 10000);
+        std::vector<Range> excludes = {Range(1000, 2000), Range(3000, 4000), Range(5000, 6000)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 999), Range(2001, 2999), Range(4001, 4999),
+                                       Range(6001, 10000)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // Same as basic but with unsorted exclusions
+        Range range(0, 10000);
+        std::vector<Range> excludes = {Range(5000, 6000), Range(1000, 2000), Range(3000, 4000)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 999), Range(2001, 2999), Range(4001, 4999),
+                                       Range(6001, 10000)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclude empty exclusions
+        Range range(100, 200);
+        std::vector<Range> excludes = {};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(100, 200)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclude no intersection
+        Range range(100, 200);
+        std::vector<Range> excludes = {Range(300, 400), Range(500, 600)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(100, 200)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclude at start
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(0, 10)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(11, 100)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclude at end
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(90, 100)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 89)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclusion extends past the end of the range
+        Range range(100, 200);
+        std::vector<Range> excludes = {Range(150, 300)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(100, 149)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclusion starts before the range
+        Range range(100, 200);
+        std::vector<Range> excludes = {Range(50, 150)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(151, 200)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // overlapping exclusion ranges
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(20, 50), Range(40, 70)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 19), Range(71, 100)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // exclusion completely covers the range
+        Range range(50, 60);
+        std::vector<Range> excludes = {Range(0, 100)};
+        auto result = range.Exclude(excludes);
+        ASSERT_TRUE(result.empty());
+    }
+    {
+        // exclusion completely matches the range
+        Range range(50, 60);
+        std::vector<Range> excludes = {Range(50, 60)};
+        auto result = range.Exclude(excludes);
+        ASSERT_TRUE(result.empty());
+    }
+    {
+        // single exclusion in the middle
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(40, 60)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 39), Range(61, 100)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // adjacent exclusion ranges
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(20, 30), Range(31, 40)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 19), Range(41, 100)};
+        ASSERT_EQ(result, expected);
+    }
+    {
+        // range is a single point
+        Range range(50, 50);
+        std::vector<Range> excludes = {Range(50, 50)};
+        auto result = range.Exclude(excludes);
+        ASSERT_TRUE(result.empty());
+    }
+    {
+        // single point exclusion
+        Range range(0, 100);
+        std::vector<Range> excludes = {Range(50, 50)};
+        auto result = range.Exclude(excludes);
+        std::vector<Range> expected = {Range(0, 49), Range(51, 100)};
+        ASSERT_EQ(result, expected);
+    }
+}
+
 }  // namespace paimon::test

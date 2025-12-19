@@ -18,6 +18,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/defs.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -35,7 +36,7 @@ TEST(ScanContextTest, TestSimple) {
     ASSERT_FALSE(ctx->GetScanFilters()->GetBucketFilter());
     ASSERT_FALSE(ctx->GetScanFilters()->GetPredicate());
     ASSERT_TRUE(ctx->GetScanFilters()->GetPartitionFilters().empty());
-    ASSERT_TRUE(ctx->GetScanFilters()->GetRowRanges().empty());
+    ASSERT_FALSE(ctx->GetGlobalIndexResult());
 }
 
 TEST(ScanContextTest, TestSetFilter) {
@@ -47,7 +48,8 @@ TEST(ScanContextTest, TestSetFilter) {
         PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
     builder.SetPredicate(predicate);
     std::vector<Range> row_ranges = {Range(1, 2), Range(4, 5)};
-    builder.SetRowRanges(row_ranges);
+    auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
+    builder.SetGlobalIndexResult(global_index_result);
     builder.SetLimit(1000);
     builder.AddOption("key", "value");
     builder.WithStreamingMode(true);
@@ -59,7 +61,7 @@ TEST(ScanContextTest, TestSetFilter) {
     ASSERT_EQ(10, ctx->GetScanFilters()->GetBucketFilter());
     ASSERT_EQ(*predicate, *(ctx->GetScanFilters()->GetPredicate()));
     ASSERT_EQ(partition_filters, ctx->GetScanFilters()->GetPartitionFilters());
-    ASSERT_EQ(row_ranges, ctx->GetScanFilters()->GetRowRanges());
+    ASSERT_EQ("{1,2,4,5}", ctx->GetGlobalIndexResult()->ToString());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
 }

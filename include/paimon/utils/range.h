@@ -46,6 +46,15 @@ struct PAIMON_EXPORT Range {
     /// Computes the set intersection of two collections of disjoint, sorted ranges.
     static std::vector<Range> And(const std::vector<Range>& left, const std::vector<Range>& right);
 
+    /// Excludes the given ranges from this range and returns the remaining ranges.
+    ///
+    /// For example, if this range is [0, 10000] and ranges to exclude are [1000, 2000], [3000,
+    /// 4000], [5000, 6000], then the result is [0, 999], [2001, 2999], [4001, 4999], [6001, 10000].
+    ///
+    /// @param ranges The ranges to exclude (can be unsorted and overlapping).
+    /// @return The remaining ranges after exclusion.
+    std::vector<Range> Exclude(const std::vector<Range>& ranges) const;
+
     bool operator==(const Range& other) const;
     bool operator<(const Range& other) const;
 

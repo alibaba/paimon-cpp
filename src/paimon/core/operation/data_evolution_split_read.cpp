@@ -130,13 +130,14 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::CreateReader(
             return Status::Invalid(
                 "Invalid read schema, read _INDEX_SCORE while split cannot cast to IndexedSplit");
         }
-        return InnerCreateReader(data_split, /*row_ranges=*/{});
+        return InnerCreateReader(data_split, /*row_ranges=*/std::nullopt);
     }
     return Status::Invalid("Invalid Split, cannot cast to IndexedSplit or DataSplit");
 }
 
 Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
-    const std::shared_ptr<DataSplit>& data_split, const std::vector<Range>& row_ranges) const {
+    const std::shared_ptr<DataSplit>& data_split,
+    const std::optional<std::vector<Range>>& row_ranges) const {
     auto split_impl = dynamic_cast<DataSplitImpl*>(data_split.get());
     if (split_impl == nullptr) {
         return Status::Invalid("unexpected error, split cast to impl failed");
@@ -178,7 +179,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvRead
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::vector<Range>& row_ranges,
+    const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (!deletion_file_map.empty()) {
         return Status::Invalid("DataEvolutionSplitRead do not support deletion vector");
@@ -244,7 +245,7 @@ DataEvolutionSplitRead::SplitFieldBunches(
 
 Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateUnionReader(
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& need_merge_files,
-    const std::vector<Range>& row_ranges,
+    const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     auto blob_field_to_field_id =
         [&](const std::shared_ptr<DataFileMeta>& file_meta) -> Result<int32_t> {
@@ -266,12 +267,12 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::shared_ptr<DataEvolutionSplitRead::FieldBunch>> fields_files,
         SplitFieldBunches(need_merge_files, blob_field_to_field_id,
-                          /*has_row_ranges_selection=*/!row_ranges.empty()));
+                          /*has_row_ranges_selection=*/row_ranges.has_value()));
 
     assert(!fields_files.empty());
     int64_t row_count = fields_files[0]->RowCount();
     PAIMON_ASSIGN_OR_RAISE(int64_t first_row_id, fields_files[0]->Files()[0]->NonNullFirstRowId());
-    if (row_ranges.empty()) {
+    if (!row_ranges) {
         for (const auto& bunch : fields_files) {
             if (bunch->RowCount() != row_count) {
                 return Status::Invalid(

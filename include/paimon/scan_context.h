@@ -23,12 +23,11 @@
 #include <string>
 #include <vector>
 
+#include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
-#include "paimon/utils/range.h"
 #include "paimon/visibility.h"
-
 namespace paimon {
 class ScanContextBuilder;
 class ScanFilter;
@@ -45,6 +44,7 @@ class PAIMON_EXPORT ScanContext {
  public:
     ScanContext(const std::string& path, bool is_streaming_mode, std::optional<int32_t> limit,
                 const std::shared_ptr<ScanFilter>& scan_filter,
+                const std::shared_ptr<GlobalIndexResult>& global_index_result,
                 const std::shared_ptr<MemoryPool>& memory_pool,
                 const std::shared_ptr<Executor>& executor,
                 const std::map<std::string, std::string>& options);
@@ -77,12 +77,16 @@ class PAIMON_EXPORT ScanContext {
     std::shared_ptr<Executor> GetExecutor() const {
         return executor_;
     }
+    std::shared_ptr<GlobalIndexResult> GetGlobalIndexResult() const {
+        return global_index_result_;
+    }
 
  private:
     std::string path_;
     bool is_streaming_mode_;
     std::optional<int32_t> limit_;
     std::shared_ptr<ScanFilter> scan_filters_;
+    std::shared_ptr<GlobalIndexResult> global_index_result_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
     std::map<std::string, std::string> options_;
@@ -93,11 +97,10 @@ class PAIMON_EXPORT ScanFilter {
  public:
     ScanFilter(const std::shared_ptr<Predicate>& predicate,
                const std::vector<std::map<std::string, std::string>>& partition_filters,
-               const std::optional<int32_t>& bucket_filter, const std::vector<Range>& row_ranges)
+               const std::optional<int32_t>& bucket_filter)
         : predicates_(predicate),
           bucket_filter_(bucket_filter),
-          partition_filters_(partition_filters),
-          row_ranges_(row_ranges) {}
+          partition_filters_(partition_filters) {}
 
     std::shared_ptr<Predicate> GetPredicate() const {
         return predicates_;
@@ -109,15 +112,10 @@ class PAIMON_EXPORT ScanFilter {
         return partition_filters_;
     }
 
-    const std::vector<Range>& GetRowRanges() const {
-        return row_ranges_;
-    }
-
  private:
     std::shared_ptr<Predicate> predicates_;
     std::optional<int32_t> bucket_filter_;
     std::vector<std::map<std::string, std::string>> partition_filters_;
-    std::vector<Range> row_ranges_;
 };
 
 /// `ScanContextBuilder` used to build a `ScanContext`, has input validation.
@@ -138,10 +136,11 @@ class PAIMON_EXPORT ScanContextBuilder {
     /// Set a predicate for filtering data.
     ScanContextBuilder& SetPredicate(const std::shared_ptr<Predicate>& predicate);
 
-    /// Specify the row id ranges for scan. This is usually used to read specific rows in
-    /// data-evolution mode. File ranges that do not have any intersection with range_ids will be
-    /// filtered. If not set, all rows are returned
-    ScanContextBuilder& SetRowRanges(const std::vector<Range>& row_ranges);
+    /// Sets the result of a global index search (e.g., row ids (may with scores) from a distributed
+    /// index lookup). This is used to push down index-filtered row ids into the scan for efficient
+    /// data retrieval.
+    ScanContextBuilder& SetGlobalIndexResult(
+        const std::shared_ptr<GlobalIndexResult>& global_index_result);
     /// The options added or set in `ScanContextBuilder` have high priority and will be merged with
     /// the options in table schema.
     ScanContextBuilder& AddOption(const std::string& key, const std::string& value);

@@ -110,16 +110,6 @@ Result<BinaryRow> DataGenerator::ExtractPartialRow(const BinaryRow& binary_row,
     return partial_row;
 }
 
-Result<std::vector<DataField>> DataGenerator::GetDataFields(
-    const std::vector<std::string>& field_names) {
-    std::vector<DataField> fields;
-    for (const auto& field_name : field_names) {
-        PAIMON_ASSIGN_OR_RAISE(auto field, table_schema_->GetField(field_name));
-        fields.push_back(field);
-    }
-    return fields;
-}
-
 Status DataGenerator::AppendValue(const BinaryRow& row, int32_t field_id,
                                   const std::shared_ptr<arrow::DataType>& type,
                                   arrow::StructBuilder* struct_builder) {
@@ -232,8 +222,9 @@ Result<std::vector<std::unique_ptr<RecordBatch>>> DataGenerator::SplitArrayByPar
     const std::vector<BinaryRow>& binary_rows) {
     auto fields = table_schema_->Fields();
     auto partition_keys = table_schema_->PartitionKeys();
-    PAIMON_ASSIGN_OR_RAISE(auto partition_fields, GetDataFields(partition_keys));
-    PAIMON_ASSIGN_OR_RAISE(auto bucket_fields, GetDataFields(table_schema_->BucketKeys()));
+    PAIMON_ASSIGN_OR_RAISE(auto partition_fields, table_schema_->GetFields(partition_keys));
+    PAIMON_ASSIGN_OR_RAISE(auto bucket_fields,
+                           table_schema_->GetFields(table_schema_->BucketKeys()));
     int32_t num_buckets = table_schema_->NumBuckets();
     // map: {partition_map, bucket_id} -> arrow::StructBuilder
     std::map<std::pair<std::map<std::string, std::string>, int32_t>,

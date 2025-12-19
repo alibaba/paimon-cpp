@@ -197,16 +197,12 @@ Result<DataField> TableSchema::GetField(int32_t field_id) const {
         fmt::format("Get field with id {} failed: not exist in table schema", field_id));
 }
 
-Result<std::vector<DataField>> TableSchema::TrimmedPrimaryKeyFields() const {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys, TrimmedPrimaryKeys());
+Result<std::vector<DataField>> TableSchema::GetFields(
+    const std::vector<std::string>& field_names) const {
     std::vector<DataField> data_fields;
-    for (const auto& trimmed_primary_key : trimmed_primary_keys) {
-        for (const auto& field : fields_) {
-            if (field.Name() == trimmed_primary_key) {
-                data_fields.emplace_back(field);
-                break;
-            }
-        }
+    for (const auto& name : field_names) {
+        PAIMON_ASSIGN_OR_RAISE(DataField field, GetField(name));
+        data_fields.emplace_back(field);
     }
     return data_fields;
 }

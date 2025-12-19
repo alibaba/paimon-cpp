@@ -125,8 +125,8 @@ Result<int64_t> DataFileMeta::CreationTimeEpochMillis() const {
 }
 
 Result<std::optional<RoaringBitmap32>> DataFileMeta::ToFileSelection(
-    const std::vector<Range>& row_ranges) const {
-    if (row_ranges.empty()) {
+    const std::optional<std::vector<Range>>& row_ranges) const {
+    if (!row_ranges) {
         return std::optional<RoaringBitmap32>();
     }
     PAIMON_ASSIGN_OR_RAISE(int64_t start, NonNullFirstRowId());
@@ -134,7 +134,7 @@ Result<std::optional<RoaringBitmap32>> DataFileMeta::ToFileSelection(
     Range file_range(start, end);
 
     RoaringBitmap32 selection;
-    for (const auto& row_range : row_ranges) {
+    for (const auto& row_range : row_ranges.value()) {
         auto intersect_result = Range::Intersection(file_range, row_range);
         if (intersect_result) {
             selection.AddRange(static_cast<int32_t>(intersect_result.value().from - start),

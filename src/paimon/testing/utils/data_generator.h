@@ -55,8 +55,6 @@ class DataGenerator {
     Result<BinaryRow> ExtractPartialRow(const BinaryRow& binary_row,
                                         const std::vector<DataField>& partition_fields);
 
-    Result<std::vector<DataField>> GetDataFields(const std::vector<std::string>& field_names);
-
     static Status WriteBinaryRow(const BinaryRow& src_row, int32_t src_field_id,
                                  const std::shared_ptr<arrow::DataType>& src_type,
                                  int32_t target_field_id, BinaryRowWriter* target_row_writer);

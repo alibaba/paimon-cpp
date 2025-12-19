@@ -148,16 +148,23 @@ TEST(DataFileMetaTest, TestToFileSelection) {
         /*external_path=*/std::nullopt, /*first_row_id=*/100, /*write_cols=*/std::nullopt);
 
     {
+        ASSERT_OK_AND_ASSIGN(std::optional<RoaringBitmap32> result,
+                             file_meta->ToFileSelection(std::nullopt));
+        ASSERT_FALSE(result);
+    }
+    {
         std::vector<Range> ranges = {Range(10l, 20l), Range(105l, 107l), Range(500l, 520l)};
         ASSERT_OK_AND_ASSIGN(std::optional<RoaringBitmap32> result,
                              file_meta->ToFileSelection(ranges));
+        ASSERT_TRUE(result);
         ASSERT_EQ(result.value().ToString(), "{5,6,7}");
     }
     {
         std::vector<Range> ranges = {};
         ASSERT_OK_AND_ASSIGN(std::optional<RoaringBitmap32> result,
                              file_meta->ToFileSelection(ranges));
-        ASSERT_FALSE(result);
+        ASSERT_TRUE(result);
+        ASSERT_EQ(result.value().ToString(), "{}");
     }
     {
         std::vector<Range> ranges = {Range(100l, 109l)};

@@ -213,8 +213,10 @@ TEST_F(TableSchemaTest, TestDeserializePkTableSchema) {
 
     ASSERT_EQ(*result_schema, expected_schema);
     ASSERT_EQ(std::vector<std::string>({"f0", "f1", "f2", "f3"}), result_schema->FieldNames());
+    ASSERT_OK_AND_ASSIGN(auto trimmed_primary_keys, result_schema->TrimmedPrimaryKeys());
+    ASSERT_EQ(trimmed_primary_keys, std::vector<std::string>({"f0", "f2"}));
     ASSERT_OK_AND_ASSIGN(std::vector<DataField> trimmed_primary_key_fields,
-                         result_schema->TrimmedPrimaryKeyFields());
+                         result_schema->GetFields(trimmed_primary_keys));
     ASSERT_EQ(2, trimmed_primary_key_fields.size());
     ASSERT_EQ(trimmed_primary_key_fields[0], field1);
     ASSERT_EQ(trimmed_primary_key_fields[1], field3);

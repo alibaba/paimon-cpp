@@ -116,6 +116,7 @@ class PAIMON_EXPORT CoreOptions {
 
     bool LegacyPartitionNameEnabled() const;
 
+    bool GlobalIndexEnabled() const;
     const std::map<std::string, std::string>& ToMap() const;
 
  private:

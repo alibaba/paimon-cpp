@@ -73,9 +73,16 @@ TEST_F(GlobalIndexResultTest, TestSimple) {
         std::make_shared<FakeGlobalIndexResult>(std::vector<int64_t>({100, 5, 4, 3, 200}));
     ASSERT_OK_AND_ASSIGN(auto and_result, result1->And(result2));
     ASSERT_EQ(and_result->ToString(), "{3,5,100}");
+    ASSERT_OK_AND_ASSIGN(auto and_ranges, and_result->ToRanges());
+    std::vector<Range> expect_and_ranges = {Range(3, 3), Range(5, 5), Range(100, 100)};
+    ASSERT_EQ(and_ranges, expect_and_ranges);
 
     ASSERT_OK_AND_ASSIGN(auto or_result, result1->Or(result2));
     ASSERT_EQ(or_result->ToString(), "{1,3,4,5,100,200}");
+    ASSERT_OK_AND_ASSIGN(auto or_ranges, or_result->ToRanges());
+    std::vector<Range> expect_or_ranges = {Range(1, 1), Range(3, 5), Range(100, 100),
+                                           Range(200, 200)};
+    ASSERT_EQ(or_ranges, expect_or_ranges);
 }
 
 TEST_F(GlobalIndexResultTest, TestSerializeAndDeserializeSimple) {

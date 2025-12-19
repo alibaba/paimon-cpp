@@ -302,6 +302,7 @@ struct CoreOptions::Impl {
     bool row_tracking_enabled = false;
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
+    bool global_index_enabled = true;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -466,6 +467,9 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse partition.legacy-name
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::PARTITION_GENERATE_LEGACY_NAME,
                                             &impl->legacy_partition_name_enabled));
+    // Parse global-index.enabled
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<bool>(Options::GLOBAL_INDEX_ENABLED, &impl->global_index_enabled));
     return options;
 }
 
@@ -739,4 +743,7 @@ bool CoreOptions::LegacyPartitionNameEnabled() const {
     return impl_->legacy_partition_name_enabled;
 }
 
+bool CoreOptions::GlobalIndexEnabled() const {
+    return impl_->global_index_enabled;
+}
 }  // namespace paimon

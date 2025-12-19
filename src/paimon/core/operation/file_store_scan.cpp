@@ -313,7 +313,6 @@ Status FileStoreScan::SplitAndSetFilter(const std::vector<std::string>& partitio
         }
     }
     bucket_filter_ = scan_filters->GetBucketFilter();
-    row_ranges_ = scan_filters->GetRowRanges();
     if (!scan_filters->GetPartitionFilters().empty()) {
         PAIMON_ASSIGN_OR_RAISE(
             partition_filter_,
