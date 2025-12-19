@@ -30,8 +30,7 @@ permissions:
   contents: read
 
 jobs:
-  ubuntu:
-    name: AMD64 Ubuntu 24.04
+  clang-test:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
