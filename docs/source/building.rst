@@ -140,8 +140,6 @@ at runtime (for example when executing unit tests).
 
 * ``-DPAIMON_USE_ASAN=ON``: Enable Address Sanitizer to check for memory leaks,
   buffer overflows or other kinds of memory management issues.
-* ``-DPAIMON_USE_TSAN=ON``: Enable Thread Sanitizer to check for races in
-  multi-threaded code.
 * ``-DPAIMON_USE_UBSAN=ON``: Enable Undefined Behavior Sanitizer to check for
   situations which trigger C++ undefined behavior.
 
@@ -159,3 +157,74 @@ LLVM and Clang Tools
 We currently use LLVM for library builds and for developer tools such as code
 formatting with clang-format. LLVM can be installed via most modern package
 managers (apt, yum, etc.).
+
+Environment variables
+~~~~~~~~~~~~~~~~~~~~~
+
+The build system and helper scripts accept several environment variables that
+can alter fetch and build behaviour without changing CMake flags. These are
+especially useful when you want to use a local or corporate mirror for
+third-party archives, or to override a specific dependency's download URL.
+
+Common environment variables
+----------------------------
+
+* ``PAIMON_THIRDPARTY_MIRROR_URL``
+
+  When set, this string is used as a prefix for the default third-party
+  download URLs. For example, if a dependency would normally be downloaded
+  from
+
+  ``https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz``
+
+  and ``PAIMON_THIRDPARTY_MIRROR_URL`` is set to
+
+  ``https://mirror.example.com/paimon/thirdparty/``, the build system will
+  attempt to download from
+
+  ``https://mirror.example.com/paimon/thirdparty/https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz``
+
+  (the exact concatenation semantics follow the third-party fetch helpers
+  defined in ``cmake_modules/ThirdpartyToolchain.cmake``). If you set a
+  mirror URL, prefer including a trailing slash to avoid accidental URL
+  concatenation issues.
+
+* Per-dependency override variables (examples)
+
+  Many dependencies support overriding their download URL via a dedicated
+  environment variable. Examples implemented in the CMake helper include:
+
+  - ``PAIMON_FMT_URL`` to override the fmt archive URL
+  - ``PAIMON_RAPIDJSON_URL`` to override RapidJSON download URL
+  - ``PAIMON_ZLIB_URL``, ``PAIMON_ZSTD_URL``, ``PAIMON_LZ4_URL`` etc.
+
+  If one of these per-dependency environment variables is defined, it will
+  take precedence over the mirror prefix. Use these variables to precisely
+  control where a given dependency is fetched from.
+
+Usage examples
+--------------
+
+Use a mirror for all third-party downloads:
+
+.. code-block:: shell
+
+   export PAIMON_THIRDPARTY_MIRROR_URL="https://mirror.example.com/paimon/thirdparty/"
+   mkdir build
+   cd build
+   cmake -DPAIMON_BUILD_TESTS=ON ..
+
+Override only a single dependency (fmt):
+
+.. code-block:: shell
+
+   export PAIMON_FMT_URL="https://internal.example.com/archives/fmt-8.1.1.tar.gz"
+   mkdir build
+   cd build
+   cmake ..
+
+.. note::
+
+  The exact fetch behaviour (how the mirror prefix is concatenated, or whether the helper expects a full URL vs. a prefix)
+  is implemented in ``cmake_modules/ThirdpartyToolchain.cmake``. Consult that file when you need a custom setup.
+  Unset an environment variable to revert to the default upstream download locations: ``unset PAIMON_THIRDPARTY_MIRROR_URL``
