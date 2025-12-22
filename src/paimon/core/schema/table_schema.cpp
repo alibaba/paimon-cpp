@@ -200,6 +200,7 @@ Result<DataField> TableSchema::GetField(int32_t field_id) const {
 Result<std::vector<DataField>> TableSchema::GetFields(
     const std::vector<std::string>& field_names) const {
     std::vector<DataField> data_fields;
+    data_fields.reserve(field_names.size());
     for (const auto& name : field_names) {
         PAIMON_ASSIGN_OR_RAISE(DataField field, GetField(name));
         data_fields.emplace_back(field);

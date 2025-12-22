@@ -91,7 +91,7 @@ class IndexedSplitImpl : public IndexedSplit {
     Status Validate() const {
         if ((row_ranges_.empty() && !data_split_->DataFiles().empty()) ||
             (!row_ranges_.empty() && data_split_->DataFiles().empty())) {
-            return Status::Invalid("invalid IndexedSplit: row ranges mismatch data files");
+            return Status::Invalid("Invalid IndexedSplit: row ranges mismatch data files.");
         }
         if (!scores_.empty()) {
             size_t row_count = 0;

@@ -37,14 +37,16 @@ DataEvolutionBatchScan::DataEvolutionBatchScan(
 
 Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     std::optional<std::vector<Range>> row_ranges;
-    if (!global_index_result_) {
+    std::shared_ptr<GlobalIndexResult> final_global_index_result = global_index_result_;
+    if (!final_global_index_result) {
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
                                EvalGlobalIndex());
         if (index_result) {
+            final_global_index_result = index_result.value();
             PAIMON_ASSIGN_OR_RAISE(row_ranges, index_result.value()->ToRanges());
         }
     } else {
-        PAIMON_ASSIGN_OR_RAISE(row_ranges, global_index_result_->ToRanges());
+        PAIMON_ASSIGN_OR_RAISE(row_ranges, final_global_index_result->ToRanges());
     }
     if (!row_ranges) {
         return batch_scan_->CreatePlan();
@@ -52,7 +54,8 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     batch_scan_->WithRowRanges(row_ranges.value());
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> data_plan, batch_scan_->CreatePlan());
     std::map<int64_t, float> id_to_score;
-    if (auto topk_result = std::dynamic_pointer_cast<TopKGlobalIndexResult>(global_index_result_)) {
+    if (auto topk_result =
+            std::dynamic_pointer_cast<TopKGlobalIndexResult>(final_global_index_result)) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TopKGlobalIndexResult::TopKIterator> topk_iter,
                                topk_result->CreateTopKIterator());
         while (topk_iter->HasNext()) {
@@ -68,8 +71,10 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
     const std::map<int64_t, float>& id_to_score) const {
     std::vector<Range> sorted_row_ranges =
         Range::SortAndMergeOverlap(row_ranges, /*adjacent=*/true);
+    auto data_splits = data_plan->Splits();
     std::vector<std::shared_ptr<Split>> indexed_splits;
-    for (const auto& split : data_plan->Splits()) {
+    indexed_splits.reserve(data_splits.size());
+    for (const auto& split : data_splits) {
         auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
         if (!data_split) {
             return Status::Invalid("Cannot cast split to DataSplit when create IndexedSplit");

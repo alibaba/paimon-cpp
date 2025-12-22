@@ -1505,7 +1505,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
 
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
-["Alice", 10, 1, 11.1], 
+["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Bob", 10, 1, 16.1]
    ])")
@@ -1575,7 +1575,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
         auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
-[0, "Alice", 10, 1, 11.1], 
+[0, "Alice", 10, 1, 11.1],
 [0, "Bob", 10, 1, 12.1],
 [0, "Bob", 10, 1, 16.1],
 [0, "Lucy", 20, 1, 15.1]

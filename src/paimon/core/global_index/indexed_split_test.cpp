@@ -169,5 +169,24 @@ TEST(IndexedSplitTest, TestValidate) {
         ASSERT_NOK_WITH_MSG(split.Validate(),
                             "Scores length does not match row ranges in indexed split.");
     }
+    {
+        std::vector<Range> row_ranges = {};
+        IndexedSplitImpl split(data_split, row_ranges);
+        ASSERT_NOK_WITH_MSG(split.Validate(),
+                            "Invalid IndexedSplit: row ranges mismatch data files.");
+    }
+    {
+        std::vector<Range> row_ranges = {Range(10, 12)};
+        DataSplitImpl::Builder empty_builder(
+            /*partition=*/BinaryRow::EmptyRow(),
+            /*bucket=*/0, /*bucket_path=*/
+            "data/test_table/bucket-0", std::vector<std::shared_ptr<DataFileMeta>>({}));
+        auto empty_data_split = std::dynamic_pointer_cast<DataSplitImpl>(
+            empty_builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build().value());
+
+        IndexedSplitImpl split(empty_data_split, row_ranges);
+        ASSERT_NOK_WITH_MSG(split.Validate(),
+                            "Invalid IndexedSplit: row ranges mismatch data files.");
+    }
 }
 }  // namespace paimon::test
