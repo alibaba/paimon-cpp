@@ -43,7 +43,7 @@ class PAIMON_EXPORT RoaringBitmap64 {
     RoaringBitmap64(RoaringBitmap64&&) noexcept;
     RoaringBitmap64& operator=(RoaringBitmap64&&) noexcept;
 
-    RoaringBitmap64(const RoaringBitmap32&) noexcept;
+    explicit RoaringBitmap64(const RoaringBitmap32&) noexcept;
     RoaringBitmap64& operator=(const RoaringBitmap32&) noexcept;
 
     class PAIMON_EXPORT Iterator {
