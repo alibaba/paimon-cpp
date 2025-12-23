@@ -548,6 +548,10 @@ macro(build_avro)
 
     get_target_property(AVRO_ZSTD_INCLUDE_DIR zstd INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(AVRO_ZSTD_ROOT "${AVRO_ZSTD_INCLUDE_DIR}" DIRECTORY)
+
+    get_target_property(AVRO_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(AVRO_ZLIB_ROOT "${AVRO_ZLIB_INCLUDE_DIR}" DIRECTORY)
+
     set(AVRO_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
     set(AVRO_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
 
@@ -558,7 +562,7 @@ macro(build_avro)
         "-DCMAKE_C_FLAGS=${AVRO_CMAKE_C_FLAGS}"
         "-DAVRO_BUILD_TESTS=OFF"
         "-DAVRO_BUILD_EXECUTABLES=OFF"
-        "-DZLIB_ROOT=${THIRDPARTY_ZLIB_ROOT}"
+        "-DZLIB_ROOT=${AVRO_ZLIB_ROOT}"
         "-Dzstd_ROOT=${AVRO_ZSTD_ROOT}"
         "-DSnappy_ROOT=${AVRO_SNAPPY_ROOT}")
     externalproject_add(avro_ep

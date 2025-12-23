@@ -47,8 +47,13 @@ class RowRangeGlobalIndexScannerImpl
     Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
         const std::string& field_name, const std::string& index_type) const override;
 
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        const std::string& field_name) const override;
+
  private:
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(int32_t field_id) const;
+    Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        const DataField& field) const;
 
     Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
         const DataField& field, const std::string& index_type,

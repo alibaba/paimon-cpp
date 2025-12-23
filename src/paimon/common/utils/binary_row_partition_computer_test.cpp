@@ -18,6 +18,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string>
 #include <variant>
 
 #include "arrow/type.h"
@@ -275,8 +276,8 @@ TEST(BinaryRowPartitionComputerTest, TestNullOrWhitespaceOnlyStr) {
                                            /*legacy_partition_name_enabled=*/true, pool));
 
     ASSERT_OK_AND_ASSIGN(auto partition_key_values,
-                         computer->GeneratePartitionVector(
-                             BinaryRowGenerator::GenerateRow({" ", "", "ab "}, pool.get())));
+                         computer->GeneratePartitionVector(BinaryRowGenerator::GenerateRow(
+                             {std::string(" "), std::string(""), std::string("ab ")}, pool.get())));
     std::vector<std::pair<std::string, std::string>> expected = {
         {"f0", "__DEFAULT_PARTITION__"}, {"f1", "__DEFAULT_PARTITION__"}, {"f2", "ab "}};
     ASSERT_EQ(partition_key_values, expected);

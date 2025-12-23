@@ -38,9 +38,9 @@ TEST(DataEvolutionRowTest, TestSimple) {
     std::vector<int32_t> field_offsets = {0, 0, 1, 1, 1, 0};
 
     auto pool = GetDefaultPool();
-    BinaryRow row1 = BinaryRowGenerator::GenerateRow({0, "00"}, pool.get());
+    BinaryRow row1 = BinaryRowGenerator::GenerateRow({0, std::string("00")}, pool.get());
     BinaryRow row2 = BinaryRowGenerator::GenerateRow({10, 110}, pool.get());
-    BinaryRow row3 = BinaryRowGenerator::GenerateRow({20, "20"}, pool.get());
+    BinaryRow row3 = BinaryRowGenerator::GenerateRow({20, std::string("20")}, pool.get());
 
     DataEvolutionRow row({row1, row2, row3}, row_offsets, field_offsets);
     ASSERT_EQ(row.GetFieldCount(), 6);
@@ -73,7 +73,7 @@ TEST(DataEvolutionRowTest, TestNull) {
     std::vector<int32_t> field_offsets = {0, 0, 1, 1, 1, 0, -1, -1};
 
     auto pool = GetDefaultPool();
-    BinaryRow row1 = BinaryRowGenerator::GenerateRow({0, "00"}, pool.get());
+    BinaryRow row1 = BinaryRowGenerator::GenerateRow({0, std::string("00")}, pool.get());
     BinaryRow row2 = BinaryRowGenerator::GenerateRow({10, 110}, pool.get());
     BinaryRow row3 = BinaryRowGenerator::GenerateRow({20, NullType()}, pool.get());
 

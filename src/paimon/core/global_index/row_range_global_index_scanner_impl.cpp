@@ -65,8 +65,19 @@ Result<std::shared_ptr<GlobalIndexReader>> RowRangeGlobalIndexScannerImpl::Creat
 }
 
 Result<std::vector<std::shared_ptr<GlobalIndexReader>>>
+RowRangeGlobalIndexScannerImpl::CreateReaders(const std::string& field_name) const {
+    PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_name));
+    return CreateReaders(field);
+}
+
+Result<std::vector<std::shared_ptr<GlobalIndexReader>>>
 RowRangeGlobalIndexScannerImpl::CreateReaders(int32_t field_id) const {
     PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema_->GetField(field_id));
+    return CreateReaders(field);
+}
+
+Result<std::vector<std::shared_ptr<GlobalIndexReader>>>
+RowRangeGlobalIndexScannerImpl::CreateReaders(const DataField& field) const {
     auto field_iter = grouped_entries_.find(field.Id());
     if (field_iter == grouped_entries_.end()) {
         return std::vector<std::shared_ptr<GlobalIndexReader>>();

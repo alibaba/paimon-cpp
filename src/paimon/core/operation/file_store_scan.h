@@ -135,6 +135,11 @@ class FileStoreScan {
         return partition_filter_;
     }
 
+    static Result<std::shared_ptr<PredicateFilter>> CreatePartitionPredicate(
+        const std::vector<std::string>& partition_keys, const std::string& partition_default_name,
+        const std::shared_ptr<arrow::Schema>& arrow_schema,
+        const std::vector<std::map<std::string, std::string>>& partition_filters);
+
     class RawPlan {
      public:
         RawPlan(const ScanMode& scan_mode, const std::optional<Snapshot>& snapshot,
@@ -202,11 +207,6 @@ class FileStoreScan {
     Status SplitAndSetFilter(const std::vector<std::string>& partition_keys,
                              const std::shared_ptr<arrow::Schema>& arrow_schema,
                              const std::shared_ptr<ScanFilter>& scan_filters);
-
-    static Result<std::shared_ptr<PredicateFilter>> CreatePartitionPredicate(
-        const std::vector<std::string>& partition_keys, const std::string& partition_default_name,
-        const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const std::vector<std::map<std::string, std::string>>& partition_filters);
 
  private:
     Status ReadManifests(std::optional<Snapshot>* snapshot_ptr,

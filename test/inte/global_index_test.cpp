@@ -1601,6 +1601,79 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
     }
 }
 
+TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.dimension", "4"},
+        {"lumina.indextype", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "encoding.rawf32"},
+        {"lumina.search.threadcount", "10"}};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1],
+["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
+["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
+["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
+["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
+["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    // write and commit bitmap global index
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
+                         /*options=*/{}, Range(0, 8)));
+
+    // write and commit lumina global index
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                         /*options=*/lumina_options, Range(0, 8)));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/lumina_options,
+                                /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 8)}));
+    ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 8)));
+    // query f0
+    ASSERT_OK_AND_ASSIGN(auto index_readers, range_scanner->CreateReaders("f0"));
+    ASSERT_EQ(index_readers.size(), 1);
+    ASSERT_OK_AND_ASSIGN(auto index_result,
+                         index_readers[0]->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
+    ASSERT_EQ(index_result->ToString(), "{0,7}");
+
+    // query f1
+    ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f1"));
+    ASSERT_EQ(index_readers.size(), 1);
+    std::vector<float> query = {11.0f, 11.0f, 11.0f, 11.0f};
+    ASSERT_OK_AND_ASSIGN(auto topk_result, index_readers[0]->VisitTopK(1, query, /*filter=*/nullptr,
+                                                                       /*predicate*/ nullptr));
+    ASSERT_EQ(topk_result->ToString(), "row ids: {7}, scores: {0}");
+
+    // query f2
+    ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f2"));
+    ASSERT_EQ(index_readers.size(), 0);
+}
+
 std::vector<std::string> GetTestValuesForGlobalIndexTest() {
     std::vector<std::string> values = {"parquet"};
 #ifdef PAIMON_ENABLE_ORC

@@ -52,6 +52,18 @@ class PAIMON_EXPORT RowRangeGlobalIndexScanner {
     ///         format).
     virtual Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
         const std::string& field_name, const std::string& index_type) const = 0;
+
+    /// Creates several `GlobalIndexReader`s for a specific field within this range.
+    ///
+    /// @param field_name  Name of the indexed column.
+    /// @return A `Result` that is:
+    ///         - Successful with several readers if the indexes exist and load correctly;
+    ///         - Successful with an empty vector if no index was built for the given field;
+    ///         - Error returns when loading fails (e.g., file corruption, I/O error, unsupported
+    ///         format) or the predicate method was incorrectly invoked (e.g., VisitTopK was invoked
+    ///         incorrectly).
+    virtual Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
+        const std::string& field_name) const = 0;
 };
 
 }  // namespace paimon
