@@ -47,12 +47,12 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
         return snapshot_;
     }
 
- private:
-    Status Scan();
-
     Result<std::optional<std::shared_ptr<GlobalIndexResult>>> ParallelScan(
         const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<Executor>& executor);
+
+ private:
+    Status Scan();
 
  private:
     bool initialized_ = false;
