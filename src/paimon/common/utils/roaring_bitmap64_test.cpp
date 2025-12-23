@@ -389,4 +389,18 @@ TEST(RoaringBitmap64Test, TestContainsAny) {
     ASSERT_FALSE(roaring.ContainsAny(10000000000500l, 10000000000520l));
 }
 
+TEST(RoaringBitmap64Test, TestFromRoaringBitmap32) {
+    {
+        RoaringBitmap32 roaring32 = RoaringBitmap32::From({10, 20, 21});
+        RoaringBitmap64 roaring64(roaring32);
+        ASSERT_EQ(roaring64.ToString(), "{10,20,21}");
+    }
+    {
+        RoaringBitmap32 roaring32 = RoaringBitmap32::From({10, 20, 21});
+        RoaringBitmap64 roaring64;
+        roaring64 = roaring32;
+        ASSERT_EQ(roaring64.ToString(), "{10,20,21}");
+    }
+}
+
 }  // namespace paimon::test

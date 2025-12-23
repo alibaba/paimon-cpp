@@ -44,7 +44,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
         virtual int64_t Next() = 0;
     };
 
-    /// Checks whether the global index result contains no matching row IDs.
+    /// Checks whether the global index result contains no matching row ids.
     ///
     /// @return A `Result<bool>` where:
     ///         - `true` indicates the result is empty (no matching rows),
@@ -66,6 +66,10 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     /// Computes the logical OR (union) between this result and another.
     virtual Result<std::shared_ptr<GlobalIndexResult>> Or(
         const std::shared_ptr<GlobalIndexResult>& other);
+
+    /// Adds the given offset to each row id in current result and returns the new global index
+    /// result.
+    virtual Result<std::shared_ptr<GlobalIndexResult>> AddOffset(int64_t offset) = 0;
 
     virtual std::string ToString() const = 0;
 
@@ -103,7 +107,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
 };
 
 /// Represents the result of a Top-K query against a global index.
-/// This class encapsulates a set of top-K candidates (row ID + score pairs) and provides
+/// This class encapsulates a set of top-K candidates (row id + score pairs) and provides
 /// an iterator interface to traverse them.
 class PAIMON_EXPORT TopKGlobalIndexResult : public GlobalIndexResult {
  public:
@@ -115,7 +119,7 @@ class PAIMON_EXPORT TopKGlobalIndexResult : public GlobalIndexResult {
      public:
         virtual ~TopKIterator() = default;
 
-        /// Checks whether more row IDs are available.
+        /// Checks whether more row ids are available.
         virtual bool HasNext() const = 0;
 
         /// Retrieves the next (row_id, score) pair and advances the iterator.

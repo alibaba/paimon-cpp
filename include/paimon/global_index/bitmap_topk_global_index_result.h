@@ -26,12 +26,12 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Represents a Top-K global index result that combines a Roaring bitmap of candidate row IDs
+/// Represents a Top-K global index result that combines a Roaring bitmap of candidate row ids
 /// with an array of associated relevance scores.
 ///
 /// **Important Ordering Note**: Despite inheriting from TopKGlobalIndexResult, the results are
 /// **NOT sorted by score**. Instead, both the bitmap and the score vector are ordered by
-/// **ascending row ID**. This design enables efficient merging and set operations while preserving
+/// **ascending row id**. This design enables efficient merging and set operations while preserving
 /// row id-to-score mapping.
 class PAIMON_EXPORT BitmapTopKGlobalIndexResult : public TopKGlobalIndexResult {
  public:
@@ -74,16 +74,18 @@ class PAIMON_EXPORT BitmapTopKGlobalIndexResult : public TopKGlobalIndexResult {
     Result<std::shared_ptr<GlobalIndexResult>> Or(
         const std::shared_ptr<GlobalIndexResult>& other) override;
 
+    Result<std::shared_ptr<GlobalIndexResult>> AddOffset(int64_t offset) override;
+
     Result<bool> IsEmpty() const override;
 
     std::string ToString() const override;
 
-    /// @return A non-owning, const pointer to the bitmap. The row IDs in the bitmap are stored in
+    /// @return A non-owning, const pointer to the bitmap. The row ids in the bitmap are stored in
     ///         ascending order (as guaranteed by Roaring64 iteration).
     Result<const RoaringBitmap64*> GetBitmap() const;
 
     /// @return A const reference to a vector of float scores, where the i-th element corresponds to
-    ///         the i-th row ID when iterating the bitmap in **ascending row ID order**.
+    ///         the i-th row id when iterating the bitmap in **ascending row id order**.
     const std::vector<float>& GetScores() const;
 
  private:

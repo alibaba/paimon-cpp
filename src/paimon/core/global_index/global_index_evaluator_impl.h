@@ -23,8 +23,8 @@
 #include <utility>
 #include <vector>
 
+#include "paimon/core/global_index/global_index_evaluator.h"
 #include "paimon/core/schema/table_schema.h"
-#include "paimon/global_index/global_index_evaluator.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/predicate/compound_predicate.h"
 

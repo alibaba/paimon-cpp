@@ -25,6 +25,7 @@
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
+#include "paimon/utils/roaring_bitmap32.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -41,6 +42,9 @@ class PAIMON_EXPORT RoaringBitmap64 {
 
     RoaringBitmap64(RoaringBitmap64&&) noexcept;
     RoaringBitmap64& operator=(RoaringBitmap64&&) noexcept;
+
+    RoaringBitmap64(const RoaringBitmap32&) noexcept;
+    RoaringBitmap64& operator=(const RoaringBitmap32&) noexcept;
 
     class PAIMON_EXPORT Iterator {
      public:

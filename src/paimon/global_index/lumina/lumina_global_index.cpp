@@ -135,7 +135,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
         return Status::Invalid(fmt::format(
             "lumina index dimension {} mismatch dimension {} in options", meta.dim, dimension));
     }
-    auto row_count = io_meta.row_id_range.Count();
+    auto row_count = io_meta.range_end + 1;
     if (meta.count != static_cast<uint64_t>(row_count)) {
         return Status::Invalid(fmt::format(
             "lumina index row count {} mismatch row count {} in io meta", meta.count, row_count));
@@ -144,7 +144,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
                                        ::lumina::api::NormalizeSearchOptions(lumina_options));
     auto searcher_with_filter = std::make_unique<::lumina::extensions::SearchWithFilterExtension>();
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_filter));
-    return std::make_shared<LuminaIndexReader>(io_meta.row_id_range, std::move(search_options),
+    return std::make_shared<LuminaIndexReader>(io_meta.range_end, std::move(search_options),
                                                std::move(searcher), std::move(searcher_with_filter),
                                                lumina_pool);
 }
@@ -265,17 +265,17 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.Dump(std::move(file_writer), io_options_));
     // prepare GlobalIndexIOMeta
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, file_manager_->GetFileSize(index_file_name));
-    GlobalIndexIOMeta meta(index_file_name, file_size, Range(0, count_ - 1),
+    GlobalIndexIOMeta meta(index_file_name, file_size, /*range_end=*/count_ - 1,
                            /*metadata=*/nullptr);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 
 LuminaIndexReader::LuminaIndexReader(
-    const Range& range, ::lumina::api::SearchOptions&& search_options,
+    int64_t range_end, ::lumina::api::SearchOptions&& search_options,
     std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
     std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
     const std::shared_ptr<LuminaMemoryPool>& pool)
-    : range_(range),
+    : range_end_(range_end),
       pool_(pool),
       search_options_(std::move(search_options)),
       searcher_(std::move(searcher)),
@@ -297,9 +297,7 @@ Result<std::shared_ptr<TopKGlobalIndexResult>> LuminaIndexReader::VisitTopK(
                                            searcher_->Search(lumina_query, search_options, *pool_));
     } else {
         search_options.Set(::lumina::core::kSearchThreadSafeFilter, true);
-        auto lumina_filter = [filter, range = range_](::lumina::core::VectorId id) -> bool {
-            return filter(id + range.from);
-        };
+        auto lumina_filter = [filter](::lumina::core::VectorId id) -> bool { return filter(id); };
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
             search_result, searcher_with_filter_->SearchWithFilter(lumina_query, lumina_filter,
                                                                    search_options, *pool_));
@@ -315,7 +313,7 @@ Result<std::shared_ptr<TopKGlobalIndexResult>> LuminaIndexReader::VisitTopK(
     std::vector<float> scores;
     scores.reserve(id_to_score.size());
     for (const auto& [id, score] : id_to_score) {
-        bitmap.Add(id + range_.from);
+        bitmap.Add(id);
         scores.push_back(score);
     }
     return std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));

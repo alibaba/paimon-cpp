@@ -26,18 +26,20 @@
 
 namespace paimon {
 /// Reads and evaluates filter predicates against a global file index.
-/// `GlobalIndexReader` is an implementation of the `FunctionVisitor` interface
-/// specialized to produce `std::shared_ptr<GlobalIndexResult>` objects.
 ///
 /// Derived classes are expected to implement the visitor methods (e.g., `VisitEqual`,
 /// `VisitIsNull`, etc.) to return index-based results that indicate which
 /// row satisfy the given predicate.
+///
+/// @note All `GlobalIndexResult` objects returned by implementations of this class use **local row
+/// ids** that start from 0 — not global row ids in the entire table.
+/// The `GlobalIndexResult` can be converted to global row ids by calling `AddOffset()`.
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
  public:
     /// TopKPreFilter: A lightweight pre-filtering function applied **before** similarity scoring.
-    /// It operates solely on row_id and is typically driven by other global index, such as bitmap,
-    /// or range index. This filter enables early pruning of irrelevant candidates (e.g., "only
-    /// consider rows with label X"), significantly reducing the search space. Returns true to
+    /// It operates solely on **local row ids** and is typically driven by other global index, such
+    /// as bitmap, or range index. This filter enables early pruning of irrelevant candidates (e.g.,
+    /// "only consider rows with label X"), significantly reducing the search space. Returns true to
     /// include the row in Top-K computation; false to exclude it.
     ///
     /// @note Must be thread-safe.
@@ -47,7 +49,8 @@ class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<G
     ///
     /// @param k         Number of top results to return.
     /// @param query     The query vector (must match the dimensionality of the indexed vectors).
-    /// @param filter    A pre-filter based on row_id, implemented by leveraging other global index
+    /// @param filter    A pre-filter based on **local row ids**, implemented by leveraging other
+    /// global index
     ///                   structures (e.g., bitmap index) for efficient candidate pruning.
     /// @param predicate A runtime filtering condition that may involve graph traversal of
     ///                   structured attributes. **Using this parameter often yields better
@@ -58,7 +61,8 @@ class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<G
     ///                   context-aware filtering at query time.
     /// @note All fields referenced in the predicate must have been materialized
     ///       in the index during build to ensure availability.
-    /// @note `VisitTopK` is thread-safe while other `VisitXXX` is not.
+    /// @note `VisitTopK` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
+    /// thread-safe.
     virtual Result<std::shared_ptr<TopKGlobalIndexResult>> VisitTopK(
         int32_t k, const std::vector<float>& query, TopKPreFilter filter,
         const std::shared_ptr<Predicate>& predicate) = 0;

@@ -62,6 +62,14 @@ class GlobalIndexResultTest : public ::testing::Test {
             return "fake";
         }
 
+        Result<std::shared_ptr<GlobalIndexResult>> AddOffset(int64_t offset) override {
+            std::vector<int64_t> values = values_;
+            for (auto& value : values) {
+                value += offset;
+            }
+            return std::make_shared<FakeGlobalIndexResult>(values);
+        }
+
      private:
         std::vector<int64_t> values_;
     };

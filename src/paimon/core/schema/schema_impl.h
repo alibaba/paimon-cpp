@@ -30,9 +30,7 @@ class SchemaImpl : public Schema {
  public:
     explicit SchemaImpl(const std::shared_ptr<TableSchema>& table_schema)
         : table_schema_(table_schema) {}
-    Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const override {
-        return table_schema_->GetArrowSchema();
-    }
+
     std::vector<std::string> FieldNames() const override {
         return table_schema_->FieldNames();
     }
@@ -59,6 +57,14 @@ class SchemaImpl : public Schema {
     }
     std::optional<std::string> Comment() const override {
         return table_schema_->Comment();
+    }
+
+    Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const override {
+        const auto& fields = table_schema_->Fields();
+        std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields);
+        auto arrow_schema = std::make_unique<::ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, arrow_schema.get()));
+        return arrow_schema;
     }
 
  private:

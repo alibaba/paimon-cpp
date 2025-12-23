@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/global_index/row_range_global_index_writer.h"
+#include "paimon/global_index/global_index_write_task.h"
 
 #include "arrow/c/bridge.h"
 #include "paimon/common/types/data_field.h"
@@ -122,16 +122,14 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
     std::vector<std::shared_ptr<IndexFileMeta>> index_file_metas;
     index_file_metas.reserve(global_index_io_metas.size());
     for (const auto& io_meta : global_index_io_metas) {
-        if (range.Count() != io_meta.row_id_range.Count()) {
+        if (range.Count() != io_meta.range_end + 1) {
             return Status::Invalid(
                 fmt::format("specified range length {} mismatch indexed range length {}",
-                            range.Count(), io_meta.row_id_range.Count()));
+                            range.Count(), io_meta.range_end + 1));
         }
-        // TODO(xinyu.lxy): global index writer may add offset to row_id_range
         index_file_metas.push_back(std::make_shared<IndexFileMeta>(
-            index_type, io_meta.file_name, io_meta.file_size, io_meta.row_id_range.Count(),
-            GlobalIndexMeta(io_meta.row_id_range.from + range.from,
-                            io_meta.row_id_range.to + range.from, field_id,
+            index_type, io_meta.file_name, io_meta.file_size, io_meta.range_end + 1,
+            GlobalIndexMeta(range.from, io_meta.range_end + range.from, field_id,
                             /*extra_field_ids=*/std::nullopt, io_meta.metadata)));
     }
     DataIncrement data_increment(std::move(index_file_metas));
@@ -140,7 +138,7 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
                                                CompactIncrement({}, {}, {}));
 }
 }  // namespace
-Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
+Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     const std::string& table_path, const std::string& field_name, const std::string& index_type,
     const std::shared_ptr<IndexedSplit>& indexed_split,
     const std::map<std::string, std::string>& options,
@@ -151,8 +149,7 @@ Result<std::shared_ptr<CommitMessage>> RowRangeGlobalIndexWriter::WriteIndex(
     }
     const auto& ranges = indexed_split->RowRanges();
     if (ranges.size() != 1) {
-        return Status::Invalid(
-            "RowRangeGlobalIndexWriter only supports a single contiguous range.");
+        return Status::Invalid("GlobalIndexWriteTask only supports a single contiguous range.");
     }
     const auto& range = ranges[0];
     std::shared_ptr<MemoryPool> pool = memory_pool ? memory_pool : GetDefaultPool();

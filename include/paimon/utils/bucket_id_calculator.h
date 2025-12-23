@@ -29,7 +29,7 @@ struct ArrowArray;
 namespace paimon {
 class MemoryPool;
 
-/// Calculator for determining bucket IDs based on the given bucket keys.
+/// Calculator for determining bucket ids based on the given bucket keys.
 ///
 /// @note `BucketIdCalculator` is compatible with the Java implementation and uses
 /// hash-based distribution to ensure even data distribution across buckets.
@@ -47,10 +47,10 @@ class PAIMON_EXPORT BucketIdCalculator {
     /// @param num_buckets Number of buckets.
     static Result<std::unique_ptr<BucketIdCalculator>> Create(bool is_pk_table,
                                                               int32_t num_buckets);
-    /// Calculate bucket IDs for the given bucket keys.
+    /// Calculate bucket ids for the given bucket keys.
     /// @param bucket_keys Arrow struct array containing the bucket key values.
     /// @param bucket_schema Arrow schema describing the structure of bucket_keys.
-    /// @param bucket_ids Output array to store calculated bucket IDs.
+    /// @param bucket_ids Output array to store calculated bucket ids.
     /// @note 1. bucket_keys is a struct array, the order of fields needs to be consistent with
     /// "bucket-key" options in table schema. 2. bucket_keys and bucket_schema match each other. 3.
     /// bucket_ids is allocated enough space, at least >= bucket_keys->length
