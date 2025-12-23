@@ -63,6 +63,22 @@ TEST(InternalReadContext, TestReadWithSpecifiedSchema) {
     ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
 }
 
+TEST(InternalReadContext, TestReadWithSpecifiedFieldId) {
+    std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    ReadContextBuilder context_builder(path);
+    context_builder.SetReadFieldIds({3, 0});
+    ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+    SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+    ASSERT_OK_AND_ASSIGN(auto internal_context,
+                         InternalReadContext::Create(std::move(read_context), table_schema,
+                                                     table_schema->Options()));
+    std::vector<DataField> read_fields = {DataField(3, arrow::field("f3", arrow::float64())),
+                                          DataField(0, arrow::field("f0", arrow::utf8()))};
+    auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
+}
+
 TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
     {
         // test simple
