@@ -58,6 +58,7 @@ class PAIMON_EXPORT RowRangeGlobalIndexScanner {
     /// @param field_name  Name of the indexed column.
     /// @return A `Result` that is:
     ///         - Successful with several readers if the indexes exist and load correctly;
+    ///         - Successful with an empty vector if no index was built for the given field;
     ///         - Error returns when loading fails (e.g., file corruption, I/O error, unsupported
     ///         format) or the predicate method was incorrectly invoked (e.g., VisitTopK was invoked
     ///         incorrectly).
