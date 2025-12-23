@@ -198,7 +198,7 @@ TEST_F(LiteralConverterTest, TestStringLiteral) {
         std::vector<Literal>({Literal(FieldType::STRING, "apple", 5),
                               Literal(FieldType::STRING, str.data(), str.size())}));
     CheckLiteralFromRow(
-        arrow::utf8(), {"apple", "苹果", NullType()}, FieldType::STRING,
+        arrow::utf8(), {std::string("apple"), std::string("苹果"), NullType()}, FieldType::STRING,
         {Literal(FieldType::STRING, "apple", 5), Literal(FieldType::STRING, str.data(), str.size()),
          Literal(FieldType::STRING)});
 }
@@ -217,7 +217,7 @@ TEST_F(LiteralConverterTest, TestBinaryLiteral) {
         std::vector<Literal>({Literal(FieldType::BINARY, "apple", 5),
                               Literal(FieldType::BINARY, str.data(), str.size())}));
     CheckLiteralFromRow(
-        arrow::binary(), {"apple", "苹果", NullType()}, FieldType::BINARY,
+        arrow::binary(), {std::string("apple"), std::string("苹果"), NullType()}, FieldType::BINARY,
         {Literal(FieldType::BINARY, "apple", 5), Literal(FieldType::BINARY, str.data(), str.size()),
          Literal(FieldType::BINARY)});
 }

@@ -394,7 +394,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestVariantType) {
     ])")
                 .ValueOrDie());
 
-        CheckVariantType(fields, std::move(src_array), {"1.1", "2.1"},
+        CheckVariantType(fields, std::move(src_array), {std::string("1.1"), std::string("2.1")},
                          {std::make_shared<Bytes>("1.12", pool_.get()),
                           std::make_shared<Bytes>("2.12", pool_.get())});
     }
