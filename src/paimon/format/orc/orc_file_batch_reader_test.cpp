@@ -499,7 +499,23 @@ TEST_P(OrcFileBatchReaderTest, TestComplexType) {
     ASSERT_OK_AND_ASSIGN(auto result_array,
                          paimon::test::ReadResultCollector::CollectResult(orc_batch_reader.get()));
     std::shared_ptr<arrow::ChunkedArray> expected_array;
-    auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+    arrow::Status array_status;
+    if (arrow_vendored::date::current_zone()->name() == "Asia/Shanghai" ||
+        arrow_vendored::date::current_zone()->name() == "PRC") {
+        // refer: https://github.com/eggert/tz/blob/main/asia#L653
+        // When using the Asia/Shanghai timezone, timestamps prior to 1901 have an additional offset
+        // of 5 minutes and 45 seconds
+        array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+        [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678", "add"],
+        [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000", "cat"],
+        [10, 1, 0,     "2008-12-28 00:00:00.000123456", null, "dad"],
+        [10, 1, 100,   "2008-12-28 00:00:00.00012345",  "-123.45000", "eat"],
+        [10, 1, null,  "1899-01-01 01:05:03.001001001", "0.00000", "fat"],
+        [10, 1, 20006, "2024-10-10 10:10:10.1001001",   "1728551410100.10010", null]
+    ])"},
+                                                                        &expected_array);
+    } else {
+        array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
         [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678", "add"],
         [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000", "cat"],
         [10, 1, 0,     "2008-12-28 00:00:00.000123456", null, "dad"],
@@ -507,7 +523,9 @@ TEST_P(OrcFileBatchReaderTest, TestComplexType) {
         [10, 1, null,  "1899-01-01 00:59:20.001001001", "0.00000", "fat"],
         [10, 1, 20006, "2024-10-10 10:10:10.1001001",   "1728551410100.10010", null]
     ])"},
-                                                                         &expected_array);
+                                                                        &expected_array);
+    }
+
     ASSERT_TRUE(array_status.ok());
     ASSERT_TRUE(result_array->Equals(*expected_array));
 }

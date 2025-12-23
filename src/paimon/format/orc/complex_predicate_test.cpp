@@ -15,9 +15,11 @@
  */
 
 #include <cstdint>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,7 +29,9 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
+#include "arrow/chunked_array.h"
 #include "arrow/ipc/json_simple.h"
+#include "arrow/vendored/datetime/tz.h"
 #include "gtest/gtest.h"
 #include "orc/OrcFile.hh"
 #include "paimon/common/utils/date_time_utils.h"
@@ -47,6 +51,7 @@
 #include "paimon/status.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/timezone_guard.h"
 #include "paimon/utils/roaring_bitmap32.h"
 
 namespace paimon {
@@ -61,14 +66,6 @@ class ComplexPredicateTest : public ::testing::Test {
     void SetUp() override {
         pool_ = GetDefaultPool();
         batch_size_ = 10;
-
-        arrow::FieldVector fields = {
-            arrow::field("f1", arrow::int32()),
-            arrow::field("f2", arrow::int32()),
-            arrow::field("f3", arrow::date32()),
-            arrow::field("f4", arrow::timestamp(arrow::TimeUnit::NANO)),
-            arrow::field("f5", arrow::decimal128(23, 5)),
-        };
     }
     void TearDown() override {}
 
@@ -131,16 +128,34 @@ TEST_F(ComplexPredicateTest, TestSimple) {
         arrow::field("f5", arrow::decimal128(23, 5)),
     };
     auto read_schema = arrow::schema(fields);
-    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
-        [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
-        [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
-        [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],
-        [10, 1, 100,   "2008-12-28 00:00:00.00012345",  "-123.45000"],
-        [10, 1, null,  "1899-01-01 00:59:20.001001001", "0.00000"],
-        [10, 1, 20006, "2024-10-10 10:10:10.100100100", "1728551410100.10010"]
-    ])")
-            .ValueOrDie());
+    std::shared_ptr<arrow::StructArray> expected_array;
+    if (arrow_vendored::date::current_zone()->name() == "Asia/Shanghai" ||
+        arrow_vendored::date::current_zone()->name() == "PRC") {
+        // refer: https://github.com/eggert/tz/blob/main/asia#L653
+        // When using the Asia/Shanghai timezone, timestamps prior to 1901 have an additional offset
+        // of 5 minutes and 45 seconds
+        expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
+            [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
+            [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],
+            [10, 1, 100,   "2008-12-28 00:00:00.00012345",  "-123.45000"],
+            [10, 1, null,  "1899-01-01 01:05:03.001001001", "0.00000"],
+            [10, 1, 20006, "2024-10-10 10:10:10.100100100", "1728551410100.10010"]
+        ])")
+                .ValueOrDie());
+    } else {
+        expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
+            [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
+            [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],
+            [10, 1, 100,   "2008-12-28 00:00:00.00012345",  "-123.45000"],
+            [10, 1, null,  "1899-01-01 00:59:20.001001001", "0.00000"],
+            [10, 1, 20006, "2024-10-10 10:10:10.100100100", "1728551410100.10010"]
+        ])")
+                .ValueOrDie());
+    }
 
     //  date
     {
