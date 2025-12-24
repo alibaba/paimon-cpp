@@ -57,6 +57,14 @@ class BitmapGlobalIndexResultTest : public ::testing::Test {
             return values_.empty();
         }
 
+        Result<std::shared_ptr<GlobalIndexResult>> AddOffset(int64_t offset) override {
+            std::vector<int64_t> values = values_;
+            for (auto& value : values) {
+                value += offset;
+            }
+            return std::make_shared<FakeGlobalIndexResult>(values);
+        }
+
      private:
         std::vector<int64_t> values_;
     };
@@ -176,6 +184,22 @@ TEST_F(BitmapGlobalIndexResultTest, TestFromRanges) {
     {
         auto result = BitmapGlobalIndexResult::FromRanges({Range(0, 5), Range(10, 10)});
         ASSERT_EQ(result->ToString(), "{0,1,2,3,4,5,10}");
+    }
+}
+
+TEST_F(BitmapGlobalIndexResultTest, TestAddOffset) {
+    {
+        auto result = BitmapGlobalIndexResult::FromRanges({Range(0, 5)});
+        ASSERT_OK_AND_ASSIGN(auto result_with_offset, result->AddOffset(0));
+        ASSERT_EQ(result_with_offset->ToString(), "{0,1,2,3,4,5}");
+
+        ASSERT_OK_AND_ASSIGN(result_with_offset, result->AddOffset(10));
+        ASSERT_EQ(result_with_offset->ToString(), "{10,11,12,13,14,15}");
+    }
+    {
+        auto result = BitmapGlobalIndexResult::FromRanges({});
+        ASSERT_OK_AND_ASSIGN(auto result_with_offset, result->AddOffset(10));
+        ASSERT_EQ(result_with_offset->ToString(), "{}");
     }
 }
 }  // namespace paimon::test

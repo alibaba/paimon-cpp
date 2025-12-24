@@ -53,6 +53,19 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndexResult::Or(
     return GlobalIndexResult::Or(other);
 }
 
+Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndexResult::AddOffset(int64_t offset) {
+    auto supplier = [offset, result = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(
+                                 shared_from_this())]() -> Result<RoaringBitmap64> {
+        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, result->GetBitmap());
+        RoaringBitmap64 bitmap64;
+        for (auto iter = bitmap->Begin(); iter != bitmap->End(); ++iter) {
+            bitmap64.Add(offset + (*iter));
+        }
+        return bitmap64;
+    };
+    return std::make_shared<BitmapGlobalIndexResult>(supplier);
+}
+
 Result<const RoaringBitmap64*> BitmapGlobalIndexResult::GetBitmap() const {
     if (!initialized_) {
         PAIMON_ASSIGN_OR_RAISE(bitmap_, bitmap_supplier_());

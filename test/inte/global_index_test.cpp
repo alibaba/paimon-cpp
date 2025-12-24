@@ -20,13 +20,14 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
+#include "paimon/core/global_index/row_range_global_index_scanner_impl.h"
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/bitmap_topk_global_index_result.h"
 #include "paimon/global_index/global_index_scan.h"
-#include "paimon/global_index/row_range_global_index_writer.h"
+#include "paimon/global_index/global_index_write_task.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/result.h"
@@ -130,7 +131,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
                       const std::string& index_field_name, const std::string& index_type,
                       const std::map<std::string, std::string>& options, const Range& range) {
         PAIMON_ASSIGN_OR_RAISE(auto split, ScanData(table_path, partition_filters));
-        PAIMON_ASSIGN_OR_RAISE(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+        PAIMON_ASSIGN_OR_RAISE(auto index_commit_msg, GlobalIndexWriteTask::WriteIndex(
                                                           table_path, index_field_name, index_type,
                                                           std::make_shared<IndexedSplitImpl>(
                                                               split, std::vector<Range>({range})),
@@ -233,21 +234,20 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
 
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["a", [0.0, 0.0, 0.0, 0.0]],
         ["b", [0.0, 1.0, 0.0, 1.0]],
         ["c", [1.0, 0.0, 1.0, 0.0]],
         ["d", [1.0, 1.0, 1.0, 1.0]]
 
     ])")
-            .ValueOrDie());
+                         .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, GlobalIndexWriteTask::WriteIndex(
                                                     table_path, "f1", "lumina",
                                                     std::make_shared<IndexedSplitImpl>(
                                                         split, std::vector<Range>({Range(0, 3)})),
@@ -275,8 +275,7 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
     auto schema = arrow::schema(fields_);
 
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
@@ -286,13 +285,13 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                         .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, /*partition_filters=*/{}));
-    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, RowRangeGlobalIndexWriter::WriteIndex(
+    ASSERT_OK_AND_ASSIGN(auto index_commit_msg, GlobalIndexWriteTask::WriteIndex(
                                                     table_path, "f0", "bitmap",
                                                     std::make_shared<IndexedSplitImpl>(
                                                         split, std::vector<Range>({Range(0, 7)})),
@@ -320,26 +319,24 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
     auto schema = arrow::schema(fields_);
 
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
 ["Tony", 10, 0, 14.1],
 ["Bob", 10, 1, 16.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
                          WriteArray(table_path, {{"f1", "10"}}, write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Lucy", 20, 1, 15.1],
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
                          WriteArray(table_path, {{"f1", "20"}}, write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
@@ -350,7 +347,7 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
             ASSERT_OK_AND_ASSIGN(auto split, ScanData(table_path, partition));
             ASSERT_OK_AND_ASSIGN(
                 auto index_commit_msg,
-                RowRangeGlobalIndexWriter::WriteIndex(
+                GlobalIndexWriteTask::WriteIndex(
                     table_path, "f0", "bitmap",
                     std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({expected_range})),
                     /*options=*/{}, pool_));
@@ -398,6 +395,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
@@ -405,7 +404,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                          index_reader->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
     ASSERT_EQ(index_result->ToString(), "{0,7}");
     // test f0, f1, f2 fields
-    ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+    ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
     {
         // test with non predicate
         ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(nullptr));
@@ -548,6 +547,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
     // test index reader
     // test f0 field
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
@@ -559,7 +560,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
     ASSERT_FALSE(index_reader2);
 
     // test evaluator
-    ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+    ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
     {
         // test and predicate
         auto f0_predicate =
@@ -600,12 +601,14 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
     ASSERT_TRUE(ranges.empty());
 
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
     // test index reader
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
     ASSERT_FALSE(index_reader);
 
     // test evaluator
-    ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+    ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
     auto predicate =
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Alice", 5));
@@ -628,6 +631,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     {
         ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 3)));
+        auto scanner_impl =
+            std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+        ASSERT_TRUE(scanner_impl);
+
         // test index reader
         ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
         ASSERT_OK_AND_ASSIGN(auto index_result,
@@ -635,7 +642,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
         ASSERT_EQ(index_result->ToString(), "{0,7}");
 
         // test evaluator
-        ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+        ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
@@ -644,11 +651,15 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
     }
     {
         ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(10, 13)));
+        auto scanner_impl =
+            std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+        ASSERT_TRUE(scanner_impl);
+
         // test index reader
         ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
         ASSERT_FALSE(index_reader);
         // test evaluator
-        ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+        ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
@@ -676,6 +687,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
             ASSERT_EQ(ranges, std::vector<Range>({Range(0, 4)}));
             ASSERT_OK_AND_ASSIGN(auto range_scanner,
                                  global_index_scan->CreateRangeScan(Range(0, 4)));
+            auto scanner_impl =
+                std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+            ASSERT_TRUE(scanner_impl);
+
             // test index reader
             ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
             ASSERT_OK_AND_ASSIGN(auto index_result,
@@ -683,7 +698,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
             ASSERT_EQ(index_result->ToString(), "{1,4}");
 
             // test evaluator
-            ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+            ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
             {
                 // null result as f2 does not have index
                 auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
@@ -732,10 +747,12 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
                                                  /*partitions=*/std::nullopt, /*options=*/{},
                                                  /*file_system=*/nullptr, pool_));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
     ASSERT_FALSE(index_reader);
 
-    ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+    ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
     auto predicate =
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Bob", 3));
@@ -750,8 +767,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     auto schema = arrow::schema(fields_);
 
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
@@ -761,7 +777,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                         .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
     ASSERT_OK(Commit(table_path, commit_msgs));
@@ -776,6 +792,8 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
     ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "bitmap"));
     ASSERT_OK_AND_ASSIGN(auto index_result,
                          index_reader->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
@@ -819,26 +837,24 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     };
 
     // write partition f2 = 10
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
 ["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
 ["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
 ["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     write_data_and_index(src_array1, {{"f2", "10"}}, Range(0, 3));
 
     // write partition f2 = 20
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
 ["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
 ["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
 ["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
 ["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     write_data_and_index(src_array2, {{"f2", "20"}}, Range(4, 8));
 
     auto scan_and_check_result = [&](const std::map<std::string, std::string>& partition,
@@ -859,9 +875,12 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 
         ASSERT_OK_AND_ASSIGN(auto range_scanner,
                              global_index_scan->CreateRangeScan(expected_range));
+        auto scanner_impl =
+            std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+        ASSERT_TRUE(scanner_impl);
 
         // check bitmap index
-        ASSERT_OK_AND_ASSIGN(auto evaluator, range_scanner->CreateIndexEvaluator());
+        ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
 
         auto predicate1 =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
@@ -886,8 +905,9 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         // check read array
         std::vector<std::string> read_field_names = schema->field_names();
         read_field_names.push_back("_INDEX_SCORE");
+        ASSERT_OK_AND_ASSIGN(auto result_with_offset, topk_result->AddOffset(expected_range.from));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
-                                                               /*options=*/{}, topk_result));
+                                                               /*options=*/{}, result_with_offset));
         ASSERT_OK(ReadData(table_path, read_field_names, expected_array,
                            /*predicate=*/nullptr, plan));
     };
@@ -895,9 +915,10 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     auto result_fields = fields;
     result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
     result_fields.push_back(SpecialFields::IndexScore().ArrowField());
-    std::map<int64_t, float> id_to_score = {{0, 4.21f},   {1, 2.01f},   {2, 2.21f},
-                                            {3, 0.01f},   {4, 322.21f}, {5, 360.01f},
-                                            {6, 360.21f}, {7, 398.01},  {8, 322.21f}};
+    std::map<int64_t, float> id_to_score1 = {{0, 4.21f}, {1, 2.01f}, {2, 2.21f}, {3, 0.01f}};
+    std::map<int64_t, float> id_to_score2 = {
+        {0, 322.21f}, {1, 360.01f}, {2, 360.21f}, {3, 398.01}, {4, 322.21f}};
+
     {
         // test scan and read for f2=10
         auto filter = [](int64_t id) -> bool { return id == 0; };
@@ -908,19 +929,19 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                 .ValueOrDie();
         scan_and_check_result({{"f2", "10"}}, Range(0, 3), filter, /*k=*/2, "{0}",
                               "row ids: {0}, scores: {4.21}", {Range(0, 0)}, expected_array,
-                              id_to_score);
+                              id_to_score1);
     }
     {
         // test scan and read for f2=20
-        auto filter = [](int64_t id) -> bool { return id == 7 || id == 8; };
+        auto filter = [](int64_t id) -> bool { return id == 3 || id == 4; };
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, 322.21]
     ])")
                 .ValueOrDie();
-        scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter, /*k=*/1, "{7,8}",
-                              "row ids: {8}, scores: {322.21}", {Range(8, 8)}, expected_array,
-                              id_to_score);
+        scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter, /*k=*/1, "{3,4}",
+                              "row ids: {4}, scores: {322.21}", {Range(4, 4)}, expected_array,
+                              id_to_score2);
     }
     {
         // test invalid range input
@@ -954,8 +975,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
     std::vector<std::string> write_cols = schema->field_names();
 
-    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
 ["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
 ["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
@@ -966,7 +986,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
 ["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
 ["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
     ])")
-            .ValueOrDie());
+                         .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
     ASSERT_OK(Commit(table_path, commit_msgs));
@@ -1047,8 +1067,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
     auto schema = arrow::schema(fields_);
     // write and commit data
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
@@ -1058,14 +1077,14 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                         .ValueOrDie();
 
     ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
     ASSERT_OK(Commit(table_path, commit_msgs));
 
     auto result_fields = fields_;
     result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
-    auto expected_all_array = std::dynamic_pointer_cast<arrow::StructArray>(
+    auto expected_all_array =
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Bob", 10, 1, 12.1],
@@ -1076,7 +1095,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
 [0, "Tony", 20, 0, 17.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+            .ValueOrDie();
 
     {
         // read when no index is built
@@ -1098,12 +1117,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
 
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
     {
@@ -1124,14 +1143,14 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
 
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Bob", 10, 1, 12.1],
 [0, "Bob", 10, 1, 16.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
     {
@@ -1164,26 +1183,24 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithOnlyOnePartitionHasIndex) 
     auto schema = arrow::schema(fields_);
     // write and commit data
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
 ["Tony", 10, 0, 14.1],
 ["Bob", 10, 1, 16.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
                          WriteArray(table_path, {{"f1", "10"}}, write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Lucy", 20, 1, 15.1],
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
                          WriteArray(table_path, {{"f1", "20"}}, write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
@@ -1200,14 +1217,14 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithOnlyOnePartitionHasIndex) 
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Lucy", 20, 1, 15.1],
 [0, "Tony", 20, 0, 17.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1219,26 +1236,24 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
     auto schema = arrow::schema(fields_);
     // write and commit data
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
 ["Tony", 10, 0, 14.1],
 ["Bob", 10, 1, 16.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
                          WriteArray(table_path, {{"f1", "10"}}, write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Lucy", 20, 1, 15.1],
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
                          WriteArray(table_path, {{"f1", "20"}}, write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
@@ -1259,14 +1274,14 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Lucy", 20, 1, 15.1],
 [0, "Tony", 20, 0, 17.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1275,7 +1290,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(1));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Bob", 10, 1, 12.1],
@@ -1284,7 +1299,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
 [0, "Bob", 10, 1, 16.1],
 [0, "Lucy", 20, 1, 15.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1296,12 +1311,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
                                                   FieldType::INT, Literal(1));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Lucy", 20, 1, 15.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1314,11 +1329,11 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoIndexInDiffTwoPartition
                                                   FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1330,26 +1345,24 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
     auto schema = arrow::schema(fields_);
     // write and commit data
     std::vector<std::string> write_cols = schema->field_names();
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Emily", 10, 0, 13.1],
 ["Tony", 10, 0, 14.1],
 ["Bob", 10, 1, 16.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
                          WriteArray(table_path, {{"f1", "10"}}, write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Lucy", 20, 1, 15.1],
 ["Tony", 20, 0, 17.1],
 ["Alice", 20, null, 18.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
                          WriteArray(table_path, {{"f1", "20"}}, write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
@@ -1369,12 +1382,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1387,11 +1400,11 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
                                                   FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1404,11 +1417,11 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
                                                      FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1421,12 +1434,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
                                                      FieldType::INT, Literal(30));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Alice", 20, null, 18.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
 
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
@@ -1453,28 +1466,26 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
     std::vector<std::string> write_cols = schema->field_names();
     // write partition f2 = 10
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
 ["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
 ["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
 ["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1,
                          WriteArray(table_path, {{"f2", "10"}}, write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
     // write partition f2 = 20
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
 ["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
 ["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
 ["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
 ["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2,
                          WriteArray(table_path, {{"f2", "20"}}, write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
@@ -1503,32 +1514,29 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
     // write and commit data
     std::vector<std::string> write_cols = schema->field_names();
 
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Alice", 10, 1, 11.1],
 ["Bob", 10, 1, 12.1],
 ["Bob", 10, 1, 16.1]
    ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs1, WriteArray(table_path, {{"f1", "10"}, {"f2", "1"}},
                                                        write_cols, src_array1));
     ASSERT_OK(Commit(table_path, commit_msgs1));
 
-    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array2 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Lucy", 20, 1, 15.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs2, WriteArray(table_path, {{"f1", "20"}, {"f2", "1"}},
                                                        write_cols, src_array2));
     ASSERT_OK(Commit(table_path, commit_msgs2));
 
-    auto src_array3 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+    auto src_array3 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
 ["Emily", 10, 0, 13.1],
 ["Tony", 10, 0, 14.1]
     ])")
-            .ValueOrDie());
+                          .ValueOrDie();
     ASSERT_OK_AND_ASSIGN(auto commit_msgs3, WriteArray(table_path, {{"f1", "10"}, {"f2", "0"}},
                                                        write_cols, src_array3));
     ASSERT_OK(Commit(table_path, commit_msgs3));
@@ -1557,12 +1565,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
 
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Bob", 10, 1, 12.1],
 [0, "Bob", 10, 1, 16.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
     {
@@ -1573,14 +1581,14 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({predicate1, predicate2}));
 
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
-        auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", 10, 1, 11.1],
 [0, "Bob", 10, 1, 12.1],
 [0, "Bob", 10, 1, 16.1],
 [0, "Lucy", 20, 1, 15.1]
     ])")
-                .ValueOrDie());
+                .ValueOrDie();
         ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
     }
     {

@@ -40,7 +40,7 @@ class BitmapGlobalIndex : public GlobalIndexer {
 
  private:
     static Result<std::shared_ptr<GlobalIndexResult>> ToGlobalIndexResult(
-        const Range& range, const std::shared_ptr<FileIndexResult>& result);
+        int64_t range_end, const std::shared_ptr<FileIndexResult>& result);
 
  private:
     std::shared_ptr<BitmapFileIndex> index_;

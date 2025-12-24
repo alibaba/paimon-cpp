@@ -36,7 +36,7 @@ class PAIMON_EXPORT GlobalIndexScan {
     /// Creates a `GlobalIndexScan` instance for the specified table and context.
     ///
     /// @param table_path     Root directory of the table.
-    /// @param snapshot_id    Optional snapshot ID to read from; if not provided, uses the latest.
+    /// @param snapshot_id    Optional snapshot id to read from; if not provided, uses the latest.
     /// @param partitions     Optional list of specific partitions to restrict the scan scope.
     ///                       Each map represents one partition (e.g., {"dt": "2024-06-01"}).
     ///                       If omitted, scans all partitions.
@@ -65,23 +65,23 @@ class PAIMON_EXPORT GlobalIndexScan {
 
     virtual ~GlobalIndexScan() = default;
 
-    /// Creates a scanner for the global index over the specified row ID range.
+    /// Creates a scanner for the global index over the specified row id range.
     ///
     /// This method instantiates a low-level scanner that can evaluate predicates and
-    /// retrieve matching row IDs from the global index data corresponding to the given
-    /// row ID range.
+    /// retrieve matching row ids from the global index data corresponding to the given
+    /// row id range.
     ///
-    /// @param range The inclusive row ID range [start, end] for which to create the scanner.
+    /// @param range The inclusive row id range [start, end] for which to create the scanner.
     ///              The range must be fully covered by existing global index data (from
     ///              `GetRowRangeList()`).
     /// @return A `Result` containing a range-level scanner, or an error if parse index meta fails.
     virtual Result<std::shared_ptr<RowRangeGlobalIndexScanner>> CreateRangeScan(
         const Range& range) = 0;
 
-    /// Returns row ID ranges covered by this global index (sorted and non-overlapping
+    /// Returns row id ranges covered by this global index (sorted and non-overlapping
     /// ranges).
     ///
-    /// Each `Range` represents a contiguous segment of row IDs for which global index
+    /// Each `Range` represents a contiguous segment of row ids for which global index
     /// data exists. This allows the query engine to parallelize scanning and be aware
     /// of ranges that are not covered by any global index.
     ///

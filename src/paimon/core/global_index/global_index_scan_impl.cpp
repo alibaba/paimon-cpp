@@ -144,21 +144,37 @@ Status GlobalIndexScanImpl::Scan() {
 Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::ParallelScan(
     const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
     const std::shared_ptr<Executor>& executor) {
-    std::vector<std::shared_ptr<RowRangeGlobalIndexScanner>> range_scanners;
+    std::vector<std::shared_ptr<RowRangeGlobalIndexScannerImpl>> range_scanners;
     range_scanners.reserve(ranges.size());
     for (const auto& range : ranges) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RowRangeGlobalIndexScanner> scanner,
                                CreateRangeScan(range));
-        range_scanners.push_back(scanner);
+        auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(scanner);
+        if (!scanner_impl) {
+            return Status::Invalid(
+                "invalid RowRangeGlobalIndexScanner, fail to cast to "
+                "RowRangeGlobalIndexScannerImpl");
+        }
+        range_scanners.push_back(scanner_impl);
     }
 
     std::vector<std::future<Result<std::optional<std::shared_ptr<GlobalIndexResult>>>>> futures;
-    for (const auto& scanner : range_scanners) {
+    for (size_t i = 0; i < range_scanners.size(); i++) {
+        const auto& scanner = range_scanners[i];
+        const auto& range = ranges[i];
         auto search_index =
-            [&scanner, &predicate]() -> Result<std::optional<std::shared_ptr<GlobalIndexResult>>> {
+            [&scanner, &predicate,
+             &range]() -> Result<std::optional<std::shared_ptr<GlobalIndexResult>>> {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
                                    scanner->CreateIndexEvaluator());
-            return evaluator->Evaluate(predicate);
+            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
+                                   evaluator->Evaluate(predicate));
+            if (!index_result) {
+                return index_result;
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result_with_offset,
+                                   index_result.value()->AddOffset(range.from));
+            return std::optional<std::shared_ptr<GlobalIndexResult>>(result_with_offset);
         };
         futures.push_back(Via(executor.get(), search_index));
     }

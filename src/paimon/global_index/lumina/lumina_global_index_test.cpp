@@ -88,8 +88,7 @@ class LuminaGlobalIndexTest : public ::testing::Test {
         EXPECT_EQ(result_metas.size(), 1);
         EXPECT_TRUE(StringUtils::StartsWith(result_metas[0].file_name, "lumina-global-index-"));
         EXPECT_TRUE(StringUtils::EndsWith(result_metas[0].file_name, ".index"));
-        EXPECT_EQ(result_metas[0].row_id_range, expected_range)
-            << result_metas[0].row_id_range.from << ", " << result_metas[0].row_id_range.to;
+        EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_FALSE(result_metas[0].metadata);
         return result_metas[0];
     }
@@ -213,6 +212,12 @@ TEST_F(LuminaGlobalIndexTest, TestWithFilter) {
     ASSERT_OK_AND_ASSIGN(auto reader,
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
     {
+        ASSERT_OK_AND_ASSIGN(auto topk_result,
+                             reader->VisitTopK(/*k=*/2, query_, /*filter=*/nullptr,
+                                               /*predicate*/ nullptr));
+        CheckResult(topk_result, {3l, 1l}, {0.01f, 2.01f});
+    }
+    {
         auto filter = [](int64_t id) -> bool { return id < 3; };
         ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/2, query_, filter,
                                                                  /*predicate*/ nullptr));
@@ -223,39 +228,6 @@ TEST_F(LuminaGlobalIndexTest, TestWithFilter) {
         ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/4, query_, filter,
                                                                  /*predicate*/ nullptr));
         CheckResult(topk_result, {1l, 2l, 0l}, {2.01f, 2.21f, 4.21f});
-    }
-}
-
-TEST_F(LuminaGlobalIndexTest, TestWithRangeNotStartFromZero) {
-    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
-    ASSERT_TRUE(test_root_dir);
-    std::string test_root = test_root_dir->Str();
-
-    // lumina only set range from 0
-    ASSERT_OK_AND_ASSIGN(auto meta,
-                         WriteGlobalIndex(test_root, data_type_, options_, array_, Range(0, 3)));
-
-    // after paimon write, range may add an offset for shard range start
-    meta.row_id_range = Range(10, 13);
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         CreateGlobalIndexReader(test_root, data_type_, options_, meta));
-    {
-        ASSERT_OK_AND_ASSIGN(auto topk_result,
-                             reader->VisitTopK(/*k=*/2, query_, /*filter=*/nullptr,
-                                               /*predicate*/ nullptr));
-        CheckResult(topk_result, {13l, 11l}, {0.01f, 2.01f});
-    }
-    {
-        auto filter = [](int64_t id) -> bool { return id < 13; };
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/2, query_, filter,
-                                                                 /*predicate*/ nullptr));
-        CheckResult(topk_result, {11l, 12l}, {2.01f, 2.21f});
-    }
-    {
-        auto filter = [](int64_t id) -> bool { return id < 13; };
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/4, query_, filter,
-                                                                 /*predicate*/ nullptr));
-        CheckResult(topk_result, {11l, 12l, 10l}, {2.01f, 2.21f, 4.21f});
     }
 }
 
@@ -271,7 +243,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
             WriteGlobalIndex(index_root, data_type_, options, /*array=*/nullptr, Range(0, 0)),
             "convert key lumina.dimension, value xxx to unsigned int failed");
         GlobalIndexIOMeta fake_meta("fake_file_name", /*file_size=*/10,
-                                    /*row_id_range=*/Range(0, 5),
+                                    /*range_end=*/5,
                                     /*metadata=*/nullptr);
         ASSERT_NOK_WITH_MSG(CreateGlobalIndexReader(index_root, data_type_, options, fake_meta),
                             "convert key lumina.dimension, value xxx to unsigned int failed");
@@ -389,7 +361,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         }
         {
             auto fake_meta = meta;
-            fake_meta.row_id_range = Range(100, 150);
+            fake_meta.range_end = 50;
             ASSERT_NOK_WITH_MSG(
                 CreateGlobalIndexReader(index_root, data_type_, options_, fake_meta),
                 "lumina index row count 4 mismatch row count 51 in io meta");

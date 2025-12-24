@@ -120,6 +120,16 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapTopKGlobalIndexResult::Or(
     return GlobalIndexResult::Or(other);
 }
 
+Result<std::shared_ptr<GlobalIndexResult>> BitmapTopKGlobalIndexResult::AddOffset(int64_t offset) {
+    PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, GetBitmap());
+    RoaringBitmap64 bitmap64;
+    for (auto iter = bitmap->Begin(); iter != bitmap->End(); ++iter) {
+        bitmap64.Add(offset + (*iter));
+    }
+    auto scores = GetScores();
+    return std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap64), std::move(scores));
+}
+
 Result<bool> BitmapTopKGlobalIndexResult::IsEmpty() const {
     return bitmap_.IsEmpty();
 }

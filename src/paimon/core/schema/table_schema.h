@@ -98,8 +98,6 @@ class TableSchema : public Jsonizable<TableSchema> {
 
     bool CrossPartitionUpdate() const;
 
-    Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const;
-
  private:
     JSONIZABLE_FRIEND_AND_DEFAULT_CTOR(TableSchema);
 

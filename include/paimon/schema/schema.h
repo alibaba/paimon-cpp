@@ -44,7 +44,7 @@ class PAIMON_EXPORT Schema {
     virtual std::vector<std::string> FieldNames() const = 0;
 
     /// Get the unique identifier of this table schema.
-    /// @return The schema ID
+    /// @return The schema id
     virtual int64_t Id() const = 0;
 
     /// Get the list of primary key field names.
@@ -65,8 +65,8 @@ class PAIMON_EXPORT Schema {
     /// @return The number of buckets.
     virtual int32_t NumBuckets() const = 0;
 
-    /// Get the highest field ID assigned in this schema.
-    /// @return The maximum field ID.
+    /// Get the highest field id assigned in this schema.
+    /// @return The maximum field id.
     virtual int32_t HighestFieldId() const = 0;
 
     /// Get the table-level options associated with this schema.

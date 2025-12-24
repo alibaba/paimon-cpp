@@ -45,19 +45,19 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileIndexReader> reader,
         index_->CreateReader(arrow_schema, /*start=*/0, meta.file_size, in, pool));
-    auto transform = [range = meta.row_id_range](const std::shared_ptr<FileIndexResult>& result)
+    auto transform = [range_end = meta.range_end](const std::shared_ptr<FileIndexResult>& result)
         -> Result<std::shared_ptr<GlobalIndexResult>> {
-        return ToGlobalIndexResult(range, result);
+        return ToGlobalIndexResult(range_end, result);
     };
     return std::make_shared<FileIndexReaderWrapper>(reader, transform);
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndex::ToGlobalIndexResult(
-    const Range& range, const std::shared_ptr<FileIndexResult>& result) {
+    int64_t range_end, const std::shared_ptr<FileIndexResult>& result) {
     if (auto remain = std::dynamic_pointer_cast<Remain>(result)) {
-        return std::make_shared<BitmapGlobalIndexResult>([range]() -> Result<RoaringBitmap64> {
+        return std::make_shared<BitmapGlobalIndexResult>([range_end]() -> Result<RoaringBitmap64> {
             RoaringBitmap64 bitmap;
-            bitmap.AddRange(range.from, range.to + 1);
+            bitmap.AddRange(0, range_end + 1);
             return bitmap;
         });
     } else if (auto skip = std::dynamic_pointer_cast<Skip>(result)) {
@@ -65,13 +65,9 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndex::ToGlobalIndexResul
             []() -> Result<RoaringBitmap64> { return RoaringBitmap64(); });
     } else if (auto bitmap_result = std::dynamic_pointer_cast<BitmapIndexResult>(result)) {
         return std::make_shared<BitmapGlobalIndexResult>(
-            [range, bitmap_result]() -> Result<RoaringBitmap64> {
+            [bitmap_result]() -> Result<RoaringBitmap64> {
                 PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* bitmap, bitmap_result->GetBitmap());
-                RoaringBitmap64 bitmap64;
-                for (auto iter = bitmap->Begin(); iter != bitmap->End(); ++iter) {
-                    bitmap64.Add(range.from + (*iter));
-                }
-                return bitmap64;
+                return RoaringBitmap64(*bitmap);
             });
     }
     return Status::Invalid(

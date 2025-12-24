@@ -145,7 +145,7 @@ set(PAIMON_CORE_SRCS
     core/global_index/global_index_scan.cpp
     core/global_index/global_index_scan_impl.cpp
     core/global_index/row_range_global_index_scanner_impl.cpp
-    core/global_index/row_range_global_index_writer.cpp
+    core/global_index/global_index_write_task.cpp
     core/index/index_file_handler.cpp
     core/index/global_index_meta.cpp
     core/index/index_file_meta_serializer.cpp

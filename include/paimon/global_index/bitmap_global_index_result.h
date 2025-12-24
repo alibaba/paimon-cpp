@@ -26,7 +26,7 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Represents a global index query result that **lazily materializes** its matching row IDs as a
+/// Represents a global index query result that **lazily materializes** its matching row ids as a
 /// Roaring bitmap. The underlying 64-bit Roaring bitmap is **not constructed during object
 /// creation**; instead, it is built on-demand the first time GetBitmap() is called. This design
 /// avoids unnecessary computation and memory allocation when the bitmap is not needed (e.g., during
@@ -66,6 +66,8 @@ class PAIMON_EXPORT BitmapGlobalIndexResult : public GlobalIndexResult {
         const std::shared_ptr<GlobalIndexResult>& other) override;
 
     Result<bool> IsEmpty() const override;
+
+    Result<std::shared_ptr<GlobalIndexResult>> AddOffset(int64_t offset) override;
 
     std::string ToString() const override;
 

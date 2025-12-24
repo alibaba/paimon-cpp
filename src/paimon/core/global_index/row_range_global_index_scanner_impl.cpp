@@ -128,7 +128,7 @@ GlobalIndexIOMeta RowRangeGlobalIndexScannerImpl::ToGlobalIndexIOMeta(
     assert(index_file->GetGlobalIndexMeta());
     const auto& global_index_meta = index_file->GetGlobalIndexMeta().value();
     return {index_file->FileName(), index_file->FileSize(),
-            Range(global_index_meta.row_range_start, global_index_meta.row_range_end),
+            /*range_end=*/global_index_meta.row_range_end - global_index_meta.row_range_start,
             global_index_meta.index_meta};
 }
 

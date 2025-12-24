@@ -331,11 +331,4 @@ bool TableSchema::CrossPartitionUpdate() const {
     return !ObjectUtils::ContainsAll(primary_keys_, partition_keys_);
 }
 
-Result<std::unique_ptr<::ArrowSchema>> TableSchema::GetArrowSchema() const {
-    std::shared_ptr<arrow::Schema> schema = DataField::ConvertDataFieldsToArrowSchema(fields_);
-    auto arrow_schema = std::make_unique<::ArrowSchema>();
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, arrow_schema.get()));
-    return arrow_schema;
-}
-
 }  // namespace paimon

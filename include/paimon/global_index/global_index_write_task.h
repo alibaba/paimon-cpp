@@ -28,10 +28,10 @@
 
 namespace paimon {
 /// Writes a range-level global index for a specific data split and field.
-class PAIMON_EXPORT RowRangeGlobalIndexWriter {
+class PAIMON_EXPORT GlobalIndexWriteTask {
  public:
-    RowRangeGlobalIndexWriter() = delete;
-    ~RowRangeGlobalIndexWriter() = delete;
+    GlobalIndexWriteTask() = delete;
+    ~GlobalIndexWriteTask() = delete;
     /// Builds and writes a global index for the specified data range.
     ///
     /// @param table_path   Path to the table root directory where index files are stored.

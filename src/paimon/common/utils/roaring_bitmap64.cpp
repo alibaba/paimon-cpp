@@ -121,6 +121,20 @@ RoaringBitmap64& RoaringBitmap64::operator=(const RoaringBitmap64& other) noexce
     return *this;
 }
 
+RoaringBitmap64::RoaringBitmap64(const RoaringBitmap32& other) noexcept {
+    *this = other;
+}
+
+RoaringBitmap64& RoaringBitmap64::operator=(const RoaringBitmap32& other) noexcept {
+    auto bitmap32 = static_cast<roaring::Roaring*>(other.roaring_bitmap_);
+    if (!roaring_bitmap_) {
+        roaring_bitmap_ = new roaring::Roaring64Map(*bitmap32);
+    } else {
+        GetRoaringBitmap(roaring_bitmap_) = roaring::Roaring64Map(*bitmap32);
+    }
+    return *this;
+}
+
 RoaringBitmap64::RoaringBitmap64(RoaringBitmap64&& other) noexcept {
     *this = std::move(other);
 }
