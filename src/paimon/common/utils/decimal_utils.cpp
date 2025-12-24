@@ -28,7 +28,7 @@
 
 namespace paimon {
 Status DecimalUtils::CheckDecimalType(const arrow::DataType& type) {
-    auto* decimal_type = arrow::internal::checked_cast<const arrow::Decimal128Type*>(&type);
+    auto* decimal_type = dynamic_cast<const arrow::Decimal128Type*>(&type);
     if (!decimal_type) {
         return Status::Invalid(fmt::format("Invalid decimal type: {}", type.ToString()));
     }
