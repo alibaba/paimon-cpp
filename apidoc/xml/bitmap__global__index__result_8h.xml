@@ -1,0 +1,390 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="bitmap__global__index__result_8h" kind="file" language="C++">
+    <compoundname>bitmap_global_index_result.h</compoundname>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includes local="no">utility</includes>
+    <includes refid="global__index__result_8h" local="yes">paimon/global_index/global_index_result.h</includes>
+    <includes refid="range_8h" local="yes">paimon/utils/range.h</includes>
+    <includes refid="roaring__bitmap64_8h" local="yes">paimon/utils/roaring_bitmap64.h</includes>
+    <includes refid="visibility_8h" local="yes">paimon/visibility.h</includes>
+    <incdepgraph>
+      <node id="31">
+        <label>paimon/fs/file_system.h</label>
+        <link refid="file__system_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h</label>
+        <link refid="bitmap__global__index__result_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon/global_index/global_index_result.h</label>
+        <link refid="global__index__result_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>paimon/io/byte_array_input_stream.h</label>
+        <link refid="byte__array__input__stream_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>paimon/memory/bytes.h</label>
+        <link refid="bytes_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>paimon/memory/memory_pool.h</label>
+        <link refid="memory__pool_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>paimon/result.h</label>
+        <link refid="result_8h"/>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>paimon/status.h</label>
+        <link refid="status_8h"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>paimon/string_builder.h</label>
+        <link refid="string__builder_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="25">
+        <label>paimon/utils/range.h</label>
+        <link refid="range_8h"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>paimon/utils/roaring_bitmap32.h</label>
+        <link refid="roaring__bitmap32_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="28">
+        <label>paimon/utils/roaring_bitmap64.h</label>
+        <link refid="roaring__bitmap64_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+      </node>
+      <node id="14">
+        <label>paimon/visibility.h</label>
+        <link refid="visibility_8h"/>
+      </node>
+      <node id="10">
+        <label>cassert</label>
+      </node>
+      <node id="7">
+        <label>cstddef</label>
+      </node>
+      <node id="8">
+        <label>cstdint</label>
+      </node>
+      <node id="18">
+        <label>cstring</label>
+      </node>
+      <node id="11">
+        <label>functional</label>
+      </node>
+      <node id="19">
+        <label>iosfwd</label>
+      </node>
+      <node id="29">
+        <label>limits</label>
+      </node>
+      <node id="2">
+        <label>memory</label>
+      </node>
+      <node id="12">
+        <label>new</label>
+      </node>
+      <node id="26">
+        <label>optional</label>
+      </node>
+      <node id="22">
+        <label>ostream</label>
+      </node>
+      <node id="20">
+        <label>paimon/compare.h</label>
+      </node>
+      <node id="13">
+        <label>paimon/macros.h</label>
+      </node>
+      <node id="24">
+        <label>paimon/traits.h</label>
+      </node>
+      <node id="23">
+        <label>sstream</label>
+      </node>
+      <node id="3">
+        <label>string</label>
+      </node>
+      <node id="16">
+        <label>type_traits</label>
+      </node>
+      <node id="4">
+        <label>utility</label>
+      </node>
+      <node id="27">
+        <label>vector</label>
+      </node>
+    </incdepgraph>
+    <innerclass refid="classpaimon_1_1_bitmap_global_index_result" prot="public">paimon::BitmapGlobalIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator" prot="public">paimon::BitmapGlobalIndexResult::Iterator</innerclass>
+    <innernamespace refid="namespacepaimon">paimon</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="2"><highlight class="comment"><sp/>*<sp/>Copyright<sp/>2024-present<sp/>Alibaba<sp/>Inc.</highlight></codeline>
+<codeline lineno="3"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="4"><highlight class="comment"><sp/>*<sp/>Licensed<sp/>under<sp/>the<sp/>Apache<sp/>License,<sp/>Version<sp/>2.0<sp/>(the<sp/>&quot;License&quot;);</highlight></codeline>
+<codeline lineno="5"><highlight class="comment"><sp/>*<sp/>you<sp/>may<sp/>not<sp/>use<sp/>this<sp/>file<sp/>except<sp/>in<sp/>compliance<sp/>with<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="6"><highlight class="comment"><sp/>*<sp/>You<sp/>may<sp/>obtain<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>License<sp/>at</highlight></codeline>
+<codeline lineno="7"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="8"><highlight class="comment"><sp/>*<sp/><sp/><sp/>http://www.apache.org/licenses/LICENSE-2.0</highlight></codeline>
+<codeline lineno="9"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="10"><highlight class="comment"><sp/>*<sp/>Unless<sp/>required<sp/>by<sp/>applicable<sp/>law<sp/>or<sp/>agreed<sp/>to<sp/>in<sp/>writing,<sp/>software</highlight></codeline>
+<codeline lineno="11"><highlight class="comment"><sp/>*<sp/>distributed<sp/>under<sp/>the<sp/>License<sp/>is<sp/>distributed<sp/>on<sp/>an<sp/>&quot;AS<sp/>IS&quot;<sp/>BASIS,</highlight></codeline>
+<codeline lineno="12"><highlight class="comment"><sp/>*<sp/>WITHOUT<sp/>WARRANTIES<sp/>OR<sp/>CONDITIONS<sp/>OF<sp/>ANY<sp/>KIND,<sp/>either<sp/>express<sp/>or<sp/>implied.</highlight></codeline>
+<codeline lineno="13"><highlight class="comment"><sp/>*<sp/>See<sp/>the<sp/>License<sp/>for<sp/>the<sp/>specific<sp/>language<sp/>governing<sp/>permissions<sp/>and</highlight></codeline>
+<codeline lineno="14"><highlight class="comment"><sp/>*<sp/>limitations<sp/>under<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="global__index__result_8h" kindref="compound">paimon/global_index/global_index_result.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="range_8h" kindref="compound">paimon/utils/range.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="roaring__bitmap64_8h" kindref="compound">paimon/utils/roaring_bitmap64.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="visibility_8h" kindref="compound">paimon/visibility.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacepaimon" kindref="compound">paimon</ref><sp/>{</highlight></codeline>
+<codeline lineno="34" refid="classpaimon_1_1_bitmap_global_index_result" refkind="compound"><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_EXPORT</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref><sp/>{</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="36" refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">using<sp/></highlight><highlight class="normal"><ref refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" kindref="member">BitmapSupplier</ref><sp/>=<sp/>std::function&lt;Result&lt;RoaringBitmap64&gt;()&gt;;</highlight></codeline>
+<codeline lineno="37" refid="classpaimon_1_1_bitmap_global_index_result_1accacdab3aa8b80967e25ac0437fedb7c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">explicit</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1accacdab3aa8b80967e25ac0437fedb7c" kindref="member">BitmapGlobalIndexResult</ref>(<ref refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" kindref="member">BitmapSupplier</ref><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bitmap_supplier</ref>)</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>bitmap_supplier_(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bitmap_supplier</ref>)<sp/>{}</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator" kindref="compound">Iterator</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_global_index_result_1_1_iterator" kindref="compound">GlobalIndexResult::Iterator</ref><sp/>{</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="42" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1ac59f6d035818a81f17dc8edf2f173296" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1ac59f6d035818a81f17dc8edf2f173296" kindref="member">Iterator</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref>*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bitmap</ref>,<sp/><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">RoaringBitmap64::Iterator</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">iter</ref>)</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>:<sp/>bitmap_(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bitmap</ref>),<sp/>iter_(<ref refid="namespacestd" kindref="compound">std</ref>::<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">move</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">iter</ref>))<sp/>{}</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1ab2955ec4b6bcbb7ae0df16d10e18e893" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1ab2955ec4b6bcbb7ae0df16d10e18e893" kindref="member">HasNext</ref>()</highlight><highlight class="keyword"><sp/>const<sp/>override<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>iter_<sp/>!=<sp/>bitmap_-&gt;End();</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1a30fc7c3c5e779784b9ff8398668f7623" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1a30fc7c3c5e779784b9ff8398668f7623" kindref="member">Next</ref>()</highlight><highlight class="keyword"><sp/>override<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref><sp/>value<sp/>=<sp/>*iter_;</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>++iter_;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>value;</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="56" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1abd6c54dd660075cc93fa8c372da1b414" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref>*<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1abd6c54dd660075cc93fa8c372da1b414" kindref="member">bitmap_</ref>;</highlight></codeline>
+<codeline lineno="57" refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1a90a2cf7b6385be485ca1ae0710a12da8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">RoaringBitmap64::Iterator</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1a90a2cf7b6385be485ca1ae0710a12da8" kindref="member">iter_</ref>;</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60" refid="classpaimon_1_1_bitmap_global_index_result_1ad3b8473b722436071b4940f6ec6b3f8a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;std::unique_ptr&lt;GlobalIndexResult::Iterator&gt;</ref>&gt;<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1ad3b8473b722436071b4940f6ec6b3f8a" kindref="member">CreateIterator</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="classpaimon_1_1_bitmap_global_index_result_1abe5b158b0b72b11193671df7ff8faa84" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;std::shared_ptr&lt;GlobalIndexResult&gt;</ref>&gt;<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1abe5b158b0b72b11193671df7ff8faa84" kindref="member">And</ref>(</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;GlobalIndexResult&gt;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">other</ref>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65" refid="classpaimon_1_1_bitmap_global_index_result_1a8c154d866ae1147734c8b1f1f3ba8367" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;std::shared_ptr&lt;GlobalIndexResult&gt;</ref>&gt;<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a8c154d866ae1147734c8b1f1f3ba8367" kindref="member">Or</ref>(</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;GlobalIndexResult&gt;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">other</ref>)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68" refid="classpaimon_1_1_bitmap_global_index_result_1ae4ec122ed6a0e13f2aa42cf28e39fc29" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;bool&gt;</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1ae4ec122ed6a0e13f2aa42cf28e39fc29" kindref="member">IsEmpty</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70" refid="classpaimon_1_1_bitmap_global_index_result_1a409d2f875a261fddfa84936c2e9e1390" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;std::shared_ptr&lt;GlobalIndexResult&gt;</ref>&gt;<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a409d2f875a261fddfa84936c2e9e1390" kindref="member">AddOffset</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref><sp/>offset)<sp/></highlight><highlight class="keyword">override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="classpaimon_1_1_bitmap_global_index_result_1a0ca5deec02bf047112fdb947d8f680d3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a0ca5deec02bf047112fdb947d8f680d3" kindref="member">ToString</ref>()<sp/></highlight><highlight class="keyword">const<sp/>override</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81" refid="classpaimon_1_1_bitmap_global_index_result_1a46943e0387c15fa969d3191be225c432" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_result" kindref="compound">Result&lt;const RoaringBitmap64*&gt;</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a46943e0387c15fa969d3191be225c432" kindref="member">GetBitmap</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85" refid="classpaimon_1_1_bitmap_global_index_result_1ad8da62f2613c50200141a8c932a12dbb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;BitmapGlobalIndexResult&gt;<sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1ad8da62f2613c50200141a8c932a12dbb" kindref="member">FromRanges</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::vector&lt;Range&gt;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">ranges</ref>);</highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="normal"><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="88" refid="classpaimon_1_1_bitmap_global_index_result_1a618758fdbaa50d9c1896608b89cd34f1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>initialized_<sp/>=<sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="89" refid="classpaimon_1_1_bitmap_global_index_result_1ab90781b3f55f502be87e631d40b3c478" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" kindref="member">BitmapSupplier</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1ab90781b3f55f502be87e631d40b3c478" kindref="member">bitmap_supplier_</ref>;</highlight></codeline>
+<codeline lineno="90" refid="classpaimon_1_1_bitmap_global_index_result_1a780d6c0e7d97d975ca125ed55dcba213" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">mutable</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref><sp/><ref refid="classpaimon_1_1_bitmap_global_index_result_1a780d6c0e7d97d975ca125ed55dcba213" kindref="member">bitmap_</ref>;</highlight></codeline>
+<codeline lineno="91"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="92"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>paimon</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h"/>
+  </compounddef>
+</doxygen>

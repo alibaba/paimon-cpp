@@ -1,0 +1,152 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexReader</compoundname>
+    <basecompoundref refid="classpaimon_1_1_function_visitor" prot="public" virt="non-virtual">paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</basecompoundref>
+    <includes refid="global__index__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpaimon_1_1_global_index_reader_1a20e35cf2744cdad153fb08691f9b4cc6" prot="public" static="no">
+        <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>)&gt;</type>
+        <definition>using paimon::GlobalIndexReader::TopKPreFilter =  std::function&lt;bool(int64_t)&gt;</definition>
+        <argsstring></argsstring>
+        <name>TopKPreFilter</name>
+        <qualifiedname>paimon::GlobalIndexReader::TopKPreFilter</qualifiedname>
+        <briefdescription>
+<para>TopKPreFilter: A lightweight pre-filtering function applied <bold>before</bold> similarity scoring. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>It operates solely on <bold>local row ids</bold> and is typically driven by other global index, such as bitmap, or range index. This filter enables early pruning of irrelevant candidates (e.g., &quot;only consider rows with label X&quot;), significantly reducing the search space. Returns true to include the row in Top-K computation; false to exclude it.</para>
+<para><simplesect kind="note"><para>Must be thread-safe. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" line="46" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" bodystart="46" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_reader_1a659382923c3e48a1e7d81b0d973fd526" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_top_k_global_index_result" kindref="compound">TopKGlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; TopKGlobalIndexResult &gt; &gt; paimon::GlobalIndexReader::VisitTopK</definition>
+        <argsstring>(int32_t k, const std::vector&lt; float &gt; &amp;query, TopKPreFilter filter, const std::shared_ptr&lt; Predicate &gt; &amp;predicate)=0</argsstring>
+        <name>VisitTopK</name>
+        <qualifiedname>paimon::GlobalIndexReader::VisitTopK</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>k</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt; &amp;</type>
+          <declname>query</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_global_index_reader_1a20e35cf2744cdad153fb08691f9b4cc6" kindref="member">TopKPreFilter</ref></type>
+          <declname>filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <briefdescription>
+<para>VisitTopK performs approximate top-k similarity search. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>k</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of top results to return. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>query</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The query vector (must match the dimensionality of the indexed vectors). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>filter</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A pre-filter based on <bold>local row ids</bold>, implemented by leveraging other global index structures (e.g., bitmap index) for efficient candidate pruning. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>predicate</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A runtime filtering condition that may involve graph traversal of structured attributes. <bold>Using this parameter often yields better filtering accuracy</bold> because during index construction, the underlying graph was built with explicit consideration of field connectivity (e.g., relationships between attributes). As a result, predicates can leverage this pre-established semantic structure to perform more meaningful and context-aware filtering at query time. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="note"><para>All fields referenced in the predicate must have been materialized in the index during build to ensure availability. </para>
+</simplesect>
+<simplesect kind="note"><para><computeroutput>VisitTopK</computeroutput> is thread-safe (not coroutine-safe) while other <computeroutput>VisitXXX</computeroutput> is not thread-safe. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" line="66" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Reads and evaluates filter predicates against a global file index. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Derived classes are expected to implement the visitor methods (e.g., <computeroutput>VisitEqual</computeroutput>, <computeroutput>VisitIsNull</computeroutput>, etc.) to return index-based results that indicate which row satisfy the given predicate.</para>
+<para><simplesect kind="note"><para>All <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput> objects returned by implementations of this class use <bold>local row ids</bold> that start from 0 — not global row ids in the entire table. The <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput> can be converted to global row ids by calling <computeroutput>AddOffset()</computeroutput>. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexReader</label>
+        <link refid="classpaimon_1_1_global_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexReader</label>
+        <link refid="classpaimon_1_1_global_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" bodystart="37" bodyend="69"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_reader_1a20e35cf2744cdad153fb08691f9b4cc6" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexReader</scope><name>TopKPreFilter</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a9bf050077573e5a8633b64dfe28c02cd" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitContains</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a0912a7c916bc37d64508e96447be76fe" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitEndsWith</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af745a4e85ca02dd9693ccf513bf01dae" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ab69382b764629572d66d879b8704ebf1" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitGreaterOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a476cbf57433a84b9e06b81f8a9967e86" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitGreaterThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af084765e656e7989a390c793ca48507a" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1b5cb370e21f4e498d921036ceead405" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIsNotNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a8afe8c5ada434c3134f0cad4e5af38bc" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIsNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a31e6d052bd6aa26dc85fd375aefd402d" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitLessOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ae9b18b37aa036bb5ae3ac7299cbf4a74" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitLessThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1af81d98d01c2e87a7814fe906fea0f7" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitNotEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1aa39876a5c1f4d2a8f423403ba840cc90" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitNotIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1adce72b1f0226f7415d907c2f37275261" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitStartsWith</name></member>
+      <member refid="classpaimon_1_1_global_index_reader_1a659382923c3e48a1e7d81b0d973fd526" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitTopK</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af9314ce379e89077c46cd3fcfaca76ae" prot="public" virt="virtual"><scope>paimon::GlobalIndexReader</scope><name>~FunctionVisitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

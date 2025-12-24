@@ -1,0 +1,782 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_roaring_bitmap64" kind="class" language="C++" prot="public">
+    <compoundname>paimon::RoaringBitmap64</compoundname>
+    <includes refid="roaring__bitmap64_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h</includes>
+    <innerclass refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" prot="public">paimon::RoaringBitmap64::Iterator</innerclass>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_roaring_bitmap64_1a027a5856df206d66220a51a5766352e4" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>constexpr int64_t paimon::RoaringBitmap64::MAX_VALUE</definition>
+        <argsstring></argsstring>
+        <name>MAX_VALUE</name>
+        <qualifiedname>paimon::RoaringBitmap64::MAX_VALUE</qualifiedname>
+        <initializer>= std::numeric_limits&lt;<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>&gt;<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">::max</ref>()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="70" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_roaring_bitmap64_1a340491c539b61cc2668d63a038f72383" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>void* paimon::RoaringBitmap64::roaring_bitmap_</definition>
+        <argsstring></argsstring>
+        <name>roaring_bitmap_</name>
+        <qualifiedname>paimon::RoaringBitmap64::roaring_bitmap_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="165" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="165" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a919230a3dd491723e153382c651a29d8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::RoaringBitmap64</definition>
+        <argsstring>()</argsstring>
+        <name>RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::RoaringBitmap64</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="37" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1ae2eb8006b77b0f651263dac76c9621a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::~RoaringBitmap64</definition>
+        <argsstring>()</argsstring>
+        <name>~RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::~RoaringBitmap64</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="38" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a6941a163df0dd17d6a232e22f6b3d0c4" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::RoaringBitmap64</definition>
+        <argsstring>(const RoaringBitmap64 &amp;) noexcept</argsstring>
+        <name>RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::RoaringBitmap64</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="40" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a5a5bc98e559dcf341c2d4dda0fb1dfc2" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator=</definition>
+        <argsstring>(const RoaringBitmap64 &amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="41" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1adf3d00bc1fe8c6f3de6d12812bb8c83e" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::RoaringBitmap64</definition>
+        <argsstring>(RoaringBitmap64 &amp;&amp;) noexcept</argsstring>
+        <name>RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::RoaringBitmap64</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="43" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a7007752c1de002cca9098c06949630e4" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator=</definition>
+        <argsstring>(RoaringBitmap64 &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="44" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1ad28f303f97c68a85f25c97148137d292" prot="public" static="no" const="no" explicit="yes" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::RoaringBitmap64</definition>
+        <argsstring>(const RoaringBitmap32 &amp;) noexcept</argsstring>
+        <name>RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::RoaringBitmap64</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="46" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1af7375213e2be45bcef811ef9da7861a7" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator=</definition>
+        <argsstring>(const RoaringBitmap32 &amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="47" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a2a31c981d777b717bd18cdce2cc8b90c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::RoaringBitmap64::Add</definition>
+        <argsstring>(int64_t x)</argsstring>
+        <name>Add</name>
+        <qualifiedname>paimon::RoaringBitmap64::Add</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>x</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value added to bitmap </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="73" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1af9e09e896ae21d0e2c0cfae4d0987aad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::CheckedAdd</definition>
+        <argsstring>(int64_t x)</argsstring>
+        <name>CheckedAdd</name>
+        <qualifiedname>paimon::RoaringBitmap64::CheckedAdd</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>x</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>value added to bitmap </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>false if contain x; true if not contain x </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="77" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1ae564c18dcd9ee2bbbf7fd6aa45d3ef41" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::Contains</definition>
+        <argsstring>(int64_t x) const</argsstring>
+        <name>Contains</name>
+        <qualifiedname>paimon::RoaringBitmap64::Contains</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>x</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if contain x; false if not contain x </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="80" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a4491bf8585040456a2dad88d4eeb2572" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::IsEmpty</definition>
+        <argsstring>() const</argsstring>
+        <name>IsEmpty</name>
+        <qualifiedname>paimon::RoaringBitmap64::IsEmpty</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>true if bitmap is empty </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="83" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a979a1ee8443a734d70a606a7efb9056b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::RoaringBitmap64::Cardinality</definition>
+        <argsstring>() const</argsstring>
+        <name>Cardinality</name>
+        <qualifiedname>paimon::RoaringBitmap64::Cardinality</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>the cardinality of bitmap, i.e., the number of unique value added </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="86" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a866eb3c495c538ea374f77949e365a23" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::RoaringBitmap64::Flip</definition>
+        <argsstring>(int64_t min, int64_t max)</argsstring>
+        <name>Flip</name>
+        <qualifiedname>paimon::RoaringBitmap64::Flip</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>max</declname>
+        </param>
+        <briefdescription>
+<para>Computes the negation of the roaring bitmap within the half-open interval [min, max). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Areas outside the interval are unchanged. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="90" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1ad52522a1a411c4dc06b397d1857f1104" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::RoaringBitmap64::AddRange</definition>
+        <argsstring>(int64_t min, int64_t max)</argsstring>
+        <name>AddRange</name>
+        <qualifiedname>paimon::RoaringBitmap64::AddRange</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>max</declname>
+        </param>
+        <briefdescription>
+<para>Adds all values in the half-open interval [min, max). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="93" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1ae53d411515815c9405d3146bdf24b18e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::RoaringBitmap64::RemoveRange</definition>
+        <argsstring>(int64_t min, int64_t max)</argsstring>
+        <name>RemoveRange</name>
+        <qualifiedname>paimon::RoaringBitmap64::RemoveRange</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>max</declname>
+        </param>
+        <briefdescription>
+<para>Removes all values in the half-open interval [min, max). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="96" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a2a4ddddcae572752768f8c5bf4af469d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::ContainsAny</definition>
+        <argsstring>(int64_t min, int64_t max) const</argsstring>
+        <name>ContainsAny</name>
+        <qualifiedname>paimon::RoaringBitmap64::ContainsAny</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>min</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>max</declname>
+        </param>
+        <briefdescription>
+<para>Contain any value in the half-open interval [min, max). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="99" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1adb49473d866bf8913ee7e354c4cc6818" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>PAIMON_UNIQUE_PTR&lt; Bytes &gt; paimon::RoaringBitmap64::Serialize</definition>
+        <argsstring>(MemoryPool *pool) const</argsstring>
+        <name>Serialize</name>
+        <qualifiedname>paimon::RoaringBitmap64::Serialize</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Serialize bitmap to bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="102" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1afb6ebdd3e11b3688e83fa1c8712cd64e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::RoaringBitmap64::Deserialize</definition>
+        <argsstring>(ByteArrayInputStream *input_stream)</argsstring>
+        <name>Deserialize</name>
+        <qualifiedname>paimon::RoaringBitmap64::Deserialize</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_byte_array_input_stream" kindref="compound">ByteArrayInputStream</ref> *</type>
+          <declname>input_stream</declname>
+        </param>
+        <briefdescription>
+<para>Deserialize bitmap from input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="105" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a0a7869dcf18f9b1a8cf73df0630765ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::RoaringBitmap64::Deserialize</definition>
+        <argsstring>(const char *begin, size_t length)</argsstring>
+        <name>Deserialize</name>
+        <qualifiedname>paimon::RoaringBitmap64::Deserialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>begin</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <briefdescription>
+<para>Deserialize bitmap from buffer with begin and length. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="108" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a7c3b46efb6a2a396b216434110bfd2de" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::RoaringBitmap64::GetSizeInBytes</definition>
+        <argsstring>() const</argsstring>
+        <name>GetSizeInBytes</name>
+        <qualifiedname>paimon::RoaringBitmap64::GetSizeInBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>How many bytes are required to serialize this bitmap. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="111" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a4ccfd7a6dc4d894e410a8e0c14cb182b" prot="public" static="no" const="yes" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::operator==</definition>
+        <argsstring>(const RoaringBitmap64 &amp;other) const noexcept</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="113" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a1ceb209e4f3698bf50a7e11e32f86ff7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator|=</definition>
+        <argsstring>(const RoaringBitmap64 &amp;other)</argsstring>
+        <name>operator|=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator|=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the union of the current bitmap and the provided bitmap, writing the result in the current bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The provided bitmap is not modified. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="118" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a6c875a54dba9ab66b43b4b316f106e33" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator&amp;=</definition>
+        <argsstring>(const RoaringBitmap64 &amp;other)</argsstring>
+        <name>operator&amp;=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator&amp;=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the intersection of the current bitmap and the provided bitmap, writing the result in the current bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The provided bitmap is not modified. <simplesect kind="note"><para>If you are computing the intersection between several bitmaps, two-by-two, it is best to start with the smallest bitmap. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="125" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a896f07503ea9a2817ae3e7ecf9c4bb85" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+        <definition>RoaringBitmap64 &amp; paimon::RoaringBitmap64::operator-=</definition>
+        <argsstring>(const RoaringBitmap64 &amp;other)</argsstring>
+        <name>operator-=</name>
+        <qualifiedname>paimon::RoaringBitmap64::operator-=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the difference of the current bitmap and the provided bitmap, writing the result in the current bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The provided bitmap is not modified. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="130" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a826ec9d02564a2a9225409f542aa97cf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::RoaringBitmap64::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::RoaringBitmap64::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="132" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1aec5715e6dee44ca03153b365acc5b19b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref></type>
+        <definition>Iterator paimon::RoaringBitmap64::Begin</definition>
+        <argsstring>() const</argsstring>
+        <name>Begin</name>
+        <qualifiedname>paimon::RoaringBitmap64::Begin</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="134" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a4ba4df8d3b71e195890433e55395dbd1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref></type>
+        <definition>Iterator paimon::RoaringBitmap64::End</definition>
+        <argsstring>() const</argsstring>
+        <name>End</name>
+        <qualifiedname>paimon::RoaringBitmap64::End</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="135" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1aae1456ae24cd1d2a4fbac33b4c07ed59" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref></type>
+        <definition>Iterator paimon::RoaringBitmap64::EqualOrLarger</definition>
+        <argsstring>(int64_t key) const</argsstring>
+        <name>EqualOrLarger</name>
+        <qualifiedname>paimon::RoaringBitmap64::EqualOrLarger</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>key</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>the iterator moved to the value which is equal or larger than key </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="137" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a73cca7904462ad6b23f934a3573eddb5" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::And</definition>
+        <argsstring>(const RoaringBitmap64 &amp;lhs, const RoaringBitmap64 &amp;rhs)</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::RoaringBitmap64::And</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+<para>Computes the intersection between two bitmaps and returns new bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The current bitmap and the provided bitmap are unchanged.</para>
+<para><simplesect kind="note"><para>If you are computing the intersection between several bitmaps, two-by-two, it is best to start with the smallest bitmap. Consider also using the operator &amp;= to avoid needlessly creating many temporary bitmaps. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="145" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a1a65af69bc574f33b66aa78a523cf588" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::Or</definition>
+        <argsstring>(const RoaringBitmap64 &amp;lhs, const RoaringBitmap64 &amp;rhs)</argsstring>
+        <name>Or</name>
+        <qualifiedname>paimon::RoaringBitmap64::Or</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+<para>Computes the union between two bitmaps and returns new bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The current bitmap and the provided bitmap are unchanged. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="149" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a8913a6becdedaeab5a81e6a0a4c8e4fb" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::AndNot</definition>
+        <argsstring>(const RoaringBitmap64 &amp;lhs, const RoaringBitmap64 &amp;rhs)</argsstring>
+        <name>AndNot</name>
+        <qualifiedname>paimon::RoaringBitmap64::AndNot</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>lhs</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>rhs</declname>
+        </param>
+        <briefdescription>
+<para>Computes the difference between two bitmaps and returns new bitmap. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The current bitmap and the provided bitmap are unchanged. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="153" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a0b5f14709c3d3738cf5b49ed179e8ff4" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::From</definition>
+        <argsstring>(const std::vector&lt; int64_t &gt; &amp;values)</argsstring>
+        <name>From</name>
+        <qualifiedname>paimon::RoaringBitmap64::From</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt; &amp;</type>
+          <declname>values</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>a bitmap contains input values </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="156" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a0827d380facfbf1afa96a7700124c79d" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::FastUnion</definition>
+        <argsstring>(const std::vector&lt; const RoaringBitmap64 * &gt; &amp;inputs)</argsstring>
+        <name>FastUnion</name>
+        <qualifiedname>paimon::RoaringBitmap64::FastUnion</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> * &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+<para>Fast union multiple bitmaps. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="159" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1a532b87bdd43afc1adbbb41454da822ae" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>static RoaringBitmap64 paimon::RoaringBitmap64::FastUnion</definition>
+        <argsstring>(const std::vector&lt; RoaringBitmap64 &gt; &amp;inputs)</argsstring>
+        <name>FastUnion</name>
+        <qualifiedname>paimon::RoaringBitmap64::FastUnion</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &gt; &amp;</type>
+          <declname>inputs</declname>
+        </param>
+        <briefdescription>
+<para>Fast union multiple bitmaps. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="162" column="28"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A compressed bitmap for 64-bit integer. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="35" bodyend="166"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a2a31c981d777b717bd18cdce2cc8b90c" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Add</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1ad52522a1a411c4dc06b397d1857f1104" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>AddRange</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a73cca7904462ad6b23f934a3573eddb5" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a8913a6becdedaeab5a81e6a0a4c8e4fb" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>AndNot</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1aec5715e6dee44ca03153b365acc5b19b" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Begin</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a979a1ee8443a734d70a606a7efb9056b" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Cardinality</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1af9e09e896ae21d0e2c0cfae4d0987aad" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>CheckedAdd</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1ae564c18dcd9ee2bbbf7fd6aa45d3ef41" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Contains</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a2a4ddddcae572752768f8c5bf4af469d" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>ContainsAny</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1afb6ebdd3e11b3688e83fa1c8712cd64e" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a0a7869dcf18f9b1a8cf73df0630765ac" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a4ba4df8d3b71e195890433e55395dbd1" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>End</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1aae1456ae24cd1d2a4fbac33b4c07ed59" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>EqualOrLarger</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a0827d380facfbf1afa96a7700124c79d" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>FastUnion</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a532b87bdd43afc1adbbb41454da822ae" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>FastUnion</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a866eb3c495c538ea374f77949e365a23" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Flip</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a0b5f14709c3d3738cf5b49ed179e8ff4" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>From</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a7c3b46efb6a2a396b216434110bfd2de" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>GetSizeInBytes</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a4491bf8585040456a2dad88d4eeb2572" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>IsEmpty</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a027a5856df206d66220a51a5766352e4" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>MAX_VALUE</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a6c875a54dba9ab66b43b4b316f106e33" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator&amp;=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a896f07503ea9a2817ae3e7ecf9c4bb85" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator-=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a5a5bc98e559dcf341c2d4dda0fb1dfc2" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a7007752c1de002cca9098c06949630e4" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1af7375213e2be45bcef811ef9da7861a7" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a4ccfd7a6dc4d894e410a8e0c14cb182b" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a1ceb209e4f3698bf50a7e11e32f86ff7" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>operator|=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a1a65af69bc574f33b66aa78a523cf588" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1ae53d411515815c9405d3146bdf24b18e" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>RemoveRange</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a340491c539b61cc2668d63a038f72383" prot="private" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>roaring_bitmap_</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a919230a3dd491723e153382c651a29d8" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>RoaringBitmap64</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a6941a163df0dd17d6a232e22f6b3d0c4" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>RoaringBitmap64</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1adf3d00bc1fe8c6f3de6d12812bb8c83e" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>RoaringBitmap64</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1ad28f303f97c68a85f25c97148137d292" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>RoaringBitmap64</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1adb49473d866bf8913ee7e354c4cc6818" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1a826ec9d02564a2a9225409f542aa97cf" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1ae2eb8006b77b0f651263dac76c9621a1" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64</scope><name>~RoaringBitmap64</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

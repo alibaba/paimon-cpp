@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Factory</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_file_format_factory" prot="public" virt="non-virtual">paimon::FileFormatFactory</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_file_indexer_factory" prot="public" virt="non-virtual">paimon::FileIndexerFactory</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_file_system_factory" prot="public" virt="non-virtual">paimon::FileSystemFactory</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_global_indexer_factory" prot="public" virt="non-virtual">paimon::GlobalIndexerFactory</derivedcompoundref>
+    <includes refid="factory_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/factory.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_factory_1a9dd9931db9fb33c829b1401d2b2b80ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Factory::~Factory</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Factory</name>
+        <qualifiedname>paimon::Factory::~Factory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/factory.h" line="27" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_factory_1ac808cd0782a47c534bc16b3b5e3b0edd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>virtual const char * paimon::Factory::Identifier</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Identifier</name>
+        <qualifiedname>paimon::Factory::Identifier</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/factory.h" line="28" column="24"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_factory" kindref="compound">Factory</ref> used to register, e.g., <computeroutput><ref refid="classpaimon_1_1_file_format_factory" kindref="compound">FileFormatFactory</ref></computeroutput>, <computeroutput><ref refid="classpaimon_1_1_file_system_factory" kindref="compound">FileSystemFactory</ref></computeroutput>. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Call <computeroutput>REGISTER_PAIMON_FACTORY</computeroutput> to register a factory to <computeroutput><ref refid="classpaimon_1_1_factory_creator" kindref="compound">FactoryCreator</ref></computeroutput>. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="2">
+        <label>paimon::FileFormatFactory</label>
+        <link refid="classpaimon_1_1_file_format_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::FileIndexerFactory</label>
+        <link refid="classpaimon_1_1_file_indexer_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::FileSystemFactory</label>
+        <link refid="classpaimon_1_1_file_system_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon::GlobalIndexerFactory</label>
+        <link refid="classpaimon_1_1_global_indexer_factory"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/factory.h" line="25" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/factory.h" bodystart="25" bodyend="29"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_factory_1ac808cd0782a47c534bc16b3b5e3b0edd" prot="public" virt="pure-virtual"><scope>paimon::Factory</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_factory_1a9dd9931db9fb33c829b1401d2b2b80ad" prot="public" virt="virtual"><scope>paimon::Factory</scope><name>~Factory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

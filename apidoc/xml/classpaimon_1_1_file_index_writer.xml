@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_index_writer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileIndexWriter</compoundname>
+    <includes refid="file__index__writer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_writer_1a16a9f15a3ae3bafe482ab9817b635358" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileIndexWriter::~FileIndexWriter</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileIndexWriter</name>
+        <qualifiedname>paimon::FileIndexWriter::~FileIndexWriter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h" line="33" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_writer_1a2a9d1adbc19116d4a70be6010c3cf975" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileIndexWriter::AddBatch</definition>
+        <argsstring>(::ArrowArray *batch)=0</argsstring>
+        <name>AddBatch</name>
+        <qualifiedname>paimon::FileIndexWriter::AddBatch</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">::ArrowArray</ref> *</type>
+          <declname>batch</declname>
+        </param>
+        <briefdescription>
+<para>Adds a batch of data to the index writer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>batch</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to a C <ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref> derived from arrow struct array contain specified indexed field. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><computeroutput><ref refid="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" kindref="member">Status::OK()</ref></computeroutput> on success; otherwise, an error indicating failure (e.g., schema mismatch). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h" line="41" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_writer_1a80294f183ab62fcdcae39e22e64cc4e0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; PAIMON_UNIQUE_PTR&lt; Bytes &gt; &gt; paimon::FileIndexWriter::SerializedBytes</definition>
+        <argsstring>() const =0</argsstring>
+        <name>SerializedBytes</name>
+        <qualifiedname>paimon::FileIndexWriter::SerializedBytes</qualifiedname>
+        <briefdescription>
+<para>Serializes the built index into a byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>This method returns the complete serialized form of the index after all batches have been added. It can be called only once and typically assumes no further calls to <computeroutput><ref refid="classpaimon_1_1_file_index_writer_1a2a9d1adbc19116d4a70be6010c3cf975" kindref="member">AddBatch()</ref></computeroutput> will occur afterward.</para>
+</simplesect>
+<simplesect kind="return"><para>A unique pointer to a byte array containing the serialized index data, or an error if serialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h" line="51" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for writing file-level index data from Arrow batches. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h" bodystart="31" bodyend="52"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_index_writer_1a2a9d1adbc19116d4a70be6010c3cf975" prot="public" virt="pure-virtual"><scope>paimon::FileIndexWriter</scope><name>AddBatch</name></member>
+      <member refid="classpaimon_1_1_file_index_writer_1a80294f183ab62fcdcae39e22e64cc4e0" prot="public" virt="pure-virtual"><scope>paimon::FileIndexWriter</scope><name>SerializedBytes</name></member>
+      <member refid="classpaimon_1_1_file_index_writer_1a16a9f15a3ae3bafe482ab9817b635358" prot="public" virt="virtual"><scope>paimon::FileIndexWriter</scope><name>~FileIndexWriter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,532 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_literal" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Literal</compoundname>
+    <includes refid="literal_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_literal_1a6bf9cfaa619c886523a457f13abe6d8a" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::Literal::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::Literal::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="103" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a17b3100bebdb102803c3d9cc15b08001" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(FieldType type)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>type</declname>
+        </param>
+        <briefdescription>
+<para>Creates a null literal of the specified type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The field type for this null literal. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="37" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a9ac2db9a22faeaccd19ff309123cf01b" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(const T &amp;val)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &amp;</type>
+          <declname>val</declname>
+        </param>
+        <briefdescription>
+<para>Creates a literal from a typed value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The template parameter T must be compatible with one of the supported field types. <parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The C++ type of the value (must match a supported FieldType). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>val</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The value to store in the literal. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="44" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a4270f006246fc4e6378952fda3f367b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(FieldType binary_type, const char *str, size_t size)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>binary_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Creates a literal from binary data (string or binary type). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The data is copied into the literal&apos;s internal storage. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>binary_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Must be either <computeroutput>STRING</computeroutput> or <computeroutput>BINARY</computeroutput> field type. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the binary data. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the binary data in bytes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="note"><para><computeroutput>BLOB</computeroutput> type is not supported by literal </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="52" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1adffd31bef9337f196450d0e8e3f8efc3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(FieldType binary_type, const char *str, size_t size, bool own_data)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>binary_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>own_data</declname>
+        </param>
+        <briefdescription>
+<para>Creates a literal from binary data with optional data ownership. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>binary_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Must be either <computeroutput>STRING</computeroutput> or <computeroutput>BINARY</computeroutput> field type. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the binary data. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the binary data in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>own_data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, the literal takes ownership and will free the data; if false, the caller must ensure the data remains valid. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="60" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1ab1101e58a37134ce309d4ec0cc24f8c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(FieldType date_type, int32_t date_value)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+          <declname>date_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>date_value</declname>
+        </param>
+        <briefdescription>
+<para>Creates a date literal from an integer value. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>date_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Must be <computeroutput>DATE</computeroutput> field type. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>date_value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Date value as days since epoch (1970-01-01). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="65" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a0f4f384d5a8115300d2940fb633b4d28" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(const Literal &amp;other)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="67" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a1c4039cf9b4b27d9be96acfd045a00ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::~Literal</definition>
+        <argsstring>()</argsstring>
+        <name>~Literal</name>
+        <qualifiedname>paimon::Literal::~Literal</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="68" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1af648224a28448ff8f2a5305f90b12b9a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Literal::Literal</definition>
+        <argsstring>(Literal &amp;&amp;other)</argsstring>
+        <name>Literal</name>
+        <qualifiedname>paimon::Literal::Literal</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="69" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1ab5087ae29e2706d886521e72a76e35a9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+        <definition>Literal &amp; paimon::Literal::operator=</definition>
+        <argsstring>(Literal &amp;&amp;other)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Literal::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="70" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a6d8acbe901f6ee36ed8cadad4fa62d28" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+        <definition>Literal &amp; paimon::Literal::operator=</definition>
+        <argsstring>(const Literal &amp;other)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Literal::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="71" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a08fd9a213a37af65aa08cfcf0d351d10" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Literal::operator==</definition>
+        <argsstring>(const Literal &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Literal::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="72" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1ac0c4108e66ecbec74d7e0b0428aa41c1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Literal::operator!=</definition>
+        <argsstring>(const Literal &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>paimon::Literal::operator!=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="73" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a1b4ca92ccbea300dc798b66b56af7fa0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Literal::IsNull</definition>
+        <argsstring>() const</argsstring>
+        <name>IsNull</name>
+        <qualifiedname>paimon::Literal::IsNull</qualifiedname>
+        <briefdescription>
+<para>Checks if this literal represents a null value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="76" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a365de3a9f37b2daddb461caf321f6239" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+        <definition>T paimon::Literal::GetValue</definition>
+        <argsstring>() const</argsstring>
+        <name>GetValue</name>
+        <qualifiedname>paimon::Literal::GetValue</qualifiedname>
+        <briefdescription>
+<para>Gets the typed value stored in this literal. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The expected C++ type of the value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The value of type <computeroutput>T</computeroutput>. </para>
+</simplesect>
+<simplesect kind="warning"><para>This method is unsafe - caller must verify the type and null status first. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="83" column="7"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1aead566c5767a69c652167c6722813348" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref></type>
+        <definition>FieldType paimon::Literal::GetType</definition>
+        <argsstring>() const</argsstring>
+        <name>GetType</name>
+        <qualifiedname>paimon::Literal::GetType</qualifiedname>
+        <briefdescription>
+<para>Gets the field type of this literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="86" column="15"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a66254791f40400c850409dd3dba26f26" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Literal::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Literal::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="88" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a037906e0638f8bf0c53228fe90295413" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::Literal::HashCode</definition>
+        <argsstring>() const</argsstring>
+        <name>HashCode</name>
+        <qualifiedname>paimon::Literal::HashCode</qualifiedname>
+        <briefdescription>
+<para>Gets the hash code for this literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="91" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_literal_1a67b7bd445cb4436c942b15e8ccfaed03" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>Result&lt; int32_t &gt; paimon::Literal::CompareTo</definition>
+        <argsstring>(const Literal &amp;other) const</argsstring>
+        <name>CompareTo</name>
+        <qualifiedname>paimon::Literal::CompareTo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compares this literal with another literal. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The comparison follows SQL semantics for the respective data types. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The literal to compare with. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing -1 (this &lt; other), 0 (this == other), or 1 (this &gt; other), or an error if the literals are not comparable. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="98" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> represents a constant value used in predicate expressions. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> support BOOLEAN, TINYINT, SMALLINT, INT, BIGINT, FLOAT, DOUBLE, STRING, BINARY, TIMESTAMP, DECIMAL, DATE. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" line="33" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h" bodystart="33" bodyend="104"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_literal_1a67b7bd445cb4436c942b15e8ccfaed03" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>CompareTo</name></member>
+      <member refid="classpaimon_1_1_literal_1aead566c5767a69c652167c6722813348" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>GetType</name></member>
+      <member refid="classpaimon_1_1_literal_1a365de3a9f37b2daddb461caf321f6239" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>GetValue</name></member>
+      <member refid="classpaimon_1_1_literal_1a037906e0638f8bf0c53228fe90295413" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>HashCode</name></member>
+      <member refid="classpaimon_1_1_literal_1a6bf9cfaa619c886523a457f13abe6d8a" prot="private" virt="non-virtual"><scope>paimon::Literal</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_literal_1a1b4ca92ccbea300dc798b66b56af7fa0" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>IsNull</name></member>
+      <member refid="classpaimon_1_1_literal_1a17b3100bebdb102803c3d9cc15b08001" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1a9ac2db9a22faeaccd19ff309123cf01b" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1a4270f006246fc4e6378952fda3f367b3" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1adffd31bef9337f196450d0e8e3f8efc3" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1ab1101e58a37134ce309d4ec0cc24f8c4" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1a0f4f384d5a8115300d2940fb633b4d28" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1af648224a28448ff8f2a5305f90b12b9a" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>Literal</name></member>
+      <member refid="classpaimon_1_1_literal_1ac0c4108e66ecbec74d7e0b0428aa41c1" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>operator!=</name></member>
+      <member refid="classpaimon_1_1_literal_1ab5087ae29e2706d886521e72a76e35a9" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_literal_1a6d8acbe901f6ee36ed8cadad4fa62d28" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_literal_1a08fd9a213a37af65aa08cfcf0d351d10" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_literal_1a66254791f40400c850409dd3dba26f26" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_literal_1a1c4039cf9b4b27d9be96acfd045a00ce" prot="public" virt="non-virtual"><scope>paimon::Literal</scope><name>~Literal</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

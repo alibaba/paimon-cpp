@@ -1,0 +1,146 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_indexer_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexerFactory</compoundname>
+    <basecompoundref refid="classpaimon_1_1_factory" prot="public" virt="non-virtual">paimon::Factory</basecompoundref>
+    <includes refid="global__indexer__factory_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_global_indexer_factory_1a53bcb91e611b57be14cf983313ca7131" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX[]</definition>
+        <argsstring>[]</argsstring>
+        <name>GLOBAL_INDEX_IDENTIFIER_SUFFIX</name>
+        <qualifiedname>paimon::GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX</qualifiedname>
+        <briefdescription>
+<para>Suffix used to distinguish global index identifiers (e.g., &quot;bitmap-global&quot;). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" line="36" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_factory_1a5fb7c39dd060a18e8bf89fff5c46abbb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::GlobalIndexerFactory::~GlobalIndexerFactory</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~GlobalIndexerFactory</name>
+        <qualifiedname>paimon::GlobalIndexerFactory::~GlobalIndexerFactory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" line="33" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_factory_1a05b24b744dd0388a0ae4188cdb51acca" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; GlobalIndexer &gt; &gt; paimon::GlobalIndexerFactory::Create</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options) const =0</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::GlobalIndexerFactory::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref></computeroutput> using the current factory’s implementation and the given options. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" line="53" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_factory_1a09abf2b41638d845477bf2147c8929ac" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; GlobalIndexer &gt; &gt; paimon::GlobalIndexerFactory::Get</definition>
+        <argsstring>(const std::string &amp;identifier, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::GlobalIndexerFactory::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref></computeroutput> instance by looking up a registered factory using an identifier. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The provided <computeroutput>identifier</computeroutput> is automatically appended with <computeroutput>GLOBAL_INDEX_IDENTIFIER_SUFFIX</computeroutput> (e.g., &quot;-global&quot;) to form the full key used for factory lookup. This ensures namespace separation between file and global index types.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The base name of the index type (e.g., &quot;bitmap&quot;). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Configuration parameters for the indexer. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a unique pointer to the created <computeroutput><ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref></computeroutput>, or an error if creation fails. </para>
+</simplesect>
+<simplesect kind="return"><para>nullptr if no matching factory. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" line="49" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_factory" kindref="compound">Factory</ref> for creating <computeroutput><ref refid="classpaimon_1_1_global_indexer" kindref="compound">GlobalIndexer</ref></computeroutput> instances based on index type identifiers. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexerFactory</label>
+        <link refid="classpaimon_1_1_global_indexer_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexerFactory</label>
+        <link refid="classpaimon_1_1_global_indexer_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h" bodystart="31" bodyend="55"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_indexer_factory_1a05b24b744dd0388a0ae4188cdb51acca" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexerFactory</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_global_indexer_factory_1a09abf2b41638d845477bf2147c8929ac" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexerFactory</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_global_indexer_factory_1a53bcb91e611b57be14cf983313ca7131" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexerFactory</scope><name>GLOBAL_INDEX_IDENTIFIER_SUFFIX</name></member>
+      <member refid="classpaimon_1_1_factory_1ac808cd0782a47c534bc16b3b5e3b0edd" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexerFactory</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_factory_1a9dd9931db9fb33c829b1401d2b2b80ad" prot="public" virt="virtual"><scope>paimon::GlobalIndexerFactory</scope><name>~Factory</name></member>
+      <member refid="classpaimon_1_1_global_indexer_factory_1a5fb7c39dd060a18e8bf89fff5c46abbb" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexerFactory</scope><name>~GlobalIndexerFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

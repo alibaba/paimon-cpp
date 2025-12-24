@@ -1,0 +1,229 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kind="class" language="C++" prot="public">
+    <compoundname>paimon::RoaringBitmap32::Iterator</compoundname>
+    <includes refid="roaring__bitmap32_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h</includes>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1abce7a8577b32a7e119ed4546950cd410" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">class</ref></type>
+        <definition>friend class RoaringBitmap32</definition>
+        <argsstring></argsstring>
+        <name>RoaringBitmap32</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::RoaringBitmap32</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="48" column="22" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1aa1f4889a38819bb8f5a50271e109ab0a" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>void* paimon::RoaringBitmap32::Iterator::iterator_</definition>
+        <argsstring></argsstring>
+        <name>iterator_</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::iterator_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="64" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1ac509da7a503ed95687ca8177956deb53" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap32::Iterator::Iterator</definition>
+        <argsstring>(const RoaringBitmap32 &amp;bitmap)</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> &amp;</type>
+          <declname>bitmap</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="49" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a45f2098e226b6bb0127d02015750555a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap32::Iterator::~Iterator</definition>
+        <argsstring>()</argsstring>
+        <name>~Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::~Iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="50" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a740383037ea12b0c925319bb81b163a6" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap32::Iterator::Iterator</definition>
+        <argsstring>(const Iterator &amp;) noexcept</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="51" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a783ef2d42cf492d499f2b883023923c5" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap32::Iterator::Iterator</definition>
+        <argsstring>(Iterator &amp;&amp;) noexcept</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="52" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1af81135e5d276bc9f77c4d74964bb3819" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap32::Iterator::operator=</definition>
+        <argsstring>(const Iterator &amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="53" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a9113ab7cbd8b3e42e26e6641d70ff2fb" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap32::Iterator::operator=</definition>
+        <argsstring>(Iterator &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="54" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a5d590d63cbd7a569e7022b5a3c023b0f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::RoaringBitmap32::Iterator::operator*</definition>
+        <argsstring>() const</argsstring>
+        <name>operator*</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator*</qualifiedname>
+        <briefdescription>
+<para>Return the current value of iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="57" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1af4f410ab22ec750b688d9633bd4a6a57" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap32::Iterator::operator++</definition>
+        <argsstring>()</argsstring>
+        <name>operator++</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator++</qualifiedname>
+        <briefdescription>
+<para>Move the iterator to next value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="59" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a66df2be85ffb952ba03cdbc94b46e9b3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap32::Iterator::operator==</definition>
+        <argsstring>(const Iterator &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="60" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a0ae439aaabec47080c3a0f6072552e50" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap32::Iterator::operator!=</definition>
+        <argsstring>(const Iterator &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>paimon::RoaringBitmap32::Iterator::operator!=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="61" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" line="46" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h" bodystart="46" bodyend="65"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1ac509da7a503ed95687ca8177956deb53" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a740383037ea12b0c925319bb81b163a6" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a783ef2d42cf492d499f2b883023923c5" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1aa1f4889a38819bb8f5a50271e109ab0a" prot="private" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>iterator_</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a0ae439aaabec47080c3a0f6072552e50" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator!=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a5d590d63cbd7a569e7022b5a3c023b0f" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator*</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1af4f410ab22ec750b688d9633bd4a6a57" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator++</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1af81135e5d276bc9f77c4d74964bb3819" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a9113ab7cbd8b3e42e26e6641d70ff2fb" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a66df2be85ffb952ba03cdbc94b46e9b3" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap32_1_1_iterator_1a45f2098e226b6bb0127d02015750555a" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap32::Iterator</scope><name>~Iterator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

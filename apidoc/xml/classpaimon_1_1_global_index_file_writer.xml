@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_file_writer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexFileWriter</compoundname>
+    <includes refid="global__index__file__writer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_file_writer_1ac565b06a2f56e34afaf59149002e45b1" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexFileWriter::~GlobalIndexFileWriter</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GlobalIndexFileWriter</name>
+        <qualifiedname>paimon::GlobalIndexFileWriter::~GlobalIndexFileWriter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" line="27" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_file_writer_1a31d48a7c456af3324c547df8281d48df" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>virtual Result&lt; std::string &gt; paimon::GlobalIndexFileWriter::NewFileName</definition>
+        <argsstring>(const std::string &amp;prefix) const =0</argsstring>
+        <name>NewFileName</name>
+        <qualifiedname>paimon::GlobalIndexFileWriter::NewFileName</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>prefix</declname>
+        </param>
+        <briefdescription>
+<para>Generates a unique file name for a new index file using the given prefix. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>This function may be called multiple times if the index consists of multiple files. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" line="31" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_file_writer_1a60e6c169024b5f3b656c65c1dee77889" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_output_stream" kindref="compound">OutputStream</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; OutputStream &gt; &gt; paimon::GlobalIndexFileWriter::NewOutputStream</definition>
+        <argsstring>(const std::string &amp;file_name) const =0</argsstring>
+        <name>NewOutputStream</name>
+        <qualifiedname>paimon::GlobalIndexFileWriter::NewOutputStream</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>file_name</declname>
+        </param>
+        <briefdescription>
+<para>Opens a new output stream for writing index data to the specified file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" line="34" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_file_writer_1a0b10c104b8a533060647ce8f288974eb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int64_t &gt; paimon::GlobalIndexFileWriter::GetFileSize</definition>
+        <argsstring>(const std::string &amp;file_name) const =0</argsstring>
+        <name>GetFileSize</name>
+        <qualifiedname>paimon::GlobalIndexFileWriter::GetFileSize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>file_name</declname>
+        </param>
+        <briefdescription>
+<para>Get the file size of input file name. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" line="38" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract interface for writing global index files to storage. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" line="25" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h" bodystart="25" bodyend="39"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_file_writer_1a0b10c104b8a533060647ce8f288974eb" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexFileWriter</scope><name>GetFileSize</name></member>
+      <member refid="classpaimon_1_1_global_index_file_writer_1a31d48a7c456af3324c547df8281d48df" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexFileWriter</scope><name>NewFileName</name></member>
+      <member refid="classpaimon_1_1_global_index_file_writer_1a60e6c169024b5f3b656c65c1dee77889" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexFileWriter</scope><name>NewOutputStream</name></member>
+      <member refid="classpaimon_1_1_global_index_file_writer_1ac565b06a2f56e34afaf59149002e45b1" prot="public" virt="virtual"><scope>paimon::GlobalIndexFileWriter</scope><name>~GlobalIndexFileWriter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

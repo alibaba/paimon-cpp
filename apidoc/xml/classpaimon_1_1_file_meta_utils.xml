@@ -1,0 +1,128 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_meta_utils" kind="class" language="C++" prot="public">
+    <compoundname>paimon::FileMetaUtils</compoundname>
+    <includes refid="file__meta__utils_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_meta_utils_1a0d3392fa819953fd356fcac9273b33c0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FileMetaUtils::FileMetaUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>FileMetaUtils</name>
+        <qualifiedname>paimon::FileMetaUtils::FileMetaUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h" line="44" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_meta_utils_1a43447327aaaed023f7a8d05708457a47" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FileMetaUtils::~FileMetaUtils</definition>
+        <argsstring>()=delete</argsstring>
+        <name>~FileMetaUtils</name>
+        <qualifiedname>paimon::FileMetaUtils::~FileMetaUtils</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h" line="45" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_meta_utils_1ab62b354fa026482cc3ee73869f0c4fdb" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; CommitMessage &gt; &gt; paimon::FileMetaUtils::GenerateCommitMessage</definition>
+        <argsstring>(const std::vector&lt; std::string &gt; &amp;src_data_files, const std::string &amp;dst_table_path, const std::map&lt; std::string, std::string &gt; &amp;partition_values, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>GenerateCommitMessage</name>
+        <qualifiedname>paimon::FileMetaUtils::GenerateCommitMessage</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>src_data_files</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>dst_table_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>partition_values</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Generate a commit message for migrating external data files into a Paimon table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method analyzes the provided source data files and generates a commit message that can be used to incorporate these files into the target Paimon table.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>src_data_files</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of paths to source data files to be migrated. <bold>These files must have the same schema as the target Paimon table</bold>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dst_table_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Path to the destination Paimon table directory. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>partition_values</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map of partition column names to their values for partitioned tables. Use empty map for non-partitioned tables. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the generated <computeroutput><ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref></computeroutput>, or an error status if the migration cannot be performed. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h" line="61" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Utility class for handling file metadata operations during data migration. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class provides static utility functions for migrating external data files into Paimon tables. It handles the generation of commit messages from source data files, enabling seamless integration of existing data into Paimon&apos;s file store architecture.</para>
+<para><simplesect kind="note"><para>This utility currently does not support:<itemizedlist>
+<listitem><para>object store file systems</para>
+</listitem><listitem><para>primary-key tables</para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+<simplesect kind="warning"><para>This utility will move/rename source data files to destination paths during migration. It is recommended to back up your data in advance before using this utility to avoid data loss. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h" line="42" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h" bodystart="42" bodyend="65"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_meta_utils_1a0d3392fa819953fd356fcac9273b33c0" prot="public" virt="non-virtual"><scope>paimon::FileMetaUtils</scope><name>FileMetaUtils</name></member>
+      <member refid="classpaimon_1_1_file_meta_utils_1ab62b354fa026482cc3ee73869f0c4fdb" prot="public" virt="non-virtual"><scope>paimon::FileMetaUtils</scope><name>GenerateCommitMessage</name></member>
+      <member refid="classpaimon_1_1_file_meta_utils_1a43447327aaaed023f7a8d05708457a47" prot="public" virt="non-virtual"><scope>paimon::FileMetaUtils</scope><name>~FileMetaUtils</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

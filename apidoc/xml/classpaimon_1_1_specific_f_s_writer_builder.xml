@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_specific_f_s_writer_builder" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::SpecificFSWriterBuilder</compoundname>
+    <basecompoundref refid="classpaimon_1_1_writer_builder" prot="public" virt="non-virtual">paimon::WriterBuilder</basecompoundref>
+    <includes refid="writer__builder_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_specific_f_s_writer_builder_1a1e03d1aa7d93401b54f70c0e5555bf82" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::SpecificFSWriterBuilder::~SpecificFSWriterBuilder</definition>
+        <argsstring>() override=default</argsstring>
+        <name>~SpecificFSWriterBuilder</name>
+        <qualifiedname>paimon::SpecificFSWriterBuilder::~SpecificFSWriterBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="48" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_specific_f_s_writer_builder_1a30d867ee02d6023146930f847dfaef12" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_specific_f_s_writer_builder" kindref="compound">SpecificFSWriterBuilder</ref> *</type>
+        <definition>virtual SpecificFSWriterBuilder * paimon::SpecificFSWriterBuilder::WithFileSystem</definition>
+        <argsstring>(const std::shared_ptr&lt; FileSystem &gt; &amp;fs)=0</argsstring>
+        <name>WithFileSystem</name>
+        <qualifiedname>paimon::SpecificFSWriterBuilder::WithFileSystem</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>fs</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="50" column="37"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_specific_f_s_writer_builder" kindref="compound">SpecificFSWriterBuilder</ref></computeroutput> allows you to specify a specific file system. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::SpecificFSWriterBuilder</label>
+        <link refid="classpaimon_1_1_specific_f_s_writer_builder"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::WriterBuilder</label>
+        <link refid="classpaimon_1_1_writer_builder"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::SpecificFSWriterBuilder</label>
+        <link refid="classpaimon_1_1_specific_f_s_writer_builder"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::WriterBuilder</label>
+        <link refid="classpaimon_1_1_writer_builder"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="46" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" bodystart="46" bodyend="51"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_writer_builder_1a0dcede79a22f46a4bc35c2f3646116a4" prot="public" virt="pure-virtual"><scope>paimon::SpecificFSWriterBuilder</scope><name>Build</name></member>
+      <member refid="classpaimon_1_1_specific_f_s_writer_builder_1a30d867ee02d6023146930f847dfaef12" prot="public" virt="pure-virtual"><scope>paimon::SpecificFSWriterBuilder</scope><name>WithFileSystem</name></member>
+      <member refid="classpaimon_1_1_writer_builder_1aebeb244a2785f602ff9b500af9adef1c" prot="public" virt="pure-virtual"><scope>paimon::SpecificFSWriterBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_specific_f_s_writer_builder_1a1e03d1aa7d93401b54f70c0e5555bf82" prot="public" virt="non-virtual"><scope>paimon::SpecificFSWriterBuilder</scope><name>~SpecificFSWriterBuilder</name></member>
+      <member refid="classpaimon_1_1_writer_builder_1a1bfb13d013967ed6e07459992bfa826c" prot="public" virt="virtual"><scope>paimon::SpecificFSWriterBuilder</scope><name>~WriterBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

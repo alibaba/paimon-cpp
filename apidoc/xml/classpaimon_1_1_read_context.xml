@@ -1,0 +1,562 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_read_context" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ReadContext</compoundname>
+    <includes refid="read__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1adc9217a9ae433aa55860a75497c2b57c" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::ReadContext::path_</definition>
+        <argsstring></argsstring>
+        <name>path_</name>
+        <qualifiedname>paimon::ReadContext::path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="108" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a23c565a48473e798d71c00b38edd2993" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::ReadContext::branch_</definition>
+        <argsstring></argsstring>
+        <name>branch_</name>
+        <qualifiedname>paimon::ReadContext::branch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="109" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="109" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1ac56aea8782be07115af5af9a2b09509b" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; paimon::ReadContext::read_schema_</definition>
+        <argsstring></argsstring>
+        <name>read_schema_</name>
+        <qualifiedname>paimon::ReadContext::read_schema_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="110" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a497df0443925e24edc2e150931706e74" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Predicate&gt; paimon::ReadContext::predicate_</definition>
+        <argsstring></argsstring>
+        <name>predicate_</name>
+        <qualifiedname>paimon::ReadContext::predicate_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="111" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="111" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1aca03ab607a0da76e8155e1af7c052fcd" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::enable_predicate_filter_</definition>
+        <argsstring></argsstring>
+        <name>enable_predicate_filter_</name>
+        <qualifiedname>paimon::ReadContext::enable_predicate_filter_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="112" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="112" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a71852711aec7f23a804c8e301c72f49a" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::enable_prefetch_</definition>
+        <argsstring></argsstring>
+        <name>enable_prefetch_</name>
+        <qualifiedname>paimon::ReadContext::enable_prefetch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="113" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="113" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1acc0c2a604a328a5d311e787c3df5a1ac" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::prefetch_batch_count_</definition>
+        <argsstring></argsstring>
+        <name>prefetch_batch_count_</name>
+        <qualifiedname>paimon::ReadContext::prefetch_batch_count_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="114" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="114" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a666c95fb2371becf3534301451e65c94" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::prefetch_max_parallel_num_</definition>
+        <argsstring></argsstring>
+        <name>prefetch_max_parallel_num_</name>
+        <qualifiedname>paimon::ReadContext::prefetch_max_parallel_num_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="115" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="115" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1af8b65fb00043c1e41406abff6ee09a39" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::enable_multi_thread_row_to_batch_</definition>
+        <argsstring></argsstring>
+        <name>enable_multi_thread_row_to_batch_</name>
+        <qualifiedname>paimon::ReadContext::enable_multi_thread_row_to_batch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="116" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="116" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a67cb8988e1f440d46fab2532c71e3c99" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::row_to_batch_thread_number_</definition>
+        <argsstring></argsstring>
+        <name>row_to_batch_thread_number_</name>
+        <qualifiedname>paimon::ReadContext::row_to_batch_thread_number_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="117" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a70bb060332cfceb4d3814044314a90ba" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>std::optional&lt;std::string&gt; paimon::ReadContext::table_schema_</definition>
+        <argsstring></argsstring>
+        <name>table_schema_</name>
+        <qualifiedname>paimon::ReadContext::table_schema_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="118" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="118" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a91d8625172c84127151f9bc894e846db" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::ReadContext::memory_pool_</definition>
+        <argsstring></argsstring>
+        <name>memory_pool_</name>
+        <qualifiedname>paimon::ReadContext::memory_pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="119" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="119" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1a68b4218cd1cae6b7129a54b6e0b1bb38" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Executor&gt; paimon::ReadContext::executor_</definition>
+        <argsstring></argsstring>
+        <name>executor_</name>
+        <qualifiedname>paimon::ReadContext::executor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="120" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="120" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1ab647c3c31d78438ba52c4be8f84ae33b" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::ReadContext::fs_scheme_to_identifier_map_</definition>
+        <argsstring></argsstring>
+        <name>fs_scheme_to_identifier_map_</name>
+        <qualifiedname>paimon::ReadContext::fs_scheme_to_identifier_map_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="121" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_1ab18780d92ab3b9f7c73df5103a386559" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::ReadContext::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>paimon::ReadContext::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="122" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a7d761a78f0cb10682720c326788c860b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadContext::ReadContext</definition>
+        <argsstring>(const std::string &amp;path, const std::string &amp;branch, const std::vector&lt; std::string &gt; &amp;read_schema, const std::shared_ptr&lt; Predicate &gt; &amp;predicate, bool enable_predicate_filter, bool enable_prefetch, uint32_t prefetch_batch_count, uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch, uint32_t row_to_batch_thread_number, const std::optional&lt; std::string &gt; &amp;table_schema, const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::map&lt; std::string, std::string &gt; &amp;fs_scheme_to_identifier_map, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>ReadContext</name>
+        <qualifiedname>paimon::ReadContext::ReadContext</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>branch</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>read_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enable_predicate_filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enable_prefetch</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>prefetch_batch_count</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>prefetch_max_parallel_num</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enable_multi_thread_row_to_batch</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>row_to_batch_thread_number</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; std::string &gt; &amp;</type>
+          <declname>table_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>fs_scheme_to_identifier_map</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="43" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a3b4cb5b0681f570c739c83dd1a08306f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadContext::~ReadContext</definition>
+        <argsstring>()</argsstring>
+        <name>~ReadContext</name>
+        <qualifiedname>paimon::ReadContext::~ReadContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="53" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a126994d77a895c402c93490a7cce310f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::ReadContext::GetPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPath</name>
+        <qualifiedname>paimon::ReadContext::GetPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="55" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1ab1ccaf50daa127ed9cb086691ebba1be" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::ReadContext::GetBranch</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBranch</name>
+        <qualifiedname>paimon::ReadContext::GetBranch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="59" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="59" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a542da2195d8ea92e921dc5c3d27dce5c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::ReadContext::GetFileSystemSchemeToIdentifierMap</definition>
+        <argsstring>() const</argsstring>
+        <name>GetFileSystemSchemeToIdentifierMap</name>
+        <qualifiedname>paimon::ReadContext::GetFileSystemSchemeToIdentifierMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="63" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="63" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1afeb99ede7b094443737236b966b3d371" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::ReadContext::GetOptions</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOptions</name>
+        <qualifiedname>paimon::ReadContext::GetOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="67" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="67" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1aff6208b05dffcf6b54533d6406d03982" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+        <definition>const std::vector&lt; std::string &gt; &amp; paimon::ReadContext::GetReadSchema</definition>
+        <argsstring>() const</argsstring>
+        <name>GetReadSchema</name>
+        <qualifiedname>paimon::ReadContext::GetReadSchema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="71" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="71" bodyend="73"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1ad41c2bfffce5da9a3cd9c423b0fc8f9d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+        <definition>const std::shared_ptr&lt; Predicate &gt; &amp; paimon::ReadContext::GetPredicate</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPredicate</name>
+        <qualifiedname>paimon::ReadContext::GetPredicate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="75" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="75" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a9f3ca13af9dd86a4d8ac5e732cf6c09b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::EnablePredicateFilter</definition>
+        <argsstring>() const</argsstring>
+        <name>EnablePredicateFilter</name>
+        <qualifiedname>paimon::ReadContext::EnablePredicateFilter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="79" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="79" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a38890f8c5c11c29c09c5be8232e1f74b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::EnablePrefetch</definition>
+        <argsstring>() const</argsstring>
+        <name>EnablePrefetch</name>
+        <qualifiedname>paimon::ReadContext::EnablePrefetch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="82" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="82" bodyend="84"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a25903f37618345ac1d57d6dddb90981d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::GetPrefetchBatchCount</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPrefetchBatchCount</name>
+        <qualifiedname>paimon::ReadContext::GetPrefetchBatchCount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="85" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="85" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1aabf26ec645f7fbdf4e35117a04591f8f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::GetPrefetchMaxParallelNum</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPrefetchMaxParallelNum</name>
+        <qualifiedname>paimon::ReadContext::GetPrefetchMaxParallelNum</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="88" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="88" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a1b2651cb2f61643cb99440cb32d23df0" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ReadContext::EnableMultiThreadRowToBatch</definition>
+        <argsstring>() const</argsstring>
+        <name>EnableMultiThreadRowToBatch</name>
+        <qualifiedname>paimon::ReadContext::EnableMultiThreadRowToBatch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="91" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="91" bodyend="93"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a735de1639311f59837ce5a4c899814d2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>uint32_t paimon::ReadContext::GetRowToBatchThreadNumber</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRowToBatchThreadNumber</name>
+        <qualifiedname>paimon::ReadContext::GetRowToBatchThreadNumber</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="94" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="94" bodyend="96"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1add40ef1a2dfcc7df53789de9c255a2a8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; std::string &gt; &amp;</type>
+        <definition>const std::optional&lt; std::string &gt; &amp; paimon::ReadContext::GetSpecificTableSchema</definition>
+        <argsstring>()</argsstring>
+        <name>GetSpecificTableSchema</name>
+        <qualifiedname>paimon::ReadContext::GetSpecificTableSchema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="97" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="97" bodyend="99"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1a3367b9e6f643e99a18b837952798383a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::ReadContext::GetMemoryPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::ReadContext::GetMemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="100" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="100" bodyend="102"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_1aa6fbbb0c471bb6f3bc71684cef2d722d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::ReadContext::GetExecutor</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExecutor</name>
+        <qualifiedname>paimon::ReadContext::GetExecutor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="103" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="103" bodyend="105"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput> is some configuration for read operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Please do not use this class directly, use <computeroutput><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref></computeroutput> to build a <computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput> which has input validation. <simplesect kind="see"><para><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="41" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="41" bodyend="123"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_read_context_1a23c565a48473e798d71c00b38edd2993" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>branch_</name></member>
+      <member refid="classpaimon_1_1_read_context_1af8b65fb00043c1e41406abff6ee09a39" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>enable_multi_thread_row_to_batch_</name></member>
+      <member refid="classpaimon_1_1_read_context_1aca03ab607a0da76e8155e1af7c052fcd" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>enable_predicate_filter_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a71852711aec7f23a804c8e301c72f49a" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>enable_prefetch_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a1b2651cb2f61643cb99440cb32d23df0" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>EnableMultiThreadRowToBatch</name></member>
+      <member refid="classpaimon_1_1_read_context_1a9f3ca13af9dd86a4d8ac5e732cf6c09b" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>EnablePredicateFilter</name></member>
+      <member refid="classpaimon_1_1_read_context_1a38890f8c5c11c29c09c5be8232e1f74b" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>EnablePrefetch</name></member>
+      <member refid="classpaimon_1_1_read_context_1a68b4218cd1cae6b7129a54b6e0b1bb38" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>executor_</name></member>
+      <member refid="classpaimon_1_1_read_context_1ab647c3c31d78438ba52c4be8f84ae33b" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>fs_scheme_to_identifier_map_</name></member>
+      <member refid="classpaimon_1_1_read_context_1ab1ccaf50daa127ed9cb086691ebba1be" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetBranch</name></member>
+      <member refid="classpaimon_1_1_read_context_1aa6fbbb0c471bb6f3bc71684cef2d722d" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetExecutor</name></member>
+      <member refid="classpaimon_1_1_read_context_1a542da2195d8ea92e921dc5c3d27dce5c" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetFileSystemSchemeToIdentifierMap</name></member>
+      <member refid="classpaimon_1_1_read_context_1a3367b9e6f643e99a18b837952798383a" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetMemoryPool</name></member>
+      <member refid="classpaimon_1_1_read_context_1afeb99ede7b094443737236b966b3d371" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetOptions</name></member>
+      <member refid="classpaimon_1_1_read_context_1a126994d77a895c402c93490a7cce310f" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetPath</name></member>
+      <member refid="classpaimon_1_1_read_context_1ad41c2bfffce5da9a3cd9c423b0fc8f9d" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetPredicate</name></member>
+      <member refid="classpaimon_1_1_read_context_1a25903f37618345ac1d57d6dddb90981d" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetPrefetchBatchCount</name></member>
+      <member refid="classpaimon_1_1_read_context_1aabf26ec645f7fbdf4e35117a04591f8f" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetPrefetchMaxParallelNum</name></member>
+      <member refid="classpaimon_1_1_read_context_1aff6208b05dffcf6b54533d6406d03982" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetReadSchema</name></member>
+      <member refid="classpaimon_1_1_read_context_1a735de1639311f59837ce5a4c899814d2" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetRowToBatchThreadNumber</name></member>
+      <member refid="classpaimon_1_1_read_context_1add40ef1a2dfcc7df53789de9c255a2a8" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>GetSpecificTableSchema</name></member>
+      <member refid="classpaimon_1_1_read_context_1a91d8625172c84127151f9bc894e846db" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>memory_pool_</name></member>
+      <member refid="classpaimon_1_1_read_context_1ab18780d92ab3b9f7c73df5103a386559" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>options_</name></member>
+      <member refid="classpaimon_1_1_read_context_1adc9217a9ae433aa55860a75497c2b57c" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>path_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a497df0443925e24edc2e150931706e74" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>predicate_</name></member>
+      <member refid="classpaimon_1_1_read_context_1acc0c2a604a328a5d311e787c3df5a1ac" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>prefetch_batch_count_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a666c95fb2371becf3534301451e65c94" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>prefetch_max_parallel_num_</name></member>
+      <member refid="classpaimon_1_1_read_context_1ac56aea8782be07115af5af9a2b09509b" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>read_schema_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a7d761a78f0cb10682720c326788c860b" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>ReadContext</name></member>
+      <member refid="classpaimon_1_1_read_context_1a67cb8988e1f440d46fab2532c71e3c99" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>row_to_batch_thread_number_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a70bb060332cfceb4d3814044314a90ba" prot="private" virt="non-virtual"><scope>paimon::ReadContext</scope><name>table_schema_</name></member>
+      <member refid="classpaimon_1_1_read_context_1a3b4cb5b0681f570c739c83dd1a08306f" prot="public" virt="non-virtual"><scope>paimon::ReadContext</scope><name>~ReadContext</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

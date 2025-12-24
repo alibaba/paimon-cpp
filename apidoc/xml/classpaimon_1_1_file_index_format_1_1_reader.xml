@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_index_format_1_1_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileIndexFormat::Reader</compoundname>
+    <includes refid="file__index__format_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_format_1_1_reader_1a7484d04c20db1a4010d775b80199ca1f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileIndexFormat::Reader::~Reader</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Reader</name>
+        <qualifiedname>paimon::FileIndexFormat::Reader::~Reader</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="108" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_format_1_1_reader_1a6f77a1642670fa64bae9888c8f516d18" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::shared_ptr&lt; FileIndexReader &gt; &gt; &gt; paimon::FileIndexFormat::Reader::ReadColumnIndex</definition>
+        <argsstring>(const std::string &amp;column_name, ::ArrowSchema *arrow_schema) const =0</argsstring>
+        <name>ReadColumnIndex</name>
+        <qualifiedname>paimon::FileIndexFormat::Reader::ReadColumnIndex</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>column_name</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>arrow_schema</declname>
+        </param>
+        <briefdescription>
+<para>Reads index data for a specific column from the index file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>column_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the column to retrieve index data for. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>arrow_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arrow schema that must contain a field corresponding to <computeroutput>column_name</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A vector of shared pointers to <ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref> objects, each corresponding to a different index type; or an error if the column is not indexed or the index is malformed. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="116" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_file_index_format_1_1_reader" kindref="compound">Reader</ref> for file index file. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" line="106" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h" bodystart="106" bodyend="118"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_index_format_1_1_reader_1a6f77a1642670fa64bae9888c8f516d18" prot="public" virt="pure-virtual"><scope>paimon::FileIndexFormat::Reader</scope><name>ReadColumnIndex</name></member>
+      <member refid="classpaimon_1_1_file_index_format_1_1_reader_1a7484d04c20db1a4010d775b80199ca1f" prot="public" virt="virtual"><scope>paimon::FileIndexFormat::Reader</scope><name>~Reader</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_executor" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Executor</compoundname>
+    <includes refid="executor_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_executor_1a6316d1ac002a423db576b154938f574b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Executor::~Executor</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Executor</name>
+        <qualifiedname>paimon::Executor::~Executor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="44" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_executor_1a4c7e16d3ca5e9287a41fd07f4925d51e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Executor::Add</definition>
+        <argsstring>(std::function&lt; void()&gt; func)=0</argsstring>
+        <name>Add</name>
+        <qualifiedname>paimon::Executor::Add</qualifiedname>
+        <param>
+          <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref>()&gt;</type>
+          <declname>func</declname>
+        </param>
+        <briefdescription>
+<para>Add a task to the executor. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>func</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The task to be executed, represented as a function object with no parameters and no return value.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="note"><para>This method should be thread-safe and can be called from multiple threads simultaneously. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="53" column="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface class for defining basic operations of a task executor. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> class provides interfaces for adding tasks and waiting for all tasks to complete. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="42" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" bodystart="42" bodyend="54"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_executor_1a4c7e16d3ca5e9287a41fd07f4925d51e" prot="public" virt="pure-virtual"><scope>paimon::Executor</scope><name>Add</name></member>
+      <member refid="classpaimon_1_1_executor_1a6316d1ac002a423db576b154938f574b" prot="public" virt="virtual"><scope>paimon::Executor</scope><name>~Executor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,113 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_global_index_i_o_meta" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::GlobalIndexIOMeta</compoundname>
+    <includes refid="global__index__io__meta_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_global_index_i_o_meta_1a08e3bddaa1f2bf24e5aaae45449bde43" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::GlobalIndexIOMeta::file_name</definition>
+        <argsstring></argsstring>
+        <name>file_name</name>
+        <qualifiedname>paimon::GlobalIndexIOMeta::file_name</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="35" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="35" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_global_index_i_o_meta_1af7a811477df217c2e74f6c30efaa0dd4" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::GlobalIndexIOMeta::file_size</definition>
+        <argsstring></argsstring>
+        <name>file_size</name>
+        <qualifiedname>paimon::GlobalIndexIOMeta::file_size</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="36" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_global_index_i_o_meta_1ac6b8bc1a8a60e1c2192ba52a2db6b51e" prot="public" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::GlobalIndexIOMeta::range_end</definition>
+        <argsstring></argsstring>
+        <name>range_end</name>
+        <qualifiedname>paimon::GlobalIndexIOMeta::range_end</qualifiedname>
+        <briefdescription>
+<para>The inclusive range end covered by this file (i.e., the last local row id). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="38" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_global_index_i_o_meta_1af0433a4a657ce0c0b0a2f27cf7f66197" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Bytes&gt; paimon::GlobalIndexIOMeta::metadata</definition>
+        <argsstring></argsstring>
+        <name>metadata</name>
+        <qualifiedname>paimon::GlobalIndexIOMeta::metadata</qualifiedname>
+        <briefdescription>
+<para>Optional binary metadata associated with the file, such as serialized secondary index structures or inline index bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>May be null if no additional metadata is available. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="42" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="structpaimon_1_1_global_index_i_o_meta_1a480329ddcf309ca154e0a2035db5f3b4" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::GlobalIndexIOMeta::GlobalIndexIOMeta</definition>
+        <argsstring>(const std::string &amp;_file_name, int64_t _file_size, int64_t _range_end, const std::shared_ptr&lt; Bytes &gt; &amp;_metadata)</argsstring>
+        <name>GlobalIndexIOMeta</name>
+        <qualifiedname>paimon::GlobalIndexIOMeta::GlobalIndexIOMeta</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>_file_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>_file_size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>_range_end</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt; &amp;</type>
+          <declname>_metadata</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="28" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="28" bodyend="33"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Metadata describing a single file entry in a global index. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_io_meta.h" bodystart="27" bodyend="43"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_global_index_i_o_meta_1a08e3bddaa1f2bf24e5aaae45449bde43" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexIOMeta</scope><name>file_name</name></member>
+      <member refid="structpaimon_1_1_global_index_i_o_meta_1af7a811477df217c2e74f6c30efaa0dd4" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexIOMeta</scope><name>file_size</name></member>
+      <member refid="structpaimon_1_1_global_index_i_o_meta_1a480329ddcf309ca154e0a2035db5f3b4" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexIOMeta</scope><name>GlobalIndexIOMeta</name></member>
+      <member refid="structpaimon_1_1_global_index_i_o_meta_1af0433a4a657ce0c0b0a2f27cf7f66197" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexIOMeta</scope><name>metadata</name></member>
+      <member refid="structpaimon_1_1_global_index_i_o_meta_1ac6b8bc1a8a60e1c2192ba52a2db6b51e" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexIOMeta</scope><name>range_end</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,176 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_metrics" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Metrics</compoundname>
+    <includes refid="metrics_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1a5c60815af6ab76a9d12b350c3c661636" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Metrics::~Metrics</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Metrics</name>
+        <qualifiedname>paimon::Metrics::~Metrics</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="36" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1ac0f795037ff66a2b6c3b069dee6d7c60" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Metrics::SetCounter</definition>
+        <argsstring>(const std::string &amp;metric_name, uint64_t metric_value)=0</argsstring>
+        <name>SetCounter</name>
+        <qualifiedname>paimon::Metrics::SetCounter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>metric_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>metric_value</declname>
+        </param>
+        <briefdescription>
+<para>Set the value of a specific counter metric. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>metric_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The name/key of the metric to set. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>metric_value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The value to set for this metric. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="41" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1a07c7a389a5400eff7f6bc1513b405823" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt;</type>
+        <definition>virtual Result&lt; uint64_t &gt; paimon::Metrics::GetCounter</definition>
+        <argsstring>(const std::string &amp;metric_name) const =0</argsstring>
+        <name>GetCounter</name>
+        <qualifiedname>paimon::Metrics::GetCounter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>metric_name</declname>
+        </param>
+        <briefdescription>
+<para>Get the current value of a specific counter metric. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>metric_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The name/key of the metric to retrieve. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The current value of the metric, or <computeroutput><ref refid="classpaimon_1_1_status_1ae7ac6f987334404cab0bc3a31f9e7893" kindref="member">Status::KeyError</ref></computeroutput> if the metric doesn&apos;t exist. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="46" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1afd617bdbfc0ee880e4751c2a81f37b38" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::map&lt; std::string, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt;</type>
+        <definition>virtual std::map&lt; std::string, uint64_t &gt; paimon::Metrics::GetAllCounters</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetAllCounters</name>
+        <qualifiedname>paimon::Metrics::GetAllCounters</qualifiedname>
+        <briefdescription>
+<para>Get all counter metrics as a map. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A map containing all metric names and their current values. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="50" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1a2c4c73b591fe40bf043ef76c29abc0d4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::Metrics::Merge</definition>
+        <argsstring>(const std::shared_ptr&lt; Metrics &gt; &amp;other)=0</argsstring>
+        <name>Merge</name>
+        <qualifiedname>paimon::Metrics::Merge</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Merge metrics from another <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> instance into this one. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For metrics that exist in both instances, the values are added together. For metrics that only exist in the other instance, they are copied over. This operation is useful for aggregating metrics from multiple sources.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>other</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The other <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> instance to merge from. If <computeroutput>other</computeroutput> is nullptr or same as this, no operation is performed. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="60" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_metrics_1a5ab7389e2cfb3cb451749688638017c6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::Metrics::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Metrics::ToString</qualifiedname>
+        <briefdescription>
+<para>Convert all metrics to a JSON string representation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A JSON string containing all metric names and values, e.g., <computeroutput>{&quot;metric1&quot;:100,&quot;metric2&quot;:200}</computeroutput>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="65" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract interface for collecting and managing performance metrics in Paimon operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class provides a unified interface for tracking various performance metrics such as counters for read/write operations, I/O statistics, and other operational measurements. It serves as the base class for concrete implementations like <computeroutput>MetricsImpl</computeroutput>. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h" bodystart="34" bodyend="66"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_metrics_1afd617bdbfc0ee880e4751c2a81f37b38" prot="public" virt="pure-virtual"><scope>paimon::Metrics</scope><name>GetAllCounters</name></member>
+      <member refid="classpaimon_1_1_metrics_1a07c7a389a5400eff7f6bc1513b405823" prot="public" virt="pure-virtual"><scope>paimon::Metrics</scope><name>GetCounter</name></member>
+      <member refid="classpaimon_1_1_metrics_1a2c4c73b591fe40bf043ef76c29abc0d4" prot="public" virt="pure-virtual"><scope>paimon::Metrics</scope><name>Merge</name></member>
+      <member refid="classpaimon_1_1_metrics_1ac0f795037ff66a2b6c3b069dee6d7c60" prot="public" virt="pure-virtual"><scope>paimon::Metrics</scope><name>SetCounter</name></member>
+      <member refid="classpaimon_1_1_metrics_1a5ab7389e2cfb3cb451749688638017c6" prot="public" virt="pure-virtual"><scope>paimon::Metrics</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_metrics_1a5c60815af6ab76a9d12b350c3c661636" prot="public" virt="virtual"><scope>paimon::Metrics</scope><name>~Metrics</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,786 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Orphan Files Clean &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/clean';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Options" href="defs.html" />
+    <link rel="prev" title="GLobal Index" href="global_index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Orphan Files Clean</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="orphan-files-clean">
+<h1>Orphan Files Clean<a class="headerlink" href="#orphan-files-clean" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-clean"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18OrphanFilesCleanerE">
+<span id="_CPPv3N6paimon18OrphanFilesCleanerE"></span><span id="_CPPv2N6paimon18OrphanFilesCleanerE"></span><span id="paimon::OrphanFilesCleaner"></span><span class="target" id="classpaimon_1_1_orphan_files_cleaner"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">OrphanFilesCleaner</span></span></span><a class="headerlink" href="#_CPPv4N6paimon18OrphanFilesCleanerE" title="Link to this definition">#</a><br /></dt>
+<dd><p><p>To remove the data files and metadata files that are not used by table (so-called “orphan</p>
+<p>files”).</p>
+</p>
+<p>It will ignore exception when listing all files because it’s OK to not delete unread files.</p>
+<p>To avoid deleting newly written files, it only deletes orphan files older than <code class="docutils literal notranslate"><span class="pre">olderThanMillis</span></code> (1 day by default).</p>
+<p>To avoid deleting files that are used but not read by mistaken, it will stop removing process when failed to read used files.</p>
+<p>To avoid deleting files that were newly added to the Paimon Java protocol but are unrecognized by Paimon C++, we implemented a strong pattern-matching validation, deleting only files in patterns we recognize.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_orphan_files_cleaner"><span class="std std-ref"><span class="pre">OrphanFilesCleaner</span></span></a></code> in Paimon C++ only support cleaning append table, do not support cleaning table with tag, table with external paths, table with branch, table with index, table with changelog, and primary key table. </p>
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18OrphanFilesCleanerD0Ev">
+<span id="_CPPv3N6paimon18OrphanFilesCleanerD0Ev"></span><span id="_CPPv2N6paimon18OrphanFilesCleanerD0Ev"></span><span id="paimon::OrphanFilesCleaner::~OrphanFilesCleaner"></span><span class="target" id="classpaimon_1_1_orphan_files_cleaner_1a83b4a2a871d4854faac596389302711c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~OrphanFilesCleaner</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon18OrphanFilesCleanerD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18OrphanFilesCleaner5CleanEv">
+<span id="_CPPv3N6paimon18OrphanFilesCleaner5CleanEv"></span><span id="_CPPv2N6paimon18OrphanFilesCleaner5CleanEv"></span><span id="paimon::OrphanFilesCleaner::Clean"></span><span class="target" id="classpaimon_1_1_orphan_files_cleaner_1a794e64d1dfd5e21ea340668c27f0cd21"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">set</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Clean</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon18OrphanFilesCleaner5CleanEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Cleans orphan files. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A Result object containing a set of strings representing the paths of the cleaned files. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE">
+<span id="_CPPv3N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE"></span><span id="_CPPv2N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE"></span><span id="paimon::OrphanFilesCleaner::Create__std::unique_ptr:CleanContext:RR"></span><span class="target" id="classpaimon_1_1_orphan_files_cleaner_1aa4ac12a9cfb871c1d8a02faa63b49c96"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon18OrphanFilesCleanerE" title="paimon::OrphanFilesCleaner"><span class="n"><span class="pre">OrphanFilesCleaner</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12CleanContextE" title="paimon::CleanContext"><span class="n"><span class="pre">CleanContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">context</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_orphan_files_cleaner"><span class="std std-ref"><span class="pre">OrphanFilesCleaner</span></span></a></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>context</strong> – A unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code> used for cleanup tasks.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_orphan_files_cleaner"><span class="std std-ref"><span class="pre">OrphanFilesCleaner</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilderE">
+<span id="_CPPv3N6paimon19CleanContextBuilderE"></span><span id="_CPPv2N6paimon19CleanContextBuilderE"></span><span id="paimon::CleanContextBuilder"></span><span class="target" id="classpaimon_1_1_clean_context_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CleanContextBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder"><span class="std std-ref"><span class="pre">CleanContextBuilder</span></span></a></code> used to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code>, has input validation. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE">
+<span id="_CPPv3N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE"></span><span id="_CPPv2N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE"></span><span id="paimon::CleanContextBuilder::CleanContextBuilder__ssCR"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a71c59ff77f2455f532bb125bb27468f1"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CleanContextBuilder</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder"><span class="std std-ref"><span class="pre">CleanContextBuilder</span></span></a></code> with required parameters. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>root_path</strong> – The root path of the table. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilderD0Ev">
+<span id="_CPPv3N6paimon19CleanContextBuilderD0Ev"></span><span id="_CPPv2N6paimon19CleanContextBuilderD0Ev"></span><span id="paimon::CleanContextBuilder::~CleanContextBuilder"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a1383007159cebbc1c0a5703437e12f6f"></span><span class="sig-name descname"><span class="n"><span class="pre">~CleanContextBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::CleanContextBuilder::SetOptions__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a787049b013625c84475f5c082fafd837"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetOptions</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The options map will clear the options added by <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder_1afc84014d61c38f5c299466a66179105f"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> before. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>options</strong> – The configuration options map. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="paimon::CleanContextBuilder::AddOption__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1afc84014d61c38f5c299466a66179105f"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">AddOption</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">key</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </p>
+<p>If you want to add multiple options, call <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder_1afc84014d61c38f5c299466a66179105f"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> multiple times or use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder_1a787049b013625c84475f5c082fafd837"><span class="std std-ref"><span class="pre">SetOptions()</span></span></a></code> instead. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – The option key. </p></li>
+<li><p><strong>value</strong> – The option value. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t">
+<span id="_CPPv3N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t"></span><span id="_CPPv2N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t"></span><span id="paimon::CleanContextBuilder::WithOlderThanMs__int64_t"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a7534e6c3b804c65605b9f1c1bc4c0aea"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithOlderThanMs</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">older_than_ms</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>An optional time threshold in milliseconds for filtering. </p>
+<p>If not provided, defaults to the current time minus one day. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE">
+<span id="_CPPv3N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE"></span><span id="_CPPv2N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1aa27b7a638a6e75afde76dc287ab944a5"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithFileRetainCondition</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">should_be_retained</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Specifies a custom condition to determine which files should be retained. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>should_be_retained</strong> – A callable object that takes a filename and returns <code class="docutils literal notranslate"><span class="pre">true</span></code> if the file should be kept, or <code class="docutils literal notranslate"><span class="pre">false</span></code> if it can be deleted. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::CleanContextBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1aa5e2de5616ddab00611280948f57d6f7"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom memory pool for memory management. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pool</strong> – The memory pool to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">
+<span id="_CPPv3N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="_CPPv2N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="paimon::CleanContextBuilder::WithExecutor__std::shared_ptr:Executor:CR"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a6ce631e4f3fa28c7ca4ec2a76f5fcec0"></span><a class="reference internal" href="#_CPPv4N6paimon19CleanContextBuilderE" title="paimon::CleanContextBuilder"><span class="n"><span class="pre">CleanContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithExecutor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom executor for task execution. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>executor</strong> – The executor to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19CleanContextBuilder6FinishEv">
+<span id="_CPPv3N6paimon19CleanContextBuilder6FinishEv"></span><span id="_CPPv2N6paimon19CleanContextBuilder6FinishEv"></span><span id="paimon::CleanContextBuilder::Finish"></span><span class="target" id="classpaimon_1_1_clean_context_builder_1a1849d11c071c1526dadfae4df4209802"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12CleanContextE" title="paimon::CleanContext"><span class="n"><span class="pre">CleanContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19CleanContextBuilder6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build and return a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code> instance with input validation. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result containing the constructed <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12CleanContextE">
+<span id="_CPPv3N6paimon12CleanContextE"></span><span id="_CPPv2N6paimon12CleanContextE"></span><span id="paimon::CleanContext"></span><span class="target" id="classpaimon_1_1_clean_context"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CleanContext</span></span></span><a class="headerlink" href="#_CPPv4N6paimon12CleanContextE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code> is some configuration for orphan files clean operations. </p>
+<p>Please do not use this class directly, use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context_builder"><span class="std std-ref"><span class="pre">CleanContextBuilder</span></span></a></code> to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_clean_context"><span class="std std-ref"><span class="pre">CleanContext</span></span></a></code> which has input validation. <div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#classpaimon_1_1_clean_context_builder"><span class="std std-ref">CleanContextBuilder</span></a></p>
+</div>
+</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE">
+<span id="_CPPv3N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE"></span><span id="_CPPv2N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE"></span><span class="target" id="classpaimon_1_1_clean_context_1aa7a3ce6c33a6bb6ecba1f3c006a3deab"></span><span class="sig-name descname"><span class="n"><span class="pre">CleanContext</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">older_than_ms</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">should_be_retained</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12CleanContextD0Ev">
+<span id="_CPPv3N6paimon12CleanContextD0Ev"></span><span id="_CPPv2N6paimon12CleanContextD0Ev"></span><span id="paimon::CleanContext::~CleanContext"></span><span class="target" id="classpaimon_1_1_clean_context_1a6067425ddd67b916f29181a158f8f8a7"></span><span class="sig-name descname"><span class="n"><span class="pre">~CleanContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon12CleanContextD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext11GetRootPathEv">
+<span id="_CPPv3NK6paimon12CleanContext11GetRootPathEv"></span><span id="_CPPv2NK6paimon12CleanContext11GetRootPathEv"></span><span id="paimon::CleanContext::GetRootPathC"></span><span class="target" id="classpaimon_1_1_clean_context_1ae6215a090a0db60d6a862dcd8fee9c8a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetRootPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext11GetRootPathEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext10GetOptionsEv">
+<span id="_CPPv3NK6paimon12CleanContext10GetOptionsEv"></span><span id="_CPPv2NK6paimon12CleanContext10GetOptionsEv"></span><span id="paimon::CleanContext::GetOptionsC"></span><span class="target" id="classpaimon_1_1_clean_context_1a0e9c520d9bce5e089d735b5d6f156530"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetOptions</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext10GetOptionsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext14GetOlderThanMsEv">
+<span id="_CPPv3NK6paimon12CleanContext14GetOlderThanMsEv"></span><span id="_CPPv2NK6paimon12CleanContext14GetOlderThanMsEv"></span><span id="paimon::CleanContext::GetOlderThanMsC"></span><span class="target" id="classpaimon_1_1_clean_context_1a6cd8e8cccb5ff4a2aa60b9cda16f926b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetOlderThanMs</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext14GetOlderThanMsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext13GetMemoryPoolEv">
+<span id="_CPPv3NK6paimon12CleanContext13GetMemoryPoolEv"></span><span id="_CPPv2NK6paimon12CleanContext13GetMemoryPoolEv"></span><span id="paimon::CleanContext::GetMemoryPoolC"></span><span class="target" id="classpaimon_1_1_clean_context_1ab1a2fae0f430a6a326a8a31dc882c276"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext13GetMemoryPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext11GetExecutorEv">
+<span id="_CPPv3NK6paimon12CleanContext11GetExecutorEv"></span><span id="_CPPv2NK6paimon12CleanContext11GetExecutorEv"></span><span id="paimon::CleanContext::GetExecutorC"></span><span class="target" id="classpaimon_1_1_clean_context_1a6c710cc90924ab81bc876610e555fa7f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetExecutor</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext11GetExecutorEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12CleanContext22GetFileRetainConditionEv">
+<span id="_CPPv3NK6paimon12CleanContext22GetFileRetainConditionEv"></span><span id="_CPPv2NK6paimon12CleanContext22GetFileRetainConditionEv"></span><span id="paimon::CleanContext::GetFileRetainConditionC"></span><span class="target" id="classpaimon_1_1_clean_context_1aeb9a6cba316473508cd0c0d450d02f80"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">(</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetFileRetainCondition</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12CleanContext22GetFileRetainConditionEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="global_index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">GLobal Index</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="defs.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Options</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18OrphanFilesCleanerE"><code class="docutils literal notranslate"><span class="pre">paimon::OrphanFilesCleaner</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18OrphanFilesCleanerD0Ev"><code class="docutils literal notranslate"><span class="pre">~OrphanFilesCleaner()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18OrphanFilesCleaner5CleanEv"><code class="docutils literal notranslate"><span class="pre">Clean()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::CleanContextBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">CleanContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~CleanContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">SetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">AddOption()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t"><code class="docutils literal notranslate"><span class="pre">WithOlderThanMs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE"><code class="docutils literal notranslate"><span class="pre">WithFileRetainCondition()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"><code class="docutils literal notranslate"><span class="pre">WithExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19CleanContextBuilder6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12CleanContextE"><code class="docutils literal notranslate"><span class="pre">paimon::CleanContext</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE"><code class="docutils literal notranslate"><span class="pre">CleanContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12CleanContextD0Ev"><code class="docutils literal notranslate"><span class="pre">~CleanContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext11GetRootPathEv"><code class="docutils literal notranslate"><span class="pre">GetRootPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext10GetOptionsEv"><code class="docutils literal notranslate"><span class="pre">GetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext14GetOlderThanMsEv"><code class="docutils literal notranslate"><span class="pre">GetOlderThanMs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext11GetExecutorEv"><code class="docutils literal notranslate"><span class="pre">GetExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12CleanContext22GetFileRetainConditionEv"><code class="docutils literal notranslate"><span class="pre">GetFileRetainCondition()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/clean.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

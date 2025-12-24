@@ -1,0 +1,618 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_read_context_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ReadContextBuilder</compoundname>
+    <includes refid="read__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_read_context_builder_1adf01c36be5deb1ef71dc097225dfb5d4" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::ReadContextBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::ReadContextBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="277" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="277" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a4e36cce9a1da99af61afb2283804128f" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadContextBuilder::ReadContextBuilder</definition>
+        <argsstring>(const std::string &amp;path)</argsstring>
+        <name>ReadContextBuilder</name>
+        <qualifiedname>paimon::ReadContextBuilder::ReadContextBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref></computeroutput> with required parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The root path of the table. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="130" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1ab2df9112180f6a2e2216ab9a2efc876e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ReadContextBuilder::~ReadContextBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~ReadContextBuilder</name>
+        <qualifiedname>paimon::ReadContextBuilder::~ReadContextBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="132" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1ab9d0cde6e98dccd3b10439bae2b6865b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetReadSchema</definition>
+        <argsstring>(const std::vector&lt; std::string &gt; &amp;read_field_names)</argsstring>
+        <name>SetReadSchema</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetReadSchema</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>read_field_names</declname>
+        </param>
+        <briefdescription>
+<para>Set the schema fields to read from the table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If not set, all fields from the table schema will be read. This is useful for projection pushdown to reduce I/O and improve performance by reading only the required columns.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>read_field_names</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of field names to read from the table. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>Currently supports top-level field selection. Future versions may support nested field selection using <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> for more granular projection </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="144" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a19370226e886d90bfb4b2146e769cff6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetOptions</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>SetOptions</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetOptions</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>The options map will clear the options added by <computeroutput><ref refid="classpaimon_1_1_read_context_builder_1a19a1a07f17d04342f0a3e31faedf4d04" kindref="member">AddOption()</ref></computeroutput> before. </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The configuration options map. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="151" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a19a1a07f17d04342f0a3e31faedf4d04" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::AddOption</definition>
+        <argsstring>(const std::string &amp;key, const std::string &amp;value)</argsstring>
+        <name>AddOption</name>
+        <qualifiedname>paimon::ReadContextBuilder::AddOption</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If you want to add multiple options, call <computeroutput><ref refid="classpaimon_1_1_read_context_builder_1a19a1a07f17d04342f0a3e31faedf4d04" kindref="member">AddOption()</ref></computeroutput> multiple times or use <computeroutput><ref refid="classpaimon_1_1_read_context_builder_1a19370226e886d90bfb4b2146e769cff6" kindref="member">SetOptions()</ref></computeroutput> instead. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option key. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="161" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a58b67acbb681a859634c7d017bfc2551" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetPredicate</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate)</argsstring>
+        <name>SetPredicate</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetPredicate</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <briefdescription>
+<para>Set a predicate for filtering data during reading. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The predicate is used for both partition pruning and data filtering. It can significantly improve performance by reducing the amount of data that needs to be read and processed.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>predicate</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared pointer to the predicate for data filtering. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="171" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1af48c4f27fd8e263b51f13f9c2badf167" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::EnablePredicateFilter</definition>
+        <argsstring>(bool enabled)</argsstring>
+        <name>EnablePredicateFilter</name>
+        <qualifiedname>paimon::ReadContextBuilder::EnablePredicateFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enabled</declname>
+        </param>
+        <briefdescription>
+<para>Whether to perform precise filtering according to predicates for data read from format reader. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>enabled</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether to enable precise filtering (default: false) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="177" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a72ae2dddf806f6ac9b715e282e0dce8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::EnablePrefetch</definition>
+        <argsstring>(bool enabled)</argsstring>
+        <name>EnablePrefetch</name>
+        <qualifiedname>paimon::ReadContextBuilder::EnablePrefetch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enabled</declname>
+        </param>
+        <briefdescription>
+<para>Enable or disable prefetching of data batches from individual files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>When enabled, the reader will prefetch multiple batches in parallel to improve throughput by overlapping I/O with computation. This is particularly beneficial for high-latency storage systems.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>enabled</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether to enable prefetching (default: false) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="187" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a83ced5a0fc3709b3dce8cda137825340" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetPrefetchBatchCount</definition>
+        <argsstring>(uint32_t batch_count)</argsstring>
+        <name>SetPrefetchBatchCount</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetPrefetchBatchCount</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>batch_count</declname>
+        </param>
+        <briefdescription>
+<para>Set the total number of batches to prefetch across all files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This controls the memory usage and parallelism of the prefetching mechanism. Higher values can improve throughput but consume more memory.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>batch_count</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Total number of batches to prefetch (default: 600) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="196" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1ac13b0e6cbeae7bea3c5f66b50331e57b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetPrefetchMaxParallelNum</definition>
+        <argsstring>(uint32_t parallel_num)</argsstring>
+        <name>SetPrefetchMaxParallelNum</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetPrefetchMaxParallelNum</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>parallel_num</declname>
+        </param>
+        <briefdescription>
+<para>Set the maximum number of parallel prefetch operations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This limits the number of concurrent I/O operations to prevent overwhelming the storage system or consuming excessive system resources.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>parallel_num</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Maximum parallel prefetch operations (default: 3) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="205" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1aa1d3965c3097b420ebb61eb8871a1029" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::EnableMultiThreadRowToBatch</definition>
+        <argsstring>(bool enabled)</argsstring>
+        <name>EnableMultiThreadRowToBatch</name>
+        <qualifiedname>paimon::ReadContextBuilder::EnableMultiThreadRowToBatch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>enabled</declname>
+        </param>
+        <briefdescription>
+<para>Enable or disable multi-threaded row-to-batch conversion in merge-on-read scenarios. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>When enabled, multiple threads are used to convert row data to batch format during merge operations, which can improve performance for CPU-intensive merge operations.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>enabled</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether to enable multi-threaded conversion (default: false) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="215" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1aa1babef236e8c932d8cfe3ebfb0d07c3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetRowToBatchThreadNumber</definition>
+        <argsstring>(uint32_t thread_number)</argsstring>
+        <name>SetRowToBatchThreadNumber</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetRowToBatchThreadNumber</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>thread_number</declname>
+        </param>
+        <briefdescription>
+<para>Set the number of threads for row-to-batch conversion in merge-on-read scenarios. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This controls the parallelism of row-to-batch conversion during merge operations. Higher values can improve performance but may affect result ordering.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>thread_number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of conversion threads (default: 1) </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>If thread_number &gt; 1, Arrow batches from the reader may not be in primary key order. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="225" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a23ca35125be67f60a8b74ea69bdeaa72" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::ReadContextBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+<para>Set custom memory pool for memory management. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>memory_pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>If not set, the default system memory pool will be used. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="231" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a2a4a37fe0d1985877ea97b6f653a7ded" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::WithExecutor</definition>
+        <argsstring>(const std::shared_ptr&lt; Executor &gt; &amp;executor)</argsstring>
+        <name>WithExecutor</name>
+        <qualifiedname>paimon::ReadContextBuilder::WithExecutor</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <briefdescription>
+<para>Set custom executor for task execution. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The executor to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>If not set, the default system executor will be used. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="237" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a2207f97601909364651cf498d8a7ca7b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::SetTableSchema</definition>
+        <argsstring>(const std::string &amp;table_schema)</argsstring>
+        <name>SetTableSchema</name>
+        <qualifiedname>paimon::ReadContextBuilder::SetTableSchema</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_schema</declname>
+        </param>
+        <briefdescription>
+<para>Set the table schema as a string to avoid schema loading I/O operations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This optimization allows the reader to use a pre-loaded schema instead of reading it from the table metadata, which can improve performance especially in scenarios with many small read operations.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>table_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String representation of the table schema. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>The user must ensure that the schema string is valid and matches the table. </para>
+</simplesect>
+<simplesect kind="note"><para>If not set, the schema will be loaded from the table path. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="249" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1ac9370c5ed4080773bdfd707f27d8a758" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::WithBranch</definition>
+        <argsstring>(const std::string &amp;branch)</argsstring>
+        <name>WithBranch</name>
+        <qualifiedname>paimon::ReadContextBuilder::WithBranch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>branch</declname>
+        </param>
+        <briefdescription>
+<para>Set the specific branch to read from in a versioned table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Paimon supports branching for data versioning and time travel queries. This method allows reading from a specific branch instead of the main branch.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>branch</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the branch to read from. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>Default branch is &quot;main&quot; if not specified. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="259" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1a251413e5eb4909c235f157bce73cf5b4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref> &amp;</type>
+        <definition>ReadContextBuilder &amp; paimon::ReadContextBuilder::WithFileSystemSchemeToIdentifierMap</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;fs_scheme_to_identifier_map)</argsstring>
+        <name>WithFileSystemSchemeToIdentifierMap</name>
+        <qualifiedname>paimon::ReadContextBuilder::WithFileSystemSchemeToIdentifierMap</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>fs_scheme_to_identifier_map</declname>
+        </param>
+        <briefdescription>
+<para>Set the file system scheme to identifier mapping for custom file system configurations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This allows using different file system implementations for different URI schemes.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>fs_scheme_to_identifier_map</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map from URI scheme to file system identifier. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>If not set, use default file system (configured in <computeroutput><ref refid="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3" kindref="member">Options::FILE_SYSTEM</ref></computeroutput>). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="267" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_read_context_builder_1ab2d9a3bf13203069492ddd73961555c1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; ReadContext &gt; &gt; paimon::ReadContextBuilder::Finish</definition>
+        <argsstring>()</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::ReadContextBuilder::Finish</qualifiedname>
+        <briefdescription>
+<para>Build and return a <computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput> instance with input validation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the constructed <computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="272" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_read_context_builder" kindref="compound">ReadContextBuilder</ref></computeroutput> used to build a <computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput>, has input validation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" line="126" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h" bodystart="126" bodyend="278"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_read_context_builder_1a19a1a07f17d04342f0a3e31faedf4d04" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>AddOption</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1aa1d3965c3097b420ebb61eb8871a1029" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>EnableMultiThreadRowToBatch</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1af48c4f27fd8e263b51f13f9c2badf167" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>EnablePredicateFilter</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a72ae2dddf806f6ac9b715e282e0dce8b" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>EnablePrefetch</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1ab2d9a3bf13203069492ddd73961555c1" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1adf01c36be5deb1ef71dc097225dfb5d4" prot="private" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a4e36cce9a1da99af61afb2283804128f" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>ReadContextBuilder</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a19370226e886d90bfb4b2146e769cff6" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetOptions</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a58b67acbb681a859634c7d017bfc2551" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetPredicate</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a83ced5a0fc3709b3dce8cda137825340" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetPrefetchBatchCount</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1ac13b0e6cbeae7bea3c5f66b50331e57b" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetPrefetchMaxParallelNum</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1ab9d0cde6e98dccd3b10439bae2b6865b" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetReadSchema</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1aa1babef236e8c932d8cfe3ebfb0d07c3" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetRowToBatchThreadNumber</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a2207f97601909364651cf498d8a7ca7b" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>SetTableSchema</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1ac9370c5ed4080773bdfd707f27d8a758" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>WithBranch</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a2a4a37fe0d1985877ea97b6f653a7ded" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>WithExecutor</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a251413e5eb4909c235f157bce73cf5b4" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>WithFileSystemSchemeToIdentifierMap</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1a23ca35125be67f60a8b74ea69bdeaa72" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_read_context_builder_1ab2df9112180f6a2e2216ab9a2efc876e" prot="public" virt="non-virtual"><scope>paimon::ReadContextBuilder</scope><name>~ReadContextBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

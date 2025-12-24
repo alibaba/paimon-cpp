@@ -1,0 +1,349 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_memory_pool" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::MemoryPool</compoundname>
+    <includes refid="memory__pool_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h</includes>
+    <innerclass refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" prot="public">paimon::MemoryPool::AllocatorDelete</innerclass>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a4435d02cf128290cafb8d8c858e4525f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::MemoryPool::~MemoryPool</definition>
+        <argsstring>()=default</argsstring>
+        <name>~MemoryPool</name>
+        <qualifiedname>paimon::MemoryPool::~MemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="45" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a6df2efb77c2de09c69d3e1d2e254f91b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+        <definition>MemoryPool &amp; paimon::MemoryPool::operator=</definition>
+        <argsstring>(const MemoryPool &amp;other)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="46" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a6a017f751b12c3d6b7a545b2836e7314" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+        <definition>MemoryPool &amp; paimon::MemoryPool::operator=</definition>
+        <argsstring>(MemoryPool &amp;other)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="47" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a4cda413e13079d73915d8898920e942b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+        <definition>MemoryPool &amp; paimon::MemoryPool::operator=</definition>
+        <argsstring>(MemoryPool &amp;&amp;other)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="48" column="16"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a9468e0ed21976e12baec04a429b14093" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>virtual void * paimon::MemoryPool::Malloc</definition>
+        <argsstring>(uint64_t size, uint64_t alignment=0)=0</argsstring>
+        <name>Malloc</name>
+        <qualifiedname>paimon::MemoryPool::Malloc</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>alignment</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+<para>Allocate memory from the pool. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Allocates a block of memory with the specified size and alignment. The returned memory is uninitialized and must be properly constructed before use.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to allocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>alignment</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory alignment requirement (0 for default alignment). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Pointer to allocated memory, or nullptr on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="59" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a55a75ddd27b62957c8958f9504451a8d" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>virtual void * paimon::MemoryPool::Realloc</definition>
+        <argsstring>(void *p, size_t old_size, size_t new_size, uint64_t alignment=0)=0</argsstring>
+        <name>Realloc</name>
+        <qualifiedname>paimon::MemoryPool::Realloc</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>old_size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>new_size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>alignment</declname>
+          <defval>0</defval>
+        </param>
+        <briefdescription>
+<para>Reallocate memory to a new size. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Changes the size of a previously allocated memory block. The contents of the memory block are preserved up to the minimum of the old and new sizes.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>p</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the memory block to reallocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>old_size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Current size of the memory block. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>new_size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>New desired size of the memory block. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>alignment</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory alignment requirement (0 for default alignment). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Pointer to the reallocated memory block. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="71" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a448b0754687971d7c6e8c402a2ea259c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::MemoryPool::Free</definition>
+        <argsstring>(void *p, uint64_t size)=0</argsstring>
+        <name>Free</name>
+        <qualifiedname>paimon::MemoryPool::Free</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+          <declname>p</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Deallocate memory back to the pool. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Releases a previously allocated memory block back to the pool. The size must match the size used during allocation.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>p</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the memory block to deallocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the memory block (must match allocation size). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="80" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1ac3c1883dd08f8fe6cde59dc0c065ec3c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::MemoryPool::CurrentUsage</definition>
+        <argsstring>() const =0</argsstring>
+        <name>CurrentUsage</name>
+        <qualifiedname>paimon::MemoryPool::CurrentUsage</qualifiedname>
+        <briefdescription>
+<para>Get current memory usage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the amount of memory currently allocated from this pool. This includes all outstanding allocations that have not been freed.</para>
+<para><simplesect kind="return"><para>Current memory usage in bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="88" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a1cdf31515d6770fb9874efbf6945d47d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::MemoryPool::MaxMemoryUsage</definition>
+        <argsstring>() const =0</argsstring>
+        <name>MaxMemoryUsage</name>
+        <qualifiedname>paimon::MemoryPool::MaxMemoryUsage</qualifiedname>
+        <briefdescription>
+<para>Get peak memory usage. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Returns the maximum amount of memory that has been allocated from this pool at any point in time since its creation.</para>
+<para><simplesect kind="return"><para>Peak memory usage in bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="96" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1a3c53c16dd1878e1838699367bcffaed8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref>, <ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt; &gt;</type>
+        <definition>std::unique_ptr&lt; T, AllocatorDelete&lt; T &gt; &gt; paimon::MemoryPool::AllocateUnique</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>AllocateUnique</name>
+        <qualifiedname>paimon::MemoryPool::AllocateUnique</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Allocate an object on the pool and return a unique_ptr with custom deleter. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method provides a convenient way to allocate objects that are automatically managed by the memory pool. The returned unique_ptr will automatically deallocate the memory through the pool when it goes out of scope.</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of object to allocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Types of constructor arguments. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>args</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Constructor arguments to forward to T&apos;s constructor. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>unique_ptr managing the allocated object with pool-aware deleter. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="175" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="175" bodyend="195"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract base class for memory pool implementations that provides controlled memory management. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="43" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="43" bodyend="196"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_memory_pool_1a3c53c16dd1878e1838699367bcffaed8" prot="public" virt="non-virtual"><scope>paimon::MemoryPool</scope><name>AllocateUnique</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1ac3c1883dd08f8fe6cde59dc0c065ec3c" prot="public" virt="pure-virtual"><scope>paimon::MemoryPool</scope><name>CurrentUsage</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a448b0754687971d7c6e8c402a2ea259c" prot="public" virt="pure-virtual"><scope>paimon::MemoryPool</scope><name>Free</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a9468e0ed21976e12baec04a429b14093" prot="public" virt="pure-virtual"><scope>paimon::MemoryPool</scope><name>Malloc</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a1cdf31515d6770fb9874efbf6945d47d" prot="public" virt="pure-virtual"><scope>paimon::MemoryPool</scope><name>MaxMemoryUsage</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a6df2efb77c2de09c69d3e1d2e254f91b" prot="public" virt="non-virtual"><scope>paimon::MemoryPool</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a6a017f751b12c3d6b7a545b2836e7314" prot="public" virt="non-virtual"><scope>paimon::MemoryPool</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a4cda413e13079d73915d8898920e942b" prot="public" virt="non-virtual"><scope>paimon::MemoryPool</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a55a75ddd27b62957c8958f9504451a8d" prot="public" virt="pure-virtual"><scope>paimon::MemoryPool</scope><name>Realloc</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1a4435d02cf128290cafb8d8c858e4525f" prot="public" virt="virtual"><scope>paimon::MemoryPool</scope><name>~MemoryPool</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

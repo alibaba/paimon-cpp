@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_decimal_column_stats" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::DecimalColumnStats</compoundname>
+    <basecompoundref refid="classpaimon_1_1_column_stats" prot="public" virt="non-virtual">paimon::ColumnStats</basecompoundref>
+    <includes refid="column__stats_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_decimal_column_stats_1afdf3b10c1b05df969c4ef11ee9a650ce" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &gt;</type>
+        <definition>virtual std::optional&lt; Decimal &gt; paimon::DecimalColumnStats::Min</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Min</name>
+        <qualifiedname>paimon::DecimalColumnStats::Min</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="162" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_column_stats_1ac53e902347ed186b00cb9f3b2956a7a8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &gt;</type>
+        <definition>virtual std::optional&lt; Decimal &gt; paimon::DecimalColumnStats::Max</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Max</name>
+        <qualifiedname>paimon::DecimalColumnStats::Max</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="163" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_column_stats_1a1d10fc77c54354d902fc823bfd22703a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>virtual void paimon::DecimalColumnStats::Collect</definition>
+        <argsstring>(const std::optional&lt; Decimal &gt; &amp;value)=0</argsstring>
+        <name>Collect</name>
+        <qualifiedname>paimon::DecimalColumnStats::Collect</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &gt; &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="164" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_column_stats_1a450912e8f6c2985e5ba34cf7bc08bdcf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>virtual int32_t paimon::DecimalColumnStats::GetPrecision</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetPrecision</name>
+        <qualifiedname>paimon::DecimalColumnStats::GetPrecision</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="165" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_column_stats_1a1d521bda3b03e0d182a92771e9532f37" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>virtual int32_t paimon::DecimalColumnStats::GetScale</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetScale</name>
+        <qualifiedname>paimon::DecimalColumnStats::GetScale</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="166" column="21"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::ColumnStats</label>
+        <link refid="classpaimon_1_1_column_stats"/>
+      </node>
+      <node id="1">
+        <label>paimon::DecimalColumnStats</label>
+        <link refid="classpaimon_1_1_decimal_column_stats"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::ColumnStats</label>
+        <link refid="classpaimon_1_1_column_stats"/>
+      </node>
+      <node id="1">
+        <label>paimon::DecimalColumnStats</label>
+        <link refid="classpaimon_1_1_decimal_column_stats"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" line="160" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h" bodystart="160" bodyend="167"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_decimal_column_stats_1a1d10fc77c54354d902fc823bfd22703a" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>Collect</name></member>
+      <member refid="classpaimon_1_1_column_stats_1ae38a4e8f969ce35eced9b59a9c5d94d3" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateBigIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a063785e2558048ab9c23bc5fe9262566" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateBooleanColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a4152dd602e62575c6578459e76355fba" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateDateColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a2240e77f944db5d48e34b51d1c31064a" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateDecimalColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af62d4a010fc532b97804e48b85bbe423" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateDoubleColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a13016c01cc9898b897812d6524a9a399" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateFloatColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af3c3ef2f5417dd8756560fa28a734d71" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1af0a7d4a3f6b61cbd5ae2eb7841abb691" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateNestedColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a7a22ec6e1d88cf6bcb2ea4a7ec4682f7" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateSmallIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a77d5d343883a1039fc8e22e93469a886" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateStringColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1afeb803c5f4f211446805046d4d44286b" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateTimestampColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a758bff21d7ac005cc022595b6be15e33" prot="public" virt="non-virtual"><scope>paimon::DecimalColumnStats</scope><name>CreateTinyIntColumnStats</name></member>
+      <member refid="classpaimon_1_1_column_stats_1acb12cbb177a9d1f4279e1c79a40ce7ea" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>GetFieldType</name></member>
+      <member refid="classpaimon_1_1_decimal_column_stats_1a450912e8f6c2985e5ba34cf7bc08bdcf" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>GetPrecision</name></member>
+      <member refid="classpaimon_1_1_decimal_column_stats_1a1d521bda3b03e0d182a92771e9532f37" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>GetScale</name></member>
+      <member refid="classpaimon_1_1_decimal_column_stats_1ac53e902347ed186b00cb9f3b2956a7a8" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>Max</name></member>
+      <member refid="classpaimon_1_1_decimal_column_stats_1afdf3b10c1b05df969c4ef11ee9a650ce" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>Min</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a092dca4f4e462bba61551fb9b3581696" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>NullCount</name></member>
+      <member refid="classpaimon_1_1_column_stats_1aa0c16b023e7414b676c114992cfc28d1" prot="public" virt="pure-virtual"><scope>paimon::DecimalColumnStats</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_column_stats_1a4ba1b7e8d8525038f55e9c8daef5f87a" prot="public" virt="virtual"><scope>paimon::DecimalColumnStats</scope><name>~ColumnStats</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

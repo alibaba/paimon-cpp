@@ -1,0 +1,770 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>API Reference &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Catalog" href="api/catalog.html" />
+    <link rel="prev" title="Clean Example" href="examples/clean.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="api/catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="api/file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">API Reference</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">#</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/catalog.html">Catalog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/catalog.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/catalog.html#_CPPv4N6paimon7CatalogE"><code class="docutils literal notranslate"><span class="pre">paimon::Catalog</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/catalog.html#_CPPv4N6paimon10IdentifierE"><code class="docutils literal notranslate"><span class="pre">paimon::Identifier</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/write.html">Write</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/write.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/write.html#_CPPv4N6paimon14FileStoreWriteE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStoreWrite</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/write.html#_CPPv4N6paimon19WriteContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::WriteContextBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/write.html#_CPPv4N6paimon12WriteContextE"><code class="docutils literal notranslate"><span class="pre">paimon::WriteContext</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/write.html#_CPPv4N6paimon11RecordBatchE"><code class="docutils literal notranslate"><span class="pre">paimon::RecordBatch</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/write.html#_CPPv4N6paimon18RecordBatchBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::RecordBatchBuilder</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/commit.html">Commit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/commit.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/commit.html#_CPPv4N6paimon15FileStoreCommitE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStoreCommit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/commit.html#_CPPv4N6paimon20CommitContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::CommitContextBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/commit.html#_CPPv4N6paimon13CommitContextE"><code class="docutils literal notranslate"><span class="pre">paimon::CommitContext</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/scan.html">Scan</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/scan.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/scan.html#_CPPv4N6paimon9TableScanE"><code class="docutils literal notranslate"><span class="pre">paimon::TableScan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/scan.html#_CPPv4N6paimon18ScanContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::ScanContextBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/scan.html#_CPPv4N6paimon11ScanContextE"><code class="docutils literal notranslate"><span class="pre">paimon::ScanContext</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/scan.html#_CPPv4N6paimon4PlanE"><code class="docutils literal notranslate"><span class="pre">paimon::Plan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/scan.html#_CPPv4N6paimon9DataSplitE"><code class="docutils literal notranslate"><span class="pre">paimon::DataSplit</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/read.html">Read</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/read.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/read.html#_CPPv4N6paimon9TableReadE"><code class="docutils literal notranslate"><span class="pre">paimon::TableRead</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/read.html#_CPPv4N6paimon18ReadContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::ReadContextBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/read.html#_CPPv4N6paimon11ReadContextE"><code class="docutils literal notranslate"><span class="pre">paimon::ReadContext</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/predicate.html">Predicate</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/predicate.html#interface">Interface</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon9PredicateE"><code class="docutils literal notranslate"><span class="pre">paimon::Predicate</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon9PredicateD0Ev"><code class="docutils literal notranslate"><span class="pre">~Predicate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon9PredicateeqERK9Predicate"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon9Predicate11GetFunctionEv"><code class="docutils literal notranslate"><span class="pre">GetFunction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon9Predicate6NegateEv"><code class="docutils literal notranslate"><span class="pre">Negate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon9Predicate8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon13LeafPredicateE"><code class="docutils literal notranslate"><span class="pre">paimon::LeafPredicate</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate10FieldIndexEv"><code class="docutils literal notranslate"><span class="pre">FieldIndex()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate9FieldNameEv"><code class="docutils literal notranslate"><span class="pre">FieldName()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate12GetFieldTypeEv"><code class="docutils literal notranslate"><span class="pre">GetFieldType()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate8LiteralsEv"><code class="docutils literal notranslate"><span class="pre">Literals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate11GetFunctionEv"><code class="docutils literal notranslate"><span class="pre">GetFunction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate6NegateEv"><code class="docutils literal notranslate"><span class="pre">Negate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon13LeafPredicateeqERK9Predicate"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon17CompoundPredicateE"><code class="docutils literal notranslate"><span class="pre">paimon::CompoundPredicate</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate11GetFunctionEv"><code class="docutils literal notranslate"><span class="pre">GetFunction()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate8ChildrenEv"><code class="docutils literal notranslate"><span class="pre">Children()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate6NegateEv"><code class="docutils literal notranslate"><span class="pre">Negate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicateeqERK9Predicate"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon8FunctionE"><code class="docutils literal notranslate"><span class="pre">paimon::Function</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon8Function4TypeE"><code class="docutils literal notranslate"><span class="pre">Type</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon8FunctionD0Ev"><code class="docutils literal notranslate"><span class="pre">~Function()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon8Function7GetTypeEv"><code class="docutils literal notranslate"><span class="pre">GetType()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon8Function8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4I0EN6paimon15FunctionVisitorE"><code class="docutils literal notranslate"><span class="pre">paimon::FunctionVisitor</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitorD0Ev"><code class="docutils literal notranslate"><span class="pre">~FunctionVisitor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor14VisitIsNotNullEv"><code class="docutils literal notranslate"><span class="pre">VisitIsNotNull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor11VisitIsNullEv"><code class="docutils literal notranslate"><span class="pre">VisitIsNull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor10VisitEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitNotEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitNotEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitLessThanERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitLessThan()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor16VisitLessOrEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitLessOrEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor16VisitGreaterThanERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitGreaterThan()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor19VisitGreaterOrEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitGreaterOrEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor7VisitInERKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">VisitIn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor10VisitNotInERKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">VisitNotIn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor15VisitStartsWithERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitStartsWith()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitEndsWithERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitEndsWith()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitContainsERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitContains()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7LiteralE"><code class="docutils literal notranslate"><span class="pre">paimon::Literal</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldType"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4I0EN6paimon7Literal7LiteralERK1T"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldTypePKc6size_t"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldTypePKc6size_tb"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldType7int32_t"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralERK7Literal"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7LiteralD0Ev"><code class="docutils literal notranslate"><span class="pre">~Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralERR7Literal"><code class="docutils literal notranslate"><span class="pre">Literal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7LiteralaSERR7Literal"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon7LiteralaSERK7Literal"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7LiteraleqERK7Literal"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7LiteralneERK7Literal"><code class="docutils literal notranslate"><span class="pre">operator!=()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7Literal6IsNullEv"><code class="docutils literal notranslate"><span class="pre">IsNull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4I0ENK6paimon7Literal8GetValueE1Tv"><code class="docutils literal notranslate"><span class="pre">GetValue()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7Literal7GetTypeEv"><code class="docutils literal notranslate"><span class="pre">GetType()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7Literal8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7Literal8HashCodeEv"><code class="docutils literal notranslate"><span class="pre">HashCode()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4NK6paimon7Literal9CompareToERK7Literal"><code class="docutils literal notranslate"><span class="pre">CompareTo()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::PredicateBuilder</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder16PredicateBuilderEv"><code class="docutils literal notranslate"><span class="pre">PredicateBuilder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~PredicateBuilder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder5EqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">Equal()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder8NotEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">NotEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder8LessThanE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">LessThan()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder11LessOrEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">LessOrEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder11GreaterThanE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">GreaterThan()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder14GreaterOrEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal"><code class="docutils literal notranslate"><span class="pre">GreaterOrEqual()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder6IsNullE7int32_tRKNSt6stringERK9FieldType"><code class="docutils literal notranslate"><span class="pre">IsNull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder9IsNotNullE7int32_tRKNSt6stringERK9FieldType"><code class="docutils literal notranslate"><span class="pre">IsNotNull()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder2InE7int32_tRKNSt6stringERK9FieldTypeRKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">In()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder5NotInE7int32_tRKNSt6stringERK9FieldTypeRKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">NotIn()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder7BetweenE7int32_tRKNSt6stringERK9FieldTypeRK7LiteralRK7Literal"><code class="docutils literal notranslate"><span class="pre">Between()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder3AndERKNSt6vectorINSt10shared_ptrI9PredicateEEEE"><code class="docutils literal notranslate"><span class="pre">And()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder2OrERKNSt6vectorINSt10shared_ptrI9PredicateEEEE"><code class="docutils literal notranslate"><span class="pre">Or()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/file_format.html">File Format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/file_format.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon10FileFormatE"><code class="docutils literal notranslate"><span class="pre">paimon::FileFormat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon12FormatWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::FormatWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon13WriterBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::WriterBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon11BatchReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::BatchReader</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon15FileBatchReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::FileBatchReader</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon13ReaderBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::ReaderBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon17FileFormatFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileFormatFactory</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractorE"><code class="docutils literal notranslate"><span class="pre">paimon::FormatStatsExtractor</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/file_system.html">File System</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/file_system.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon10FileSystemE"><code class="docutils literal notranslate"><span class="pre">paimon::FileSystem</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon17FileSystemFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileSystemFactory</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon11InputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::InputStream</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon12OutputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::OutputStream</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon10SeekOriginE"><code class="docutils literal notranslate"><span class="pre">SeekOrigin</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon10FileStatusE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStatus</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_system.html#_CPPv4N6paimon15BasicFileStatusE"><code class="docutils literal notranslate"><span class="pre">paimon::BasicFileStatus</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/io.html">IO</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/io.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/io.html#_CPPv4N6paimon9ByteOrderE"><code class="docutils literal notranslate"><span class="pre">ByteOrder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/io.html#_CPPv4N6paimon15SystemByteOrderEv"><code class="docutils literal notranslate"><span class="pre">SystemByteOrder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/io.html#_CPPv4N6paimon19BufferedInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::BufferedInputStream</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/io.html#_CPPv4N6paimon20ByteArrayInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::ByteArrayInputStream</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/io.html#_CPPv4N6paimon15DataInputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::DataInputStream</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/data_types.html">Data Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/data_types.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/data_types.html#_CPPv4N6paimon4BlobE"><code class="docutils literal notranslate"><span class="pre">paimon::Blob</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/data_types.html#_CPPv4N6paimon7DecimalE"><code class="docutils literal notranslate"><span class="pre">paimon::Decimal</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/data_types.html#_CPPv4N6paimon9TimestampE"><code class="docutils literal notranslate"><span class="pre">paimon::Timestamp</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/file_index.html">File Index</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/file_index.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon11FileIndexerE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon18FileIndexerFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexerFactory</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon15FileIndexWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon15FileIndexReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexReader</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon15FileIndexFormatE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexFormat</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon15FileIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::BitmapIndexResult</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/global_index.html">GLobal Index</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/global_index.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexFileReader</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexFileWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon17GlobalIndexReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexReader</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMetaE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexIOMeta</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScanE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexScan</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon17GlobalIndexWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexWriter</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon20GlobalIndexerFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexerFactory</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon13GlobalIndexerE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexer</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/global_index.html#_CPPv4N6paimon26RowRangeGlobalIndexScannerE"><code class="docutils literal notranslate"><span class="pre">paimon::RowRangeGlobalIndexScanner</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/clean.html">Orphan Files Clean</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/clean.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/clean.html#_CPPv4N6paimon18OrphanFilesCleanerE"><code class="docutils literal notranslate"><span class="pre">paimon::OrphanFilesCleaner</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/clean.html#_CPPv4N6paimon19CleanContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::CleanContextBuilder</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/clean.html#_CPPv4N6paimon12CleanContextE"><code class="docutils literal notranslate"><span class="pre">paimon::CleanContext</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/defs.html">Options</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/defs.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/defs.html#_CPPv4N6paimon9FieldTypeE"><code class="docutils literal notranslate"><span class="pre">FieldType</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/defs.html#_CPPv4N6paimon7OptionsE"><code class="docutils literal notranslate"><span class="pre">paimon::Options</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/executor.html">Executor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/executor.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/executor.html#_CPPv4N6paimon29DEFAULT_EXECUTOR_THREAD_COUNTE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_EXECUTOR_THREAD_COUNT</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/executor.html#_CPPv4N6paimon24GetGlobalDefaultExecutorEv"><code class="docutils literal notranslate"><span class="pre">GetGlobalDefaultExecutor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/executor.html#_CPPv4N6paimon21CreateDefaultExecutorEv"><code class="docutils literal notranslate"><span class="pre">CreateDefaultExecutor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/executor.html#_CPPv4N6paimon21CreateDefaultExecutorE8uint32_t"><code class="docutils literal notranslate"><span class="pre">CreateDefaultExecutor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/executor.html#_CPPv4N6paimon8ExecutorE"><code class="docutils literal notranslate"><span class="pre">paimon::Executor</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/memory.html">Memory</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/memory.html#interface">Interface</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/memory.html#_CPPv4N6paimon13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/memory.html#_CPPv4N6paimon14GetDefaultPoolEv"><code class="docutils literal notranslate"><span class="pre">GetDefaultPool()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/memory.html#_CPPv4N6paimon10MemoryPoolE"><code class="docutils literal notranslate"><span class="pre">paimon::MemoryPool</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/memory.html#_CPPv4N6paimon5BytesE"><code class="docutils literal notranslate"><span class="pre">paimon::Bytes</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="examples/clean.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Clean Example</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="api/catalog.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Catalog</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

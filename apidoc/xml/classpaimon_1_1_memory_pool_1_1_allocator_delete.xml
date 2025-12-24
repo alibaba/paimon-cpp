@@ -1,0 +1,257 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_memory_pool_1_1_allocator_delete" kind="class" language="C++" prot="public">
+    <compoundname>paimon::MemoryPool::AllocatorDelete</compoundname>
+    <includes refid="memory__pool_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h</includes>
+    <templateparamlist>
+      <param>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a49b18640a64e29f923ecb52c498063f0" prot="private" static="no" mutable="no">
+        <type>std::reference_wrapper&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::reference_wrapper&lt;MemoryPool&gt; paimon::MemoryPool::AllocatorDelete&lt; T &gt;::pool</definition>
+        <argsstring></argsstring>
+        <name>pool</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::pool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="108" column="32" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a6a9d43c7a855b13f52fcb4c0954e6285" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::MemoryPool::AllocatorDelete&lt; T &gt;::size</definition>
+        <argsstring></argsstring>
+        <name>size</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::size</qualifiedname>
+        <initializer>{0}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="109" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="109" bodyend="109"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a23d976384aa3a484b4f51ae1af3dab60" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemoryPool::AllocatorDelete&lt; T &gt;::AllocatorDelete</definition>
+        <argsstring>()</argsstring>
+        <name>AllocatorDelete</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::AllocatorDelete</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="112" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="112" bodyend="112"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1acee78a003cdec0b47616271666cc9660" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemoryPool::AllocatorDelete&lt; T &gt;::AllocatorDelete</definition>
+        <argsstring>(MemoryPool &amp;_pool, size_t _size)</argsstring>
+        <name>AllocatorDelete</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::AllocatorDelete</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+          <declname>_pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>_size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="113" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="113" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a09b9001fcf608a9a48d804e5ba075667" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::MemoryPool::AllocatorDelete&lt; T &gt;::AllocatorDelete</definition>
+        <argsstring>(AllocatorDelete const &amp;)=default</argsstring>
+        <name>AllocatorDelete</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::AllocatorDelete</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="114" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae976d304e48920bbffaa78f0c052f266" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">U</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> &amp;</type>
+        <definition>AllocatorDelete &amp; paimon::MemoryPool::AllocatorDelete&lt; T &gt;::operator=</definition>
+        <argsstring>(const AllocatorDelete&lt; U &gt; &amp;other)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">U</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="117" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="117" bodyend="121"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae83c7130c70d49cfca58f866c651412c" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> &amp;</type>
+        <definition>AllocatorDelete &amp; paimon::MemoryPool::AllocatorDelete&lt; T &gt;::operator=</definition>
+        <argsstring>(AllocatorDelete const &amp;other)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="123" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="123" bodyend="127"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1abdb459c2c8680f9ff6e9678d4bd154c8" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> &amp;</type>
+        <definition>AllocatorDelete &amp; paimon::MemoryPool::AllocatorDelete&lt; T &gt;::operator=</definition>
+        <argsstring>(AllocatorDelete &amp;&amp;other)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> &amp;&amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="129" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="129" bodyend="133"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aef1eb10feccbd4d48652aee499783c69" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">U</ref></type>
+          </param>
+        </templateparamlist>
+        <type></type>
+        <definition>paimon::MemoryPool::AllocatorDelete&lt; T &gt;::AllocatorDelete</definition>
+        <argsstring>(const AllocatorDelete&lt; U &gt; &amp;other)</argsstring>
+        <name>AllocatorDelete</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::AllocatorDelete</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">U</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="136" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="136" bodyend="137"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aa5c3b320a9a95302b2e4155567ac3fbc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &amp;</type>
+        <definition>MemoryPool &amp; paimon::MemoryPool::AllocatorDelete&lt; T &gt;::GetPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPool</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::GetPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="139" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="139" bodyend="141"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae0e518d7a0d93bb4c2bfdcec5e14891e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::MemoryPool::AllocatorDelete&lt; T &gt;::GetSize</definition>
+        <argsstring>() const</argsstring>
+        <name>GetSize</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::GetSize</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="143" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="143" bodyend="145"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a27416e5c6171e136ca88c39226892a09" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::MemoryPool::AllocatorDelete&lt; T &gt;::operator()</definition>
+        <argsstring>(T *p) const</argsstring>
+        <name>operator()</name>
+        <qualifiedname>paimon::MemoryPool::AllocatorDelete::operator()</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> *</type>
+          <declname>p</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="147" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="147" bodyend="161"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Custom deleter for use with std::unique_ptr that integrates with memory pools. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">AllocatorDelete</ref> provides automatic memory deallocation through the memory pool when used with std::unique_ptr. It stores both the pool reference and the allocation size to ensure proper cleanup.</para>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of object being managed. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="106" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="106" bodyend="162"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a23d976384aa3a484b4f51ae1af3dab60" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>AllocatorDelete</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1acee78a003cdec0b47616271666cc9660" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>AllocatorDelete</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a09b9001fcf608a9a48d804e5ba075667" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>AllocatorDelete</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aef1eb10feccbd4d48652aee499783c69" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>AllocatorDelete</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aa5c3b320a9a95302b2e4155567ac3fbc" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>GetPool</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae0e518d7a0d93bb4c2bfdcec5e14891e" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>GetSize</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a27416e5c6171e136ca88c39226892a09" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>operator()</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae976d304e48920bbffaa78f0c052f266" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae83c7130c70d49cfca58f866c651412c" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1abdb459c2c8680f9ff6e9678d4bd154c8" prot="public" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a49b18640a64e29f923ecb52c498063f0" prot="private" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>pool</name></member>
+      <member refid="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a6a9d43c7a855b13f52fcb4c0954e6285" prot="private" virt="non-virtual"><scope>paimon::MemoryPool::AllocatorDelete</scope><name>size</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

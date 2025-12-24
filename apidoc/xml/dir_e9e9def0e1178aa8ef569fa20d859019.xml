@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_e9e9def0e1178aa8ef569fa20d859019" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory</compoundname>
+    <innerfile refid="bytes_8h">bytes.h</innerfile>
+    <innerfile refid="memory__pool_8h">memory_pool.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,671 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_decimal" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Decimal</compoundname>
+    <includes refid="decimal_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" prot="public" static="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__int128_t</ref></type>
+        <definition>using paimon::Decimal::int128_t =  __int128_t</definition>
+        <argsstring></argsstring>
+        <name>int128_t</name>
+        <qualifiedname>paimon::Decimal::int128_t</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="32" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="32" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951" prot="public" static="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__uint128_t</ref></type>
+        <definition>using paimon::Decimal::uint128_t =  __uint128_t</definition>
+        <argsstring></argsstring>
+        <name>uint128_t</name>
+        <qualifiedname>paimon::Decimal::uint128_t</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="33" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="33" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a5bbcbbaffc001d48993cd8f2933f6ed5" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::Decimal::DEFAULT_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>DEFAULT_PRECISION</name>
+        <qualifiedname>paimon::Decimal::DEFAULT_PRECISION</qualifiedname>
+        <initializer>= 10</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="120" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="120" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1adb5d987155d24b0bb38271df051c277c" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::Decimal::DEFAULT_SCALE</definition>
+        <argsstring></argsstring>
+        <name>DEFAULT_SCALE</name>
+        <qualifiedname>paimon::Decimal::DEFAULT_SCALE</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="121" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a955c0f16a950e6e4e11e0987eec58aa0" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::Decimal::MIN_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MIN_PRECISION</name>
+        <qualifiedname>paimon::Decimal::MIN_PRECISION</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="122" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a97ad51695862af8d1686a161b7760a42" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::Decimal::MAX_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MAX_PRECISION</name>
+        <qualifiedname>paimon::Decimal::MAX_PRECISION</qualifiedname>
+        <initializer>= 38</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="123" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1aa058030128b370cf64830f2139223e4a" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::Decimal::MAX_COMPACT_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MAX_COMPACT_PRECISION</name>
+        <qualifiedname>paimon::Decimal::MAX_COMPACT_PRECISION</qualifiedname>
+        <initializer>= 18</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="126" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1af71e5fcb121aab2f3e71f46a89c6c926" prot="private" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>const int128_t paimon::Decimal::INT128_MAXIMUM_VALUE</definition>
+        <argsstring></argsstring>
+        <name>INT128_MAXIMUM_VALUE</name>
+        <qualifiedname>paimon::Decimal::INT128_MAXIMUM_VALUE</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="127" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="127" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1acf156e7de562a706acf72ba33fcc00b0" prot="private" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>const int128_t paimon::Decimal::INT128_MINIMUM_VALUE</definition>
+        <argsstring></argsstring>
+        <name>INT128_MINIMUM_VALUE</name>
+        <qualifiedname>paimon::Decimal::INT128_MINIMUM_VALUE</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="128" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="128" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a6aeaa2355f92d5b5299a1ca51668e82d" prot="private" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>const int64_t paimon::Decimal::POWERS_OF_TEN[MAX_COMPACT_PRECISION+1]</definition>
+        <argsstring>[MAX_COMPACT_PRECISION+1]</argsstring>
+        <name>POWERS_OF_TEN</name>
+        <qualifiedname>paimon::Decimal::POWERS_OF_TEN</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="129" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="129" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1ab2c094ef8c8d53301a29b6676d5e1831" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Decimal::precision_</definition>
+        <argsstring></argsstring>
+        <name>precision_</name>
+        <qualifiedname>paimon::Decimal::precision_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="138" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="138" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a1c437a386ed3b026074f87e846e25a77" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Decimal::scale_</definition>
+        <argsstring></argsstring>
+        <name>scale_</name>
+        <qualifiedname>paimon::Decimal::scale_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="139" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="139" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_decimal_1a2d3fc73407f9912306b37f91292ac3b2" prot="private" static="no" mutable="no">
+        <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>int128_t paimon::Decimal::value_</definition>
+        <argsstring></argsstring>
+        <name>value_</name>
+        <qualifiedname>paimon::Decimal::value_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="140" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="140" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a9d27a7728aefc0535ba415de4756075e" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Decimal::Decimal</definition>
+        <argsstring>(int32_t precision, int32_t scale, int128_t value)</argsstring>
+        <name>Decimal</name>
+        <qualifiedname>paimon::Decimal::Decimal</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>precision</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>scale</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="35" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="35" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a2b2bfe2c63dddcaeb9f69a89e21dacd4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Decimal::Precision</definition>
+        <argsstring>() const</argsstring>
+        <name>Precision</name>
+        <qualifiedname>paimon::Decimal::Precision</qualifiedname>
+        <briefdescription>
+<para>Get the <bold>precision</bold> of this decimal. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The precision is the number of digits in the unscaled value. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="41" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="41" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a19d162ec9b8149a74fa767768c6665a1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Decimal::Scale</definition>
+        <argsstring>() const</argsstring>
+        <name>Scale</name>
+        <qualifiedname>paimon::Decimal::Scale</qualifiedname>
+        <briefdescription>
+<para>Get the <bold>scale</bold> of this decimal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="46" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="46" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a3937d6342318c961dd175459c3bd5588" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>int128_t paimon::Decimal::Value</definition>
+        <argsstring>() const</argsstring>
+        <name>Value</name>
+        <qualifiedname>paimon::Decimal::Value</qualifiedname>
+        <briefdescription>
+<para>Get the underlying int128_t value of this decimal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="51" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="51" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1ab03a2e26a2a3bd33a76e17da8dd26d1a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>uint64_t paimon::Decimal::LowBits</definition>
+        <argsstring>() const</argsstring>
+        <name>LowBits</name>
+        <qualifiedname>paimon::Decimal::LowBits</qualifiedname>
+        <briefdescription>
+<para>Get the low 64 bits of the decimal value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="56" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="56" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1ace9a5fffa5fc3c389b1cc6654d3cfd69" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>uint64_t paimon::Decimal::HighBits</definition>
+        <argsstring>() const</argsstring>
+        <name>HighBits</name>
+        <qualifiedname>paimon::Decimal::HighBits</qualifiedname>
+        <briefdescription>
+<para>Get the high 64 bits of the decimal value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="61" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="61" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a735bf689fca27c1478de25e18be3dbae" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Decimal::IsCompact</definition>
+        <argsstring>() const</argsstring>
+        <name>IsCompact</name>
+        <qualifiedname>paimon::Decimal::IsCompact</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Whether the decimal value is small enough to be stored in a long. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="66" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="66" bodyend="68"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a0ca00468d2e8b6ec8f5024a13ded41c2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Decimal::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Decimal::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="70" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a1c0ba4f7d0c8b5f24bad58673bebe23a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Decimal::ToUnscaledLong</definition>
+        <argsstring>() const</argsstring>
+        <name>ToUnscaledLong</name>
+        <qualifiedname>paimon::Decimal::ToUnscaledLong</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A long describing the <bold>unscaled value</bold> of this decimal. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="84" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="84" bodyend="89"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a0c98e2c50ea8ac2268e2722590c3e7f1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::vector&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> &gt;</type>
+        <definition>std::vector&lt; char &gt; paimon::Decimal::ToUnscaledBytes</definition>
+        <argsstring>() const</argsstring>
+        <name>ToUnscaledBytes</name>
+        <qualifiedname>paimon::Decimal::ToUnscaledBytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A byte array describing the <bold>unscaled value</bold> of this decimal. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="92" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1ad77452ca074e755023dd53d1c6a6d11c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Decimal::operator==</definition>
+        <argsstring>(const Decimal &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Decimal::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="98" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="98" bodyend="103"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a901de6e33df1939f4fac709a1814f377" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Decimal::operator&lt;</definition>
+        <argsstring>(const Decimal &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>paimon::Decimal::operator&lt;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="105" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="105" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1aff946da3759d4ef0963fd229ea438475" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Decimal::operator&gt;</definition>
+        <argsstring>(const Decimal &amp;other) const</argsstring>
+        <name>operator&gt;</name>
+        <qualifiedname>paimon::Decimal::operator&gt;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="112" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="112" bodyend="117"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a5988d86dbb09ea25098023d27cccdb49" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Decimal::CompareTo</definition>
+        <argsstring>(const Decimal &amp;other) const</argsstring>
+        <name>CompareTo</name>
+        <qualifiedname>paimon::Decimal::CompareTo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="119" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1ad2bbd6260a8010669e1deb89de608646" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>static bool paimon::Decimal::IsCompact</definition>
+        <argsstring>(int32_t precision)</argsstring>
+        <name>IsCompact</name>
+        <qualifiedname>paimon::Decimal::IsCompact</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Whether the decimal value is small enough to be stored in a long. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="73" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="73" bodyend="75"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a77cca42c6f56f9917cf2e955c70cc69e" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref></type>
+        <definition>static Decimal paimon::Decimal::FromUnscaledLong</definition>
+        <argsstring>(int64_t unscaled_long, int32_t precision, int32_t scale)</argsstring>
+        <name>FromUnscaledLong</name>
+        <qualifiedname>paimon::Decimal::FromUnscaledLong</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>unscaled_long</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>precision</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>scale</declname>
+        </param>
+        <briefdescription>
+<para>Creates an instance of <computeroutput><ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref></computeroutput> from an unscaled long value and the given precision and scale. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="79" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="79" bodyend="81"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1afc069958cba6d02fed8663f6f0df7ef6" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref></type>
+        <definition>static Decimal paimon::Decimal::FromUnscaledBytes</definition>
+        <argsstring>(int32_t precision, int32_t scale, Bytes *bytes)</argsstring>
+        <name>FromUnscaledBytes</name>
+        <qualifiedname>paimon::Decimal::FromUnscaledBytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>precision</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>scale</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> *</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Creates an instance of <computeroutput><ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref></computeroutput> from an unscaled byte array value and the given precision and scale. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="96" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a6c95dd434390aa8c43af85f9f0f2ad41" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>static int32_t paimon::Decimal::clz_u128</definition>
+        <argsstring>(uint128_t u)</argsstring>
+        <name>clz_u128</name>
+        <qualifiedname>paimon::Decimal::clz_u128</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951" kindref="member">uint128_t</ref></type>
+          <declname>u</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="131" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1aa49017a099157242cd4312575693596e" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>static int32_t paimon::Decimal::count_leading_zero_bytes</definition>
+        <argsstring>(uint128_t u)</argsstring>
+        <name>count_leading_zero_bytes</name>
+        <qualifiedname>paimon::Decimal::count_leading_zero_bytes</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951" kindref="member">uint128_t</ref></type>
+          <declname>u</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="132" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a184d6d541fb15ca0d33259c30a4f39ff" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>static int32_t paimon::Decimal::count_leading_all_ones_bytes</definition>
+        <argsstring>(uint128_t u)</argsstring>
+        <name>count_leading_all_ones_bytes</name>
+        <qualifiedname>paimon::Decimal::count_leading_all_ones_bytes</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951" kindref="member">uint128_t</ref></type>
+          <declname>u</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="133" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1a32152e2550bb7c6a18a3332239fa8694" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>static int128_t paimon::Decimal::DownScaleInt128</definition>
+        <argsstring>(int128_t value, int32_t scale)</argsstring>
+        <name>DownScaleInt128</name>
+        <qualifiedname>paimon::Decimal::DownScaleInt128</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>scale</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="134" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_decimal_1aea21319828fbaa86630bcd5889eb4553" prot="private" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+        <definition>static int128_t paimon::Decimal::ScaleInt128</definition>
+        <argsstring>(int128_t value, int32_t scale, bool *overflow)</argsstring>
+        <name>ScaleInt128</name>
+        <qualifiedname>paimon::Decimal::ScaleInt128</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" kindref="member">int128_t</ref></type>
+          <declname>value</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>scale</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> *</type>
+          <declname>overflow</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="135" column="21"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A data structure representing data of <ref refid="classpaimon_1_1_decimal" kindref="compound">Decimal</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>It might be stored in a compact representation (as a long value) if values are small enough. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/decimal.h" bodystart="30" bodyend="141"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_decimal_1a6c95dd434390aa8c43af85f9f0f2ad41" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>clz_u128</name></member>
+      <member refid="classpaimon_1_1_decimal_1a5988d86dbb09ea25098023d27cccdb49" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>CompareTo</name></member>
+      <member refid="classpaimon_1_1_decimal_1a184d6d541fb15ca0d33259c30a4f39ff" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>count_leading_all_ones_bytes</name></member>
+      <member refid="classpaimon_1_1_decimal_1aa49017a099157242cd4312575693596e" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>count_leading_zero_bytes</name></member>
+      <member refid="classpaimon_1_1_decimal_1a9d27a7728aefc0535ba415de4756075e" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>Decimal</name></member>
+      <member refid="classpaimon_1_1_decimal_1a5bbcbbaffc001d48993cd8f2933f6ed5" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>DEFAULT_PRECISION</name></member>
+      <member refid="classpaimon_1_1_decimal_1adb5d987155d24b0bb38271df051c277c" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>DEFAULT_SCALE</name></member>
+      <member refid="classpaimon_1_1_decimal_1a32152e2550bb7c6a18a3332239fa8694" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>DownScaleInt128</name></member>
+      <member refid="classpaimon_1_1_decimal_1afc069958cba6d02fed8663f6f0df7ef6" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>FromUnscaledBytes</name></member>
+      <member refid="classpaimon_1_1_decimal_1a77cca42c6f56f9917cf2e955c70cc69e" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>FromUnscaledLong</name></member>
+      <member refid="classpaimon_1_1_decimal_1ace9a5fffa5fc3c389b1cc6654d3cfd69" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>HighBits</name></member>
+      <member refid="classpaimon_1_1_decimal_1af71e5fcb121aab2f3e71f46a89c6c926" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>INT128_MAXIMUM_VALUE</name></member>
+      <member refid="classpaimon_1_1_decimal_1acf156e7de562a706acf72ba33fcc00b0" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>INT128_MINIMUM_VALUE</name></member>
+      <member refid="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>int128_t</name></member>
+      <member refid="classpaimon_1_1_decimal_1a735bf689fca27c1478de25e18be3dbae" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>IsCompact</name></member>
+      <member refid="classpaimon_1_1_decimal_1ad2bbd6260a8010669e1deb89de608646" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>IsCompact</name></member>
+      <member refid="classpaimon_1_1_decimal_1ab03a2e26a2a3bd33a76e17da8dd26d1a" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>LowBits</name></member>
+      <member refid="classpaimon_1_1_decimal_1aa058030128b370cf64830f2139223e4a" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>MAX_COMPACT_PRECISION</name></member>
+      <member refid="classpaimon_1_1_decimal_1a97ad51695862af8d1686a161b7760a42" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>MAX_PRECISION</name></member>
+      <member refid="classpaimon_1_1_decimal_1a955c0f16a950e6e4e11e0987eec58aa0" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>MIN_PRECISION</name></member>
+      <member refid="classpaimon_1_1_decimal_1a901de6e33df1939f4fac709a1814f377" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>operator&lt;</name></member>
+      <member refid="classpaimon_1_1_decimal_1ad77452ca074e755023dd53d1c6a6d11c" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_decimal_1aff946da3759d4ef0963fd229ea438475" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>operator&gt;</name></member>
+      <member refid="classpaimon_1_1_decimal_1a6aeaa2355f92d5b5299a1ca51668e82d" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>POWERS_OF_TEN</name></member>
+      <member refid="classpaimon_1_1_decimal_1a2b2bfe2c63dddcaeb9f69a89e21dacd4" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>Precision</name></member>
+      <member refid="classpaimon_1_1_decimal_1ab2c094ef8c8d53301a29b6676d5e1831" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>precision_</name></member>
+      <member refid="classpaimon_1_1_decimal_1a19d162ec9b8149a74fa767768c6665a1" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>Scale</name></member>
+      <member refid="classpaimon_1_1_decimal_1a1c437a386ed3b026074f87e846e25a77" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>scale_</name></member>
+      <member refid="classpaimon_1_1_decimal_1aea21319828fbaa86630bcd5889eb4553" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>ScaleInt128</name></member>
+      <member refid="classpaimon_1_1_decimal_1a0ca00468d2e8b6ec8f5024a13ded41c2" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_decimal_1a0c98e2c50ea8ac2268e2722590c3e7f1" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>ToUnscaledBytes</name></member>
+      <member refid="classpaimon_1_1_decimal_1a1c0ba4f7d0c8b5f24bad58673bebe23a" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>ToUnscaledLong</name></member>
+      <member refid="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>uint128_t</name></member>
+      <member refid="classpaimon_1_1_decimal_1a3937d6342318c961dd175459c3bd5588" prot="public" virt="non-virtual"><scope>paimon::Decimal</scope><name>Value</name></member>
+      <member refid="classpaimon_1_1_decimal_1a2d3fc73407f9912306b37f91292ac3b2" prot="private" virt="non-virtual"><scope>paimon::Decimal</scope><name>value_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

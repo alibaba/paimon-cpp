@@ -1,0 +1,290 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_commit_context" kind="class" language="C++" prot="public">
+    <compoundname>paimon::CommitContext</compoundname>
+    <includes refid="commit__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1ac43316fa85944c7b9d4e32bdf1d84068" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::CommitContext::root_path_</definition>
+        <argsstring></argsstring>
+        <name>root_path_</name>
+        <qualifiedname>paimon::CommitContext::root_path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="74" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1a8a4d37dc51d01f155960c92376767229" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::CommitContext::commit_user_</definition>
+        <argsstring></argsstring>
+        <name>commit_user_</name>
+        <qualifiedname>paimon::CommitContext::commit_user_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="75" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="75" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1a1476d595d14eeea7589e5d3120c736aa" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::CommitContext::ignore_empty_commit_</definition>
+        <argsstring></argsstring>
+        <name>ignore_empty_commit_</name>
+        <qualifiedname>paimon::CommitContext::ignore_empty_commit_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="76" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="76" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1a668659aa2a7a8c03bf36c63916b06885" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::CommitContext::use_rest_catalog_commit_</definition>
+        <argsstring></argsstring>
+        <name>use_rest_catalog_commit_</name>
+        <qualifiedname>paimon::CommitContext::use_rest_catalog_commit_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="77" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1afdb3532cf005939530ec2217b1ddb50b" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::CommitContext::memory_pool_</definition>
+        <argsstring></argsstring>
+        <name>memory_pool_</name>
+        <qualifiedname>paimon::CommitContext::memory_pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="78" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1af81a5e94072dd38cf7099f8bebeacd6d" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Executor&gt; paimon::CommitContext::executor_</definition>
+        <argsstring></argsstring>
+        <name>executor_</name>
+        <qualifiedname>paimon::CommitContext::executor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="79" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_1a4f01a5372cd883565764dfce55b823b6" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::CommitContext::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>paimon::CommitContext::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="80" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="80" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1add751bfaec44b19ac9b03093b87b74a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CommitContext::CommitContext</definition>
+        <argsstring>(const std::string &amp;root_path, const std::string &amp;commit_user, bool ignore_empty_commit, bool use_rest_catalog_commit, const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>CommitContext</name>
+        <qualifiedname>paimon::CommitContext::CommitContext</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>commit_user</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_empty_commit</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>use_rest_catalog_commit</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="38" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1ac78a125531f977d739d513608365ac74" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CommitContext::~CommitContext</definition>
+        <argsstring>()</argsstring>
+        <name>~CommitContext</name>
+        <qualifiedname>paimon::CommitContext::~CommitContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="43" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1abc60e14796df885d1fc77094bae75a24" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::CommitContext::GetRootPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRootPath</name>
+        <qualifiedname>paimon::CommitContext::GetRootPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="45" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="45" bodyend="47"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1a2f3d101509cf979986d9f27e1c2d970a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::CommitContext::GetCommitUser</definition>
+        <argsstring>() const</argsstring>
+        <name>GetCommitUser</name>
+        <qualifiedname>paimon::CommitContext::GetCommitUser</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="49" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="49" bodyend="51"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1aa548afad705d6eddee8870297e386c65" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::CommitContext::IgnoreEmptyCommit</definition>
+        <argsstring>() const</argsstring>
+        <name>IgnoreEmptyCommit</name>
+        <qualifiedname>paimon::CommitContext::IgnoreEmptyCommit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="53" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="53" bodyend="55"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1a080cc3e95b4640b956a4ffed9921a4ce" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::CommitContext::UseRESTCatalogCommit</definition>
+        <argsstring>() const</argsstring>
+        <name>UseRESTCatalogCommit</name>
+        <qualifiedname>paimon::CommitContext::UseRESTCatalogCommit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="57" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="57" bodyend="59"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1aca7bfe9f1b26b2581144a29391eed79c" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::CommitContext::GetMemoryPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::CommitContext::GetMemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="61" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="61" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1a0d824d071312adf4cfca321fd0eede90" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::CommitContext::GetExecutor</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExecutor</name>
+        <qualifiedname>paimon::CommitContext::GetExecutor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="65" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="65" bodyend="67"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_1aab1947d5b188b7a38edd3599054a0696" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::CommitContext::GetOptions</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOptions</name>
+        <qualifiedname>paimon::CommitContext::GetOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="69" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="69" bodyend="71"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput> is some configuration for commit operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Please do not use this class directly, use <computeroutput><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref></computeroutput> to build a <computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput> which has input validation. <simplesect kind="see"><para><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="36" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="36" bodyend="81"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_commit_context_1a8a4d37dc51d01f155960c92376767229" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>commit_user_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1add751bfaec44b19ac9b03093b87b74a4" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>CommitContext</name></member>
+      <member refid="classpaimon_1_1_commit_context_1af81a5e94072dd38cf7099f8bebeacd6d" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>executor_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a2f3d101509cf979986d9f27e1c2d970a" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>GetCommitUser</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a0d824d071312adf4cfca321fd0eede90" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>GetExecutor</name></member>
+      <member refid="classpaimon_1_1_commit_context_1aca7bfe9f1b26b2581144a29391eed79c" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>GetMemoryPool</name></member>
+      <member refid="classpaimon_1_1_commit_context_1aab1947d5b188b7a38edd3599054a0696" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>GetOptions</name></member>
+      <member refid="classpaimon_1_1_commit_context_1abc60e14796df885d1fc77094bae75a24" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>GetRootPath</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a1476d595d14eeea7589e5d3120c736aa" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>ignore_empty_commit_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1aa548afad705d6eddee8870297e386c65" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>IgnoreEmptyCommit</name></member>
+      <member refid="classpaimon_1_1_commit_context_1afdb3532cf005939530ec2217b1ddb50b" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>memory_pool_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a4f01a5372cd883565764dfce55b823b6" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>options_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1ac43316fa85944c7b9d4e32bdf1d84068" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>root_path_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a668659aa2a7a8c03bf36c63916b06885" prot="private" virt="non-virtual"><scope>paimon::CommitContext</scope><name>use_rest_catalog_commit_</name></member>
+      <member refid="classpaimon_1_1_commit_context_1a080cc3e95b4640b956a4ffed9921a4ce" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>UseRESTCatalogCommit</name></member>
+      <member refid="classpaimon_1_1_commit_context_1ac78a125531f977d739d513608365ac74" prot="public" virt="non-virtual"><scope>paimon::CommitContext</scope><name>~CommitContext</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

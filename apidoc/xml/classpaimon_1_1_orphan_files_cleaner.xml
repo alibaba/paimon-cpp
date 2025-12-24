@@ -1,0 +1,110 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_orphan_files_cleaner" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::OrphanFilesCleaner</compoundname>
+    <includes refid="orphan__files__cleaner_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_orphan_files_cleaner_1a83b4a2a871d4854faac596389302711c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::OrphanFilesCleaner::~OrphanFilesCleaner</definition>
+        <argsstring>()=default</argsstring>
+        <name>~OrphanFilesCleaner</name>
+        <qualifiedname>paimon::OrphanFilesCleaner::~OrphanFilesCleaner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="157" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_orphan_files_cleaner_1a794e64d1dfd5e21ea340668c27f0cd21" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::set&lt; std::string &gt; &gt;</type>
+        <definition>virtual Result&lt; std::set&lt; std::string &gt; &gt; paimon::OrphanFilesCleaner::Clean</definition>
+        <argsstring>()=0</argsstring>
+        <name>Clean</name>
+        <qualifiedname>paimon::OrphanFilesCleaner::Clean</qualifiedname>
+        <briefdescription>
+<para>Cleans orphan files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> object containing a set of strings representing the paths of the cleaned files. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="171" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_orphan_files_cleaner_1aa4ac12a9cfb871c1d8a02faa63b49c96" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_orphan_files_cleaner" kindref="compound">OrphanFilesCleaner</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; OrphanFilesCleaner &gt; &gt; paimon::OrphanFilesCleaner::Create</definition>
+        <argsstring>(std::unique_ptr&lt; CleanContext &gt; &amp;&amp;context)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::OrphanFilesCleaner::Create</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_clean_context" kindref="compound">CleanContext</ref> &gt; &amp;&amp;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+<para>Create an instance of <computeroutput><ref refid="classpaimon_1_1_orphan_files_cleaner" kindref="compound">OrphanFilesCleaner</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique pointer to the <computeroutput><ref refid="classpaimon_1_1_clean_context" kindref="compound">CleanContext</ref></computeroutput> used for cleanup tasks.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_orphan_files_cleaner" kindref="compound">OrphanFilesCleaner</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="164" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpaimon_1_1_orphan_files_cleaner_1a97467593d54342f673741b72166c7994" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::OrphanFilesCleaner::OrphanFilesCleaner</definition>
+        <argsstring>()=default</argsstring>
+        <name>OrphanFilesCleaner</name>
+        <qualifiedname>paimon::OrphanFilesCleaner::OrphanFilesCleaner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="174" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>To remove the data files and metadata files that are not used by table (so-called &quot;orphan
+files&quot;). </para>
+    </briefdescription>
+    <detaileddescription>
+<para>It will ignore exception when listing all files because it&apos;s OK to not delete unread files.</para>
+<para>To avoid deleting newly written files, it only deletes orphan files older than <computeroutput>olderThanMillis</computeroutput> (1 day by default).</para>
+<para>To avoid deleting files that are used but not read by mistaken, it will stop removing process when failed to read used files.</para>
+<para>To avoid deleting files that were newly added to the Paimon Java protocol but are unrecognized by Paimon C++, we implemented a strong pattern-matching validation, deleting only files in patterns we recognize.</para>
+<para><simplesect kind="note"><para><computeroutput><ref refid="classpaimon_1_1_orphan_files_cleaner" kindref="compound">OrphanFilesCleaner</ref></computeroutput> in Paimon C++ only support cleaning append table, do not support cleaning table with tag, table with external paths, table with branch, table with index, table with changelog, and primary key table. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="155" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="155" bodyend="175"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_orphan_files_cleaner_1a794e64d1dfd5e21ea340668c27f0cd21" prot="public" virt="pure-virtual"><scope>paimon::OrphanFilesCleaner</scope><name>Clean</name></member>
+      <member refid="classpaimon_1_1_orphan_files_cleaner_1aa4ac12a9cfb871c1d8a02faa63b49c96" prot="public" virt="non-virtual"><scope>paimon::OrphanFilesCleaner</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_orphan_files_cleaner_1a97467593d54342f673741b72166c7994" prot="protected" virt="non-virtual"><scope>paimon::OrphanFilesCleaner</scope><name>OrphanFilesCleaner</name></member>
+      <member refid="classpaimon_1_1_orphan_files_cleaner_1a83b4a2a871d4854faac596389302711c" prot="public" virt="virtual"><scope>paimon::OrphanFilesCleaner</scope><name>~OrphanFilesCleaner</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,535 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_bytes" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Bytes</compoundname>
+    <includes refid="bytes_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_bytes_1ac968a8098133115f20c31fcc462cba37" prot="private" static="no" mutable="no">
+        <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+        <definition>MemoryPool* paimon::Bytes::pool_</definition>
+        <argsstring></argsstring>
+        <name>pool_</name>
+        <qualifiedname>paimon::Bytes::pool_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="122" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bytes_1a2ae963aa9cb7699175799ab554bab2f0" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>char* paimon::Bytes::data_</definition>
+        <argsstring></argsstring>
+        <name>data_</name>
+        <qualifiedname>paimon::Bytes::data_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="123" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bytes_1a40d56199a9a9f0a0b30da568afbaa95d" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::Bytes::size_</definition>
+        <argsstring></argsstring>
+        <name>size_</name>
+        <qualifiedname>paimon::Bytes::size_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="124" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="124" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1af31cb27c438a4e59d9aee9e4d9761e27" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::Bytes</definition>
+        <argsstring>()=default</argsstring>
+        <name>Bytes</name>
+        <qualifiedname>paimon::Bytes::Bytes</qualifiedname>
+        <briefdescription>
+<para>Default constructor creating an empty <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object with no allocated memory. The object will have null data pointer and zero size. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="40" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a145a3eaebffb74d156e3d9f553f762f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::Bytes</definition>
+        <argsstring>(size_t size, MemoryPool *pool)</argsstring>
+        <name>Bytes</name>
+        <qualifiedname>paimon::Bytes::Bytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Constructor that allocates memory of specified size. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Allocates a new byte array of the given size using the provided memory pool. The allocated memory is uninitialized.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to allocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool to use for allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="49" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a151a522ee8b4b24113182cbd4e4b8315" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::Bytes</definition>
+        <argsstring>(const std::string &amp;str, MemoryPool *pool)</argsstring>
+        <name>Bytes</name>
+        <qualifiedname>paimon::Bytes::Bytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Constructor that creates a copy of a string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Allocates memory and copies the contents of the provided string into the new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String to copy data from. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool to use for allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="58" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a246f6db5220806ec66b898210eb986c2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::Bytes</definition>
+        <argsstring>(const Bytes &amp;)=delete</argsstring>
+        <name>Bytes</name>
+        <qualifiedname>paimon::Bytes::Bytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="93" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1aa4acb59bfd93d52d1fe275161d42b536" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Bytes::operator=</definition>
+        <argsstring>(const Bytes &amp;)=delete</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Bytes::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="94" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a5572560920a30a12b7e3654376309988" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::Bytes</definition>
+        <argsstring>(Bytes &amp;&amp;) noexcept</argsstring>
+        <name>Bytes</name>
+        <qualifiedname>paimon::Bytes::Bytes</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="96" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a132b19b29dff61ee2d8c84ea88f4360a" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+        <definition>Bytes &amp; paimon::Bytes::operator=</definition>
+        <argsstring>(Bytes &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Bytes::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="97" column="11"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1ad4178495fb2cf73f21a8fd39266ec86c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Bytes::~Bytes</definition>
+        <argsstring>()</argsstring>
+        <name>~Bytes</name>
+        <qualifiedname>paimon::Bytes::~Bytes</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="99" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1affc08878c8ff37b0476f8e8b60eb49bb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Bytes::operator==</definition>
+        <argsstring>(const Bytes &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Bytes::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="101" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1ab3046290142f31faa72aea060cbc5d49" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Bytes::operator&lt;</definition>
+        <argsstring>(const Bytes &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>paimon::Bytes::operator&lt;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="102" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a9e767f140b6b38f268d6d900fd884ab4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> &amp;</type>
+        <definition>char &amp; paimon::Bytes::operator[]</definition>
+        <argsstring>(size_t idx) const</argsstring>
+        <name>operator[]</name>
+        <qualifiedname>paimon::Bytes::operator[]</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>idx</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="103" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a6db1a89480677662811766afc1e61e0e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Bytes::compare</definition>
+        <argsstring>(const Bytes &amp;other) const</argsstring>
+        <name>compare</name>
+        <qualifiedname>paimon::Bytes::compare</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compare this <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object with another. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Negative value if this &lt; other; 0 if equal; positive value if this &gt; other. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="107" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a16740bcc9dbaefee3a2f829ec05be475" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>char * paimon::Bytes::data</definition>
+        <argsstring>() const</argsstring>
+        <name>data</name>
+        <qualifiedname>paimon::Bytes::data</qualifiedname>
+        <briefdescription>
+<para>Get pointer to the raw data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A pointer to the underlying byte array. The pointer remains valid as long as the <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object exists and is not moved from. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="112" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="112" bodyend="114"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a0c808c1893967e523481bbe19bda6347" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::Bytes::size</definition>
+        <argsstring>() const</argsstring>
+        <name>size</name>
+        <qualifiedname>paimon::Bytes::size</qualifiedname>
+        <briefdescription>
+<para>Get the size of the byte array. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="117" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="117" bodyend="119"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1ae0b0e80ce8bd911427d85b2479f734cb" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>static PAIMON_UNIQUE_PTR&lt; Bytes &gt; paimon::Bytes::CopyOf</definition>
+        <argsstring>(const Bytes &amp;bytes, size_t size, MemoryPool *pool)</argsstring>
+        <name>CopyOf</name>
+        <qualifiedname>paimon::Bytes::CopyOf</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &amp;</type>
+          <declname>bytes</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Create a copy of existing <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> with specified size. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object by copying data from an existing <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. The copy will have the specified size, which may be different from the source object&apos;s size (truncation or padding may occur).</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Source <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object to copy from. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool to use for allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Unique pointer to the newly created <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="70" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a3ffe7a792a70e2797964eb9ffcb4dfab" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>static PAIMON_UNIQUE_PTR&lt; Bytes &gt; paimon::Bytes::AllocateBytes</definition>
+        <argsstring>(int32_t length, MemoryPool *pool)</argsstring>
+        <name>AllocateBytes</name>
+        <qualifiedname>paimon::Bytes::AllocateBytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Allocate a new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object with specified length. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Factory method that creates a new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object with uninitialized memory of the specified length.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to allocate. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool to use for allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Unique pointer to the newly allocated <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="80" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bytes_1a0292ba33e9432638cf961cd02e20684a" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>static PAIMON_UNIQUE_PTR&lt; Bytes &gt; paimon::Bytes::AllocateBytes</definition>
+        <argsstring>(const std::string &amp;str, MemoryPool *pool)</argsstring>
+        <name>AllocateBytes</name>
+        <qualifiedname>paimon::Bytes::AllocateBytes</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Allocate a new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object from string data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Factory method that creates a new <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object and copies the contents of the provided string into it.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>str</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>String to copy data from. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool to use for allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Unique pointer to the newly allocated <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="90" column="30"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A memory-managed byte array class that provides efficient storage and manipulation of binary data. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> is a RAII wrapper around raw memory that integrates with Paimon&apos;s memory pool system for efficient memory allocation and deallocation. It provides safe access to byte arrays with automatic memory management and supports move semantics for efficient transfers. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::Bytes</label>
+        <link refid="classpaimon_1_1_bytes"/>
+        <childnode refid="2" relation="usage">
+          <edgelabel>pool_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::MemoryPool</label>
+        <link refid="classpaimon_1_1_memory_pool"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/bytes.h" bodystart="34" bodyend="125"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_bytes_1a3ffe7a792a70e2797964eb9ffcb4dfab" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>AllocateBytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a0292ba33e9432638cf961cd02e20684a" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>AllocateBytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1af31cb27c438a4e59d9aee9e4d9761e27" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>Bytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a145a3eaebffb74d156e3d9f553f762f9" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>Bytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a151a522ee8b4b24113182cbd4e4b8315" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>Bytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a246f6db5220806ec66b898210eb986c2" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>Bytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a5572560920a30a12b7e3654376309988" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>Bytes</name></member>
+      <member refid="classpaimon_1_1_bytes_1a6db1a89480677662811766afc1e61e0e" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>compare</name></member>
+      <member refid="classpaimon_1_1_bytes_1ae0b0e80ce8bd911427d85b2479f734cb" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>CopyOf</name></member>
+      <member refid="classpaimon_1_1_bytes_1a16740bcc9dbaefee3a2f829ec05be475" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>data</name></member>
+      <member refid="classpaimon_1_1_bytes_1a2ae963aa9cb7699175799ab554bab2f0" prot="private" virt="non-virtual"><scope>paimon::Bytes</scope><name>data_</name></member>
+      <member refid="classpaimon_1_1_bytes_1ab3046290142f31faa72aea060cbc5d49" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>operator&lt;</name></member>
+      <member refid="classpaimon_1_1_bytes_1aa4acb59bfd93d52d1fe275161d42b536" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_bytes_1a132b19b29dff61ee2d8c84ea88f4360a" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_bytes_1affc08878c8ff37b0476f8e8b60eb49bb" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_bytes_1a9e767f140b6b38f268d6d900fd884ab4" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>operator[]</name></member>
+      <member refid="classpaimon_1_1_bytes_1ac968a8098133115f20c31fcc462cba37" prot="private" virt="non-virtual"><scope>paimon::Bytes</scope><name>pool_</name></member>
+      <member refid="classpaimon_1_1_bytes_1a0c808c1893967e523481bbe19bda6347" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>size</name></member>
+      <member refid="classpaimon_1_1_bytes_1a40d56199a9a9f0a0b30da568afbaa95d" prot="private" virt="non-virtual"><scope>paimon::Bytes</scope><name>size_</name></member>
+      <member refid="classpaimon_1_1_bytes_1ad4178495fb2cf73f21a8fd39266ec86c" prot="public" virt="non-virtual"><scope>paimon::Bytes</scope><name>~Bytes</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
