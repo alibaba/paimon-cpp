@@ -66,7 +66,7 @@ The writing is divided into two stages:
                                .AddOption(Options::FILE_SYSTEM, "local")
                                .IgnoreEmptyCommit(false)
                                .Finish());
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> commit, FileStoreCommit::Create(std::move(commit_context));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> commit, FileStoreCommit::Create(std::move(commit_context)));
     PAIMON_RETURN_NOT_OK(commit->Commit(commit_messages));
 
 ```
@@ -100,7 +100,7 @@ The reading is divided into two stages:
                                .AddOption(Options::FILE_SYSTEM, "local")
                                .EnablePrefetch(true)
                                .Finish());
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read, TableRead::Create(std::move(read_context));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read, TableRead::Create(std::move(read_context)));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader, table_read->CreateReader(plan->Splits()));
 
     while (true) {
