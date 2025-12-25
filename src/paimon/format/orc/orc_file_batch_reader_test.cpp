@@ -256,9 +256,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::string orc_schema = "struct<col1:int,col2:double,col3:string>";
         std::unique_ptr<::orc::Type> src_type = ::orc::Type::buildTypeFromString(orc_schema);
         std::unique_ptr<::orc::Type> target_type = ::orc::Type::buildTypeFromString(orc_schema);
-        ASSERT_OK_AND_ASSIGN(auto row_reader_option, OrcFileBatchReader::CreateRowReaderOptions(
-                                                         src_type.get(), target_type.get(),
-                                                         /*search_arg=*/nullptr, options));
+        std::vector<uint64_t> target_column_ids;
+        ASSERT_OK_AND_ASSIGN(auto row_reader_option,
+                             OrcFileBatchReader::CreateRowReaderOptions(
+                                 src_type.get(), target_type.get(),
+                                 /*search_arg=*/nullptr, options, &target_column_ids));
         ASSERT_EQ(std::list<std::string>({"col1", "col2", "col3"}),
                   row_reader_option.getIncludeNames());
         ASSERT_EQ(row_reader_option.getEnableLazyDecoding(), false);
@@ -271,9 +273,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::string target_orc_schema = "struct<col1:int,col3:string>";
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
-        ASSERT_OK_AND_ASSIGN(auto row_reader_option, OrcFileBatchReader::CreateRowReaderOptions(
-                                                         src_type.get(), target_type.get(),
-                                                         /*search_arg=*/nullptr, options));
+        std::vector<uint64_t> target_column_ids;
+        ASSERT_OK_AND_ASSIGN(auto row_reader_option,
+                             OrcFileBatchReader::CreateRowReaderOptions(
+                                 src_type.get(), target_type.get(),
+                                 /*search_arg=*/nullptr, options, &target_column_ids));
         ASSERT_EQ(std::list<std::string>({"col1", "col3"}), row_reader_option.getIncludeNames());
         ASSERT_EQ(row_reader_option.getEnableLazyDecoding(), true);
     }
@@ -285,9 +289,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::string target_orc_schema = "struct<col3:string,col1:int>";
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
+        std::vector<uint64_t> target_column_ids;
         ASSERT_NOK_WITH_MSG(
             OrcFileBatchReader::CreateRowReaderOptions(src_type.get(), target_type.get(),
-                                                       /*search_arg=*/nullptr, options),
+                                                       /*search_arg=*/nullptr, options,
+                                                       &target_column_ids),
             "The column id of the target field should be monotonically increasing in format "
             "reader");
     }
@@ -299,10 +305,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::string target_orc_schema = "struct<col1:int,non_exist_col:double>";
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
-        ASSERT_NOK_WITH_MSG(
-            OrcFileBatchReader::CreateRowReaderOptions(src_type.get(), target_type.get(),
-                                                       /*search_arg=*/nullptr, options),
-            "field non_exist_col not in file schema");
+        std::vector<uint64_t> target_column_ids;
+        ASSERT_NOK_WITH_MSG(OrcFileBatchReader::CreateRowReaderOptions(
+                                src_type.get(), target_type.get(),
+                                /*search_arg=*/nullptr, options, &target_column_ids),
+                            "field non_exist_col not in file schema");
     }
     {
         std::map<std::string, std::string> options;
@@ -314,9 +321,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
             "struct<col1:struct<sub1:int,sub2:array<array<double>>,sub3:int>,col3:map<string,int>>";
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
-        ASSERT_OK_AND_ASSIGN(auto row_reader_option, OrcFileBatchReader::CreateRowReaderOptions(
-                                                         src_type.get(), target_type.get(),
-                                                         /*search_arg=*/nullptr, options));
+        std::vector<uint64_t> target_column_ids;
+        ASSERT_OK_AND_ASSIGN(auto row_reader_option,
+                             OrcFileBatchReader::CreateRowReaderOptions(
+                                 src_type.get(), target_type.get(),
+                                 /*search_arg=*/nullptr, options, &target_column_ids));
         ASSERT_EQ(std::list<std::string>({"col1", "col3"}), row_reader_option.getIncludeNames());
     }
     {
@@ -330,9 +339,11 @@ TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
         std::unique_ptr<::orc::Type> target_type =
             ::orc::Type::buildTypeFromString(target_orc_schema);
 
+        std::vector<uint64_t> target_column_ids;
         ASSERT_NOK_WITH_MSG(
             OrcFileBatchReader::CreateRowReaderOptions(src_type.get(), target_type.get(),
-                                                       /*search_arg=*/nullptr, options),
+                                                       /*search_arg=*/nullptr, options,
+                                                       &target_column_ids),
             "target_type "
             "struct<col1:struct<sub1:int,sub2:double,sub3:int>,col2:double,col3:string> not match "
             "src_type struct<col1:struct<sub1:int,sub2:int,sub3:int>,col2:double,col3:string>, "

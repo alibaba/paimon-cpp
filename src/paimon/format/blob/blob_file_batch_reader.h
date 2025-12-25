@@ -96,8 +96,6 @@ class BlobFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Status SeekToRow(uint64_t row_number) override;
-
     Result<ReadBatch> NextBatch() override;
 
     uint64_t GetPreviousBatchFirstRowNumber() const override {
@@ -108,24 +106,8 @@ class BlobFileBatchReader : public FileBatchReader {
         return all_blob_lengths_.size();
     }
 
-    uint64_t GetNextRowToRead() const override {
-        if (current_pos_ < target_blob_row_indexes_.size()) {
-            return target_blob_row_indexes_[current_pos_];
-        }
-        return GetNumberOfRows();
-    }
-
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
         return metrics_;
-    }
-
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        return Status::NotImplemented("set read ranges not implemented");
-    }
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        return Status::NotImplemented("gen read ranges not implemented");
     }
 
     void Close() override {

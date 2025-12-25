@@ -46,4 +46,12 @@ static inline const char ORC_NATURAL_READ_SIZE[] = "orc.read.natural-read-size";
 static constexpr uint64_t DEFAULT_NATURAL_READ_SIZE = 1024 * 1024;
 // default value of ORC_READ_ENABLE_METRICS is false
 static inline const char ORC_READ_ENABLE_METRICS[] = "orc.read.enable-metrics";
+
+static constexpr uint64_t MIN_ROW_GROUP_COUNT_IN_ONE_NATURAL_READ = 1;
+static inline const char ENABLE_PREFETCH_READ_SIZE_THRESHOLD[] =
+    "orc.read.enable-prefetch-read-size-threshold";
+// Prefetching will not be enabled if the total amount of data queried is below this threshold, as
+// prefetching for very small data sets is not beneficial.
+static constexpr uint64_t DEFAULT_ENABLE_PREFETCH_READ_SIZE_THRESHOLD = 10ull * 1024 * 1024;
+
 }  // namespace paimon::orc

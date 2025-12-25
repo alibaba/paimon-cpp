@@ -23,7 +23,7 @@
 #include "arrow/type.h"
 #include "paimon/common/reader/delegating_prefetch_reader.h"
 #include "paimon/common/reader/predicate_batch_reader.h"
-#include "paimon/common/reader/prefetch_file_batch_reader.h"
+#include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/object_utils.h"
@@ -147,11 +147,9 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReade
         // lance do not support stream build with input stream
         return reader_builder->Build(data_file_path);
     }
-    // TODO(zhanyu.fyh): orc format support prefetch
-    if (context_->EnablePrefetch() && file_format_identifier != "blob" &&
-        file_format_identifier != "orc") {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<PrefetchFileBatchReader> prefetch_reader,
-                               PrefetchFileBatchReader::Create(
+    if (context_->EnablePrefetch() && file_format_identifier != "blob") {
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<PrefetchFileBatchReaderImpl> prefetch_reader,
+                               PrefetchFileBatchReaderImpl::Create(
                                    data_file_path, reader_builder, options_.GetFileSystem(),
                                    context_->GetPrefetchMaxParallelNum(),
                                    options_.GetReadBatchSize(), context_->GetPrefetchBatchCount(),

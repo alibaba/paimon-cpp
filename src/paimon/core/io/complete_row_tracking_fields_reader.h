@@ -60,29 +60,12 @@ class CompleteRowTrackingFieldsBatchReader : public FileBatchReader {
         reader_->Close();
     }
 
-    Status SeekToRow(uint64_t row_number) override {
-        return Status::Invalid("CompleteRowTrackingFieldsBatchReader does not support SeekToRow");
-    }
-
     uint64_t GetPreviousBatchFirstRowNumber() const override {
         return reader_->GetPreviousBatchFirstRowNumber();
     }
 
     uint64_t GetNumberOfRows() const override {
         return reader_->GetNumberOfRows();
-    }
-
-    uint64_t GetNextRowToRead() const override {
-        return reader_->GetNextRowToRead();
-    }
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        return Status::Invalid("CompleteRowTrackingFieldsBatchReader do not support GenReadRanges");
-    }
-
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        return Status::Invalid("CompleteRowTrackingFieldsBatchReader do not support SetReadRanges");
     }
 
     bool SupportPreciseBitmapSelection() const override {

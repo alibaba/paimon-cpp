@@ -199,6 +199,8 @@ std::vector<TestParam> PrepareTestParam() {
 
 #ifdef PAIMON_ENABLE_ORC
     values.push_back(TestParam{false, "false", "orc"});
+    values.push_back(TestParam{true, "true", "orc"});
+    values.push_back(TestParam{true, "false", "orc"});
 #endif
     return values;
 }

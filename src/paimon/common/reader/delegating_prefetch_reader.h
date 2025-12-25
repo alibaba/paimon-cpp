@@ -22,14 +22,14 @@
 
 #include "arrow/c/bridge.h"
 #include "arrow/type.h"
-#include "paimon/common/reader/prefetch_file_batch_reader.h"
+#include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
 #include "paimon/reader/file_batch_reader.h"
 
 namespace paimon {
 
 class DelegatingPrefetchReader : public FileBatchReader {
  public:
-    explicit DelegatingPrefetchReader(std::unique_ptr<PrefetchFileBatchReader> prefetch_reader)
+    explicit DelegatingPrefetchReader(std::unique_ptr<PrefetchFileBatchReaderImpl> prefetch_reader)
         : prefetch_reader_(std::move(prefetch_reader)) {}
 
     Result<ReadBatch> NextBatch() override {
@@ -48,38 +48,24 @@ class DelegatingPrefetchReader : public FileBatchReader {
     Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override {
         return GetReader()->GetFileSchema();
     }
+
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override {
         return prefetch_reader_->SetReadSchema(read_schema, predicate, selection_bitmap);
     }
 
-    Status SeekToRow(uint64_t row_number) override {
-        assert(false);
-        return Status::NotImplemented("not support seek to row for delegate reader");
-    }
     uint64_t GetPreviousBatchFirstRowNumber() const override {
         return GetReader()->GetPreviousBatchFirstRowNumber();
     }
+
     uint64_t GetNumberOfRows() const override {
         return GetReader()->GetNumberOfRows();
-    }
-    uint64_t GetNextRowToRead() const override {
-        return GetReader()->GetNextRowToRead();
-    }
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        assert(false);
-        return Status::NotImplemented("gen read ranges not implemented");
     }
 
     void Close() override {
         return prefetch_reader_->Close();
     }
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        assert(false);
-        return Status::NotImplemented("not support set read ranges for delegate reader");
-    }
+
     bool SupportPreciseBitmapSelection() const override {
         return GetReader()->SupportPreciseBitmapSelection();
     }
@@ -94,7 +80,7 @@ class DelegatingPrefetchReader : public FileBatchReader {
         }
     }
 
-    std::unique_ptr<PrefetchFileBatchReader> prefetch_reader_;
+    std::unique_ptr<PrefetchFileBatchReaderImpl> prefetch_reader_;
 };
 
 }  // namespace paimon

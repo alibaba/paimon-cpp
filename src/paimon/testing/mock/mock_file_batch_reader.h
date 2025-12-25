@@ -27,9 +27,10 @@
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
-#include "paimon/reader/file_batch_reader.h"
+#include "paimon/reader/prefetch_file_batch_reader.h"
 namespace paimon::test {
-class MockFileBatchReader : public FileBatchReader {
+
+class MockFileBatchReader : public PrefetchFileBatchReader {
  public:
     MockFileBatchReader(const std::shared_ptr<arrow::Array>& data,
                         const std::shared_ptr<arrow::DataType>& file_schema,
@@ -181,4 +182,5 @@ class MockFileBatchReader : public FileBatchReader {
     bool enable_randomize_batch_size_ = true;
     std::vector<std::pair<uint64_t, uint64_t>> read_ranges_;
 };
+
 }  // namespace paimon::test

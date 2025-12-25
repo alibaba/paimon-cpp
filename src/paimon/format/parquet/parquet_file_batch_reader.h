@@ -36,7 +36,7 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/file_reader_wrapper.h"
-#include "paimon/reader/file_batch_reader.h"
+#include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "parquet/arrow/reader.h"
@@ -57,7 +57,7 @@ class RoaringBitmap32;
 
 namespace paimon::parquet {
 
-class ParquetFileBatchReader : public FileBatchReader {
+class ParquetFileBatchReader : public PrefetchFileBatchReader {
  public:
     static Result<std::unique_ptr<ParquetFileBatchReader>> Create(
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,

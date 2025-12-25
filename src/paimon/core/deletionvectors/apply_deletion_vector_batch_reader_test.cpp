@@ -23,7 +23,7 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
-#include "paimon/common/reader/prefetch_file_batch_reader.h"
+#include "paimon/common/reader/prefetch_file_batch_reader_impl.h"
 #include "paimon/executor.h"
 #include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/mock/mock_file_system.h"
@@ -78,7 +78,7 @@ class ApplyDeletionVectorBatchReaderTest : public ::testing::Test,
             if (enable_prefetch) {
                 MockFormatReaderBuilder reader_builder(data, target_type_, batch_size);
                 ASSERT_OK_AND_ASSIGN(file_batch_reader,
-                                     PrefetchFileBatchReader::Create(
+                                     PrefetchFileBatchReaderImpl::Create(
                                          /*data_file_path=*/"DUMMY", &reader_builder, fs_,
                                          prefetch_batch_count, batch_size, prefetch_batch_count * 2,
                                          /*enable_adaptive_prefetch_strategy=*/false, executor_,

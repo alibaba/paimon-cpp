@@ -21,8 +21,10 @@ if(PAIMON_ENABLE_ORC)
         orc_input_stream_impl.cpp
         orc_output_stream_impl.cpp
         orc_adapter.cpp
+        orc_reader_wrapper.cpp
         orc_stats_extractor.cpp
-        orc_format_writer.cpp)
+        orc_format_writer.cpp
+        read_range_generator.cpp)
 
     add_paimon_lib(paimon_orc_file_format
                    SOURCES
@@ -56,6 +58,8 @@ if(PAIMON_ENABLE_ORC)
                         orc_stats_extractor_test.cpp
                         orc_format_writer_test.cpp
                         orc_file_batch_reader_test.cpp
+                        orc_reader_wrapper_test.cpp
+                        read_range_generator_test.cpp
                         EXTRA_INCLUDES
                         ${ORC_INCLUDE_DIR}
                         STATIC_LINK_LIBS
