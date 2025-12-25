@@ -148,13 +148,13 @@ Result<std::vector<Range>> GlobalIndexResult::ToRanges() const {
             // Extend the current range
             range_end = current;
         } else {
-            ranges.push_back(Range(range_start, range_end));
+            ranges.emplace_back(range_start, range_end);
             range_start = current;
             range_end = current;
         }
     }
     // Add the last range
-    ranges.push_back(Range(range_start, range_end));
+    ranges.emplace_back(range_start, range_end);
     return ranges;
 }
 

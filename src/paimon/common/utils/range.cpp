@@ -122,7 +122,7 @@ std::vector<Range> Range::Exclude(const std::vector<Range>& ranges) const {
         }
         // Add the part before the intersection (if any)
         if (current < intersect.value().from) {
-            result.push_back(Range(current, intersect.value().from - 1));
+            result.emplace_back(current, intersect.value().from - 1);
         }
         // Move current position past the intersection
         current = intersect.value().to + 1;
@@ -132,7 +132,7 @@ std::vector<Range> Range::Exclude(const std::vector<Range>& ranges) const {
     }
     // Add the remaining part after all exclusions (if any)
     if (current <= to) {
-        result.push_back(Range(current, to));
+        result.emplace_back(current, to);
     }
 
     return result;
