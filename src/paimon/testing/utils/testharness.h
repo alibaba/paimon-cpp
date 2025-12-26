@@ -69,6 +69,14 @@ std::string GetJindoTestDir();
 
 int64_t RandomNumber(int64_t min, int64_t max);
 
+class OsReleaseDetector {
+ public:
+    static bool IsDebian() {
+        struct stat buffer;
+        return (stat("/etc/debian_version", &buffer) == 0);
+    }
+};
+
 ::testing::AssertionResult AssertStatus(const char* s_expr, const Status& s);
 
 #define ASSERT_OK(expr)                                                                  \
