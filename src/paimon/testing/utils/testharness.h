@@ -45,9 +45,8 @@
 
 #pragma once
 
-#include <sys/stat.h>
-
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -74,8 +73,20 @@ int64_t RandomNumber(int64_t min, int64_t max);
 class OsReleaseDetector {
  public:
     static bool IsDebian() {
-        struct stat buffer;
-        return (stat("/etc/debian_version", &buffer) == 0);
+        std::ifstream file("/etc/os-release");
+        if (!file.is_open()) {
+            return false;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.find("ID=") == 0) {
+                if (line.find("debian") != std::string::npos) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 };
 
