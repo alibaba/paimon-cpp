@@ -179,7 +179,7 @@ class ReadInteTest : public testing::Test, public ::testing::WithParamInterface<
         EXPECT_OK_AND_ASSIGN(auto input_stream, file_system->Open(split_file_name));
         std::vector<char> split_bytes(input_stream->Length().value_or(0), 0);
         EXPECT_OK_AND_ASSIGN([[maybe_unused]] int32_t read_len,
-                             input_stream -> Read(split_bytes.data(), split_bytes.size()));
+                             input_stream->Read(split_bytes.data(), split_bytes.size()));
         EXPECT_OK(input_stream->Close());
 
         EXPECT_OK_AND_ASSIGN(auto split,
@@ -660,15 +660,14 @@ TEST_P(ReadInteTest, TestAppendReadWithComplexTypePredicate) {
 
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     arrow::Status array_status;
-    if (::paimon::test::OsReleaseDetector::IsDebian()) {
+    if (::paimon::test::OsReleaseDetector::IsDebian() && param.file_format == "orc") {
         // refer: https://github.com/eggert/tz/blob/main/asia#L653
         // When using the Asia/Shanghai timezone under Debian, timestamps prior to 1901 have an
         // additional offset of 5 minutes and 43 seconds
         array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
         [0, "add", 1, "2033-05-18 03:33:20.0",         1234,  "123456789987654321.45678"],
         [0, "cat", 1, "2033-05-18 03:33:20.000001001", 19909, "12.30000"],
-        [0, "fat", 1, "1899-01-01 01:05:03.001001001", null,  "0.00000"],
-        [0, "bad", 1, "1899-01-01 01:05:03.001001001", -1234, "-123456789987654321.45678"]
+        [0, "fat", 1, "1899-01-01 01:05:03.001001001", null,  "0.00000"]
     ])"},
                                                                         &expected_array);
     } else {
