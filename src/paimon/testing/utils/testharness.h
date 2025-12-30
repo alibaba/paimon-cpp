@@ -45,6 +45,8 @@
 
 #pragma once
 
+#include <sys/stat.h>
+
 #include <filesystem>
 #include <map>
 #include <memory>
