@@ -1,0 +1,556 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_system" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileSystem</compoundname>
+    <includes refid="file__system_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a04a8b646af1b296361f62582d9b0180f" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileSystem::~FileSystem</definition>
+        <argsstring>()</argsstring>
+        <name>~FileSystem</name>
+        <qualifiedname>paimon::FileSystem::~FileSystem</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="181" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a72c1f7b0cce63bea2ba4c386c0835251" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; InputStream &gt; &gt; paimon::FileSystem::Open</definition>
+        <argsstring>(const std::string &amp;path) const =0</argsstring>
+        <name>Open</name>
+        <qualifiedname>paimon::FileSystem::Open</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Open an existing file for reading. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file path to open. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to <computeroutput><ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref></computeroutput> on success, or error status on failure (e.g., file not found, permission denied). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="191" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1acb391d2242b9f12d548d97cbb1e7b1f5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_output_stream" kindref="compound">OutputStream</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; OutputStream &gt; &gt; paimon::FileSystem::Create</definition>
+        <argsstring>(const std::string &amp;path, bool overwrite) const =0</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::FileSystem::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>overwrite</declname>
+        </param>
+        <briefdescription>
+<para>Create a new file for writing. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file path to create. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>overwrite</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, overwrite existing file; if false, fail if file exists. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to <computeroutput><ref refid="classpaimon_1_1_output_stream" kindref="compound">OutputStream</ref></computeroutput> on success, or error status on failure (e.g., I/O error, permission denied). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="198" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a9959000667856883aa0c884b5be11b3e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::Mkdirs</definition>
+        <argsstring>(const std::string &amp;path) const =0</argsstring>
+        <name>Mkdirs</name>
+        <qualifiedname>paimon::FileSystem::Mkdirs</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Create directories recursively. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The directory path to create (including all parent directories). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="204" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a8103e3f37aad87743a3b1d35846c3424" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::Rename</definition>
+        <argsstring>(const std::string &amp;src, const std::string &amp;dst) const =0</argsstring>
+        <name>Rename</name>
+        <qualifiedname>paimon::FileSystem::Rename</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>src</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>dst</declname>
+        </param>
+        <briefdescription>
+<para>Rename or move a file or directory. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>src</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The source path (file or directory to rename/move). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>dst</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The destination path. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="210" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1ae8c6594859b8000d635ffccff1ce3700" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::Delete</definition>
+        <argsstring>(const std::string &amp;path, bool recursive=true) const =0</argsstring>
+        <name>Delete</name>
+        <qualifiedname>paimon::FileSystem::Delete</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>recursive</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></defval>
+        </param>
+        <briefdescription>
+<para>Delete a file or directory. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The path to delete. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>recursive</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, delete directories and their contents recursively; if false, only delete empty directories. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="217" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1ac1053fcec2de3f45217c31b787898be1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_status" kindref="compound">FileStatus</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FileStatus &gt; &gt; paimon::FileSystem::GetFileStatus</definition>
+        <argsstring>(const std::string &amp;path) const =0</argsstring>
+        <name>GetFileStatus</name>
+        <qualifiedname>paimon::FileSystem::GetFileStatus</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Get detailed status information for a file or directory. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file or directory path to query. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to <computeroutput><ref refid="classpaimon_1_1_file_status" kindref="compound">FileStatus</ref></computeroutput> on success, or error status on failure (e.g., path not found, permission denied). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="222" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a46ba86eb6cdd924f4402e626916575af" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::ListDir</definition>
+        <argsstring>(const std::string &amp;directory, std::vector&lt; std::unique_ptr&lt; BasicFileStatus &gt; &gt; *file_status_list) const =0</argsstring>
+        <name>ListDir</name>
+        <qualifiedname>paimon::FileSystem::ListDir</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>directory</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_basic_file_status" kindref="compound">BasicFileStatus</ref> &gt; &gt; *</type>
+          <declname>file_status_list</declname>
+        </param>
+        <briefdescription>
+<para>List files of a directory (basic information only). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>directory</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The directory path to list. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="out">file_status_list</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Output vector to store <computeroutput><ref refid="classpaimon_1_1_basic_file_status" kindref="compound">BasicFileStatus</ref></computeroutput> objects. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="228" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a1c243fa5543b843fc6d06090d5af50c0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::ListFileStatus</definition>
+        <argsstring>(const std::string &amp;path, std::vector&lt; std::unique_ptr&lt; FileStatus &gt; &gt; *file_status_list) const =0</argsstring>
+        <name>ListFileStatus</name>
+        <qualifiedname>paimon::FileSystem::ListFileStatus</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type>std::vector&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_status" kindref="compound">FileStatus</ref> &gt; &gt; *</type>
+          <declname>file_status_list</declname>
+        </param>
+        <briefdescription>
+<para>List file status with detailed information. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file or directory path to list. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="out">file_status_list</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Output vector to store <computeroutput><ref refid="classpaimon_1_1_file_status" kindref="compound">FileStatus</ref></computeroutput> objects. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="236" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a8275380dae43d478bb40ca45e7bdf679" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>virtual Result&lt; bool &gt; paimon::FileSystem::Exists</definition>
+        <argsstring>(const std::string &amp;path) const =0</argsstring>
+        <name>Exists</name>
+        <qualifiedname>paimon::FileSystem::Exists</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Check if a file or directory exists. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file or directory path to check. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing true if path exists, false if not found; or error status if I/O error occurs during check. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="244" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1ac52c94b98ce0bc0e55715dd18f29105d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::ReadFile</definition>
+        <argsstring>(const std::string &amp;path, std::string *content)</argsstring>
+        <name>ReadFile</name>
+        <qualifiedname>paimon::FileSystem::ReadFile</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type>std::string *</type>
+          <declname>content</declname>
+        </param>
+        <briefdescription>
+<para>Read entire file content into a string at once. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file path to read. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername direction="out">content</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Output string to store the file content. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+<simplesect kind="note"><para>Virtual only for mock testing purposes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="251" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a76fae546803760b1b0d063088a089ee2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::WriteFile</definition>
+        <argsstring>(const std::string &amp;path, const std::string &amp;content, bool overwrite)</argsstring>
+        <name>WriteFile</name>
+        <qualifiedname>paimon::FileSystem::WriteFile</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>content</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>overwrite</declname>
+        </param>
+        <briefdescription>
+<para>Write the entire content to a file at once. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The file path to write to. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>content</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The string content to write. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>overwrite</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, overwrite existing file; if false, fail if file exists. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+<simplesect kind="note"><para>Virtual only for mock testing purposes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="259" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1a8b1f228e96ed46496e95c1aa8deb8c38" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileSystem::AtomicStore</definition>
+        <argsstring>(const std::string &amp;path, const std::string &amp;content)</argsstring>
+        <name>AtomicStore</name>
+        <qualifiedname>paimon::FileSystem::AtomicStore</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>content</declname>
+        </param>
+        <briefdescription>
+<para>Write content to a file atomically. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Atomic operation: writes to temporary hidden file first, then renames to target. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The target file path. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>content</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The string content to write. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+<simplesect kind="note"><para>Virtual only for mock testing purposes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="267" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_system_1af62ae49a94e2d7eabe0e71dcb9166562" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>static Result&lt; bool &gt; paimon::FileSystem::IsObjectStore</definition>
+        <argsstring>(const std::string &amp;path_str)</argsstring>
+        <name>IsObjectStore</name>
+        <qualifiedname>paimon::FileSystem::IsObjectStore</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path_str</declname>
+        </param>
+        <briefdescription>
+<para>Check if the given path represents an object store. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>Object stores typically have different semantics than traditional file systems. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="185" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract file system interface. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="179" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="179" bodyend="268"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_system_1a8b1f228e96ed46496e95c1aa8deb8c38" prot="public" virt="virtual"><scope>paimon::FileSystem</scope><name>AtomicStore</name></member>
+      <member refid="classpaimon_1_1_file_system_1acb391d2242b9f12d548d97cbb1e7b1f5" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_file_system_1ae8c6594859b8000d635ffccff1ce3700" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Delete</name></member>
+      <member refid="classpaimon_1_1_file_system_1a8275380dae43d478bb40ca45e7bdf679" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Exists</name></member>
+      <member refid="classpaimon_1_1_file_system_1ac1053fcec2de3f45217c31b787898be1" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>GetFileStatus</name></member>
+      <member refid="classpaimon_1_1_file_system_1af62ae49a94e2d7eabe0e71dcb9166562" prot="public" virt="non-virtual"><scope>paimon::FileSystem</scope><name>IsObjectStore</name></member>
+      <member refid="classpaimon_1_1_file_system_1a46ba86eb6cdd924f4402e626916575af" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>ListDir</name></member>
+      <member refid="classpaimon_1_1_file_system_1a1c243fa5543b843fc6d06090d5af50c0" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>ListFileStatus</name></member>
+      <member refid="classpaimon_1_1_file_system_1a9959000667856883aa0c884b5be11b3e" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Mkdirs</name></member>
+      <member refid="classpaimon_1_1_file_system_1a72c1f7b0cce63bea2ba4c386c0835251" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Open</name></member>
+      <member refid="classpaimon_1_1_file_system_1ac52c94b98ce0bc0e55715dd18f29105d" prot="public" virt="virtual"><scope>paimon::FileSystem</scope><name>ReadFile</name></member>
+      <member refid="classpaimon_1_1_file_system_1a8103e3f37aad87743a3b1d35846c3424" prot="public" virt="pure-virtual"><scope>paimon::FileSystem</scope><name>Rename</name></member>
+      <member refid="classpaimon_1_1_file_system_1a76fae546803760b1b0d063088a089ee2" prot="public" virt="virtual"><scope>paimon::FileSystem</scope><name>WriteFile</name></member>
+      <member refid="classpaimon_1_1_file_system_1a04a8b646af1b296361f62582d9b0180f" prot="public" virt="virtual"><scope>paimon::FileSystem</scope><name>~FileSystem</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

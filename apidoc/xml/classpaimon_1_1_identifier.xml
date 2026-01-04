@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_identifier" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Identifier</compoundname>
+    <includes refid="identifier_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_identifier_1a68dc02413dd4eff2b51de61613cbd430" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string</type>
+        <definition>const std::string paimon::Identifier::database_</definition>
+        <argsstring></argsstring>
+        <name>database_</name>
+        <qualifiedname>paimon::Identifier::database_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="37" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" bodystart="37" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_identifier_1a2c04a93e814fe23851aa5e6108455565" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string</type>
+        <definition>const std::string paimon::Identifier::table_</definition>
+        <argsstring></argsstring>
+        <name>table_</name>
+        <qualifiedname>paimon::Identifier::table_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="38" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" bodystart="38" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_identifier_1a55a561dfb9b064e17dbb481b17985622" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Identifier::Identifier</definition>
+        <argsstring>(const std::string &amp;database, const std::string &amp;table)</argsstring>
+        <name>Identifier</name>
+        <qualifiedname>paimon::Identifier::Identifier</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>database</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="29" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_identifier_1a0a1df189995dd93123dc479fcd9f694a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Identifier::operator==</definition>
+        <argsstring>(const Identifier &amp;other)</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Identifier::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_identifier" kindref="compound">Identifier</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="31" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_identifier_1a3542e82502dbdf018d5a0532b19fbe4e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::Identifier::GetDatabaseName</definition>
+        <argsstring>() const</argsstring>
+        <name>GetDatabaseName</name>
+        <qualifiedname>paimon::Identifier::GetDatabaseName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="32" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_identifier_1adb64851f69ca7cd10d1e0653afa2f48c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::Identifier::GetTableName</definition>
+        <argsstring>() const</argsstring>
+        <name>GetTableName</name>
+        <qualifiedname>paimon::Identifier::GetTableName</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="33" column="23"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_identifier_1a524957e38fa739fc158fda51f2e6747c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Identifier::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Identifier::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="34" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An identifier for a table containing database and table name. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h" bodystart="27" bodyend="39"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_identifier_1a68dc02413dd4eff2b51de61613cbd430" prot="private" virt="non-virtual"><scope>paimon::Identifier</scope><name>database_</name></member>
+      <member refid="classpaimon_1_1_identifier_1a3542e82502dbdf018d5a0532b19fbe4e" prot="public" virt="non-virtual"><scope>paimon::Identifier</scope><name>GetDatabaseName</name></member>
+      <member refid="classpaimon_1_1_identifier_1adb64851f69ca7cd10d1e0653afa2f48c" prot="public" virt="non-virtual"><scope>paimon::Identifier</scope><name>GetTableName</name></member>
+      <member refid="classpaimon_1_1_identifier_1a55a561dfb9b064e17dbb481b17985622" prot="public" virt="non-virtual"><scope>paimon::Identifier</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_identifier_1a0a1df189995dd93123dc479fcd9f694a" prot="public" virt="non-virtual"><scope>paimon::Identifier</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_identifier_1a2c04a93e814fe23851aa5e6108455565" prot="private" virt="non-virtual"><scope>paimon::Identifier</scope><name>table_</name></member>
+      <member refid="classpaimon_1_1_identifier_1a524957e38fa739fc158fda51f2e6747c" prot="public" virt="non-virtual"><scope>paimon::Identifier</scope><name>ToString</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

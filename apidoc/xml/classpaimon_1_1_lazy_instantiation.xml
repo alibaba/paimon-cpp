@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_lazy_instantiation" kind="class" language="C++" prot="public">
+    <compoundname>paimon::LazyInstantiation</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_singleton" prot="private" virt="non-virtual">paimon::Singleton&lt; FactoryCreator &gt;</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_singleton" prot="private" virt="non-virtual">paimon::Singleton&lt; T, InstPolicy &gt;</derivedcompoundref>
+    <includes refid="singleton_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h</includes>
+    <sectiondef kind="protected-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_lazy_instantiation_1ab054c02c6c9c1914a276688943c7cb7e" prot="protected" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>static void paimon::LazyInstantiation::Create</definition>
+        <argsstring>(T *&amp;ptr)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::LazyInstantiation::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> *&amp;</type>
+          <declname>ptr</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="32" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" bodystart="32" bodyend="37"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::Singleton&lt; FactoryCreator &gt;</label>
+        <link refid="classpaimon_1_1_singleton"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::FactoryCreator</label>
+        <link refid="classpaimon_1_1_factory_creator"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::LazyInstantiation</label>
+        <link refid="classpaimon_1_1_lazy_instantiation"/>
+      </node>
+      <node id="4">
+        <label>paimon::Singleton&lt; T, InstPolicy &gt;</label>
+        <link refid="classpaimon_1_1_singleton"/>
+        <childnode refid="1" relation="private-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" bodystart="29" bodyend="38"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_lazy_instantiation_1ab054c02c6c9c1914a276688943c7cb7e" prot="protected" virt="non-virtual"><scope>paimon::LazyInstantiation</scope><name>Create</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

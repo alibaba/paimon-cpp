@@ -1,0 +1,413 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_store_commit" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileStoreCommit</compoundname>
+    <includes refid="file__store__commit_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a60831ecec970a1006afb374b8a3efa56" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_store_commit" kindref="compound">FileStoreCommit</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; FileStoreCommit &gt; &gt; paimon::FileStoreCommit::Create</definition>
+        <argsstring>(std::unique_ptr&lt; CommitContext &gt; context)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::FileStoreCommit::Create</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+<para>Create an instance of <computeroutput><ref refid="classpaimon_1_1_file_store_commit" kindref="compound">FileStoreCommit</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique pointer to the <computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput> used for commit operations.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_file_store_commit" kindref="compound">FileStoreCommit</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="50" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1aceefaf841105024566a33d7ba9537d03" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileStoreCommit::~FileStoreCommit</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileStoreCommit</name>
+        <qualifiedname>paimon::FileStoreCommit::~FileStoreCommit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="52" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1af7d78ade944ce09c77fc5c5fa4668881" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileStoreCommit::Commit</definition>
+        <argsstring>(const std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &amp;commit_messages, int64_t commit_identifier=BATCH_WRITE_COMMIT_IDENTIFIER, std::optional&lt; int64_t &gt; watermark=std::nullopt)=0</argsstring>
+        <name>Commit</name>
+        <qualifiedname>paimon::FileStoreCommit::Commit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &amp;</type>
+          <declname>commit_messages</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>commit_identifier</declname>
+          <defval><ref refid="namespacepaimon_1ae171754921080c9d7a51e4ff460663af" kindref="member">BATCH_WRITE_COMMIT_IDENTIFIER</ref></defval>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+          <declname>watermark</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+<para>Commit changes to the file store. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>commit_messages</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of commit messages to be committed. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An optional identifier for the commit operation. Default is <computeroutput>BATCH_WRITE_COMMIT_IDENTIFIER</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>watermark</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating the success or failure of the commit operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="62" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a7588411adfc60796e3ef42d976caab93" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int32_t &gt; paimon::FileStoreCommit::FilterAndCommit</definition>
+        <argsstring>(const std::map&lt; int64_t, std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &gt; &amp;commit_identifier_and_messages, std::optional&lt; int64_t &gt; watermark=std::nullopt)=0</argsstring>
+        <name>FilterAndCommit</name>
+        <qualifiedname>paimon::FileStoreCommit::FilterAndCommit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>, std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &gt; &amp;</type>
+          <declname>commit_identifier_and_messages</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+          <declname>watermark</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+<para>Filter out all <computeroutput>std::vector&lt;<ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref>&gt;</computeroutput> which have been committed and commit the remaining ones. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Compared to commit, this method will first check if a commit_identifier has been committed, so this method might be slower. A common usage of this method is to retry the commit process after a failure.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>commit_identifier_and_messages</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A map containing all <computeroutput><ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref></computeroutput>s in question. The key is the commit_identifier.</para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>watermark</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Number of <computeroutput>std::vector&lt;<ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref>&gt;</computeroutput> committed. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="79" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1ad07c0a3b2ce357812bc9884e212983aa" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileStoreCommit::Overwrite</definition>
+        <argsstring>(const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partitions, const std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &amp;commit_messages, int64_t commit_identifier, std::optional&lt; int64_t &gt; watermark=std::nullopt)=0</argsstring>
+        <name>Overwrite</name>
+        <qualifiedname>paimon::FileStoreCommit::Overwrite</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partitions</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &amp;</type>
+          <declname>commit_messages</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>commit_identifier</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+          <declname>watermark</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+<para>Overwrite from manifest committable and partition. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>partitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A single partition maps each partition key to a partition value. Depending on the user-defined statement, the partition might not include all partition keys. Also note that this partition does not necessarily equal to the partitions of the newly added key-values. This is just the partition to be cleaned up. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_messages</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Description of the commit messages. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Unique identifier. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>watermark</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> of the operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="95" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a7b85f1010dae3cc5e568604a34e035ef" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int32_t &gt; paimon::FileStoreCommit::FilterAndOverwrite</definition>
+        <argsstring>(const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partitions, const std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &amp;commit_messages, int64_t commit_identifier, std::optional&lt; int64_t &gt; watermark=std::nullopt)=0</argsstring>
+        <name>FilterAndOverwrite</name>
+        <qualifiedname>paimon::FileStoreCommit::FilterAndOverwrite</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partitions</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &amp;</type>
+          <declname>commit_messages</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>commit_identifier</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+          <declname>watermark</declname>
+          <defval>std::nullopt</defval>
+        </param>
+        <briefdescription>
+<para>This is a temporary interface for internal use. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>It will be removed in a future version. Please do not rely on it for long-term use.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>partitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Description of the partitions. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_messages</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Description of the commit messages. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Unique identifier. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>watermark</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> of the operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="109" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a5ae2fb04ea79c56cfdd2aee86737bd5a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>virtual Result&lt; std::string &gt; paimon::FileStoreCommit::GetLastCommitTableRequest</definition>
+        <argsstring>()=0</argsstring>
+        <name>GetLastCommitTableRequest</name>
+        <qualifiedname>paimon::FileStoreCommit::GetLastCommitTableRequest</qualifiedname>
+        <briefdescription>
+<para>If user want to use REST catalog commit, please set <computeroutput><ref refid="classpaimon_1_1_commit_context_builder_1ae9b915cd4fd9a12757ca11239ec2fbc6" kindref="member">CommitContextBuilder::UseRESTCatalogCommit()</ref></computeroutput>, then call <computeroutput><ref refid="classpaimon_1_1_file_store_commit_1af7d78ade944ce09c77fc5c5fa4668881" kindref="member">Commit()</ref></computeroutput> (or <computeroutput><ref refid="classpaimon_1_1_file_store_commit_1a7588411adfc60796e3ef42d976caab93" kindref="member">FilterAndCommit()</ref></computeroutput>) normally, then call this method to get the last commit table request, which is a JSON string that can be used to send to REST catalog server. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>Temporary interface for internal use, will be removed in the future.</para>
+</simplesect>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a JSON string which including <computeroutput>snapshot</computeroutput> and <computeroutput>statistics</computeroutput>, but excluding <computeroutput>tableId</computeroutput>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="123" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a41b7fa9e190f5ded41c32e2b37094145" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int32_t &gt; paimon::FileStoreCommit::Expire</definition>
+        <argsstring>()=0</argsstring>
+        <name>Expire</name>
+        <qualifiedname>paimon::FileStoreCommit::Expire</qualifiedname>
+        <briefdescription>
+<para>Expire old snapshot in the file store. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Result&lt;int32_t&gt; indicating the number of expired items or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="128" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1acd5f5351efa184f161b4d04e1684ed3e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileStoreCommit::DropPartition</definition>
+        <argsstring>(const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partitions, int64_t commit_identifier)=0</argsstring>
+        <name>DropPartition</name>
+        <qualifiedname>paimon::FileStoreCommit::DropPartition</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partitions</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>commit_identifier</declname>
+        </param>
+        <briefdescription>
+<para>Drop specified partitions from the file store. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>partitions</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of partitions to be dropped. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>An identifier for the commit operation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating the success or failure of the drop partition operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="135" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_commit_1a3f46b0e1c02f199ae73dbfb204f4dfe7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> &gt;</type>
+        <definition>virtual std::shared_ptr&lt; Metrics &gt; paimon::FileStoreCommit::GetCommitMetrics</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetCommitMetrics</name>
+        <qualifiedname>paimon::FileStoreCommit::GetCommitMetrics</qualifiedname>
+        <briefdescription>
+<para>Retrieve metrics related to commit operations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A shared pointer to a <computeroutput><ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref></computeroutput> object containing commit metrics. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="141" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for commit operations in a file store. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The <computeroutput><ref refid="classpaimon_1_1_file_store_commit" kindref="compound">FileStoreCommit</ref></computeroutput> class provides interfaces for committing changes, expiring old snapshots, dropping partitions, and retrieving commit metrics. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" line="43" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h" bodystart="43" bodyend="142"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_store_commit_1af7d78ade944ce09c77fc5c5fa4668881" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>Commit</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a60831ecec970a1006afb374b8a3efa56" prot="public" virt="non-virtual"><scope>paimon::FileStoreCommit</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1acd5f5351efa184f161b4d04e1684ed3e" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>DropPartition</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a41b7fa9e190f5ded41c32e2b37094145" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>Expire</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a7588411adfc60796e3ef42d976caab93" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>FilterAndCommit</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a7b85f1010dae3cc5e568604a34e035ef" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>FilterAndOverwrite</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a3f46b0e1c02f199ae73dbfb204f4dfe7" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>GetCommitMetrics</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1a5ae2fb04ea79c56cfdd2aee86737bd5a" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>GetLastCommitTableRequest</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1ad07c0a3b2ce357812bc9884e212983aa" prot="public" virt="pure-virtual"><scope>paimon::FileStoreCommit</scope><name>Overwrite</name></member>
+      <member refid="classpaimon_1_1_file_store_commit_1aceefaf841105024566a33d7ba9537d03" prot="public" virt="virtual"><scope>paimon::FileStoreCommit</scope><name>~FileStoreCommit</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

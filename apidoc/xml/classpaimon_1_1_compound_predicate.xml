@@ -1,0 +1,187 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_compound_predicate" kind="class" language="C++" prot="public">
+    <compoundname>paimon::CompoundPredicate</compoundname>
+    <basecompoundref refid="classpaimon_1_1_predicate" prot="public" virt="virtual">paimon::Predicate</basecompoundref>
+    <includes refid="compound__predicate_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h</includes>
+    <sectiondef kind="protected-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_compound_predicate_1a0ddf3446339d707f1ddc382cbdf479ac" prot="protected" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">CompoundFunction</ref> &amp;</type>
+        <definition>const CompoundFunction&amp; paimon::CompoundPredicate::compound_function_</definition>
+        <argsstring></argsstring>
+        <name>compound_function_</name>
+        <qualifiedname>paimon::CompoundPredicate::compound_function_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="48" column="28" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" bodystart="48" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_compound_predicate_1a2e62e4ae4dd53596d708146c50232307" prot="protected" static="no" mutable="no">
+        <type>std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt;</type>
+        <definition>std::vector&lt;std::shared_ptr&lt;Predicate&gt; &gt; paimon::CompoundPredicate::children_</definition>
+        <argsstring></argsstring>
+        <name>children_</name>
+        <qualifiedname>paimon::CompoundPredicate::children_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="49" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" bodystart="49" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a81f9c00d1e76a8667ae5be1c0f5ab695" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_function" kindref="compound">Function</ref> &amp;</type>
+        <definition>const Function &amp; paimon::CompoundPredicate::GetFunction</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetFunction</name>
+        <qualifiedname>paimon::CompoundPredicate::GetFunction</qualifiedname>
+        <reimplements refid="classpaimon_1_1_predicate_1ae47e80c4b72ced3c86f8008d54b8708e">GetFunction</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="33" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a61b311607d27ec96b705e297ec090a1a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; &amp;</type>
+        <definition>const std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; &amp; paimon::CompoundPredicate::Children</definition>
+        <argsstring>() const</argsstring>
+        <name>Children</name>
+        <qualifiedname>paimon::CompoundPredicate::Children</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="35" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" bodystart="35" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a1eb2a8e29101ea1a34429d8a6be7a2e1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Predicate &gt; paimon::CompoundPredicate::Negate</definition>
+        <argsstring>() const override</argsstring>
+        <name>Negate</name>
+        <qualifiedname>paimon::CompoundPredicate::Negate</qualifiedname>
+        <reimplements refid="classpaimon_1_1_predicate_1ab8d80cebcd4a1427ecb967a37a774b68">Negate</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The negation predicate of this predicate if possible. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="39" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a609e2716a1eb3a46b16c9005c616c965" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::CompoundPredicate::ToString</definition>
+        <argsstring>() const override</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::CompoundPredicate::ToString</qualifiedname>
+        <reimplements refid="classpaimon_1_1_predicate_1ae20ec461e28b9d286d164d524bc5ba1c">ToString</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="40" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a166e85c9c04dc7bef23cc0c6d58b9af2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::CompoundPredicate::operator==</definition>
+        <argsstring>(const Predicate &amp;other) const override</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::CompoundPredicate::operator==</qualifiedname>
+        <reimplements refid="classpaimon_1_1_predicate_1a4766fb9716f8c6ae44000e5039e406f5">operator==</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="42" column="10"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpaimon_1_1_compound_predicate_1a3470bd42a9c06fc7ecaef1e3fc2ef27f" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CompoundPredicate::CompoundPredicate</definition>
+        <argsstring>(const CompoundFunction &amp;compound_function, const std::vector&lt; std::shared_ptr&lt; Predicate &gt; &gt; &amp;children)</argsstring>
+        <name>CompoundPredicate</name>
+        <qualifiedname>paimon::CompoundPredicate::CompoundPredicate</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">CompoundFunction</ref> &amp;</type>
+          <declname>compound_function</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &gt; &amp;</type>
+          <declname>children</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="45" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Non-leaf node in a <computeroutput><ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref></computeroutput> tree. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Its evaluation result depends on the results of its children. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::CompoundPredicate</label>
+        <link refid="classpaimon_1_1_compound_predicate"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Predicate</label>
+        <link refid="classpaimon_1_1_predicate"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::CompoundPredicate</label>
+        <link refid="classpaimon_1_1_compound_predicate"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Predicate</label>
+        <link refid="classpaimon_1_1_predicate"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/compound_predicate.h" bodystart="31" bodyend="50"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_compound_predicate_1a61b311607d27ec96b705e297ec090a1a" prot="public" virt="non-virtual"><scope>paimon::CompoundPredicate</scope><name>Children</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a2e62e4ae4dd53596d708146c50232307" prot="protected" virt="non-virtual"><scope>paimon::CompoundPredicate</scope><name>children_</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a0ddf3446339d707f1ddc382cbdf479ac" prot="protected" virt="non-virtual"><scope>paimon::CompoundPredicate</scope><name>compound_function_</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a3470bd42a9c06fc7ecaef1e3fc2ef27f" prot="protected" virt="non-virtual"><scope>paimon::CompoundPredicate</scope><name>CompoundPredicate</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a81f9c00d1e76a8667ae5be1c0f5ab695" prot="public" virt="virtual"><scope>paimon::CompoundPredicate</scope><name>GetFunction</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a1eb2a8e29101ea1a34429d8a6be7a2e1" prot="public" virt="virtual"><scope>paimon::CompoundPredicate</scope><name>Negate</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a166e85c9c04dc7bef23cc0c6d58b9af2" prot="public" virt="virtual"><scope>paimon::CompoundPredicate</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_compound_predicate_1a609e2716a1eb3a46b16c9005c616c965" prot="public" virt="virtual"><scope>paimon::CompoundPredicate</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_predicate_1ae9b429c30313950b195b95b213c5e937" prot="public" virt="virtual"><scope>paimon::CompoundPredicate</scope><name>~Predicate</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

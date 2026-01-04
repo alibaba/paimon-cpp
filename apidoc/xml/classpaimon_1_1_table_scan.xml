@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_table_scan" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::TableScan</compoundname>
+    <includes refid="table__scan_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_scan_1a32e5f7ba110b6474abc09d3c391c3f2e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_table_scan" kindref="compound">TableScan</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; TableScan &gt; &gt; paimon::TableScan::Create</definition>
+        <argsstring>(std::unique_ptr&lt; ScanContext &gt; context)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::TableScan::Create</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+<para>Create an instance of <computeroutput><ref refid="classpaimon_1_1_table_scan" kindref="compound">TableScan</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique pointer to the <computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput> used for scan operations. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_table_scan" kindref="compound">TableScan</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h" line="36" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_scan_1ae9b094407c58cd48bc21fb01d70e20f9" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::TableScan::~TableScan</definition>
+        <argsstring>()=default</argsstring>
+        <name>~TableScan</name>
+        <qualifiedname>paimon::TableScan::~TableScan</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h" line="38" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_scan_1a4cff0e5627053b0ece53c7eeda61a7b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_plan" kindref="compound">Plan</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; Plan &gt; &gt; paimon::TableScan::CreatePlan</definition>
+        <argsstring>()=0</argsstring>
+        <name>CreatePlan</name>
+        <qualifiedname>paimon::TableScan::CreatePlan</qualifiedname>
+        <briefdescription>
+<para>Create a scan plan. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a shared pointer to the created <computeroutput><ref refid="classpaimon_1_1_plan" kindref="compound">Plan</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h" line="43" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A scanner interface for reading table&apos;s meta and create a plan. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h" bodystart="30" bodyend="44"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_table_scan_1a32e5f7ba110b6474abc09d3c391c3f2e" prot="public" virt="non-virtual"><scope>paimon::TableScan</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_table_scan_1a4cff0e5627053b0ece53c7eeda61a7b7" prot="public" virt="pure-virtual"><scope>paimon::TableScan</scope><name>CreatePlan</name></member>
+      <member refid="classpaimon_1_1_table_scan_1ae9b094407c58cd48bc21fb01d70e20f9" prot="public" virt="virtual"><scope>paimon::TableScan</scope><name>~TableScan</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

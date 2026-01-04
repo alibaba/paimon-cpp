@@ -1,0 +1,1122 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Options &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/defs';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Executor" href="executor.html" />
+    <link rel="prev" title="Orphan Files Clean" href="clean.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Options</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="options">
+<h1>Options<a class="headerlink" href="#options" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-options"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp enum-class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldTypeE">
+<span id="_CPPv3N6paimon9FieldTypeE"></span><span id="_CPPv2N6paimon9FieldTypeE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">FieldType</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldTypeE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Enumeration of supported data types in Paimon tables. </p>
+<p><em>Values:</em></p>
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType7BOOLEANE">
+<span id="_CPPv3N6paimon9FieldType7BOOLEANE"></span><span id="_CPPv2N6paimon9FieldType7BOOLEANE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ac48d5da12d702e73d6966069f2687376"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BOOLEAN</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType7BOOLEANE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType7TINYINTE">
+<span id="_CPPv3N6paimon9FieldType7TINYINTE"></span><span id="_CPPv2N6paimon9FieldType7TINYINTE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a0ad48930fd2845c5b42f6c5747cc87c0"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">TINYINT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType7TINYINTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType8SMALLINTE">
+<span id="_CPPv3N6paimon9FieldType8SMALLINTE"></span><span id="_CPPv2N6paimon9FieldType8SMALLINTE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a42a2165cd790300c66917317b8bf7818"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SMALLINT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType8SMALLINTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType3INTE">
+<span id="_CPPv3N6paimon9FieldType3INTE"></span><span id="_CPPv2N6paimon9FieldType3INTE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a53f93baa3057821107c750323892fa92"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">INT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType3INTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType6BIGINTE">
+<span id="_CPPv3N6paimon9FieldType6BIGINTE"></span><span id="_CPPv2N6paimon9FieldType6BIGINTE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a7f4c937d16ac710f52c288124cc886ae"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BIGINT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType6BIGINTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType5FLOATE">
+<span id="_CPPv3N6paimon9FieldType5FLOATE"></span><span id="_CPPv2N6paimon9FieldType5FLOATE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ae738c26bf4ce1037fa81b039a915cbf6"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FLOAT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType5FLOATE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType6DOUBLEE">
+<span id="_CPPv3N6paimon9FieldType6DOUBLEE"></span><span id="_CPPv2N6paimon9FieldType6DOUBLEE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7afd3e4ece78a7d422280d5ed379482229"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DOUBLE</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType6DOUBLEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType6STRINGE">
+<span id="_CPPv3N6paimon9FieldType6STRINGE"></span><span id="_CPPv2N6paimon9FieldType6STRINGE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a63b588d5559f64f89a416e656880b949"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">STRING</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType6STRINGE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType6BINARYE">
+<span id="_CPPv3N6paimon9FieldType6BINARYE"></span><span id="_CPPv2N6paimon9FieldType6BINARYE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a98ad0e8750ae10ad556ed7a62affb452"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BINARY</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType6BINARYE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType9TIMESTAMPE">
+<span id="_CPPv3N6paimon9FieldType9TIMESTAMPE"></span><span id="_CPPv2N6paimon9FieldType9TIMESTAMPE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a87fb568bfdc633ffd5dee0f22cb4606c"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">TIMESTAMP</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType9TIMESTAMPE" title="Link to this definition">#</a><br /></dt>
+<dd><p>timestamp type only supports precision values of 0, 3, 6, 9: </p>
+<p><ul class="simple">
+<li><p>0: second precision</p></li>
+<li><p>3: millisecond precision</p></li>
+<li><p>6: microsecond precision</p></li>
+<li><p>9: nanosecond precision </p></li>
+</ul>
+</p>
+</dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType7DECIMALE">
+<span id="_CPPv3N6paimon9FieldType7DECIMALE"></span><span id="_CPPv2N6paimon9FieldType7DECIMALE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a13d992d671957e9a2b3e936ca0cf14a4"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DECIMAL</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType7DECIMALE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType4DATEE">
+<span id="_CPPv3N6paimon9FieldType4DATEE"></span><span id="_CPPv2N6paimon9FieldType4DATEE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a633a6c7a6b9958f8174250094daf1e6a"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DATE</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType4DATEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType5ARRAYE">
+<span id="_CPPv3N6paimon9FieldType5ARRAYE"></span><span id="_CPPv2N6paimon9FieldType5ARRAYE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7acb4fb1757fb37c43cded35d3eb857c43"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ARRAY</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType5ARRAYE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType3MAPE">
+<span id="_CPPv3N6paimon9FieldType3MAPE"></span><span id="_CPPv2N6paimon9FieldType3MAPE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a5af1a3a285c2bdee4192223e31e1f833"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MAP</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType3MAPE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType6STRUCTE">
+<span id="_CPPv3N6paimon9FieldType6STRUCTE"></span><span id="_CPPv2N6paimon9FieldType6STRUCTE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ab8223be2455e0ea5a0e63e8f018d6fc3"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">STRUCT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType6STRUCTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType4BLOBE">
+<span id="_CPPv3N6paimon9FieldType4BLOBE"></span><span id="_CPPv2N6paimon9FieldType4BLOBE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a1649cff06611a6025da3dd511a97fb43"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BLOB</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType4BLOBE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9FieldType7UNKNOWNE">
+<span id="_CPPv3N6paimon9FieldType7UNKNOWNE"></span><span id="_CPPv2N6paimon9FieldType7UNKNOWNE"></span><span class="target" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a696b031073e74bf2cb98e5ef201d4aa3"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">UNKNOWN</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9FieldType7UNKNOWNE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="cpp struct">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7OptionsE">
+<span id="_CPPv3N6paimon7OptionsE"></span><span id="_CPPv2N6paimon7OptionsE"></span><span id="paimon::Options"></span><span class="target" id="structpaimon_1_1_options"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Options</span></span></span><a class="headerlink" href="#_CPPv4N6paimon7OptionsE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Configuration options and constants for Paimon table operations. </p>
+<p>The <a class="reference internal" href="#structpaimon_1_1_options"><span class="std std-ref">Options</span></a> struct contains static string constants that define configuration keys used throughout the Paimon system. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-merge-on-read-configurations">merge-on-read configurations</p>
+<p>The 5 constants are the prefixes or suffixes for merge on read configuration.</p>
+<p>The complete configuration keys can be:<ul class="simple">
+<li><p>fields.$field_name.aggregate-function</p></li>
+<li><p>fields.$field_name.ignore-retract</p></li>
+<li><p>fields.$field_names.sequence-group ($field_names support one or more field_name, split with FIELDS_SEPARATOR)</p></li>
+</ul>
+</p>
+<p>examples:<ul class="simple">
+<li><p>fields.f1.aggregate-function</p></li>
+<li><p>fields.f2.sequence-group</p></li>
+<li><p>fields.f3,f4.sequence-group </p></li>
+</ul>
+</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16FIELDS_SEPARATORE">
+<span id="_CPPv3N6paimon7Options16FIELDS_SEPARATORE"></span><span id="_CPPv2N6paimon7Options16FIELDS_SEPARATORE"></span><span id="paimon::Options::FIELDS_SEPARATOR__cCA"></span><span class="target" id="structpaimon_1_1_options_1ab8ce808006ca88bbf3dd4277e7199bc8"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FIELDS_SEPARATOR</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16FIELDS_SEPARATORE" title="Link to this definition">#</a><br /></dt>
+<dd><p>FIELDS_SEPARATOR is “,”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options13FIELDS_PREFIXE">
+<span id="_CPPv3N6paimon7Options13FIELDS_PREFIXE"></span><span id="_CPPv2N6paimon7Options13FIELDS_PREFIXE"></span><span id="paimon::Options::FIELDS_PREFIX__cCA"></span><span class="target" id="structpaimon_1_1_options_1ad04919fa4835ff09ed568842e292d6ab"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FIELDS_PREFIX</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options13FIELDS_PREFIXE" title="Link to this definition">#</a><br /></dt>
+<dd><p>FIELDS_PREFIX is “fields”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options12AGG_FUNCTIONE">
+<span id="_CPPv3N6paimon7Options12AGG_FUNCTIONE"></span><span id="_CPPv2N6paimon7Options12AGG_FUNCTIONE"></span><span id="paimon::Options::AGG_FUNCTION__cCA"></span><span class="target" id="structpaimon_1_1_options_1ad6db9a62ddd32788b4ac9d094b0d75a7"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AGG_FUNCTION</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options12AGG_FUNCTIONE" title="Link to this definition">#</a><br /></dt>
+<dd><p>AGG_FUNCTION is “aggregate-function”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options20DEFAULT_AGG_FUNCTIONE">
+<span id="_CPPv3N6paimon7Options20DEFAULT_AGG_FUNCTIONE"></span><span id="_CPPv2N6paimon7Options20DEFAULT_AGG_FUNCTIONE"></span><span id="paimon::Options::DEFAULT_AGG_FUNCTION__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2efcd211258e28e590cedf2b69ac69a3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DEFAULT_AGG_FUNCTION</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options20DEFAULT_AGG_FUNCTIONE" title="Link to this definition">#</a><br /></dt>
+<dd><p>DEFAULT_AGG_FUNCTION is “default-aggregate-function”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options14IGNORE_RETRACTE">
+<span id="_CPPv3N6paimon7Options14IGNORE_RETRACTE"></span><span id="_CPPv2N6paimon7Options14IGNORE_RETRACTE"></span><span id="paimon::Options::IGNORE_RETRACT__cCA"></span><span class="target" id="structpaimon_1_1_options_1a4885922a6c0e228f6af911e33d6171e3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IGNORE_RETRACT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options14IGNORE_RETRACTE" title="Link to this definition">#</a><br /></dt>
+<dd><p>IGNORE_RETRACT is “ignore-retract”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options14SEQUENCE_GROUPE">
+<span id="_CPPv3N6paimon7Options14SEQUENCE_GROUPE"></span><span id="_CPPv2N6paimon7Options14SEQUENCE_GROUPE"></span><span id="paimon::Options::SEQUENCE_GROUP__cCA"></span><span class="target" id="structpaimon_1_1_options_1a590f345233ef3c5d4e7f8e3b2d1a0714"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SEQUENCE_GROUP</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options14SEQUENCE_GROUPE" title="Link to this definition">#</a><br /></dt>
+<dd><p>SEQUENCE_GROUP is “sequence-group”. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options6BUCKETE">
+<span id="_CPPv3N6paimon7Options6BUCKETE"></span><span id="_CPPv2N6paimon7Options6BUCKETE"></span><span id="paimon::Options::BUCKET__cCA"></span><span class="target" id="structpaimon_1_1_options_1a51bffec724b24ffc438dddded120da40"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BUCKET</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options6BUCKETE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“bucket” - Bucket number for file store. </p>
+<p>It should either be equal to -1 (dynamic bucket mode), or it must be greater than 0 (fixed bucket mode). </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options10BUCKET_KEYE">
+<span id="_CPPv3N6paimon7Options10BUCKET_KEYE"></span><span id="_CPPv2N6paimon7Options10BUCKET_KEYE"></span><span id="paimon::Options::BUCKET_KEY__cCA"></span><span class="target" id="structpaimon_1_1_options_1a1274b48114fb97b2881ac12839977b10"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BUCKET_KEY</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options10BUCKET_KEYE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“bucket-key” - Specify the paimon distribution policy. </p>
+<p>Data is assigned to each bucket according to the hash value of bucket-key. If you specify multiple fields, delimiter is ‘,’. If not specified, the primary key will be used, if there is no primary key, the full row will be used. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options9PAGE_SIZEE">
+<span id="_CPPv3N6paimon7Options9PAGE_SIZEE"></span><span id="_CPPv2N6paimon7Options9PAGE_SIZEE"></span><span id="paimon::Options::PAGE_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a5b7cfde2732a102a84c9d0a140cbbec7"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PAGE_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options9PAGE_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“page-size” - Memory page size, default value 64 kb. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options11FILE_FORMATE">
+<span id="_CPPv3N6paimon7Options11FILE_FORMATE"></span><span id="_CPPv2N6paimon7Options11FILE_FORMATE"></span><span id="paimon::Options::FILE_FORMAT__cCA"></span><span class="target" id="structpaimon_1_1_options_1ab6ab49b3757e09afa8a0ea93e102da6b"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FILE_FORMAT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options11FILE_FORMATE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“file.format” - Specify the message format of data files. </p>
+<p>Default value is parquet. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options11FILE_SYSTEME">
+<span id="_CPPv3N6paimon7Options11FILE_SYSTEME"></span><span id="_CPPv2N6paimon7Options11FILE_SYSTEME"></span><span id="paimon::Options::FILE_SYSTEM__cCA"></span><span class="target" id="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FILE_SYSTEM</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options11FILE_SYSTEME" title="Link to this definition">#</a><br /></dt>
+<dd><p>“file-system” - Specify the file system. </p>
+<p>Default value is local. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16TARGET_FILE_SIZEE">
+<span id="_CPPv3N6paimon7Options16TARGET_FILE_SIZEE"></span><span id="_CPPv2N6paimon7Options16TARGET_FILE_SIZEE"></span><span id="paimon::Options::TARGET_FILE_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1aea71adb55d0c0163de81ce345ab60a3c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">TARGET_FILE_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16TARGET_FILE_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“target-file-size” - Target size of a file. Default value is 128MB. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options21BLOB_TARGET_FILE_SIZEE">
+<span id="_CPPv3N6paimon7Options21BLOB_TARGET_FILE_SIZEE"></span><span id="_CPPv2N6paimon7Options21BLOB_TARGET_FILE_SIZEE"></span><span id="paimon::Options::BLOB_TARGET_FILE_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1aa10918f1e1847610cc2369e0f6701419"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BLOB_TARGET_FILE_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options21BLOB_TARGET_FILE_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“blob.target-file-size” - Target size of a blob file. Default is TARGET_FILE_SIZE. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options22PARTITION_DEFAULT_NAMEE">
+<span id="_CPPv3N6paimon7Options22PARTITION_DEFAULT_NAMEE"></span><span id="_CPPv2N6paimon7Options22PARTITION_DEFAULT_NAMEE"></span><span id="paimon::Options::PARTITION_DEFAULT_NAME__cCA"></span><span class="target" id="structpaimon_1_1_options_1a3d2781743b85911a6245f621ab2b5a72"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PARTITION_DEFAULT_NAME</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options22PARTITION_DEFAULT_NAMEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“partition.default-name” - The default partition name in case the dynamic partition column value is null/empty string. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16FILE_COMPRESSIONE">
+<span id="_CPPv3N6paimon7Options16FILE_COMPRESSIONE"></span><span id="_CPPv2N6paimon7Options16FILE_COMPRESSIONE"></span><span id="paimon::Options::FILE_COMPRESSION__cCA"></span><span class="target" id="structpaimon_1_1_options_1a71a027400d3e66ad15312ddd0af73e9c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FILE_COMPRESSION</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16FILE_COMPRESSIONE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“file.compression” - The default file compression is zstd. </p>
+<p>For faster read and write, it is recommended to use zstd. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE">
+<span id="_CPPv3N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE"></span><span id="_CPPv2N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE"></span><span id="paimon::Options::FILE_COMPRESSION_ZSTD_LEVEL__cCA"></span><span class="target" id="structpaimon_1_1_options_1aa5b3a1fc8018b3cfa18036e9200f7a77"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FILE_COMPRESSION_ZSTD_LEVEL</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“file.compression.zstd-level” Default file compression zstd level. </p>
+<p>For higher compression rates, it can be configured to 9, but the read and write speed will significantly decrease. Default value is 1. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE">
+<span id="_CPPv3N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE"></span><span id="_CPPv2N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE"></span><span id="paimon::Options::MANIFEST_TARGET_FILE_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a3c4da2efb535830009f96cf610abb48e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MANIFEST_TARGET_FILE_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“manifest.target-file-size” - Suggested file size of a manifest file. </p>
+<p>Default value is 8MB. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options15MANIFEST_FORMATE">
+<span id="_CPPv3N6paimon7Options15MANIFEST_FORMATE"></span><span id="_CPPv2N6paimon7Options15MANIFEST_FORMATE"></span><span id="paimon::Options::MANIFEST_FORMAT__cCA"></span><span class="target" id="structpaimon_1_1_options_1a0ac79f203f9b012175941c410e7b8aa2"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MANIFEST_FORMAT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options15MANIFEST_FORMATE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“manifest.format” - Specify the message format of manifest files. </p>
+<p>Default value is orc. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options20MANIFEST_COMPRESSIONE">
+<span id="_CPPv3N6paimon7Options20MANIFEST_COMPRESSIONE"></span><span id="_CPPv2N6paimon7Options20MANIFEST_COMPRESSIONE"></span><span id="paimon::Options::MANIFEST_COMPRESSION__cCA"></span><span class="target" id="structpaimon_1_1_options_1a64199aab5e2949c8a6213fe2888c6c12"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MANIFEST_COMPRESSION</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options20MANIFEST_COMPRESSIONE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“manifest.compression” - File compression for manifest, default value is zstd. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE">
+<span id="_CPPv3N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE"></span><span id="_CPPv2N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE"></span><span id="paimon::Options::MANIFEST_MERGE_MIN_COUNT__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2a5f00d1318d9b0a6ae142ab4048e6b6"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MANIFEST_MERGE_MIN_COUNT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“manifest.merge-min-count” - To avoid frequent manifest merges, this parameter specifies the minimum number of ManifestFileMeta to merge, default value is 30. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE">
+<span id="_CPPv3N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE"></span><span id="_CPPv2N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE"></span><span id="paimon::Options::MANIFEST_FULL_COMPACTION_FILE_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a180ad44e1fe9b14b08d0f11128c2036b"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MANIFEST_FULL_COMPACTION_FILE_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“manifest.full-compaction-threshold-size” - The size threshold for triggering full compaction of manifest, default value is 16MB. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE">
+<span id="_CPPv3N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE"></span><span id="_CPPv2N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE"></span><span id="paimon::Options::SOURCE_SPLIT_TARGET_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1aa609b09a43e0194db031cadb22e7252b"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SOURCE_SPLIT_TARGET_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“source.split.target-size” - Target size of a source split when scanning a bucket. </p>
+<p>Default value is 128MB. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE">
+<span id="_CPPv3N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE"></span><span id="_CPPv2N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE"></span><span id="paimon::Options::SOURCE_SPLIT_OPEN_FILE_COST__cCA"></span><span class="target" id="structpaimon_1_1_options_1a8db37fd6e275d5d4db725a76f34bd8e9"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SOURCE_SPLIT_OPEN_FILE_COST</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“source.split.open-file-cost” - Open file cost of a source file. </p>
+<p>It is used to avoid reading too many files with a source split, which can be very slow. Default value is 4MB. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16SCAN_SNAPSHOT_IDE">
+<span id="_CPPv3N6paimon7Options16SCAN_SNAPSHOT_IDE"></span><span id="_CPPv2N6paimon7Options16SCAN_SNAPSHOT_IDE"></span><span id="paimon::Options::SCAN_SNAPSHOT_ID__cCA"></span><span class="target" id="structpaimon_1_1_options_1a78c2c1ab1c9c296a43813c9cacdfe835"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SCAN_SNAPSHOT_ID</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16SCAN_SNAPSHOT_IDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“scan.snapshot-id” - Optional snapshot id used in case of “from-snapshot” or “from-snapshot-full” scan mode </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options9SCAN_MODEE">
+<span id="_CPPv3N6paimon7Options9SCAN_MODEE"></span><span id="_CPPv2N6paimon7Options9SCAN_MODEE"></span><span id="paimon::Options::SCAN_MODE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a4943f66c2aa6662477edc4ff83f2aeac"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SCAN_MODE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options9SCAN_MODEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“scan.mode” - Specify the scanning behavior of the source. </p>
+<p>Values can be: “default”, “latest-full”, “latest”, “from-snapshot”, “from-snapshot-full”. Default value is “default”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options15READ_BATCH_SIZEE">
+<span id="_CPPv3N6paimon7Options15READ_BATCH_SIZEE"></span><span id="_CPPv2N6paimon7Options15READ_BATCH_SIZEE"></span><span id="paimon::Options::READ_BATCH_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a7f83ced15c93c7fd98c28ed4b8a80935"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">READ_BATCH_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options15READ_BATCH_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“read.batch-size” - Read batch size for any file format if it supports. </p>
+<p>The default value is 1024. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16WRITE_BATCH_SIZEE">
+<span id="_CPPv3N6paimon7Options16WRITE_BATCH_SIZEE"></span><span id="_CPPv2N6paimon7Options16WRITE_BATCH_SIZEE"></span><span id="paimon::Options::WRITE_BATCH_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2287eaa3a9b49904e10b009a7f57e1cc"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WRITE_BATCH_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16WRITE_BATCH_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“write.batch-size” - Write batch size for any file format if it supports. </p>
+<p>The default value is 1024. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options17WRITE_BUFFER_SIZEE">
+<span id="_CPPv3N6paimon7Options17WRITE_BUFFER_SIZEE"></span><span id="_CPPv2N6paimon7Options17WRITE_BUFFER_SIZEE"></span><span id="paimon::Options::WRITE_BUFFER_SIZE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a047552260c3ed90836e59b5c6a184a7a"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WRITE_BUFFER_SIZE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options17WRITE_BUFFER_SIZEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“write-buffer-size” - Amount of data to build up in memory before converting to a sorted on-disk file. </p>
+<p>The default value is 256 mb </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE">
+<span id="_CPPv3N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE"></span><span id="_CPPv2N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE"></span><span id="paimon::Options::SNAPSHOT_NUM_RETAINED_MIN__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2eae818025acd9da707952c56dc6eed1"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SNAPSHOT_NUM_RETAINED_MIN</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“snapshot.num-retained.min” - The minimum number of completed snapshots to retain. </p>
+<p>Should be greater than or equal to 1. Default value is 10 </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE">
+<span id="_CPPv3N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE"></span><span id="_CPPv2N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE"></span><span id="paimon::Options::SNAPSHOT_NUM_RETAINED_MAX__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2c753272f7afce85fd4f9c13c37b367d"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SNAPSHOT_NUM_RETAINED_MAX</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“snapshot.num-retained.max” - The maximum number of completed snapshots to retain. </p>
+<p>Should be greater than or equal to the minimum number. Default value is int32 max value. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options22SNAPSHOT_TIME_RETAINEDE">
+<span id="_CPPv3N6paimon7Options22SNAPSHOT_TIME_RETAINEDE"></span><span id="_CPPv2N6paimon7Options22SNAPSHOT_TIME_RETAINEDE"></span><span id="paimon::Options::SNAPSHOT_TIME_RETAINED__cCA"></span><span class="target" id="structpaimon_1_1_options_1a878d288cd32767680a5f2c1b6540ac54"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SNAPSHOT_TIME_RETAINED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options22SNAPSHOT_TIME_RETAINEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“snapshot.time-retained” - The maximum time of completed snapshots to retain. </p>
+<p>Default value is 1 hour. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE">
+<span id="_CPPv3N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE"></span><span id="_CPPv2N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE"></span><span id="paimon::Options::SNAPSHOT_EXPIRE_LIMIT__cCA"></span><span class="target" id="structpaimon_1_1_options_1ac3ba4534124e27beb027dac13ed585ee"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SNAPSHOT_EXPIRE_LIMIT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“snapshot.expire.limit” - The maximum number of snapshots allowed to expire at a time. </p>
+<p>Default value is 10. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE">
+<span id="_CPPv3N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE"></span><span id="_CPPv2N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE"></span><span id="paimon::Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES__cCA"></span><span class="target" id="structpaimon_1_1_options_1a0323dc398212e2087a542ffe65ec6120"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SNAPSHOT_CLEAN_EMPTY_DIRECTORIES</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“snapshot.clean-empty-directories” - Whether to try to clean empty directories when expiring snapshots, if enabled, please note: hdfs: may print exceptions in NameNode. </p>
+<p>oss/s3: may cause performance issue. Default value is false. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options14COMMIT_TIMEOUTE">
+<span id="_CPPv3N6paimon7Options14COMMIT_TIMEOUTE"></span><span id="_CPPv2N6paimon7Options14COMMIT_TIMEOUTE"></span><span id="paimon::Options::COMMIT_TIMEOUT__cCA"></span><span class="target" id="structpaimon_1_1_options_1a2448d09733a570a6c9f66b433b58bfc8"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">COMMIT_TIMEOUT</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options14COMMIT_TIMEOUTE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“commit.timeout” - Timeout duration of retry when commit failed. No default value. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options18COMMIT_MAX_RETRIESE">
+<span id="_CPPv3N6paimon7Options18COMMIT_MAX_RETRIESE"></span><span id="_CPPv2N6paimon7Options18COMMIT_MAX_RETRIESE"></span><span id="paimon::Options::COMMIT_MAX_RETRIES__cCA"></span><span class="target" id="structpaimon_1_1_options_1adb267e06a41749e8d4adbd1fa4da47e4"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">COMMIT_MAX_RETRIES</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options18COMMIT_MAX_RETRIESE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“commit.max-retries” - Maximum number of retries when commit failed. Default value is 10. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options14SEQUENCE_FIELDE">
+<span id="_CPPv3N6paimon7Options14SEQUENCE_FIELDE"></span><span id="_CPPv2N6paimon7Options14SEQUENCE_FIELDE"></span><span id="paimon::Options::SEQUENCE_FIELD__cCA"></span><span class="target" id="structpaimon_1_1_options_1a07322605bcff72ca8281dbccda0daab3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SEQUENCE_FIELD</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options14SEQUENCE_FIELDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“sequence.field” - The field that generates the sequence number for primary key table, the sequence number determines which data is the most recent. </p>
+<p>Value use “,” as delimiter. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE">
+<span id="_CPPv3N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE"></span><span id="_CPPv2N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE"></span><span id="paimon::Options::SEQUENCE_FIELD_SORT_ORDER__cCA"></span><span class="target" id="structpaimon_1_1_options_1a70e6bcd22de046c55b5c756b1806528c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SEQUENCE_FIELD_SORT_ORDER</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“sequence.field.sort-order” - Specify the order of sequence.field. </p>
+<p>Values can be: “ascending”, “descending”. Default value is “ascending”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options12MERGE_ENGINEE">
+<span id="_CPPv3N6paimon7Options12MERGE_ENGINEE"></span><span id="_CPPv2N6paimon7Options12MERGE_ENGINEE"></span><span id="paimon::Options::MERGE_ENGINE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a76a874c19324589247093ffc26d0acc1"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MERGE_ENGINE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options12MERGE_ENGINEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“merge-engine” - Specify the merge engine for table with primary key. </p>
+<p>Values can be: “deduplicate”, “partial-update”, “aggregation”, “first-row”. Default value is “deduplicate”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options11SORT_ENGINEE">
+<span id="_CPPv3N6paimon7Options11SORT_ENGINEE"></span><span id="_CPPv2N6paimon7Options11SORT_ENGINEE"></span><span id="paimon::Options::SORT_ENGINE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a98c43b0233de7def0c32485028e72e8d"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SORT_ENGINE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options11SORT_ENGINEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“sort-engine” - Specify the sort engine for table with primary key. </p>
+<p>Values can be: “min-heap”, “loser-tree”. Default value is “loser-tree”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options13IGNORE_DELETEE">
+<span id="_CPPv3N6paimon7Options13IGNORE_DELETEE"></span><span id="_CPPv2N6paimon7Options13IGNORE_DELETEE"></span><span id="paimon::Options::IGNORE_DELETE__cCA"></span><span class="target" id="structpaimon_1_1_options_1a6933b0046d98486fc800cd38c222b773"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IGNORE_DELETE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options13IGNORE_DELETEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“ignore-delete” - Whether to ignore delete records. Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE">
+<span id="_CPPv3N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE"></span><span id="_CPPv2N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE"></span><span id="paimon::Options::FIELDS_DEFAULT_AGG_FUNC__cCA"></span><span class="target" id="structpaimon_1_1_options_1aa71f20c1cbcfbc05c5b7438c1ef90355"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FIELDS_DEFAULT_AGG_FUNC</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“fields.default-aggregate-function” - Default aggregate function of all fields for partial-update and aggregate merge function. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options24DELETION_VECTORS_ENABLEDE">
+<span id="_CPPv3N6paimon7Options24DELETION_VECTORS_ENABLEDE"></span><span id="_CPPv2N6paimon7Options24DELETION_VECTORS_ENABLEDE"></span><span id="paimon::Options::DELETION_VECTORS_ENABLED__cCA"></span><span class="target" id="structpaimon_1_1_options_1a74820aa9cd3a53d9685ccbc469ee6367"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DELETION_VECTORS_ENABLED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options24DELETION_VECTORS_ENABLEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“deletion-vectors.enabled” - Whether to enable deletion vectors mode. </p>
+<p>In this mode, index files containing deletion vectors are generated when data is written, which marks the data for deletion. During read operations, by applying these index files, merging can be avoided. Default value is false. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options18CHANGELOG_PRODUCERE">
+<span id="_CPPv3N6paimon7Options18CHANGELOG_PRODUCERE"></span><span id="_CPPv2N6paimon7Options18CHANGELOG_PRODUCERE"></span><span id="paimon::Options::CHANGELOG_PRODUCER__cCA"></span><span class="target" id="structpaimon_1_1_options_1a221864b071bf35238a2f0643ef707c91"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CHANGELOG_PRODUCER</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options18CHANGELOG_PRODUCERE" title="Link to this definition">#</a><br /></dt>
+<dd><p>
+“changelog-producer” - Whether to double write to a changelog file. This changelog file keeps the details of data changes, it can be read directly during stream reads. This can be applied to tables with primary keys. Values can be “none”, “input”, “lookup”, “full-compaction”. Default value is “none”. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">CHANGELOG_PRODUCER</span></code> currently only support <code class="docutils literal notranslate"><span class="pre">none</span></code></p>
+</div>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options12FORCE_LOOKUPE">
+<span id="_CPPv3N6paimon7Options12FORCE_LOOKUPE"></span><span id="_CPPv2N6paimon7Options12FORCE_LOOKUPE"></span><span id="paimon::Options::FORCE_LOOKUP__cCA"></span><span class="target" id="structpaimon_1_1_options_1a4bb834532b220d8fa4bac2df74d26e05"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FORCE_LOOKUP</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options12FORCE_LOOKUPE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“force-lookup” - Whether to force the use of lookup for compaction. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE">
+<span id="_CPPv3N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE"></span><span id="_CPPv2N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE"></span><span id="paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE__cCA"></span><span class="target" id="structpaimon_1_1_options_1af173f870c67bfaa3fcf3800fa0cf9402"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“partial-update.remove-record-on-delete” - Whether to remove the whole row in partial-update engine when records are received. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE">
+<span id="_CPPv3N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE"></span><span id="_CPPv2N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE"></span><span id="paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP__cCA"></span><span class="target" id="structpaimon_1_1_options_1a57cdd3e2e66df9a97ee51bcd60251c89"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“partial-update.remove-record-on-sequence-group” - When records of the given sequence groups are received, remove the whole row. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options20SCAN_FALLBACK_BRANCHE">
+<span id="_CPPv3N6paimon7Options20SCAN_FALLBACK_BRANCHE"></span><span id="_CPPv2N6paimon7Options20SCAN_FALLBACK_BRANCHE"></span><span id="paimon::Options::SCAN_FALLBACK_BRANCH__cCA"></span><span class="target" id="structpaimon_1_1_options_1a5ef2b53ac7ded65625545e75efef26ae"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SCAN_FALLBACK_BRANCH</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options20SCAN_FALLBACK_BRANCHE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“scan.fallback-branch” - When a batch job queries from a table, if a partition does not exist in the current branch, the reader will try to get this partition from this fallback branch. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options6BRANCHE">
+<span id="_CPPv3N6paimon7Options6BRANCHE"></span><span id="_CPPv2N6paimon7Options6BRANCHE"></span><span id="paimon::Options::BRANCH__cCA"></span><span class="target" id="structpaimon_1_1_options_1a7759e2bf7eea6b4fa657f29e21a0d437"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BRANCH</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options6BRANCHE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“branch” - Specify branch name. Default value is “main”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options23FILE_INDEX_READ_ENABLEDE">
+<span id="_CPPv3N6paimon7Options23FILE_INDEX_READ_ENABLEDE"></span><span id="_CPPv2N6paimon7Options23FILE_INDEX_READ_ENABLEDE"></span><span id="paimon::Options::FILE_INDEX_READ_ENABLED__cCA"></span><span class="target" id="structpaimon_1_1_options_1a8d1a70db1f9e9eb27618fac1f9f96a86"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FILE_INDEX_READ_ENABLED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options23FILE_INDEX_READ_ENABLEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“file-index.read.enabled” - Whether enabled read file index. Default value is “true”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE">
+<span id="_CPPv3N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE"></span><span id="_CPPv2N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE"></span><span id="paimon::Options::DATA_FILE_EXTERNAL_PATHS__cCA"></span><span class="target" id="structpaimon_1_1_options_1abdbc3a1b6f206104f7e6d3d8df5a6dae"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DATA_FILE_EXTERNAL_PATHS</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“data-file.external-paths” - The external paths where the data of this table will be written, multiple elements separated by commas. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE">
+<span id="_CPPv3N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE"></span><span id="_CPPv2N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE"></span><span id="paimon::Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY__cCA"></span><span class="target" id="structpaimon_1_1_options_1afdfac4ab2795c18d579580443f0a3228"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DATA_FILE_EXTERNAL_PATHS_STRATEGY</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“data-file.external-paths.strategy” - The strategy of selecting an external path when writing data. </p>
+<p>Values can be: “none”, “specific-fs”, “round-robin”. Default value is “none”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options16DATA_FILE_PREFIXE">
+<span id="_CPPv3N6paimon7Options16DATA_FILE_PREFIXE"></span><span id="_CPPv2N6paimon7Options16DATA_FILE_PREFIXE"></span><span id="paimon::Options::DATA_FILE_PREFIX__cCA"></span><span class="target" id="structpaimon_1_1_options_1a6793acd517b0759d14e18c89808a70c0"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DATA_FILE_PREFIX</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options16DATA_FILE_PREFIXE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“data-file.prefix” - Specify the file name prefix of data files. Default value is “data-”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE">
+<span id="_CPPv3N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE"></span><span id="_CPPv2N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE"></span><span id="paimon::Options::INDEX_FILE_IN_DATA_FILE_DIR__cCA"></span><span class="target" id="structpaimon_1_1_options_1a7d1e5032bb6fab186cca56dc2070369a"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">INDEX_FILE_IN_DATA_FILE_DIR</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“index-file-in-data-file-dir” - Whether index file in data file directory. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options20ROW_TRACKING_ENABLEDE">
+<span id="_CPPv3N6paimon7Options20ROW_TRACKING_ENABLEDE"></span><span id="_CPPv2N6paimon7Options20ROW_TRACKING_ENABLEDE"></span><span id="paimon::Options::ROW_TRACKING_ENABLED__cCA"></span><span class="target" id="structpaimon_1_1_options_1adae9d0eca977241094aad9d8f89281a1"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ROW_TRACKING_ENABLED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options20ROW_TRACKING_ENABLEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“row-tracking.enabled” - Whether enable unique row id for append table. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options22DATA_EVOLUTION_ENABLEDE">
+<span id="_CPPv3N6paimon7Options22DATA_EVOLUTION_ENABLEDE"></span><span id="_CPPv2N6paimon7Options22DATA_EVOLUTION_ENABLEDE"></span><span id="paimon::Options::DATA_EVOLUTION_ENABLED__cCA"></span><span class="target" id="structpaimon_1_1_options_1ab1508a51de5769f8906183f5ecb3aedd"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DATA_EVOLUTION_ENABLED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options22DATA_EVOLUTION_ENABLEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“data-evolution.enabled” - Whether enable data evolution for row tracking table. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE">
+<span id="_CPPv3N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE"></span><span id="_CPPv2N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE"></span><span id="paimon::Options::PARTITION_GENERATE_LEGACY_NAME__cCA"></span><span class="target" id="structpaimon_1_1_options_1a05ba604edad1ca939f642e72414b9c08"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PARTITION_GENERATE_LEGACY_NAME</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“partition.legacy-name” - The legacy partition name is using <code class="docutils literal notranslate"><span class="pre">ToString</span></code> for all types. </p>
+<p>If false, using casting to string for all types. Default value is “true”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options18BLOB_AS_DESCRIPTORE">
+<span id="_CPPv3N6paimon7Options18BLOB_AS_DESCRIPTORE"></span><span id="_CPPv2N6paimon7Options18BLOB_AS_DESCRIPTORE"></span><span id="paimon::Options::BLOB_AS_DESCRIPTOR__cCA"></span><span class="target" id="structpaimon_1_1_options_1a565d571a883532d4637b8fccdfc78920"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BLOB_AS_DESCRIPTOR</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options18BLOB_AS_DESCRIPTORE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“blob-as-descriptor” - Read and write blob field using blob descriptor rather than blob bytes. </p>
+<p>Default value is “false”. </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Options20GLOBAL_INDEX_ENABLEDE">
+<span id="_CPPv3N6paimon7Options20GLOBAL_INDEX_ENABLEDE"></span><span id="_CPPv2N6paimon7Options20GLOBAL_INDEX_ENABLEDE"></span><span id="paimon::Options::GLOBAL_INDEX_ENABLED__cCA"></span><span class="target" id="structpaimon_1_1_options_1aaf4ad3e62fef143409b14298762d5da5"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GLOBAL_INDEX_ENABLED</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon7Options20GLOBAL_INDEX_ENABLEDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>“global-index.enabled” - Whether to enable global index for scan. Default value is “true”. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="clean.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Orphan Files Clean</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="executor.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Executor</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldTypeE"><code class="docutils literal notranslate"><span class="pre">FieldType</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType7BOOLEANE"><code class="docutils literal notranslate"><span class="pre">BOOLEAN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType7TINYINTE"><code class="docutils literal notranslate"><span class="pre">TINYINT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType8SMALLINTE"><code class="docutils literal notranslate"><span class="pre">SMALLINT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType3INTE"><code class="docutils literal notranslate"><span class="pre">INT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType6BIGINTE"><code class="docutils literal notranslate"><span class="pre">BIGINT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType5FLOATE"><code class="docutils literal notranslate"><span class="pre">FLOAT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType6DOUBLEE"><code class="docutils literal notranslate"><span class="pre">DOUBLE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType6STRINGE"><code class="docutils literal notranslate"><span class="pre">STRING</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType6BINARYE"><code class="docutils literal notranslate"><span class="pre">BINARY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType9TIMESTAMPE"><code class="docutils literal notranslate"><span class="pre">TIMESTAMP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType7DECIMALE"><code class="docutils literal notranslate"><span class="pre">DECIMAL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType4DATEE"><code class="docutils literal notranslate"><span class="pre">DATE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType5ARRAYE"><code class="docutils literal notranslate"><span class="pre">ARRAY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType3MAPE"><code class="docutils literal notranslate"><span class="pre">MAP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType6STRUCTE"><code class="docutils literal notranslate"><span class="pre">STRUCT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType4BLOBE"><code class="docutils literal notranslate"><span class="pre">BLOB</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9FieldType7UNKNOWNE"><code class="docutils literal notranslate"><span class="pre">UNKNOWN</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7OptionsE"><code class="docutils literal notranslate"><span class="pre">paimon::Options</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16FIELDS_SEPARATORE"><code class="docutils literal notranslate"><span class="pre">FIELDS_SEPARATOR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options13FIELDS_PREFIXE"><code class="docutils literal notranslate"><span class="pre">FIELDS_PREFIX</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options12AGG_FUNCTIONE"><code class="docutils literal notranslate"><span class="pre">AGG_FUNCTION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options20DEFAULT_AGG_FUNCTIONE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_AGG_FUNCTION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options14IGNORE_RETRACTE"><code class="docutils literal notranslate"><span class="pre">IGNORE_RETRACT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options14SEQUENCE_GROUPE"><code class="docutils literal notranslate"><span class="pre">SEQUENCE_GROUP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options6BUCKETE"><code class="docutils literal notranslate"><span class="pre">BUCKET</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options10BUCKET_KEYE"><code class="docutils literal notranslate"><span class="pre">BUCKET_KEY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options9PAGE_SIZEE"><code class="docutils literal notranslate"><span class="pre">PAGE_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options11FILE_FORMATE"><code class="docutils literal notranslate"><span class="pre">FILE_FORMAT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options11FILE_SYSTEME"><code class="docutils literal notranslate"><span class="pre">FILE_SYSTEM</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16TARGET_FILE_SIZEE"><code class="docutils literal notranslate"><span class="pre">TARGET_FILE_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options21BLOB_TARGET_FILE_SIZEE"><code class="docutils literal notranslate"><span class="pre">BLOB_TARGET_FILE_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options22PARTITION_DEFAULT_NAMEE"><code class="docutils literal notranslate"><span class="pre">PARTITION_DEFAULT_NAME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16FILE_COMPRESSIONE"><code class="docutils literal notranslate"><span class="pre">FILE_COMPRESSION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE"><code class="docutils literal notranslate"><span class="pre">FILE_COMPRESSION_ZSTD_LEVEL</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE"><code class="docutils literal notranslate"><span class="pre">MANIFEST_TARGET_FILE_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options15MANIFEST_FORMATE"><code class="docutils literal notranslate"><span class="pre">MANIFEST_FORMAT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options20MANIFEST_COMPRESSIONE"><code class="docutils literal notranslate"><span class="pre">MANIFEST_COMPRESSION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE"><code class="docutils literal notranslate"><span class="pre">MANIFEST_MERGE_MIN_COUNT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE"><code class="docutils literal notranslate"><span class="pre">MANIFEST_FULL_COMPACTION_FILE_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE"><code class="docutils literal notranslate"><span class="pre">SOURCE_SPLIT_TARGET_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE"><code class="docutils literal notranslate"><span class="pre">SOURCE_SPLIT_OPEN_FILE_COST</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16SCAN_SNAPSHOT_IDE"><code class="docutils literal notranslate"><span class="pre">SCAN_SNAPSHOT_ID</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options9SCAN_MODEE"><code class="docutils literal notranslate"><span class="pre">SCAN_MODE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options15READ_BATCH_SIZEE"><code class="docutils literal notranslate"><span class="pre">READ_BATCH_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16WRITE_BATCH_SIZEE"><code class="docutils literal notranslate"><span class="pre">WRITE_BATCH_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options17WRITE_BUFFER_SIZEE"><code class="docutils literal notranslate"><span class="pre">WRITE_BUFFER_SIZE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE"><code class="docutils literal notranslate"><span class="pre">SNAPSHOT_NUM_RETAINED_MIN</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE"><code class="docutils literal notranslate"><span class="pre">SNAPSHOT_NUM_RETAINED_MAX</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options22SNAPSHOT_TIME_RETAINEDE"><code class="docutils literal notranslate"><span class="pre">SNAPSHOT_TIME_RETAINED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE"><code class="docutils literal notranslate"><span class="pre">SNAPSHOT_EXPIRE_LIMIT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE"><code class="docutils literal notranslate"><span class="pre">SNAPSHOT_CLEAN_EMPTY_DIRECTORIES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options14COMMIT_TIMEOUTE"><code class="docutils literal notranslate"><span class="pre">COMMIT_TIMEOUT</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options18COMMIT_MAX_RETRIESE"><code class="docutils literal notranslate"><span class="pre">COMMIT_MAX_RETRIES</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options14SEQUENCE_FIELDE"><code class="docutils literal notranslate"><span class="pre">SEQUENCE_FIELD</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE"><code class="docutils literal notranslate"><span class="pre">SEQUENCE_FIELD_SORT_ORDER</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options12MERGE_ENGINEE"><code class="docutils literal notranslate"><span class="pre">MERGE_ENGINE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options11SORT_ENGINEE"><code class="docutils literal notranslate"><span class="pre">SORT_ENGINE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options13IGNORE_DELETEE"><code class="docutils literal notranslate"><span class="pre">IGNORE_DELETE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE"><code class="docutils literal notranslate"><span class="pre">FIELDS_DEFAULT_AGG_FUNC</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options24DELETION_VECTORS_ENABLEDE"><code class="docutils literal notranslate"><span class="pre">DELETION_VECTORS_ENABLED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options18CHANGELOG_PRODUCERE"><code class="docutils literal notranslate"><span class="pre">CHANGELOG_PRODUCER</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options12FORCE_LOOKUPE"><code class="docutils literal notranslate"><span class="pre">FORCE_LOOKUP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE"><code class="docutils literal notranslate"><span class="pre">PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE"><code class="docutils literal notranslate"><span class="pre">PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options20SCAN_FALLBACK_BRANCHE"><code class="docutils literal notranslate"><span class="pre">SCAN_FALLBACK_BRANCH</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options6BRANCHE"><code class="docutils literal notranslate"><span class="pre">BRANCH</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options23FILE_INDEX_READ_ENABLEDE"><code class="docutils literal notranslate"><span class="pre">FILE_INDEX_READ_ENABLED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE"><code class="docutils literal notranslate"><span class="pre">DATA_FILE_EXTERNAL_PATHS</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE"><code class="docutils literal notranslate"><span class="pre">DATA_FILE_EXTERNAL_PATHS_STRATEGY</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options16DATA_FILE_PREFIXE"><code class="docutils literal notranslate"><span class="pre">DATA_FILE_PREFIX</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE"><code class="docutils literal notranslate"><span class="pre">INDEX_FILE_IN_DATA_FILE_DIR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options20ROW_TRACKING_ENABLEDE"><code class="docutils literal notranslate"><span class="pre">ROW_TRACKING_ENABLED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options22DATA_EVOLUTION_ENABLEDE"><code class="docutils literal notranslate"><span class="pre">DATA_EVOLUTION_ENABLED</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE"><code class="docutils literal notranslate"><span class="pre">PARTITION_GENERATE_LEGACY_NAME</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options18BLOB_AS_DESCRIPTORE"><code class="docutils literal notranslate"><span class="pre">BLOB_AS_DESCRIPTOR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Options20GLOBAL_INDEX_ENABLEDE"><code class="docutils literal notranslate"><span class="pre">GLOBAL_INDEX_ENABLED</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/defs.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

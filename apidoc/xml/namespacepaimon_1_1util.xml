@@ -1,0 +1,102 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="namespacepaimon_1_1util" kind="namespace" language="C++">
+    <compoundname>paimon::util</compoundname>
+    <innerclass refid="classpaimon_1_1util_1_1_to_string_ostreamable" prot="public">paimon::util::ToStringOstreamable</innerclass>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="namespacepaimon_1_1util_1a011c615352d70ccdc1e93cd5f73d4f81" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Head</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::util::StringBuilderRecursive</definition>
+        <argsstring>(std::ostream &amp;stream, Head &amp;&amp;head)</argsstring>
+        <name>StringBuilderRecursive</name>
+        <qualifiedname>paimon::util::StringBuilderRecursive</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Head</ref> &amp;&amp;</type>
+          <declname>head</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" line="55" column="6" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1_1util_1a51e5374bd5a2c1152333d9167d7e730c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Head</ref></type>
+          </param>
+          <param>
+            <type>typename...</type>
+            <declname>Tail</declname>
+            <defname>Tail</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::util::StringBuilderRecursive</definition>
+        <argsstring>(std::ostream &amp;stream, Head &amp;&amp;head, Tail &amp;&amp;... tail)</argsstring>
+        <name>StringBuilderRecursive</name>
+        <qualifiedname>paimon::util::StringBuilderRecursive</qualifiedname>
+        <param>
+          <type>std::ostream &amp;</type>
+          <declname>stream</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Head</ref> &amp;&amp;</type>
+          <declname>head</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Tail</ref> &amp;&amp;...</type>
+          <declname>tail</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" line="60" column="6" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" bodystart="60" bodyend="63"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1_1util_1a0957d9442ebc9118744ea5bc81c46719" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type>std::string</type>
+        <definition>std::string paimon::util::StringBuilder</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>StringBuilder</name>
+        <qualifiedname>paimon::util::StringBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" line="66" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" bodystart="66" bodyend="70"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/string_builder.h" line="31" column="1"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,588 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_buffered_input_stream" kind="class" language="C++" prot="public">
+    <compoundname>paimon::BufferedInputStream</compoundname>
+    <basecompoundref refid="classpaimon_1_1_input_stream" prot="public" virt="non-virtual">paimon::InputStream</basecompoundref>
+    <includes refid="buffered__input__stream_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1a3343edad41c9cf97fde8dcef6a287fa8" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::BufferedInputStream::DEFAULT_BUFFER_SIZE</definition>
+        <argsstring></argsstring>
+        <name>DEFAULT_BUFFER_SIZE</name>
+        <qualifiedname>paimon::BufferedInputStream::DEFAULT_BUFFER_SIZE</qualifiedname>
+        <initializer>= 8192</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="67" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1af6d742c388b1fb7b6be4db3bb963a845" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::BufferedInputStream::buffer_size_</definition>
+        <argsstring></argsstring>
+        <name>buffer_size_</name>
+        <qualifiedname>paimon::BufferedInputStream::buffer_size_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="81" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1a951ec59a2373ce47e112f85ebb50dfb1" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::BufferedInputStream::pos_</definition>
+        <argsstring></argsstring>
+        <name>pos_</name>
+        <qualifiedname>paimon::BufferedInputStream::pos_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="82" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="82" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1ac928c4edcab0ef22b0013c9bb46a1faf" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::BufferedInputStream::count_</definition>
+        <argsstring></argsstring>
+        <name>count_</name>
+        <qualifiedname>paimon::BufferedInputStream::count_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="83" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="83" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1ab0141f1e1211554346b2db6e5969a786" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Bytes&gt; paimon::BufferedInputStream::buffer_</definition>
+        <argsstring></argsstring>
+        <name>buffer_</name>
+        <qualifiedname>paimon::BufferedInputStream::buffer_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="84" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_buffered_input_stream_1a4718d13675a6ea1a27b3fc99b8b6cce5" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;InputStream&gt; paimon::BufferedInputStream::in_</definition>
+        <argsstring></argsstring>
+        <name>in_</name>
+        <qualifiedname>paimon::BufferedInputStream::in_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="85" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="85" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a72aa752849c601901f6d798423dac9a8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BufferedInputStream::BufferedInputStream</definition>
+        <argsstring>(const std::shared_ptr&lt; InputStream &gt; &amp;in, int32_t buffer_size, MemoryPool *pool)</argsstring>
+        <name>BufferedInputStream</name>
+        <qualifiedname>paimon::BufferedInputStream::BufferedInputStream</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>in</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>buffer_size</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> *</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a new buffered input stream that wraps the provided input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The buffer is allocated from the specified memory pool.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>in</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The underlying input stream to wrap. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>buffer_size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the internal buffer in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for buffer allocation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="45" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1aae1d0fc7feb644b06de9f563f0d5123b" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BufferedInputStream::~BufferedInputStream</definition>
+        <argsstring>() noexcept override</argsstring>
+        <name>~BufferedInputStream</name>
+        <qualifiedname>paimon::BufferedInputStream::~BufferedInputStream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="48" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a632c6c39f06cbd9e9c22626ed776dcc9" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::BufferedInputStream::Seek</definition>
+        <argsstring>(int64_t offset, SeekOrigin origin) override</argsstring>
+        <name>Seek</name>
+        <qualifiedname>paimon::BufferedInputStream::Seek</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a2dc5b4b46ddcae0352124a6d0c9ac4c9">Seek</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type><ref refid="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9" kindref="member">SeekOrigin</ref></type>
+          <declname>origin</declname>
+        </param>
+        <briefdescription>
+<para>Seek to a specified position in the input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>offset</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte offset relative to the origin position. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>origin</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The reference point for seeking (<computeroutput><ref refid="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e" kindref="member">FS_SEEK_SET</ref></computeroutput>, <computeroutput><ref refid="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7" kindref="member">FS_SEEK_CUR</ref></computeroutput>, <computeroutput><ref refid="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27" kindref="member">FS_SEEK_END</ref></computeroutput>). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with appropriate error information. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="50" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a150cbb2548d8ef77cfbada6e0038fbeb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>Result&lt; int64_t &gt; paimon::BufferedInputStream::GetPos</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetPos</name>
+        <qualifiedname>paimon::BufferedInputStream::GetPos</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a3ac32eb3c03543f382ffeae736d47212">GetPos</reimplements>
+        <briefdescription>
+<para>Get the current position in the input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Current position in the input stream. </para>
+</simplesect>
+<simplesect kind="return"><para>IOError returned if an I/O error occurred in the underlying stream. implementation while accessing the stream&apos;s position. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="52" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a5af6b5c8c1231360277856173c2ef078" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>Result&lt; int32_t &gt; paimon::BufferedInputStream::Read</definition>
+        <argsstring>(char *buffer, uint32_t size) override</argsstring>
+        <name>Read</name>
+        <qualifiedname>paimon::BufferedInputStream::Read</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1ad09a4cdc7205c7654e34523ede1ab263">Read</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Read data from the current position in the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="out">buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the buffer where read data will be stored. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Maximum number of bytes to read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the actual number of bytes read on success, or an error status on failure. </para>
+</simplesect>
+<simplesect kind="note"><para>The stream position advances by the number of bytes actually read. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="54" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a71d0421b381829da41ba7c5cef6ff019" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>Result&lt; int32_t &gt; paimon::BufferedInputStream::Read</definition>
+        <argsstring>(char *buffer, uint32_t size, uint64_t offset) override</argsstring>
+        <name>Read</name>
+        <qualifiedname>paimon::BufferedInputStream::Read</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a0d3fbaf923f52330fc6c6d9d1ea31161">Read</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <briefdescription>
+<para>Read data from given position in the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Read with offset performs like <computeroutput><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">pread()</ref></computeroutput> function, which will not change the position in the input stream.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="out">buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The buffer to store the read content. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of bytes to read. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>offset</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The position in the stream to read from. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="56" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a757439b3f52a83b25b5a991a43ad9e88" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::BufferedInputStream::ReadAsync</definition>
+        <argsstring>(char *buffer, uint32_t size, uint64_t offset, std::function&lt; void(Status)&gt; &amp;&amp;callback) override</argsstring>
+        <name>ReadAsync</name>
+        <qualifiedname>paimon::BufferedInputStream::ReadAsync</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a1eef04a3ae6c2f2789cd5e8349861466">ReadAsync</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <param>
+          <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>)&gt; &amp;&amp;</type>
+          <declname>callback</declname>
+        </param>
+        <briefdescription>
+<para>Asynchronously read data from the input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This function initiates an asynchronous read operation. The specified number of bytes will be read from the stream starting at the given offset and stored in the provided buffer. Once the read operation is complete, the provided callback function will be invoked with the status of the read operation.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername direction="out">buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The buffer to store the read content. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of bytes to read. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>offset</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The position in the stream to read from. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>callback</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The callback function to be invoked upon completion of the read operation. The callback will receive a <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> object indicating the success or failure of the read operation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="58" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a874cf6ccefd7efe8afeaf42ed3e0e7ec" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt;</type>
+        <definition>Result&lt; uint64_t &gt; paimon::BufferedInputStream::Length</definition>
+        <argsstring>() const override</argsstring>
+        <name>Length</name>
+        <qualifiedname>paimon::BufferedInputStream::Length</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a3f70d345fa4bc73a57a8b77bab13d5f9">Length</reimplements>
+        <briefdescription>
+<para>Get the total length of the file in bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="61" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a595869ad75eb02c8b24bb6a224e3f4fb" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::BufferedInputStream::Close</definition>
+        <argsstring>() override</argsstring>
+        <name>Close</name>
+        <qualifiedname>paimon::BufferedInputStream::Close</qualifiedname>
+        <reimplements refid="classpaimon_1_1_stream_1a1c12b3f1e8618ad95e980aa6ea79912a">Close</reimplements>
+        <briefdescription>
+<para>Close the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="63" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a646ecb64407e882b5d448f37e27884f3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>Result&lt; std::string &gt; paimon::BufferedInputStream::GetUri</definition>
+        <argsstring>() const override</argsstring>
+        <name>GetUri</name>
+        <qualifiedname>paimon::BufferedInputStream::GetUri</qualifiedname>
+        <reimplements refid="classpaimon_1_1_input_stream_1a689b6b28137753671f61da41a6ce636f">GetUri</reimplements>
+        <briefdescription>
+<para>Get an identifier that uniquely identify the underlying content. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>An uri if the underlying content can be uniquely identified. </para>
+</simplesect>
+<simplesect kind="return"><para>Empty string if the underlying content cannot be uniquely identified. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="65" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a31b260d0ac03fc958bf250eb3bf33eb3" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::BufferedInputStream::Fill</definition>
+        <argsstring>()</argsstring>
+        <name>Fill</name>
+        <qualifiedname>paimon::BufferedInputStream::Fill</qualifiedname>
+        <briefdescription>
+<para>Fill the internal buffer from the underlying stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="71" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a571b67689355b654968d44fbae42d0c0" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>Result&lt; int32_t &gt; paimon::BufferedInputStream::InnerRead</definition>
+        <argsstring>(char *buffer, int32_t size)</argsstring>
+        <name>InnerRead</name>
+        <qualifiedname>paimon::BufferedInputStream::InnerRead</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Internal read implementation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="pre"><para>size &gt; 0 </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="75" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_buffered_input_stream_1a1f114b8b77ed865d835d799e3fa570ab" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::BufferedInputStream::AssertReadLength</definition>
+        <argsstring>(int32_t read_length, int32_t actual_read_length) const</argsstring>
+        <name>AssertReadLength</name>
+        <qualifiedname>paimon::BufferedInputStream::AssertReadLength</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>read_length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>actual_read_length</declname>
+        </param>
+        <briefdescription>
+<para>Validate that the expected number of bytes were read. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="78" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A buffered input stream that wraps another <computeroutput><ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref></computeroutput> to provide buffering capabilities. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><computeroutput><ref refid="classpaimon_1_1_buffered_input_stream" kindref="compound">BufferedInputStream</ref></computeroutput> improves I/O performance by reducing the number of system calls through internal buffering. It reads data from the underlying stream in larger chunks and serves subsequent read requests from the internal buffer when possible. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::BufferedInputStream</label>
+        <link refid="classpaimon_1_1_buffered_input_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::InputStream</label>
+        <link refid="classpaimon_1_1_input_stream"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::Stream</label>
+        <link refid="classpaimon_1_1_stream"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::BufferedInputStream</label>
+        <link refid="classpaimon_1_1_buffered_input_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::InputStream</label>
+        <link refid="classpaimon_1_1_input_stream"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::Stream</label>
+        <link refid="classpaimon_1_1_stream"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h" bodystart="37" bodyend="86"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a1f114b8b77ed865d835d799e3fa570ab" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>AssertReadLength</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1ab0141f1e1211554346b2db6e5969a786" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>buffer_</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1af6d742c388b1fb7b6be4db3bb963a845" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>buffer_size_</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a72aa752849c601901f6d798423dac9a8" prot="public" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>BufferedInputStream</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a595869ad75eb02c8b24bb6a224e3f4fb" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1ac928c4edcab0ef22b0013c9bb46a1faf" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>count_</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a3343edad41c9cf97fde8dcef6a287fa8" prot="public" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>DEFAULT_BUFFER_SIZE</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a31b260d0ac03fc958bf250eb3bf33eb3" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>Fill</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a150cbb2548d8ef77cfbada6e0038fbeb" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>GetPos</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a646ecb64407e882b5d448f37e27884f3" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>GetUri</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a4718d13675a6ea1a27b3fc99b8b6cce5" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>in_</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a571b67689355b654968d44fbae42d0c0" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>InnerRead</name></member>
+      <member refid="classpaimon_1_1_input_stream_1a105551df49ad793873a9b7383048fb8d" prot="public" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>InputStream</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a874cf6ccefd7efe8afeaf42ed3e0e7ec" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>Length</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a951ec59a2373ce47e112f85ebb50dfb1" prot="private" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>pos_</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a5af6b5c8c1231360277856173c2ef078" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>Read</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a71d0421b381829da41ba7c5cef6ff019" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>Read</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a757439b3f52a83b25b5a991a43ad9e88" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>ReadAsync</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1a632c6c39f06cbd9e9c22626ed776dcc9" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>Seek</name></member>
+      <member refid="classpaimon_1_1_buffered_input_stream_1aae1d0fc7feb644b06de9f563f0d5123b" prot="public" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>~BufferedInputStream</name></member>
+      <member refid="classpaimon_1_1_input_stream_1aad5b06608c25f5dda325e5c32dcb6090" prot="public" virt="non-virtual"><scope>paimon::BufferedInputStream</scope><name>~InputStream</name></member>
+      <member refid="classpaimon_1_1_stream_1aff0ae0a9c78f8fb31da85ef1607748d9" prot="public" virt="virtual"><scope>paimon::BufferedInputStream</scope><name>~Stream</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

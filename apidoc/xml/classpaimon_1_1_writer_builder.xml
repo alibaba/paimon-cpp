@@ -1,0 +1,96 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_writer_builder" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::WriterBuilder</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_direct_writer_builder" prot="public" virt="non-virtual">paimon::DirectWriterBuilder</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_specific_f_s_writer_builder" prot="public" virt="non-virtual">paimon::SpecificFSWriterBuilder</derivedcompoundref>
+    <includes refid="writer__builder_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_writer_builder_1a1bfb13d013967ed6e07459992bfa826c" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::WriterBuilder::~WriterBuilder</definition>
+        <argsstring>()=default</argsstring>
+        <name>~WriterBuilder</name>
+        <qualifiedname>paimon::WriterBuilder::~WriterBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="28" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_writer_builder_1aebeb244a2785f602ff9b500af9adef1c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_writer_builder" kindref="compound">WriterBuilder</ref> *</type>
+        <definition>virtual WriterBuilder * paimon::WriterBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)=0</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::WriterBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Set memory pool to use. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="31" column="27"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_writer_builder_1a0dcede79a22f46a4bc35c2f3646116a4" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_format_writer" kindref="compound">FormatWriter</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FormatWriter &gt; &gt; paimon::WriterBuilder::Build</definition>
+        <argsstring>(const std::shared_ptr&lt; OutputStream &gt; &amp;out, const std::string &amp;compression)=0</argsstring>
+        <name>Build</name>
+        <qualifiedname>paimon::WriterBuilder::Build</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_output_stream" kindref="compound">OutputStream</ref> &gt; &amp;</type>
+          <declname>out</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>compression</declname>
+        </param>
+        <briefdescription>
+<para>Build a file format writer based on the file output stream and file compression. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="34" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Create a file format writer based on the file output stream. Allows you to specify memory pool. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::DirectWriterBuilder</label>
+        <link refid="classpaimon_1_1_direct_writer_builder"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::SpecificFSWriterBuilder</label>
+        <link refid="classpaimon_1_1_specific_f_s_writer_builder"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::WriterBuilder</label>
+        <link refid="classpaimon_1_1_writer_builder"/>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" line="26" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h" bodystart="26" bodyend="36"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_writer_builder_1a0dcede79a22f46a4bc35c2f3646116a4" prot="public" virt="pure-virtual"><scope>paimon::WriterBuilder</scope><name>Build</name></member>
+      <member refid="classpaimon_1_1_writer_builder_1aebeb244a2785f602ff9b500af9adef1c" prot="public" virt="pure-virtual"><scope>paimon::WriterBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_writer_builder_1a1bfb13d013967ed6e07459992bfa826c" prot="public" virt="virtual"><scope>paimon::WriterBuilder</scope><name>~WriterBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

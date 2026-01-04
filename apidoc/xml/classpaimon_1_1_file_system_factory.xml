@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_system_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileSystemFactory</compoundname>
+    <basecompoundref refid="classpaimon_1_1_factory" prot="public" virt="non-virtual">paimon::Factory</basecompoundref>
+    <includes refid="file__system__factory_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_system_factory_1abd820b2275a6daa37e74bc7454e9e5e2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FileSystem &gt; &gt; paimon::FileSystemFactory::Create</definition>
+        <argsstring>(const std::string &amp;path, const std::map&lt; std::string, std::string &gt; &amp;options) const =0</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::FileSystemFactory::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Create a <computeroutput><ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref></computeroutput> of current factory with specific path. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h" line="34" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_system_factory_1a11f5dd1e5b0263c147639ed36042740f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; FileSystem &gt; &gt; paimon::FileSystemFactory::Get</definition>
+        <argsstring>(const std::string &amp;identifier, const std::string &amp;path, const std::map&lt; std::string, std::string &gt; &amp;fs_options)</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::FileSystemFactory::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>fs_options</declname>
+        </param>
+        <briefdescription>
+<para>Get <computeroutput><ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref></computeroutput> corresponding to identifier and specific path. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="pre"><para><ref refid="classpaimon_1_1_factory" kindref="compound">Factory</ref> is already registered. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h" line="39" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A factory for creating <computeroutput><ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref></computeroutput> instances. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileSystemFactory</label>
+        <link refid="classpaimon_1_1_file_system_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileSystemFactory</label>
+        <link refid="classpaimon_1_1_file_system_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h" bodystart="31" bodyend="42"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_system_factory_1abd820b2275a6daa37e74bc7454e9e5e2" prot="public" virt="pure-virtual"><scope>paimon::FileSystemFactory</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_file_system_factory_1a11f5dd1e5b0263c147639ed36042740f" prot="public" virt="non-virtual"><scope>paimon::FileSystemFactory</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_factory_1ac808cd0782a47c534bc16b3b5e3b0edd" prot="public" virt="pure-virtual"><scope>paimon::FileSystemFactory</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_factory_1a9dd9931db9fb33c829b1401d2b2b80ad" prot="public" virt="virtual"><scope>paimon::FileSystemFactory</scope><name>~Factory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

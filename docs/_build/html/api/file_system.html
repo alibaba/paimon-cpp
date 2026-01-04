@@ -1,0 +1,1144 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>File System &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/file_system';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="IO" href="io.html" />
+    <link rel="prev" title="File Format" href="file_format.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">File System</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="file-system">
+<h1>File System<a class="headerlink" href="#file-system" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-file-system-factory"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystemE">
+<span id="_CPPv3N6paimon10FileSystemE"></span><span id="_CPPv2N6paimon10FileSystemE"></span><span id="paimon::FileSystem"></span><span class="target" id="classpaimon_1_1_file_system"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileSystem</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10FileSystemE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract file system interface. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystemD0Ev">
+<span id="_CPPv3N6paimon10FileSystemD0Ev"></span><span id="_CPPv2N6paimon10FileSystemD0Ev"></span><span id="paimon::FileSystem::~FileSystem"></span><span class="target" id="classpaimon_1_1_file_system_1a04a8b646af1b296361f62582d9b0180f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileSystem</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10FileSystemD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem4OpenERKNSt6stringE">
+<span id="_CPPv3NK6paimon10FileSystem4OpenERKNSt6stringE"></span><span id="_CPPv2NK6paimon10FileSystem4OpenERKNSt6stringE"></span><span id="paimon::FileSystem::Open__ssCRC"></span><span class="target" id="classpaimon_1_1_file_system_1a72c1f7b0cce63bea2ba4c386c0835251"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Open</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem4OpenERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Open an existing file for reading. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The file path to open. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing a unique pointer to <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code> on success, or error status on failure (e.g., file not found, permission denied). </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem6CreateERKNSt6stringEb">
+<span id="_CPPv3NK6paimon10FileSystem6CreateERKNSt6stringEb"></span><span id="_CPPv2NK6paimon10FileSystem6CreateERKNSt6stringEb"></span><span id="paimon::FileSystem::Create__ssCR.bC"></span><span class="target" id="classpaimon_1_1_file_system_1acb391d2242b9f12d548d97cbb1e7b1f5"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12OutputStreamE" title="paimon::OutputStream"><span class="n"><span class="pre">OutputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">overwrite</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem6CreateERKNSt6stringEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a new file for writing. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file path to create. </p></li>
+<li><p><strong>overwrite</strong> – If true, overwrite existing file; if false, fail if file exists. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing a unique pointer to <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_output_stream"><span class="std std-ref"><span class="pre">OutputStream</span></span></a></code> on success, or error status on failure (e.g., I/O error, permission denied). </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem6MkdirsERKNSt6stringE">
+<span id="_CPPv3NK6paimon10FileSystem6MkdirsERKNSt6stringE"></span><span id="_CPPv2NK6paimon10FileSystem6MkdirsERKNSt6stringE"></span><span id="paimon::FileSystem::Mkdirs__ssCRC"></span><span class="target" id="classpaimon_1_1_file_system_1a9959000667856883aa0c884b5be11b3e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Mkdirs</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem6MkdirsERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create directories recursively. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The directory path to create (including all parent directories). </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE"></span><span id="paimon::FileSystem::Rename__ssCR.ssCRC"></span><span class="target" id="classpaimon_1_1_file_system_1a8103e3f37aad87743a3b1d35846c3424"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Rename</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">src</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">dst</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Rename or move a file or directory. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> – The source path (file or directory to rename/move). </p></li>
+<li><p><strong>dst</strong> – The destination path. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem6DeleteERKNSt6stringEb">
+<span id="_CPPv3NK6paimon10FileSystem6DeleteERKNSt6stringEb"></span><span id="_CPPv2NK6paimon10FileSystem6DeleteERKNSt6stringEb"></span><span id="paimon::FileSystem::Delete__ssCR.bC"></span><span class="target" id="classpaimon_1_1_file_system_1ae8c6594859b8000d635ffccff1ce3700"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Delete</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">recursive</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">true</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem6DeleteERKNSt6stringEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Delete a file or directory. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The path to delete. </p></li>
+<li><p><strong>recursive</strong> – If true, delete directories and their contents recursively; if false, only delete empty directories. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem13GetFileStatusERKNSt6stringE">
+<span id="_CPPv3NK6paimon10FileSystem13GetFileStatusERKNSt6stringE"></span><span id="_CPPv2NK6paimon10FileSystem13GetFileStatusERKNSt6stringE"></span><span id="paimon::FileSystem::GetFileStatus__ssCRC"></span><span class="target" id="classpaimon_1_1_file_system_1ac1053fcec2de3f45217c31b787898be1"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileStatusE" title="paimon::FileStatus"><span class="n"><span class="pre">FileStatus</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetFileStatus</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem13GetFileStatusERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get detailed status information for a file or directory. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The file or directory path to query. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing a unique pointer to <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_status"><span class="std std-ref"><span class="pre">FileStatus</span></span></a></code> on success, or error status on failure (e.g., path not found, permission denied). </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE">
+<span id="_CPPv3NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE"></span><span id="_CPPv2NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE"></span><span id="paimon::FileSystem::ListDir__ssCR.std::vector:std::unique_ptr:BasicFileStatus::PC"></span><span class="target" id="classpaimon_1_1_file_system_1a46ba86eb6cdd924f4402e626916575af"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ListDir</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">directory</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15BasicFileStatusE" title="paimon::BasicFileStatus"><span class="n"><span class="pre">BasicFileStatus</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">file_status_list</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>List files of a directory (basic information only). </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>directory</strong> – The directory path to list. </p></li>
+<li><p><strong>file_status_list</strong> – <strong>[out]</strong> Output vector to store <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_basic_file_status"><span class="std std-ref"><span class="pre">BasicFileStatus</span></span></a></code> objects. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE">
+<span id="_CPPv3NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE"></span><span id="_CPPv2NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE"></span><span id="paimon::FileSystem::ListFileStatus__ssCR.std::vector:std::unique_ptr:FileStatus::PC"></span><span class="target" id="classpaimon_1_1_file_system_1a1c243fa5543b843fc6d06090d5af50c0"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ListFileStatus</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileStatusE" title="paimon::FileStatus"><span class="n"><span class="pre">FileStatus</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">file_status_list</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>List file status with detailed information. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file or directory path to list. </p></li>
+<li><p><strong>file_status_list</strong> – <strong>[out]</strong> Output vector to store <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_status"><span class="std std-ref"><span class="pre">FileStatus</span></span></a></code> objects. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileSystem6ExistsERKNSt6stringE">
+<span id="_CPPv3NK6paimon10FileSystem6ExistsERKNSt6stringE"></span><span id="_CPPv2NK6paimon10FileSystem6ExistsERKNSt6stringE"></span><span id="paimon::FileSystem::Exists__ssCRC"></span><span class="target" id="classpaimon_1_1_file_system_1a8275380dae43d478bb40ca45e7bdf679"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Exists</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileSystem6ExistsERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Check if a file or directory exists. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The file or directory path to check. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing true if path exists, false if not found; or error status if I/O error occurs during check. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE">
+<span id="_CPPv3N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE"></span><span id="_CPPv2N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE"></span><span id="paimon::FileSystem::ReadFile__ssCR.ssP"></span><span class="target" id="classpaimon_1_1_file_system_1ac52c94b98ce0bc0e55715dd18f29105d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadFile</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">content</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read entire file content into a string at once. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Virtual only for mock testing purposes. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file path to read. </p></li>
+<li><p><strong>content</strong> – <strong>[out]</strong> Output string to store the file content. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb">
+<span id="_CPPv3N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb"></span><span id="_CPPv2N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb"></span><span id="paimon::FileSystem::WriteFile__ssCR.ssCR.b"></span><span class="target" id="classpaimon_1_1_file_system_1a76fae546803760b1b0d063088a089ee2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteFile</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">content</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">overwrite</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Write the entire content to a file at once. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Virtual only for mock testing purposes. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file path to write to. </p></li>
+<li><p><strong>content</strong> – The string content to write. </p></li>
+<li><p><strong>overwrite</strong> – If true, overwrite existing file; if false, fail if file exists. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE"></span><span id="paimon::FileSystem::AtomicStore__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_file_system_1a8b1f228e96ed46496e95c1aa8deb8c38"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AtomicStore</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">content</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Write content to a file atomically. </p>
+<p>Atomic operation: writes to temporary hidden file first, then renames to target. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Virtual only for mock testing purposes. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The target file path. </p></li>
+<li><p><strong>content</strong> – The string content to write. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileSystem13IsObjectStoreERKNSt6stringE">
+<span id="_CPPv3N6paimon10FileSystem13IsObjectStoreERKNSt6stringE"></span><span id="_CPPv2N6paimon10FileSystem13IsObjectStoreERKNSt6stringE"></span><span id="paimon::FileSystem::IsObjectStore__ssCR"></span><span class="target" id="classpaimon_1_1_file_system_1af62ae49a94e2d7eabe0e71dcb9166562"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsObjectStore</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path_str</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10FileSystem13IsObjectStoreERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Check if the given path represents an object store. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Object stores typically have different semantics than traditional file systems. </p>
+</div>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17FileSystemFactoryE">
+<span id="_CPPv3N6paimon17FileSystemFactoryE"></span><span id="_CPPv2N6paimon17FileSystemFactoryE"></span><span id="paimon::FileSystemFactory"></span><span class="target" id="classpaimon_1_1_file_system_factory"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileSystemFactory</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Factory</span></span><a class="headerlink" href="#_CPPv4N6paimon17FileSystemFactoryE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A factory for creating <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_system"><span class="std std-ref"><span class="pre">FileSystem</span></span></a></code> instances. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileSystemFactory::Create__ssCR.std::map:ss.ss:CRC"></span><span class="target" id="classpaimon_1_1_file_system_factory_1abd820b2275a6daa37e74bc7454e9e5e2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_system"><span class="std std-ref"><span class="pre">FileSystem</span></span></a></code> of current factory with specific path. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileSystemFactory::Get__ssCR.ssCR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_file_system_factory_1a11f5dd1e5b0263c147639ed36042740f"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">identifier</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">fs_options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_system"><span class="std std-ref"><span class="pre">FileSystem</span></span></a></code> corresponding to identifier and specific path. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Pre<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Factory is already registered. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStreamE">
+<span id="_CPPv3N6paimon11InputStreamE"></span><span id="_CPPv2N6paimon11InputStreamE"></span><span id="paimon::InputStream"></span><span class="target" id="classpaimon_1_1_input_stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">InputStream</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Stream</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStreamE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract class for input stream operations. </p>
+<p>Subclassed by <a class="reference internal" href="io.html#classpaimon_1_1_buffered_input_stream"><span class="std std-ref">paimon::BufferedInputStream</span></a>, <a class="reference internal" href="io.html#classpaimon_1_1_byte_array_input_stream"><span class="std std-ref">paimon::ByteArrayInputStream</span></a></p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStream11InputStreamEv">
+<span id="_CPPv3N6paimon11InputStream11InputStreamEv"></span><span id="_CPPv2N6paimon11InputStream11InputStreamEv"></span><span id="paimon::InputStream::InputStream"></span><span class="target" id="classpaimon_1_1_input_stream_1a105551df49ad793873a9b7383048fb8d"></span><span class="sig-name descname"><span class="n"><span class="pre">InputStream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStream11InputStreamEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStreamD0Ev">
+<span id="_CPPv3N6paimon11InputStreamD0Ev"></span><span id="_CPPv2N6paimon11InputStreamD0Ev"></span><span id="paimon::InputStream::~InputStream"></span><span class="target" id="classpaimon_1_1_input_stream_1aad5b06608c25f5dda325e5c32dcb6090"></span><span class="sig-name descname"><span class="n"><span class="pre">~InputStream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStreamD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStream4SeekE7int64_t10SeekOrigin">
+<span id="_CPPv3N6paimon11InputStream4SeekE7int64_t10SeekOrigin"></span><span id="_CPPv2N6paimon11InputStream4SeekE7int64_t10SeekOrigin"></span><span id="paimon::InputStream::Seek__int64_t.SeekOrigin"></span><span class="target" id="classpaimon_1_1_input_stream_1a2dc5b4b46ddcae0352124a6d0c9ac4c9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Seek</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10SeekOriginE" title="paimon::SeekOrigin"><span class="n"><span class="pre">SeekOrigin</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">origin</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStream4SeekE7int64_t10SeekOrigin" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek to a specified position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>offset</strong> – The byte offset relative to the origin position. </p></li>
+<li><p><strong>origin</strong> – The reference point for seeking (<code class="docutils literal notranslate"><a class="reference internal" href="#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e"><span class="std std-ref"><span class="pre">FS_SEEK_SET</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7"><span class="std std-ref"><span class="pre">FS_SEEK_CUR</span></span></a></code>, <code class="docutils literal notranslate"><a class="reference internal" href="#namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27"><span class="std std-ref"><span class="pre">FS_SEEK_END</span></span></a></code>). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with appropriate error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11InputStream6GetPosEv">
+<span id="_CPPv3NK6paimon11InputStream6GetPosEv"></span><span id="_CPPv2NK6paimon11InputStream6GetPosEv"></span><span id="paimon::InputStream::GetPosC"></span><span class="target" id="classpaimon_1_1_input_stream_1a3ac32eb3c03543f382ffeae736d47212"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11InputStream6GetPosEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the current position in the input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current position in the input stream. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>IOError returned if an I/O error occurred in the underlying stream. implementation while accessing the stream’s position. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStream4ReadEPc8uint32_t">
+<span id="_CPPv3N6paimon11InputStream4ReadEPc8uint32_t"></span><span id="_CPPv2N6paimon11InputStream4ReadEPc8uint32_t"></span><span id="paimon::InputStream::Read__cP.uint32_t"></span><span class="target" id="classpaimon_1_1_input_stream_1ad09a4cdc7205c7654e34523ede1ab263"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from the current position in the stream. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The stream position advances by the number of bytes actually read. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> Pointer to the buffer where read data will be stored. </p></li>
+<li><p><strong>size</strong> – Maximum number of bytes to read. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the actual number of bytes read on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStream4ReadEPc8uint32_t8uint64_t">
+<span id="_CPPv3N6paimon11InputStream4ReadEPc8uint32_t8uint64_t"></span><span id="_CPPv2N6paimon11InputStream4ReadEPc8uint32_t8uint64_t"></span><span id="paimon::InputStream::Read__cP.uint32_t.uint64_t"></span><span class="target" id="classpaimon_1_1_input_stream_1a0d3fbaf923f52330fc6c6d9d1ea31161"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Read</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t8uint64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Read data from given position in the stream. </p>
+<p>Read with offset performs like <code class="docutils literal notranslate"><span class="pre">pread()</span></code> function, which will not change the position in the input stream.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE">
+<span id="_CPPv3N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE"></span><span id="_CPPv2N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE"></span><span class="target" id="classpaimon_1_1_input_stream_1a1eef04a3ae6c2f2789cd5e8349861466"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadAsync</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">void</span></span><span class="p"><span class="pre">(</span></span><span class="n"><span class="pre">Status</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">callback</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Asynchronously read data from the input stream. </p>
+<p>This function initiates an asynchronous read operation. The specified number of bytes will be read from the stream starting at the given offset and stored in the provided buffer. Once the read operation is complete, the provided callback function will be invoked with the status of the read operation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – <strong>[out]</strong> The buffer to store the read content. </p></li>
+<li><p><strong>size</strong> – The number of bytes to read. </p></li>
+<li><p><strong>offset</strong> – The position in the stream to read from. </p></li>
+<li><p><strong>callback</strong> – The callback function to be invoked upon completion of the read operation. The callback will receive a Status object indicating the success or failure of the read operation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11InputStream6GetUriEv">
+<span id="_CPPv3NK6paimon11InputStream6GetUriEv"></span><span id="_CPPv2NK6paimon11InputStream6GetUriEv"></span><span id="paimon::InputStream::GetUriC"></span><span class="target" id="classpaimon_1_1_input_stream_1a689b6b28137753671f61da41a6ce636f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetUri</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11InputStream6GetUriEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get an identifier that uniquely identify the underlying content. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>An uri if the underlying content can be uniquely identified. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Empty string if the underlying content cannot be uniquely identified. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11InputStream6LengthEv">
+<span id="_CPPv3NK6paimon11InputStream6LengthEv"></span><span id="_CPPv2NK6paimon11InputStream6LengthEv"></span><span id="paimon::InputStream::LengthC"></span><span class="target" id="classpaimon_1_1_input_stream_1a3f70d345fa4bc73a57a8b77bab13d5f9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">uint64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Length</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11InputStream6LengthEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the total length of the file in bytes. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12OutputStreamE">
+<span id="_CPPv3N6paimon12OutputStreamE"></span><span id="_CPPv2N6paimon12OutputStreamE"></span><span id="paimon::OutputStream"></span><span class="target" id="classpaimon_1_1_output_stream"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">OutputStream</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Stream</span></span><a class="headerlink" href="#_CPPv4N6paimon12OutputStreamE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract class for output stream operations. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12OutputStream12OutputStreamEv">
+<span id="_CPPv3N6paimon12OutputStream12OutputStreamEv"></span><span id="_CPPv2N6paimon12OutputStream12OutputStreamEv"></span><span id="paimon::OutputStream::OutputStream"></span><span class="target" id="classpaimon_1_1_output_stream_1a550aead391c3dff769bbeeea330bb4c2"></span><span class="sig-name descname"><span class="n"><span class="pre">OutputStream</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon12OutputStream12OutputStreamEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12OutputStream5WriteEPKc8uint32_t">
+<span id="_CPPv3N6paimon12OutputStream5WriteEPKc8uint32_t"></span><span id="_CPPv2N6paimon12OutputStream5WriteEPKc8uint32_t"></span><span id="paimon::OutputStream::Write__cCP.uint32_t"></span><span class="target" id="classpaimon_1_1_output_stream_1a123e26e1906f3f31f24d5b2af5792ed2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Write</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">uint32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon12OutputStream5WriteEPKc8uint32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Write data to the output stream. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The stream position advances by the number of bytes actually written. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Pointer to the data buffer to write. </p></li>
+<li><p><strong>size</strong> – Number of bytes to write from the buffer. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result containing the actual number of bytes written on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12OutputStream5FlushEv">
+<span id="_CPPv3N6paimon12OutputStream5FlushEv"></span><span id="_CPPv2N6paimon12OutputStream5FlushEv"></span><span id="paimon::OutputStream::Flush"></span><span class="target" id="classpaimon_1_1_output_stream_1abe7934a91049e5026eae1a8288c2e42f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Flush</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon12OutputStream5FlushEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Flush pending data to the disk. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12OutputStream6GetPosEv">
+<span id="_CPPv3NK6paimon12OutputStream6GetPosEv"></span><span id="_CPPv2NK6paimon12OutputStream6GetPosEv"></span><span id="paimon::OutputStream::GetPosC"></span><span class="target" id="classpaimon_1_1_output_stream_1acf3de015741596ae7d44bade71df9b89"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPos</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon12OutputStream6GetPosEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the write position. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12OutputStream6GetUriEv">
+<span id="_CPPv3NK6paimon12OutputStream6GetUriEv"></span><span id="_CPPv2NK6paimon12OutputStream6GetUriEv"></span><span id="paimon::OutputStream::GetUriC"></span><span class="target" id="classpaimon_1_1_output_stream_1af8d3717c83bb3b7c3a664167c3f43261"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetUri</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon12OutputStream6GetUriEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the uri of the output stream. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp enum">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10SeekOriginE">
+<span id="_CPPv3N6paimon10SeekOriginE"></span><span id="_CPPv2N6paimon10SeekOriginE"></span><span class="target" id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">SeekOrigin</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10SeekOriginE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Enumeration for stream seek origin positions. </p>
+<p><em>Values:</em></p>
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10SeekOrigin11FS_SEEK_SETE">
+<span id="_CPPv3N6paimon10SeekOrigin11FS_SEEK_SETE"></span><span id="_CPPv2N6paimon10SeekOrigin11FS_SEEK_SETE"></span><span class="target" id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FS_SEEK_SET</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_SETE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek from the beginning of the stream. </p>
+</dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10SeekOrigin11FS_SEEK_CURE">
+<span id="_CPPv3N6paimon10SeekOrigin11FS_SEEK_CURE"></span><span id="_CPPv2N6paimon10SeekOrigin11FS_SEEK_CURE"></span><span class="target" id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FS_SEEK_CUR</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_CURE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek from the current position in the stream. </p>
+</dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10SeekOrigin11FS_SEEK_ENDE">
+<span id="_CPPv3N6paimon10SeekOrigin11FS_SEEK_ENDE"></span><span id="_CPPv2N6paimon10SeekOrigin11FS_SEEK_ENDE"></span><span class="target" id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FS_SEEK_END</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_ENDE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Seek from the end of the stream. </p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileStatusE">
+<span id="_CPPv3N6paimon10FileStatusE"></span><span id="_CPPv2N6paimon10FileStatusE"></span><span id="paimon::FileStatus"></span><span class="target" id="classpaimon_1_1_file_status"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileStatus</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10FileStatusE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Extended file status information interface. </p>
+<p>This class extends <a class="reference internal" href="#classpaimon_1_1_basic_file_status"><span class="std std-ref">BasicFileStatus</span></a> to provide comprehensive file system metadata including file size, modification time, and other attributes. It’s used for operations that require detailed file information. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileStatus10FileStatusEv">
+<span id="_CPPv3N6paimon10FileStatus10FileStatusEv"></span><span id="_CPPv2N6paimon10FileStatus10FileStatusEv"></span><span id="paimon::FileStatus::FileStatus"></span><span class="target" id="classpaimon_1_1_file_status_1a6278b7b7d8c7327ba7d7af3674836381"></span><span class="sig-name descname"><span class="n"><span class="pre">FileStatus</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon10FileStatus10FileStatusEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileStatusD0Ev">
+<span id="_CPPv3N6paimon10FileStatusD0Ev"></span><span id="_CPPv2N6paimon10FileStatusD0Ev"></span><span id="paimon::FileStatus::~FileStatus"></span><span class="target" id="classpaimon_1_1_file_status_1a21e73effa4f499388d75f93047ee73c2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileStatus</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon10FileStatusD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileStatus6GetLenEv">
+<span id="_CPPv3NK6paimon10FileStatus6GetLenEv"></span><span id="_CPPv2NK6paimon10FileStatus6GetLenEv"></span><span id="paimon::FileStatus::GetLenC"></span><span class="target" id="classpaimon_1_1_file_status_1a25848ccde7f13f443535273372684bc5"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetLen</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileStatus6GetLenEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the size of the file in bytes. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For directories, this method is undefined behavior. </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileStatus5IsDirEv">
+<span id="_CPPv3NK6paimon10FileStatus5IsDirEv"></span><span id="_CPPv2NK6paimon10FileStatus5IsDirEv"></span><span id="paimon::FileStatus::IsDirC"></span><span class="target" id="classpaimon_1_1_file_status_1abd9922464a1ca7a1da01f7914c845a20"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsDir</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileStatus5IsDirEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Check if this entry represents a directory. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileStatus7GetPathEv">
+<span id="_CPPv3NK6paimon10FileStatus7GetPathEv"></span><span id="_CPPv2NK6paimon10FileStatus7GetPathEv"></span><span id="paimon::FileStatus::GetPathC"></span><span class="target" id="classpaimon_1_1_file_status_1a471c2161d9e75ce5a031a642ac33dcf2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileStatus7GetPathEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the path of this file or directory. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileStatus19GetModificationTimeEv">
+<span id="_CPPv3NK6paimon10FileStatus19GetModificationTimeEv"></span><span id="_CPPv2NK6paimon10FileStatus19GetModificationTimeEv"></span><span id="paimon::FileStatus::GetModificationTimeC"></span><span class="target" id="classpaimon_1_1_file_status_1a7448ae0890fff2992a1acc2e877bfb3f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetModificationTime</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileStatus19GetModificationTimeEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the last modification time of the file. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A long value representing the time the file was last modified, measured in milliseconds since the epoch (UTC January 1, 1970). </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15BasicFileStatusE">
+<span id="_CPPv3N6paimon15BasicFileStatusE"></span><span id="_CPPv2N6paimon15BasicFileStatusE"></span><span id="paimon::BasicFileStatus"></span><span class="target" id="classpaimon_1_1_basic_file_status"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BasicFileStatus</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15BasicFileStatusE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Basic file status information interface. </p>
+<p>This class provides fundamental file system metadata for files and directories. It serves as a lightweight interface for basic file operations that only require path information and directory status. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15BasicFileStatus15BasicFileStatusEv">
+<span id="_CPPv3N6paimon15BasicFileStatus15BasicFileStatusEv"></span><span id="_CPPv2N6paimon15BasicFileStatus15BasicFileStatusEv"></span><span id="paimon::BasicFileStatus::BasicFileStatus"></span><span class="target" id="classpaimon_1_1_basic_file_status_1a025f1e86f33d5122302d1ad2953d6514"></span><span class="sig-name descname"><span class="n"><span class="pre">BasicFileStatus</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15BasicFileStatus15BasicFileStatusEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15BasicFileStatusD0Ev">
+<span id="_CPPv3N6paimon15BasicFileStatusD0Ev"></span><span id="_CPPv2N6paimon15BasicFileStatusD0Ev"></span><span id="paimon::BasicFileStatus::~BasicFileStatus"></span><span class="target" id="classpaimon_1_1_basic_file_status_1a62185ba087f185521214a058606f3d78"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~BasicFileStatus</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15BasicFileStatusD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15BasicFileStatus5IsDirEv">
+<span id="_CPPv3NK6paimon15BasicFileStatus5IsDirEv"></span><span id="_CPPv2NK6paimon15BasicFileStatus5IsDirEv"></span><span id="paimon::BasicFileStatus::IsDirC"></span><span class="target" id="classpaimon_1_1_basic_file_status_1a14316a38dbf07ec6522f9cd6a28dc6e7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsDir</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15BasicFileStatus5IsDirEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Check if this entry represents a directory. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15BasicFileStatus7GetPathEv">
+<span id="_CPPv3NK6paimon15BasicFileStatus7GetPathEv"></span><span id="_CPPv2NK6paimon15BasicFileStatus7GetPathEv"></span><span id="paimon::BasicFileStatus::GetPathC"></span><span class="target" id="classpaimon_1_1_basic_file_status_1af029dbd64ffe2b4fb3f7314945309653"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15BasicFileStatus7GetPathEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the path of this file or directory. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="file_format.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">File Format</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="io.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">IO</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystemE"><code class="docutils literal notranslate"><span class="pre">paimon::FileSystem</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystemD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileSystem()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem4OpenERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Open()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem6CreateERKNSt6stringEb"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem6MkdirsERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Mkdirs()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Rename()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem6DeleteERKNSt6stringEb"><code class="docutils literal notranslate"><span class="pre">Delete()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem13GetFileStatusERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">GetFileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE"><code class="docutils literal notranslate"><span class="pre">ListDir()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE"><code class="docutils literal notranslate"><span class="pre">ListFileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileSystem6ExistsERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Exists()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE"><code class="docutils literal notranslate"><span class="pre">ReadFile()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb"><code class="docutils literal notranslate"><span class="pre">WriteFile()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">AtomicStore()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileSystem13IsObjectStoreERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">IsObjectStore()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17FileSystemFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileSystemFactory</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Get()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::InputStream</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStream11InputStreamEv"><code class="docutils literal notranslate"><span class="pre">InputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStreamD0Ev"><code class="docutils literal notranslate"><span class="pre">~InputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStream4SeekE7int64_t10SeekOrigin"><code class="docutils literal notranslate"><span class="pre">Seek()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11InputStream6GetPosEv"><code class="docutils literal notranslate"><span class="pre">GetPos()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t8uint64_t"><code class="docutils literal notranslate"><span class="pre">Read()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE"><code class="docutils literal notranslate"><span class="pre">ReadAsync()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11InputStream6GetUriEv"><code class="docutils literal notranslate"><span class="pre">GetUri()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11InputStream6LengthEv"><code class="docutils literal notranslate"><span class="pre">Length()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12OutputStreamE"><code class="docutils literal notranslate"><span class="pre">paimon::OutputStream</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12OutputStream12OutputStreamEv"><code class="docutils literal notranslate"><span class="pre">OutputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12OutputStream5WriteEPKc8uint32_t"><code class="docutils literal notranslate"><span class="pre">Write()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12OutputStream5FlushEv"><code class="docutils literal notranslate"><span class="pre">Flush()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12OutputStream6GetPosEv"><code class="docutils literal notranslate"><span class="pre">GetPos()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12OutputStream6GetUriEv"><code class="docutils literal notranslate"><span class="pre">GetUri()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10SeekOriginE"><code class="docutils literal notranslate"><span class="pre">SeekOrigin</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_SETE"><code class="docutils literal notranslate"><span class="pre">FS_SEEK_SET</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_CURE"><code class="docutils literal notranslate"><span class="pre">FS_SEEK_CUR</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10SeekOrigin11FS_SEEK_ENDE"><code class="docutils literal notranslate"><span class="pre">FS_SEEK_END</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileStatusE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStatus</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileStatus10FileStatusEv"><code class="docutils literal notranslate"><span class="pre">FileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileStatusD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileStatus6GetLenEv"><code class="docutils literal notranslate"><span class="pre">GetLen()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileStatus5IsDirEv"><code class="docutils literal notranslate"><span class="pre">IsDir()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileStatus7GetPathEv"><code class="docutils literal notranslate"><span class="pre">GetPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileStatus19GetModificationTimeEv"><code class="docutils literal notranslate"><span class="pre">GetModificationTime()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15BasicFileStatusE"><code class="docutils literal notranslate"><span class="pre">paimon::BasicFileStatus</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15BasicFileStatus15BasicFileStatusEv"><code class="docutils literal notranslate"><span class="pre">BasicFileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15BasicFileStatusD0Ev"><code class="docutils literal notranslate"><span class="pre">~BasicFileStatus()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15BasicFileStatus5IsDirEv"><code class="docutils literal notranslate"><span class="pre">IsDir()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15BasicFileStatus7GetPathEv"><code class="docutils literal notranslate"><span class="pre">GetPath()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/file_system.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,706 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Building Paimon C++ &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'building';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Integrating Paimon C++" href="build_system.html" />
+    <link rel="prev" title="Getting Started" href="getting_started.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Building Paimon C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="build_system.html">Integrating Paimon C++</a></li>
+<li class="toctree-l1"><a class="reference internal" href="basic_concepts.html">Basic Concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentations.html">Building the Documentation</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="getting_started.html" class="nav-link">Getting Started</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Building Paimon C++</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="building-paimon-c">
+<span id="building-paimon-cpp"></span><h1>Building Paimon C++<a class="headerlink" href="#building-paimon-c" title="Link to this heading">#</a></h1>
+<section id="system-setup">
+<h2>System setup<a class="headerlink" href="#system-setup" title="Link to this heading">#</a></h2>
+<p>Paimon uses CMake as a build configuration system. We recommend building
+out-of-source. For example, you could create <code class="docutils literal notranslate"><span class="pre">paimon-cpp/build-release</span></code>
+and invoke <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">$CMAKE_ARGS</span> <span class="pre">..</span></code> from this directory.</p>
+<p>Building requires:</p>
+<ul class="simple">
+<li><p>A C++17-enabled compiler. On Linux, gcc 9 and higher should be
+sufficient. Windows and MacOS are not supported for now.</p></li>
+<li><p>At least 2GB of RAM for a minimal build, 8GB for a minimal
+debug build with tests and 16GB for a full build.</p></li>
+</ul>
+<p>On Ubuntu/Debian you can install the requirements with:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>apt-get<span class="w"> </span>install<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>build-essential<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>cmake
+</pre></div>
+</div>
+<p>We also provide a docker template to help you get started quickly. See in
+<code class="docutils literal notranslate"><span class="pre">.devcontainer</span></code> folder for more details.</p>
+</section>
+<section id="building">
+<span id="cpp-building-building"></span><h2>Building<a class="headerlink" href="#building" title="Link to this heading">#</a></h2>
+<p>All the instructions below assume that you have cloned the paimon-cpp git
+repository:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/alibaba/paimon-cpp.git
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>paimon-cpp
+</pre></div>
+</div>
+<section id="manual-configuration">
+<h3>Manual configuration<a class="headerlink" href="#manual-configuration" title="Link to this heading">#</a></h3>
+<p>The build system uses <code class="docutils literal notranslate"><span class="pre">CMAKE_BUILD_TYPE=Release</span></code> by default, so if this
+argument is omitted then a release build will be produced.</p>
+<p>Two build types are possible:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Debug</span></code>: doesn’t apply any compiler optimizations and adds debugging
+information in the binary.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Release</span></code>: applies compiler optimizations and removes debug information
+from the binary.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>You can also run default build with flag <code class="docutils literal notranslate"><span class="pre">-DPAIMON_EXTRA_ERROR_CONTEXT=ON</span></code>
+for more error msg context.</p>
+</div>
+<p>Minimal release build (2GB of RAM for building or more recommended):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mkdir<span class="w"> </span>build-release
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>build-release
+<span class="gp">$ </span>cmake<span class="w"> </span>..
+<span class="gp">$ </span>make<span class="w"> </span>-j8<span class="w">       </span><span class="c1"># if you have 8 CPU cores, otherwise adjust</span>
+<span class="gp">$ </span>make<span class="w"> </span>install
+</pre></div>
+</div>
+<p>Minimal debug build with unit tests (4GB of RAM for building or more recommended):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>mkdir<span class="w"> </span>build-debug
+<span class="gp">$ </span><span class="nb">cd</span><span class="w"> </span>build-debug
+<span class="gp">$ </span>cmake<span class="w"> </span>-DCMAKE_BUILD_TYPE<span class="o">=</span>Debug<span class="w"> </span>-DPAIMON_BUILD_TESTS<span class="o">=</span>ON<span class="w"> </span>..
+<span class="gp">$ </span>make<span class="w"> </span>-j8<span class="w">       </span><span class="c1"># if you have 8 CPU cores, otherwise adjust</span>
+<span class="gp">$ </span>make<span class="w"> </span>unittest<span class="w">  </span><span class="c1"># to run the tests</span>
+<span class="gp">$ </span>make<span class="w"> </span>install
+</pre></div>
+</div>
+<p>The unit tests are not built by default. After building, one can also invoke
+the unit tests using the <code class="docutils literal notranslate"><span class="pre">ctest</span></code> tool provided by CMake.</p>
+<section id="faster-builds-with-ninja">
+<h4>Faster builds with Ninja<a class="headerlink" href="#faster-builds-with-ninja" title="Link to this heading">#</a></h4>
+<p>Many contributors use the <a class="reference external" href="https://ninja-build.org/">Ninja build system</a> to
+get faster builds. It especially speeds up incremental builds. To use
+<code class="docutils literal notranslate"><span class="pre">ninja</span></code>, pass <code class="docutils literal notranslate"><span class="pre">-GNinja</span></code> when calling <code class="docutils literal notranslate"><span class="pre">cmake</span></code> and then use the <code class="docutils literal notranslate"><span class="pre">ninja</span></code>
+command instead of <code class="docutils literal notranslate"><span class="pre">make</span></code>.</p>
+</section>
+<section id="optional-components">
+<span id="cpp-build-optional-components"></span><h4>Optional Components<a class="headerlink" href="#optional-components" title="Link to this heading">#</a></h4>
+<p>By default, the C++ build system creates a fairly minimal build. We have
+several optional system components which you can opt into building by passing
+boolean flags to <code class="docutils literal notranslate"><span class="pre">cmake</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_ENABLE_ORC=ON</span></code>: Paimon integration with Apache ORC</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_ENABLE_LANCE=ON</span></code>: Paimon integration with Lance</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_ENABLE_AVRO=ON</span></code>: Apache Avro libraries and Paimon integration</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_ENABLE_JINDO=ON</span></code>: Support for Alibaba Jindo filesystems</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_ENABLE_LUMINA=ON</span></code>: Support for Lumina vector index</p></li>
+</ul>
+</section>
+<section id="optional-targets">
+<h4>Optional Targets<a class="headerlink" href="#optional-targets" title="Link to this heading">#</a></h4>
+<p>For development builds, you will often want to enable additional targets in
+enable to exercise your changes, using the following <code class="docutils literal notranslate"><span class="pre">cmake</span></code> options.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_BUILD_TESTS=ON</span></code>: Build executable unit tests.</p></li>
+</ul>
+</section>
+<section id="optional-checks">
+<h4>Optional Checks<a class="headerlink" href="#optional-checks" title="Link to this heading">#</a></h4>
+<p>The following special checks are available as well.  They instrument the
+generated code in various ways so as to detect select classes of problems
+at runtime (for example when executing unit tests).</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_USE_ASAN=ON</span></code>: Enable Address Sanitizer to check for memory leaks,
+buffer overflows or other kinds of memory management issues.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-DPAIMON_USE_UBSAN=ON</span></code>: Enable Undefined Behavior Sanitizer to check for
+situations which trigger C++ undefined behavior.</p></li>
+</ul>
+<p>Some of those options are mutually incompatible, so you may have to build
+several times with different options if you want to exercise all of them.</p>
+</section>
+<section id="cmake-version-requirements">
+<h4>CMake version requirements<a class="headerlink" href="#cmake-version-requirements" title="Link to this heading">#</a></h4>
+<p>We support CMake 3.16 and higher.</p>
+</section>
+<section id="llvm-and-clang-tools">
+<h4>LLVM and Clang Tools<a class="headerlink" href="#llvm-and-clang-tools" title="Link to this heading">#</a></h4>
+<p>We currently use LLVM for library builds and for developer tools such as code
+formatting with clang-format. LLVM can be installed via most modern package
+managers (apt, yum, etc.).</p>
+</section>
+<section id="environment-variables">
+<h4>Environment variables<a class="headerlink" href="#environment-variables" title="Link to this heading">#</a></h4>
+<p>The build system and helper scripts accept several environment variables that
+can alter fetch and build behaviour without changing CMake flags. These are
+especially useful when you want to use a local or corporate mirror for
+third-party archives, or to override a specific dependency’s download URL.</p>
+</section>
+</section>
+<section id="common-environment-variables">
+<h3>Common environment variables<a class="headerlink" href="#common-environment-variables" title="Link to this heading">#</a></h3>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAIMON_THIRDPARTY_MIRROR_URL</span></code></p>
+<p>When set, this string is used as a prefix for the default third-party
+download URLs. For example, if a dependency would normally be downloaded
+from</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz</span></code></p>
+<p>and <code class="docutils literal notranslate"><span class="pre">PAIMON_THIRDPARTY_MIRROR_URL</span></code> is set to</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://mirror.example.com/paimon/thirdparty/</span></code>, the build system will
+attempt to download from</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://mirror.example.com/paimon/thirdparty/https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz</span></code></p>
+<p>(the exact concatenation semantics follow the third-party fetch helpers
+defined in <code class="docutils literal notranslate"><span class="pre">cmake_modules/ThirdpartyToolchain.cmake</span></code>). If you set a
+mirror URL, prefer including a trailing slash to avoid accidental URL
+concatenation issues.</p>
+</li>
+<li><p>Per-dependency override variables (examples)</p>
+<p>Many dependencies support overriding their download URL via a dedicated
+environment variable. Examples implemented in the CMake helper include:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">PAIMON_FMT_URL</span></code> to override the fmt archive URL</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAIMON_RAPIDJSON_URL</span></code> to override RapidJSON download URL</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">PAIMON_ZLIB_URL</span></code>, <code class="docutils literal notranslate"><span class="pre">PAIMON_ZSTD_URL</span></code>, <code class="docutils literal notranslate"><span class="pre">PAIMON_LZ4_URL</span></code> etc.</p></li>
+</ul>
+<p>If one of these per-dependency environment variables is defined, it will
+take precedence over the mirror prefix. Use these variables to precisely
+control where a given dependency is fetched from.</p>
+</li>
+</ul>
+</section>
+<section id="usage-examples">
+<h3>Usage examples<a class="headerlink" href="#usage-examples" title="Link to this heading">#</a></h3>
+<p>Use a mirror for all third-party downloads:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PAIMON_THIRDPARTY_MIRROR_URL</span><span class="o">=</span><span class="s2">&quot;https://mirror.example.com/paimon/thirdparty/&quot;</span>
+mkdir<span class="w"> </span>build
+<span class="nb">cd</span><span class="w"> </span>build
+cmake<span class="w"> </span>-DPAIMON_BUILD_TESTS<span class="o">=</span>ON<span class="w"> </span>..
+</pre></div>
+</div>
+<p>Override only a single dependency (fmt):</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">PAIMON_FMT_URL</span><span class="o">=</span><span class="s2">&quot;https://internal.example.com/archives/fmt-8.1.1.tar.gz&quot;</span>
+mkdir<span class="w"> </span>build
+<span class="nb">cd</span><span class="w"> </span>build
+cmake<span class="w"> </span>..
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The exact fetch behaviour (how the mirror prefix is concatenated, or whether the helper expects a full URL vs. a prefix)
+is implemented in <code class="docutils literal notranslate"><span class="pre">cmake_modules/ThirdpartyToolchain.cmake</span></code>. Consult that file when you need a custom setup.
+Unset an environment variable to revert to the default upstream download locations: <code class="docutils literal notranslate"><span class="pre">unset</span> <span class="pre">PAIMON_THIRDPARTY_MIRROR_URL</span></code></p>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="getting_started.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Getting Started</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="build_system.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Integrating Paimon C++</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#system-setup">System setup</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#building">Building</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#manual-configuration">Manual configuration</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#faster-builds-with-ninja">Faster builds with Ninja</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-components">Optional Components</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-targets">Optional Targets</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#optional-checks">Optional Checks</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#cmake-version-requirements">CMake version requirements</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#llvm-and-clang-tools">LLVM and Clang Tools</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#environment-variables">Environment variables</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#common-environment-variables">Common environment variables</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#usage-examples">Usage examples</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/building.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

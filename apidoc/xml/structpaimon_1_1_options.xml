@@ -1,0 +1,997 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_options" kind="struct" language="C++" prot="public">
+    <compoundname>paimon::Options</compoundname>
+    <includes refid="defs_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h</includes>
+    <sectiondef kind="user-defined">
+      <header>merge-on-read configurations</header>
+      <description><para>The 5 constants are the prefixes or suffixes for merge on read configuration.</para>
+<para>The complete configuration keys can be:<itemizedlist>
+<listitem><para>fields.$field_name.aggregate-function</para>
+</listitem><listitem><para>fields.$field_name.ignore-retract</para>
+</listitem><listitem><para>fields.$field_names.sequence-group ($field_names support one or more field_name, split with FIELDS_SEPARATOR)</para>
+</listitem></itemizedlist>
+</para>
+<para>examples:<itemizedlist>
+<listitem><para>fields.f1.aggregate-function</para>
+</listitem><listitem><para>fields.f2.sequence-group</para>
+</listitem><listitem><para>fields.f3,f4.sequence-group </para>
+</listitem></itemizedlist>
+</para>
+</description>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ab8ce808006ca88bbf3dd4277e7199bc8" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FIELDS_SEPARATOR[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FIELDS_SEPARATOR</name>
+        <qualifiedname>paimon::Options::FIELDS_SEPARATOR</qualifiedname>
+        <briefdescription>
+<para>FIELDS_SEPARATOR is &quot;,&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="73" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ad04919fa4835ff09ed568842e292d6ab" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FIELDS_PREFIX[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FIELDS_PREFIX</name>
+        <qualifiedname>paimon::Options::FIELDS_PREFIX</qualifiedname>
+        <briefdescription>
+<para>FIELDS_PREFIX is &quot;fields&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="75" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="75" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ad6db9a62ddd32788b4ac9d094b0d75a7" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::AGG_FUNCTION[]</definition>
+        <argsstring>[]</argsstring>
+        <name>AGG_FUNCTION</name>
+        <qualifiedname>paimon::Options::AGG_FUNCTION</qualifiedname>
+        <briefdescription>
+<para>AGG_FUNCTION is &quot;aggregate-function&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="77" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2efcd211258e28e590cedf2b69ac69a3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DEFAULT_AGG_FUNCTION[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DEFAULT_AGG_FUNCTION</name>
+        <qualifiedname>paimon::Options::DEFAULT_AGG_FUNCTION</qualifiedname>
+        <briefdescription>
+<para>DEFAULT_AGG_FUNCTION is &quot;default-aggregate-function&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="79" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="79" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a4885922a6c0e228f6af911e33d6171e3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::IGNORE_RETRACT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>IGNORE_RETRACT</name>
+        <qualifiedname>paimon::Options::IGNORE_RETRACT</qualifiedname>
+        <briefdescription>
+<para>IGNORE_RETRACT is &quot;ignore-retract&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="81" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="81" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a590f345233ef3c5d4e7f8e3b2d1a0714" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SEQUENCE_GROUP[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SEQUENCE_GROUP</name>
+        <qualifiedname>paimon::Options::SEQUENCE_GROUP</qualifiedname>
+        <briefdescription>
+<para>SEQUENCE_GROUP is &quot;sequence-group&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="83" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="83" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a51bffec724b24ffc438dddded120da40" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::BUCKET[]</definition>
+        <argsstring>[]</argsstring>
+        <name>BUCKET</name>
+        <qualifiedname>paimon::Options::BUCKET</qualifiedname>
+        <briefdescription>
+<para>&quot;bucket&quot; - Bucket number for file store. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>It should either be equal to -1 (dynamic bucket mode), or it must be greater than 0 (fixed bucket mode). </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="88" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a1274b48114fb97b2881ac12839977b10" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::BUCKET_KEY[]</definition>
+        <argsstring>[]</argsstring>
+        <name>BUCKET_KEY</name>
+        <qualifiedname>paimon::Options::BUCKET_KEY</qualifiedname>
+        <briefdescription>
+<para>&quot;bucket-key&quot; - Specify the paimon distribution policy. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Data is assigned to each bucket according to the hash value of bucket-key. If you specify multiple fields, delimiter is &apos;,&apos;. If not specified, the primary key will be used, if there is no primary key, the full row will be used. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="94" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="94" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a5b7cfde2732a102a84c9d0a140cbbec7" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::PAGE_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>PAGE_SIZE</name>
+        <qualifiedname>paimon::Options::PAGE_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;page-size&quot; - Memory page size, default value 64 kb. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="98" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="98" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ab6ab49b3757e09afa8a0ea93e102da6b" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FILE_FORMAT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FILE_FORMAT</name>
+        <qualifiedname>paimon::Options::FILE_FORMAT</qualifiedname>
+        <briefdescription>
+<para>&quot;file.format&quot; - Specify the message format of data files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is parquet. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="102" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="102" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FILE_SYSTEM[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FILE_SYSTEM</name>
+        <qualifiedname>paimon::Options::FILE_SYSTEM</qualifiedname>
+        <briefdescription>
+<para>&quot;file-system&quot; - Specify the file system. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is local. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="106" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="106" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aea71adb55d0c0163de81ce345ab60a3c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::TARGET_FILE_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>TARGET_FILE_SIZE</name>
+        <qualifiedname>paimon::Options::TARGET_FILE_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;target-file-size&quot; - Target size of a file. Default value is 128MB. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="110" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aa10918f1e1847610cc2369e0f6701419" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::BLOB_TARGET_FILE_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>BLOB_TARGET_FILE_SIZE</name>
+        <qualifiedname>paimon::Options::BLOB_TARGET_FILE_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;blob.target-file-size&quot; - Target size of a blob file. Default is TARGET_FILE_SIZE. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="113" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="113" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a3d2781743b85911a6245f621ab2b5a72" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::PARTITION_DEFAULT_NAME[]</definition>
+        <argsstring>[]</argsstring>
+        <name>PARTITION_DEFAULT_NAME</name>
+        <qualifiedname>paimon::Options::PARTITION_DEFAULT_NAME</qualifiedname>
+        <briefdescription>
+<para>&quot;partition.default-name&quot; - The default partition name in case the dynamic partition column value is null/empty string. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="117" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="117" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a71a027400d3e66ad15312ddd0af73e9c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FILE_COMPRESSION[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FILE_COMPRESSION</name>
+        <qualifiedname>paimon::Options::FILE_COMPRESSION</qualifiedname>
+        <briefdescription>
+<para>&quot;file.compression&quot; - The default file compression is zstd. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For faster read and write, it is recommended to use zstd. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="121" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aa5b3a1fc8018b3cfa18036e9200f7a77" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FILE_COMPRESSION_ZSTD_LEVEL[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FILE_COMPRESSION_ZSTD_LEVEL</name>
+        <qualifiedname>paimon::Options::FILE_COMPRESSION_ZSTD_LEVEL</qualifiedname>
+        <briefdescription>
+<para>&quot;file.compression.zstd-level&quot; Default file compression zstd level. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For higher compression rates, it can be configured to 9, but the read and write speed will significantly decrease. Default value is 1. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="126" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="126" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a3c4da2efb535830009f96cf610abb48e" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MANIFEST_TARGET_FILE_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MANIFEST_TARGET_FILE_SIZE</name>
+        <qualifiedname>paimon::Options::MANIFEST_TARGET_FILE_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;manifest.target-file-size&quot; - Suggested file size of a manifest file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is 8MB. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="130" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="130" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a0ac79f203f9b012175941c410e7b8aa2" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MANIFEST_FORMAT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MANIFEST_FORMAT</name>
+        <qualifiedname>paimon::Options::MANIFEST_FORMAT</qualifiedname>
+        <briefdescription>
+<para>&quot;manifest.format&quot; - Specify the message format of manifest files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is orc. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="134" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="134" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a64199aab5e2949c8a6213fe2888c6c12" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MANIFEST_COMPRESSION[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MANIFEST_COMPRESSION</name>
+        <qualifiedname>paimon::Options::MANIFEST_COMPRESSION</qualifiedname>
+        <briefdescription>
+<para>&quot;manifest.compression&quot; - File compression for manifest, default value is zstd. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="137" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="137" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2a5f00d1318d9b0a6ae142ab4048e6b6" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MANIFEST_MERGE_MIN_COUNT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MANIFEST_MERGE_MIN_COUNT</name>
+        <qualifiedname>paimon::Options::MANIFEST_MERGE_MIN_COUNT</qualifiedname>
+        <briefdescription>
+<para>&quot;manifest.merge-min-count&quot; - To avoid frequent manifest merges, this parameter specifies the minimum number of ManifestFileMeta to merge, default value is 30. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="141" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a180ad44e1fe9b14b08d0f11128c2036b" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MANIFEST_FULL_COMPACTION_FILE_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MANIFEST_FULL_COMPACTION_FILE_SIZE</name>
+        <qualifiedname>paimon::Options::MANIFEST_FULL_COMPACTION_FILE_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;manifest.full-compaction-threshold-size&quot; - The size threshold for triggering full compaction of manifest, default value is 16MB. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="145" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="145" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aa609b09a43e0194db031cadb22e7252b" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SOURCE_SPLIT_TARGET_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SOURCE_SPLIT_TARGET_SIZE</name>
+        <qualifiedname>paimon::Options::SOURCE_SPLIT_TARGET_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;source.split.target-size&quot; - Target size of a source split when scanning a bucket. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is 128MB. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="149" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="149" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a8db37fd6e275d5d4db725a76f34bd8e9" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SOURCE_SPLIT_OPEN_FILE_COST[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SOURCE_SPLIT_OPEN_FILE_COST</name>
+        <qualifiedname>paimon::Options::SOURCE_SPLIT_OPEN_FILE_COST</qualifiedname>
+        <briefdescription>
+<para>&quot;source.split.open-file-cost&quot; - Open file cost of a source file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>It is used to avoid reading too many files with a source split, which can be very slow. Default value is 4MB. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="153" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="153" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a78c2c1ab1c9c296a43813c9cacdfe835" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SCAN_SNAPSHOT_ID[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SCAN_SNAPSHOT_ID</name>
+        <qualifiedname>paimon::Options::SCAN_SNAPSHOT_ID</qualifiedname>
+        <briefdescription>
+<para>&quot;scan.snapshot-id&quot; - Optional snapshot id used in case of &quot;from-snapshot&quot; or &quot;from-snapshot-full&quot; scan mode </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="157" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="157" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a4943f66c2aa6662477edc4ff83f2aeac" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SCAN_MODE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SCAN_MODE</name>
+        <qualifiedname>paimon::Options::SCAN_MODE</qualifiedname>
+        <briefdescription>
+<para>&quot;scan.mode&quot; - Specify the scanning behavior of the source. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Values can be: &quot;default&quot;, &quot;latest-full&quot;, &quot;latest&quot;, &quot;from-snapshot&quot;, &quot;from-snapshot-full&quot;. Default value is &quot;default&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="161" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="161" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a7f83ced15c93c7fd98c28ed4b8a80935" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::READ_BATCH_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>READ_BATCH_SIZE</name>
+        <qualifiedname>paimon::Options::READ_BATCH_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;read.batch-size&quot; - Read batch size for any file format if it supports. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The default value is 1024. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="165" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="165" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2287eaa3a9b49904e10b009a7f57e1cc" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::WRITE_BATCH_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>WRITE_BATCH_SIZE</name>
+        <qualifiedname>paimon::Options::WRITE_BATCH_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;write.batch-size&quot; - Write batch size for any file format if it supports. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The default value is 1024. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="169" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="169" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a047552260c3ed90836e59b5c6a184a7a" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::WRITE_BUFFER_SIZE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>WRITE_BUFFER_SIZE</name>
+        <qualifiedname>paimon::Options::WRITE_BUFFER_SIZE</qualifiedname>
+        <briefdescription>
+<para>&quot;write-buffer-size&quot; - Amount of data to build up in memory before converting to a sorted on-disk file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The default value is 256 mb </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="173" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2eae818025acd9da707952c56dc6eed1" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SNAPSHOT_NUM_RETAINED_MIN[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SNAPSHOT_NUM_RETAINED_MIN</name>
+        <qualifiedname>paimon::Options::SNAPSHOT_NUM_RETAINED_MIN</qualifiedname>
+        <briefdescription>
+<para>&quot;snapshot.num-retained.min&quot; - The minimum number of completed snapshots to retain. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Should be greater than or equal to 1. Default value is 10 </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="177" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="177" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2c753272f7afce85fd4f9c13c37b367d" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SNAPSHOT_NUM_RETAINED_MAX[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SNAPSHOT_NUM_RETAINED_MAX</name>
+        <qualifiedname>paimon::Options::SNAPSHOT_NUM_RETAINED_MAX</qualifiedname>
+        <briefdescription>
+<para>&quot;snapshot.num-retained.max&quot; - The maximum number of completed snapshots to retain. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Should be greater than or equal to the minimum number. Default value is int32 max value. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="181" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="181" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a878d288cd32767680a5f2c1b6540ac54" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SNAPSHOT_TIME_RETAINED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SNAPSHOT_TIME_RETAINED</name>
+        <qualifiedname>paimon::Options::SNAPSHOT_TIME_RETAINED</qualifiedname>
+        <briefdescription>
+<para>&quot;snapshot.time-retained&quot; - The maximum time of completed snapshots to retain. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is 1 hour. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="185" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="185" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ac3ba4534124e27beb027dac13ed585ee" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SNAPSHOT_EXPIRE_LIMIT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SNAPSHOT_EXPIRE_LIMIT</name>
+        <qualifiedname>paimon::Options::SNAPSHOT_EXPIRE_LIMIT</qualifiedname>
+        <briefdescription>
+<para>&quot;snapshot.expire.limit&quot; - The maximum number of snapshots allowed to expire at a time. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is 10. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="189" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="189" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a0323dc398212e2087a542ffe65ec6120" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SNAPSHOT_CLEAN_EMPTY_DIRECTORIES</name>
+        <qualifiedname>paimon::Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES</qualifiedname>
+        <briefdescription>
+<para>&quot;snapshot.clean-empty-directories&quot; - Whether to try to clean empty directories when expiring snapshots, if enabled, please note: hdfs: may print exceptions in NameNode. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>oss/s3: may cause performance issue. Default value is false. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="194" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="194" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a2448d09733a570a6c9f66b433b58bfc8" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::COMMIT_TIMEOUT[]</definition>
+        <argsstring>[]</argsstring>
+        <name>COMMIT_TIMEOUT</name>
+        <qualifiedname>paimon::Options::COMMIT_TIMEOUT</qualifiedname>
+        <briefdescription>
+<para>&quot;commit.timeout&quot; - Timeout duration of retry when commit failed. No default value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="197" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="197" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1adb267e06a41749e8d4adbd1fa4da47e4" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::COMMIT_MAX_RETRIES[]</definition>
+        <argsstring>[]</argsstring>
+        <name>COMMIT_MAX_RETRIES</name>
+        <qualifiedname>paimon::Options::COMMIT_MAX_RETRIES</qualifiedname>
+        <briefdescription>
+<para>&quot;commit.max-retries&quot; - Maximum number of retries when commit failed. Default value is 10. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="200" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="200" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a07322605bcff72ca8281dbccda0daab3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SEQUENCE_FIELD[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SEQUENCE_FIELD</name>
+        <qualifiedname>paimon::Options::SEQUENCE_FIELD</qualifiedname>
+        <briefdescription>
+<para>&quot;sequence.field&quot; - The field that generates the sequence number for primary key table, the sequence number determines which data is the most recent. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Value use &quot;,&quot; as delimiter. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="204" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="204" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a70e6bcd22de046c55b5c756b1806528c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SEQUENCE_FIELD_SORT_ORDER[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SEQUENCE_FIELD_SORT_ORDER</name>
+        <qualifiedname>paimon::Options::SEQUENCE_FIELD_SORT_ORDER</qualifiedname>
+        <briefdescription>
+<para>&quot;sequence.field.sort-order&quot; - Specify the order of sequence.field. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Values can be: &quot;ascending&quot;, &quot;descending&quot;. Default value is &quot;ascending&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="208" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="208" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a76a874c19324589247093ffc26d0acc1" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::MERGE_ENGINE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>MERGE_ENGINE</name>
+        <qualifiedname>paimon::Options::MERGE_ENGINE</qualifiedname>
+        <briefdescription>
+<para>&quot;merge-engine&quot; - Specify the merge engine for table with primary key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Values can be: &quot;deduplicate&quot;, &quot;partial-update&quot;, &quot;aggregation&quot;, &quot;first-row&quot;. Default value is &quot;deduplicate&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="212" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="212" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a98c43b0233de7def0c32485028e72e8d" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SORT_ENGINE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SORT_ENGINE</name>
+        <qualifiedname>paimon::Options::SORT_ENGINE</qualifiedname>
+        <briefdescription>
+<para>&quot;sort-engine&quot; - Specify the sort engine for table with primary key. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Values can be: &quot;min-heap&quot;, &quot;loser-tree&quot;. Default value is &quot;loser-tree&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="216" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="216" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a6933b0046d98486fc800cd38c222b773" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::IGNORE_DELETE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>IGNORE_DELETE</name>
+        <qualifiedname>paimon::Options::IGNORE_DELETE</qualifiedname>
+        <briefdescription>
+<para>&quot;ignore-delete&quot; - Whether to ignore delete records. Default value is &quot;false&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="219" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="219" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aa71f20c1cbcfbc05c5b7438c1ef90355" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FIELDS_DEFAULT_AGG_FUNC[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FIELDS_DEFAULT_AGG_FUNC</name>
+        <qualifiedname>paimon::Options::FIELDS_DEFAULT_AGG_FUNC</qualifiedname>
+        <briefdescription>
+<para>&quot;fields.default-aggregate-function&quot; - Default aggregate function of all fields for partial-update and aggregate merge function. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="223" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="223" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a74820aa9cd3a53d9685ccbc469ee6367" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DELETION_VECTORS_ENABLED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DELETION_VECTORS_ENABLED</name>
+        <qualifiedname>paimon::Options::DELETION_VECTORS_ENABLED</qualifiedname>
+        <briefdescription>
+<para>&quot;deletion-vectors.enabled&quot; - Whether to enable deletion vectors mode. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>In this mode, index files containing deletion vectors are generated when data is written, which marks the data for deletion. During read operations, by applying these index files, merging can be avoided. Default value is false. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="229" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="229" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a221864b071bf35238a2f0643ef707c91" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::CHANGELOG_PRODUCER[]</definition>
+        <argsstring>[]</argsstring>
+        <name>CHANGELOG_PRODUCER</name>
+        <qualifiedname>paimon::Options::CHANGELOG_PRODUCER</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para><computeroutput>CHANGELOG_PRODUCER</computeroutput> currently only support <computeroutput>none</computeroutput></para>
+</simplesect>
+&quot;changelog-producer&quot; - Whether to double write to a changelog file. This changelog file keeps the details of data changes, it can be read directly during stream reads. This can be applied to tables with primary keys. Values can be &quot;none&quot;, &quot;input&quot;, &quot;lookup&quot;, &quot;full-compaction&quot;. Default value is &quot;none&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="237" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="237" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a4bb834532b220d8fa4bac2df74d26e05" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FORCE_LOOKUP[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FORCE_LOOKUP</name>
+        <qualifiedname>paimon::Options::FORCE_LOOKUP</qualifiedname>
+        <briefdescription>
+<para>&quot;force-lookup&quot; - Whether to force the use of lookup for compaction. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="241" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="241" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1af173f870c67bfaa3fcf3800fa0cf9402" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE[]</definition>
+        <argsstring>[]</argsstring>
+        <name>PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE</name>
+        <qualifiedname>paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE</qualifiedname>
+        <briefdescription>
+<para>&quot;partial-update.remove-record-on-delete&quot; - Whether to remove the whole row in partial-update engine when records are received. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="245" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="245" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a57cdd3e2e66df9a97ee51bcd60251c89" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP[]</definition>
+        <argsstring>[]</argsstring>
+        <name>PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP</name>
+        <qualifiedname>paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP</qualifiedname>
+        <briefdescription>
+<para>&quot;partial-update.remove-record-on-sequence-group&quot; - When records of the given sequence groups are received, remove the whole row. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="249" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="249" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a5ef2b53ac7ded65625545e75efef26ae" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::SCAN_FALLBACK_BRANCH[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SCAN_FALLBACK_BRANCH</name>
+        <qualifiedname>paimon::Options::SCAN_FALLBACK_BRANCH</qualifiedname>
+        <briefdescription>
+<para>&quot;scan.fallback-branch&quot; - When a batch job queries from a table, if a partition does not exist in the current branch, the reader will try to get this partition from this fallback branch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="254" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="254" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a7759e2bf7eea6b4fa657f29e21a0d437" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::BRANCH[]</definition>
+        <argsstring>[]</argsstring>
+        <name>BRANCH</name>
+        <qualifiedname>paimon::Options::BRANCH</qualifiedname>
+        <briefdescription>
+<para>&quot;branch&quot; - Specify branch name. Default value is &quot;main&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="257" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="257" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a8d1a70db1f9e9eb27618fac1f9f96a86" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::FILE_INDEX_READ_ENABLED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>FILE_INDEX_READ_ENABLED</name>
+        <qualifiedname>paimon::Options::FILE_INDEX_READ_ENABLED</qualifiedname>
+        <briefdescription>
+<para>&quot;file-index.read.enabled&quot; - Whether enabled read file index. Default value is &quot;true&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="260" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="260" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1abdbc3a1b6f206104f7e6d3d8df5a6dae" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DATA_FILE_EXTERNAL_PATHS[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DATA_FILE_EXTERNAL_PATHS</name>
+        <qualifiedname>paimon::Options::DATA_FILE_EXTERNAL_PATHS</qualifiedname>
+        <briefdescription>
+<para>&quot;data-file.external-paths&quot; - The external paths where the data of this table will be written, multiple elements separated by commas. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="264" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="264" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1afdfac4ab2795c18d579580443f0a3228" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DATA_FILE_EXTERNAL_PATHS_STRATEGY</name>
+        <qualifiedname>paimon::Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY</qualifiedname>
+        <briefdescription>
+<para>&quot;data-file.external-paths.strategy&quot; - The strategy of selecting an external path when writing data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Values can be: &quot;none&quot;, &quot;specific-fs&quot;, &quot;round-robin&quot;. Default value is &quot;none&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="267" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="267" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a6793acd517b0759d14e18c89808a70c0" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DATA_FILE_PREFIX[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DATA_FILE_PREFIX</name>
+        <qualifiedname>paimon::Options::DATA_FILE_PREFIX</qualifiedname>
+        <briefdescription>
+<para>&quot;data-file.prefix&quot; - Specify the file name prefix of data files. Default value is &quot;data-&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="269" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="269" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a7d1e5032bb6fab186cca56dc2070369a" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::INDEX_FILE_IN_DATA_FILE_DIR[]</definition>
+        <argsstring>[]</argsstring>
+        <name>INDEX_FILE_IN_DATA_FILE_DIR</name>
+        <qualifiedname>paimon::Options::INDEX_FILE_IN_DATA_FILE_DIR</qualifiedname>
+        <briefdescription>
+<para>&quot;index-file-in-data-file-dir&quot; - Whether index file in data file directory. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="272" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="272" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1adae9d0eca977241094aad9d8f89281a1" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::ROW_TRACKING_ENABLED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>ROW_TRACKING_ENABLED</name>
+        <qualifiedname>paimon::Options::ROW_TRACKING_ENABLED</qualifiedname>
+        <briefdescription>
+<para>&quot;row-tracking.enabled&quot; - Whether enable unique row id for append table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="275" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="275" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1ab1508a51de5769f8906183f5ecb3aedd" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::DATA_EVOLUTION_ENABLED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DATA_EVOLUTION_ENABLED</name>
+        <qualifiedname>paimon::Options::DATA_EVOLUTION_ENABLED</qualifiedname>
+        <briefdescription>
+<para>&quot;data-evolution.enabled&quot; - Whether enable data evolution for row tracking table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="278" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="278" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a05ba604edad1ca939f642e72414b9c08" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::PARTITION_GENERATE_LEGACY_NAME[]</definition>
+        <argsstring>[]</argsstring>
+        <name>PARTITION_GENERATE_LEGACY_NAME</name>
+        <qualifiedname>paimon::Options::PARTITION_GENERATE_LEGACY_NAME</qualifiedname>
+        <briefdescription>
+<para>&quot;partition.legacy-name&quot; - The legacy partition name is using <computeroutput>ToString</computeroutput> for all types. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If false, using casting to string for all types. Default value is &quot;true&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="281" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="281" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1a565d571a883532d4637b8fccdfc78920" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::BLOB_AS_DESCRIPTOR[]</definition>
+        <argsstring>[]</argsstring>
+        <name>BLOB_AS_DESCRIPTOR</name>
+        <qualifiedname>paimon::Options::BLOB_AS_DESCRIPTOR</qualifiedname>
+        <briefdescription>
+<para>&quot;blob-as-descriptor&quot; - Read and write blob field using blob descriptor rather than blob bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Default value is &quot;false&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="284" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="284" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_options_1aaf4ad3e62fef143409b14298762d5da5" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Options::GLOBAL_INDEX_ENABLED[]</definition>
+        <argsstring>[]</argsstring>
+        <name>GLOBAL_INDEX_ENABLED</name>
+        <qualifiedname>paimon::Options::GLOBAL_INDEX_ENABLED</qualifiedname>
+        <briefdescription>
+<para>&quot;global-index.enabled&quot; - Whether to enable global index for scan. Default value is &quot;true&quot;. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="286" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="286" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Configuration options and constants for Paimon table operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The <ref refid="structpaimon_1_1_options" kindref="compound">Options</ref> struct contains static string constants that define configuration keys used throughout the Paimon system. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="56" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="56" bodyend="287"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_options_1ad6db9a62ddd32788b4ac9d094b0d75a7" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>AGG_FUNCTION</name></member>
+      <member refid="structpaimon_1_1_options_1a565d571a883532d4637b8fccdfc78920" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>BLOB_AS_DESCRIPTOR</name></member>
+      <member refid="structpaimon_1_1_options_1aa10918f1e1847610cc2369e0f6701419" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>BLOB_TARGET_FILE_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1a7759e2bf7eea6b4fa657f29e21a0d437" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>BRANCH</name></member>
+      <member refid="structpaimon_1_1_options_1a51bffec724b24ffc438dddded120da40" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>BUCKET</name></member>
+      <member refid="structpaimon_1_1_options_1a1274b48114fb97b2881ac12839977b10" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>BUCKET_KEY</name></member>
+      <member refid="structpaimon_1_1_options_1a221864b071bf35238a2f0643ef707c91" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>CHANGELOG_PRODUCER</name></member>
+      <member refid="structpaimon_1_1_options_1adb267e06a41749e8d4adbd1fa4da47e4" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>COMMIT_MAX_RETRIES</name></member>
+      <member refid="structpaimon_1_1_options_1a2448d09733a570a6c9f66b433b58bfc8" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>COMMIT_TIMEOUT</name></member>
+      <member refid="structpaimon_1_1_options_1ab1508a51de5769f8906183f5ecb3aedd" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DATA_EVOLUTION_ENABLED</name></member>
+      <member refid="structpaimon_1_1_options_1abdbc3a1b6f206104f7e6d3d8df5a6dae" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DATA_FILE_EXTERNAL_PATHS</name></member>
+      <member refid="structpaimon_1_1_options_1afdfac4ab2795c18d579580443f0a3228" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DATA_FILE_EXTERNAL_PATHS_STRATEGY</name></member>
+      <member refid="structpaimon_1_1_options_1a6793acd517b0759d14e18c89808a70c0" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DATA_FILE_PREFIX</name></member>
+      <member refid="structpaimon_1_1_options_1a2efcd211258e28e590cedf2b69ac69a3" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DEFAULT_AGG_FUNCTION</name></member>
+      <member refid="structpaimon_1_1_options_1a74820aa9cd3a53d9685ccbc469ee6367" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>DELETION_VECTORS_ENABLED</name></member>
+      <member refid="structpaimon_1_1_options_1aa71f20c1cbcfbc05c5b7438c1ef90355" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FIELDS_DEFAULT_AGG_FUNC</name></member>
+      <member refid="structpaimon_1_1_options_1ad04919fa4835ff09ed568842e292d6ab" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FIELDS_PREFIX</name></member>
+      <member refid="structpaimon_1_1_options_1ab8ce808006ca88bbf3dd4277e7199bc8" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FIELDS_SEPARATOR</name></member>
+      <member refid="structpaimon_1_1_options_1a71a027400d3e66ad15312ddd0af73e9c" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FILE_COMPRESSION</name></member>
+      <member refid="structpaimon_1_1_options_1aa5b3a1fc8018b3cfa18036e9200f7a77" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FILE_COMPRESSION_ZSTD_LEVEL</name></member>
+      <member refid="structpaimon_1_1_options_1ab6ab49b3757e09afa8a0ea93e102da6b" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FILE_FORMAT</name></member>
+      <member refid="structpaimon_1_1_options_1a8d1a70db1f9e9eb27618fac1f9f96a86" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FILE_INDEX_READ_ENABLED</name></member>
+      <member refid="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FILE_SYSTEM</name></member>
+      <member refid="structpaimon_1_1_options_1a4bb834532b220d8fa4bac2df74d26e05" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>FORCE_LOOKUP</name></member>
+      <member refid="structpaimon_1_1_options_1aaf4ad3e62fef143409b14298762d5da5" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>GLOBAL_INDEX_ENABLED</name></member>
+      <member refid="structpaimon_1_1_options_1a6933b0046d98486fc800cd38c222b773" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>IGNORE_DELETE</name></member>
+      <member refid="structpaimon_1_1_options_1a4885922a6c0e228f6af911e33d6171e3" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>IGNORE_RETRACT</name></member>
+      <member refid="structpaimon_1_1_options_1a7d1e5032bb6fab186cca56dc2070369a" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>INDEX_FILE_IN_DATA_FILE_DIR</name></member>
+      <member refid="structpaimon_1_1_options_1a64199aab5e2949c8a6213fe2888c6c12" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MANIFEST_COMPRESSION</name></member>
+      <member refid="structpaimon_1_1_options_1a0ac79f203f9b012175941c410e7b8aa2" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MANIFEST_FORMAT</name></member>
+      <member refid="structpaimon_1_1_options_1a180ad44e1fe9b14b08d0f11128c2036b" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MANIFEST_FULL_COMPACTION_FILE_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1a2a5f00d1318d9b0a6ae142ab4048e6b6" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MANIFEST_MERGE_MIN_COUNT</name></member>
+      <member refid="structpaimon_1_1_options_1a3c4da2efb535830009f96cf610abb48e" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MANIFEST_TARGET_FILE_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1a76a874c19324589247093ffc26d0acc1" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>MERGE_ENGINE</name></member>
+      <member refid="structpaimon_1_1_options_1a5b7cfde2732a102a84c9d0a140cbbec7" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>PAGE_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1af173f870c67bfaa3fcf3800fa0cf9402" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE</name></member>
+      <member refid="structpaimon_1_1_options_1a57cdd3e2e66df9a97ee51bcd60251c89" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP</name></member>
+      <member refid="structpaimon_1_1_options_1a3d2781743b85911a6245f621ab2b5a72" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>PARTITION_DEFAULT_NAME</name></member>
+      <member refid="structpaimon_1_1_options_1a05ba604edad1ca939f642e72414b9c08" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>PARTITION_GENERATE_LEGACY_NAME</name></member>
+      <member refid="structpaimon_1_1_options_1a7f83ced15c93c7fd98c28ed4b8a80935" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>READ_BATCH_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1adae9d0eca977241094aad9d8f89281a1" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>ROW_TRACKING_ENABLED</name></member>
+      <member refid="structpaimon_1_1_options_1a5ef2b53ac7ded65625545e75efef26ae" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SCAN_FALLBACK_BRANCH</name></member>
+      <member refid="structpaimon_1_1_options_1a4943f66c2aa6662477edc4ff83f2aeac" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SCAN_MODE</name></member>
+      <member refid="structpaimon_1_1_options_1a78c2c1ab1c9c296a43813c9cacdfe835" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SCAN_SNAPSHOT_ID</name></member>
+      <member refid="structpaimon_1_1_options_1a07322605bcff72ca8281dbccda0daab3" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SEQUENCE_FIELD</name></member>
+      <member refid="structpaimon_1_1_options_1a70e6bcd22de046c55b5c756b1806528c" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SEQUENCE_FIELD_SORT_ORDER</name></member>
+      <member refid="structpaimon_1_1_options_1a590f345233ef3c5d4e7f8e3b2d1a0714" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SEQUENCE_GROUP</name></member>
+      <member refid="structpaimon_1_1_options_1a0323dc398212e2087a542ffe65ec6120" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SNAPSHOT_CLEAN_EMPTY_DIRECTORIES</name></member>
+      <member refid="structpaimon_1_1_options_1ac3ba4534124e27beb027dac13ed585ee" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SNAPSHOT_EXPIRE_LIMIT</name></member>
+      <member refid="structpaimon_1_1_options_1a2c753272f7afce85fd4f9c13c37b367d" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SNAPSHOT_NUM_RETAINED_MAX</name></member>
+      <member refid="structpaimon_1_1_options_1a2eae818025acd9da707952c56dc6eed1" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SNAPSHOT_NUM_RETAINED_MIN</name></member>
+      <member refid="structpaimon_1_1_options_1a878d288cd32767680a5f2c1b6540ac54" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SNAPSHOT_TIME_RETAINED</name></member>
+      <member refid="structpaimon_1_1_options_1a98c43b0233de7def0c32485028e72e8d" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SORT_ENGINE</name></member>
+      <member refid="structpaimon_1_1_options_1a8db37fd6e275d5d4db725a76f34bd8e9" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SOURCE_SPLIT_OPEN_FILE_COST</name></member>
+      <member refid="structpaimon_1_1_options_1aa609b09a43e0194db031cadb22e7252b" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>SOURCE_SPLIT_TARGET_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1aea71adb55d0c0163de81ce345ab60a3c" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>TARGET_FILE_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1a2287eaa3a9b49904e10b009a7f57e1cc" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>WRITE_BATCH_SIZE</name></member>
+      <member refid="structpaimon_1_1_options_1a047552260c3ed90836e59b5c6a184a7a" prot="public" virt="non-virtual"><scope>paimon::Options</scope><name>WRITE_BUFFER_SIZE</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

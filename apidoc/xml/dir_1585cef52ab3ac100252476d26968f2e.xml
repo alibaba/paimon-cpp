@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_1585cef52ab3ac100252476d26968f2e" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils</compoundname>
+    <innerfile refid="bucket__id__calculator_8h">bucket_id_calculator.h</innerfile>
+    <innerfile refid="range_8h">range.h</innerfile>
+    <innerfile refid="roaring__bitmap32_8h">roaring_bitmap32.h</innerfile>
+    <innerfile refid="roaring__bitmap64_8h">roaring_bitmap64.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/"/>
+  </compounddef>
+</doxygen>

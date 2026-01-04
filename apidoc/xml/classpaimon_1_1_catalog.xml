@@ -1,0 +1,377 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_catalog" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Catalog</compoundname>
+    <includes refid="catalog_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_catalog_1a6761df59f92fa8d361d2224b4ab5a5b8" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Catalog::SYSTEM_DATABASE_NAME[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SYSTEM_DATABASE_NAME</name>
+        <qualifiedname>paimon::Catalog::SYSTEM_DATABASE_NAME</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="40" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" bodystart="40" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_catalog_1ac8e24315525d650976a73480afef08d2" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Catalog::SYSTEM_TABLE_SPLITTER[]</definition>
+        <argsstring>[]</argsstring>
+        <name>SYSTEM_TABLE_SPLITTER</name>
+        <qualifiedname>paimon::Catalog::SYSTEM_TABLE_SPLITTER</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="41" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" bodystart="41" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_catalog_1a88b6d8397691b01f256b288916786177" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Catalog::DB_SUFFIX[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DB_SUFFIX</name>
+        <qualifiedname>paimon::Catalog::DB_SUFFIX</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="42" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" bodystart="42" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_catalog_1a35cd0cfd608112dcf536d5b561ec7d8c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <definition>const char paimon::Catalog::DB_LOCATION_PROP[]</definition>
+        <argsstring>[]</argsstring>
+        <name>DB_LOCATION_PROP</name>
+        <qualifiedname>paimon::Catalog::DB_LOCATION_PROP</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="43" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1a78dacd8d5ecc1ff80b0b237ae8a7fb7c" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_catalog" kindref="compound">Catalog</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; Catalog &gt; &gt; paimon::Catalog::Create</definition>
+        <argsstring>(const std::string &amp;root_path, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::Catalog::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Factory method for creating a <computeroutput><ref refid="classpaimon_1_1_catalog" kindref="compound">Catalog</ref></computeroutput> instance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>root_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Path to the root directory where the catalog is located. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Configuration options for catalog initialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing a unique pointer to a <computeroutput><ref refid="classpaimon_1_1_catalog" kindref="compound">Catalog</ref></computeroutput> instance, or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="50" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1a70b09552f71b95c6efc299074bd61c9b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Catalog::~Catalog</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Catalog</name>
+        <qualifiedname>paimon::Catalog::~Catalog</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="53" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1a84df9597c6b425ff192f01b66f060cb5" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::Catalog::CreateDatabase</definition>
+        <argsstring>(const std::string &amp;name, const std::map&lt; std::string, std::string &gt; &amp;options, bool ignore_if_exists)=0</argsstring>
+        <name>CreateDatabase</name>
+        <qualifiedname>paimon::Catalog::CreateDatabase</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_if_exists</declname>
+        </param>
+        <briefdescription>
+<para>Creates a database with the specified properties. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the database to be created. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Additional properties associated with the database. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ignore_if_exists</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, no action is taken if the database already exists. If false, an error status is returned if the database exists. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A status indicating success or failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="62" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1a3897ab46944bc30efb90182dbb68359e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::Catalog::CreateTable</definition>
+        <argsstring>(const Identifier &amp;identifier, ArrowSchema *c_schema, const std::vector&lt; std::string &gt; &amp;partition_keys, const std::vector&lt; std::string &gt; &amp;primary_keys, const std::map&lt; std::string, std::string &gt; &amp;options, bool ignore_if_exists)=0</argsstring>
+        <name>CreateTable</name>
+        <qualifiedname>paimon::Catalog::CreateTable</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_identifier" kindref="compound">Identifier</ref> &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref> *</type>
+          <declname>c_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>partition_keys</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>primary_keys</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_if_exists</declname>
+        </param>
+        <briefdescription>
+<para>Creates a new table in the catalog. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>System tables cannot be created using this method.</para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="classpaimon_1_1_identifier" kindref="compound">Identifier</ref> of the table to be created. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>c_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The schema of the table to be created. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>partition_keys</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>List of columns that should be used as partition keys for the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>primary_keys</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>List of columns that should be used as primary keys for the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Additional table-specific options. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>ignore_if_exists</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>If true, no action is taken if the table already exists. If false, an error status is returned if the table exists. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A status indicating success or failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="78" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1ad105a410f62dbbe891272d3c647b7976" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::string &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::string &gt; &gt; paimon::Catalog::ListDatabases</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ListDatabases</name>
+        <qualifiedname>paimon::Catalog::ListDatabases</qualifiedname>
+        <briefdescription>
+<para>Lists all the databases available in the catalog. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A result containing a vector of database names, or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="87" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1ad0bb25fe3c39013b1f981079208e4c4c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::string &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::string &gt; &gt; paimon::Catalog::ListTables</definition>
+        <argsstring>(const std::string &amp;db_name) const =0</argsstring>
+        <name>ListTables</name>
+        <qualifiedname>paimon::Catalog::ListTables</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>db_name</declname>
+        </param>
+        <briefdescription>
+<para>Lists all the tables within a specified database. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>System tables will not be listed.</para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>db_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The name of the database to list tables from. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing a vector of table names in the specified database, or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="96" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_catalog_1a76e4d168264fe571fee9e39d356457e8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; Schema &gt; &gt; paimon::Catalog::LoadTableSchema</definition>
+        <argsstring>(const Identifier &amp;identifier) const =0</argsstring>
+        <name>LoadTableSchema</name>
+        <qualifiedname>paimon::Catalog::LoadTableSchema</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_identifier" kindref="compound">Identifier</ref> &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <briefdescription>
+<para>Loads the latest schema of a specified table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>System tables will not be supported.</para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The identifier (database and table name) of the table to load. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A result containing table schema if the table exists, or an error status on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="104" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This interface is responsible for reading and writing metadata such as database/table from a paimon catalog. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" line="38" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h" bodystart="38" bodyend="105"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_catalog_1a78dacd8d5ecc1ff80b0b237ae8a7fb7c" prot="public" virt="non-virtual"><scope>paimon::Catalog</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_catalog_1a84df9597c6b425ff192f01b66f060cb5" prot="public" virt="pure-virtual"><scope>paimon::Catalog</scope><name>CreateDatabase</name></member>
+      <member refid="classpaimon_1_1_catalog_1a3897ab46944bc30efb90182dbb68359e" prot="public" virt="pure-virtual"><scope>paimon::Catalog</scope><name>CreateTable</name></member>
+      <member refid="classpaimon_1_1_catalog_1a35cd0cfd608112dcf536d5b561ec7d8c" prot="public" virt="non-virtual"><scope>paimon::Catalog</scope><name>DB_LOCATION_PROP</name></member>
+      <member refid="classpaimon_1_1_catalog_1a88b6d8397691b01f256b288916786177" prot="public" virt="non-virtual"><scope>paimon::Catalog</scope><name>DB_SUFFIX</name></member>
+      <member refid="classpaimon_1_1_catalog_1ad105a410f62dbbe891272d3c647b7976" prot="public" virt="pure-virtual"><scope>paimon::Catalog</scope><name>ListDatabases</name></member>
+      <member refid="classpaimon_1_1_catalog_1ad0bb25fe3c39013b1f981079208e4c4c" prot="public" virt="pure-virtual"><scope>paimon::Catalog</scope><name>ListTables</name></member>
+      <member refid="classpaimon_1_1_catalog_1a76e4d168264fe571fee9e39d356457e8" prot="public" virt="pure-virtual"><scope>paimon::Catalog</scope><name>LoadTableSchema</name></member>
+      <member refid="classpaimon_1_1_catalog_1a6761df59f92fa8d361d2224b4ab5a5b8" prot="public" virt="non-virtual"><scope>paimon::Catalog</scope><name>SYSTEM_DATABASE_NAME</name></member>
+      <member refid="classpaimon_1_1_catalog_1ac8e24315525d650976a73480afef08d2" prot="public" virt="non-virtual"><scope>paimon::Catalog</scope><name>SYSTEM_TABLE_SPLITTER</name></member>
+      <member refid="classpaimon_1_1_catalog_1a70b09552f71b95c6efc299074bd61c9b" prot="public" virt="virtual"><scope>paimon::Catalog</scope><name>~Catalog</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

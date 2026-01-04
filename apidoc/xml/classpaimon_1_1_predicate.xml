@@ -1,0 +1,130 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_predicate" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Predicate</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_compound_predicate" prot="public" virt="virtual">paimon::CompoundPredicate</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_leaf_predicate" prot="public" virt="virtual">paimon::LeafPredicate</derivedcompoundref>
+    <includes refid="predicate_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_predicate_1ae9b429c30313950b195b95b213c5e937" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Predicate::~Predicate</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Predicate</name>
+        <qualifiedname>paimon::Predicate::~Predicate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="34" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_1a4766fb9716f8c6ae44000e5039e406f5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::Predicate::operator==</definition>
+        <argsstring>(const Predicate &amp;other) const =0</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Predicate::operator==</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_compound_predicate_1a166e85c9c04dc7bef23cc0c6d58b9af2">operator==</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_leaf_predicate_1a61b590a55aa18c773231f08df3a55cea">operator==</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="35" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_1ae47e80c4b72ced3c86f8008d54b8708e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_function" kindref="compound">Function</ref> &amp;</type>
+        <definition>virtual const Function &amp; paimon::Predicate::GetFunction</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetFunction</name>
+        <qualifiedname>paimon::Predicate::GetFunction</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_compound_predicate_1a81f9c00d1e76a8667ae5be1c0f5ab695">GetFunction</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_leaf_predicate_1a6b562f9cbc11126d1883e29a2800a3d5">GetFunction</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="37" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_1ab8d80cebcd4a1427ecb967a37a774b68" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>virtual std::shared_ptr&lt; Predicate &gt; paimon::Predicate::Negate</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Negate</name>
+        <qualifiedname>paimon::Predicate::Negate</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_compound_predicate_1a1eb2a8e29101ea1a34429d8a6be7a2e1">Negate</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_leaf_predicate_1aafe45884b63f0093a26908fd00b6667c">Negate</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The negation predicate of this predicate if possible. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="39" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_predicate_1ae20ec461e28b9d286d164d524bc5ba1c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::Predicate::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Predicate::ToString</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_compound_predicate_1a609e2716a1eb3a46b16c9005c616c965">ToString</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_leaf_predicate_1ab2ff30ffc558cde49caec7c7bfaecc9b">ToString</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="40" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>To create a predicate, please use <computeroutput><ref refid="classpaimon_1_1_predicate_builder" kindref="compound">PredicateBuilder</ref></computeroutput>. <simplesect kind="see"><para><ref refid="classpaimon_1_1_predicate_builder" kindref="compound">PredicateBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::CompoundPredicate</label>
+        <link refid="classpaimon_1_1_compound_predicate"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::LeafPredicate</label>
+        <link refid="classpaimon_1_1_leaf_predicate"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::Predicate</label>
+        <link refid="classpaimon_1_1_predicate"/>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate.h" bodystart="32" bodyend="41"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_predicate_1ae47e80c4b72ced3c86f8008d54b8708e" prot="public" virt="pure-virtual"><scope>paimon::Predicate</scope><name>GetFunction</name></member>
+      <member refid="classpaimon_1_1_predicate_1ab8d80cebcd4a1427ecb967a37a774b68" prot="public" virt="pure-virtual"><scope>paimon::Predicate</scope><name>Negate</name></member>
+      <member refid="classpaimon_1_1_predicate_1a4766fb9716f8c6ae44000e5039e406f5" prot="public" virt="pure-virtual"><scope>paimon::Predicate</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_predicate_1ae20ec461e28b9d286d164d524bc5ba1c" prot="public" virt="pure-virtual"><scope>paimon::Predicate</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_predicate_1ae9b429c30313950b195b95b213c5e937" prot="public" virt="virtual"><scope>paimon::Predicate</scope><name>~Predicate</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,636 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Commit &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/commit';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Read and Data Evolution" href="read.html" />
+    <link rel="prev" title="Write And Prepare Commit" href="write.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="snapshot.html">Snapshot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest.html">Manifest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primary_key_table.html">Primary Key Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="append_only_table.html">Append Only Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write And Prepare Commit</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read and Data Evolution</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Data Cleanup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prefetch.html">Prefetch</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="arrow.html">Memory Format</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Commit</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="commit">
+<h1>Commit<a class="headerlink" href="#commit" title="Link to this heading">#</a></h1>
+<p>Commit is a critical stage in Paimon’s write path. It is responsible for generating
+Snapshot files that describe the current state of a Paimon table. This document
+provides a detailed analysis of the Paimon Commit process.</p>
+<section id="commit-process-overview">
+<h2>Commit Process Overview<a class="headerlink" href="#commit-process-overview" title="Link to this heading">#</a></h2>
+<p>The input to Commit is a <code class="docutils literal notranslate"><span class="pre">CommitMessage</span></code>, which is produced by the write
+operation through <code class="docutils literal notranslate"><span class="pre">PrepareCommit</span></code>. It records all data files generated during
+the write phase.</p>
+<p>The Commit process consists of the following steps:</p>
+<ol class="arabic simple">
+<li><p>Collect file changes</p></li>
+<li><p>Compact (merge) Manifest files</p></li>
+<li><p>Generate the Base Manifest List</p></li>
+<li><p>Generate new Manifest files and the Delta Manifest List</p></li>
+<li><p>Generate the Snapshot and HINT file</p></li>
+</ol>
+</section>
+<section id="detailed-process">
+<h2>Detailed Process<a class="headerlink" href="#detailed-process" title="Link to this heading">#</a></h2>
+<section id="collect-file-changes">
+<h3>Collect File Changes<a class="headerlink" href="#collect-file-changes" title="Link to this heading">#</a></h3>
+<p>During Commit, the system extracts key information from <code class="docutils literal notranslate"><span class="pre">CommitMessages</span></code>—such as
+file name, operation type (<code class="docutils literal notranslate"><span class="pre">ADD</span></code> or <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>), the file’s Partition and Bucket—
+and converts them into <code class="docutils literal notranslate"><span class="pre">ManifestEntry</span></code> records.</p>
+<p>A <code class="docutils literal notranslate"><span class="pre">ManifestEntry</span></code> represents a single operation record in a manifest file and
+corresponds to a change to one file.</p>
+<p>Paimon snapshots track two manifest list files:</p>
+<ul class="simple">
+<li><p>Base Manifest List: Describes the data that existed prior to the current Snapshot.
+Because there may be multiple manifest files, the base manifest list records
+metadata for all original manifest files.</p></li>
+<li><p>Delta Manifest List: Records the changes (adds/deletes) produced by the current Commit.</p></li>
+</ul>
+</section>
+<section id="compact-merge-manifest-files">
+<h3>Compact (Merge) Manifest Files<a class="headerlink" href="#compact-merge-manifest-files" title="Link to this heading">#</a></h3>
+<p>To control the number and size of manifest files, the system determines whether
+existing manifest files should be compacted prior to generating a new Snapshot.</p>
+<p>Compaction starts by fetching the latest Snapshot and using its base and delta
+manifest lists to locate all relevant manifest files.</p>
+<p>Two compaction strategies are used: Full Compaction and Minor Compaction.</p>
+<section id="full-compaction">
+<h4>Full Compaction<a class="headerlink" href="#full-compaction" title="Link to this heading">#</a></h4>
+<p>Full Compaction is attempted first. The system iterates over candidate files and
+classifies them as follows:</p>
+<ul class="simple">
+<li><p>Base files: If a file has no <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> operations and its size exceeds the
+target file size (default 8 MB), the file is categorized as base.</p></li>
+<li><p>Delta files: Remaining files are categorized as delta. The system computes the
+total size of delta files; if the total exceeds the Full Compaction threshold
+(default 16 MB), the delta files are merged.</p></li>
+</ul>
+</section>
+<section id="minor-compaction">
+<h4>Minor Compaction<a class="headerlink" href="#minor-compaction" title="Link to this heading">#</a></h4>
+<p>If Full Compaction’s conditions are not met, Minor Compaction is attempted:</p>
+<ul class="simple">
+<li><p>The system iterates over all files, skipping any file larger than the target file size.</p></li>
+<li><p>Whenever the accumulated size of selected files exceeds the target file size, those files are merged.</p></li>
+<li><p>If there are still unmerged files and their count exceeds the minimum compaction trigger
+threshold (default 30 files), a merge is triggered.</p></li>
+</ul>
+</section>
+<section id="compaction-rules">
+<h4>Compaction Rules<a class="headerlink" href="#compaction-rules" title="Link to this heading">#</a></h4>
+<ol class="arabic simple">
+<li><p>If duplicate <code class="docutils literal notranslate"><span class="pre">ADD</span></code> operations for the same file are discovered, an error is raised.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ADD</span></code> and <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> for the same file neutralize each other.</p></li>
+</ol>
+</section>
+</section>
+<section id="generate-the-base-manifest-list">
+<h3>Generate the Base Manifest List<a class="headerlink" href="#generate-the-base-manifest-list" title="Link to this heading">#</a></h3>
+<p>After compaction (which may or may not be triggered every time), the system obtains
+a consolidated set of manifest file metadata. This metadata is written into a new
+manifest list file, forming the Snapshot’s base manifest list.</p>
+</section>
+<section id="generate-new-manifest-files-and-the-delta-manifest-list">
+<h3>Generate New Manifest Files and the Delta Manifest List<a class="headerlink" href="#generate-new-manifest-files-and-the-delta-manifest-list" title="Link to this heading">#</a></h3>
+<p>The initially collected file change information is written into new manifest files.
+Metadata for these newly created manifest files is then written into the delta
+manifest list.</p>
+</section>
+<section id="generate-the-snapshot-and-hint-file">
+<h3>Generate the Snapshot and HINT File<a class="headerlink" href="#generate-the-snapshot-and-hint-file" title="Link to this heading">#</a></h3>
+<p>After the above steps are completed, the system generates a new Snapshot and performs
+the following operations:</p>
+<ol class="arabic simple">
+<li><p>Determine the new Snapshot ID based on the latest <code class="docutils literal notranslate"><span class="pre">SnapshotId</span> <span class="pre">+</span> <span class="pre">1</span></code>.</p></li>
+<li><p>Record metadata such as <code class="docutils literal notranslate"><span class="pre">schema</span> <span class="pre">id</span></code>, <code class="docutils literal notranslate"><span class="pre">commit</span> <span class="pre">time</span></code>, and <code class="docutils literal notranslate"><span class="pre">total</span> <span class="pre">record</span> <span class="pre">count</span></code>.</p></li>
+<li><p>Atomicity guarantee: Generating a Snapshot is an atomic operation. If an exception
+(e.g., an I/O error) occurs during the process, the manifest files and manifest list files
+generated in Steps 2–4 are cleaned up and removed.</p></li>
+<li><p>The Snapshot is written via a rename operation to ensure atomicity.</p></li>
+<li><p>After the Snapshot is successfully written, the system writes the <code class="docutils literal notranslate"><span class="pre">LATEST</span></code> hint file
+to reduce list operations when fetching the latest Snapshot.</p></li>
+</ol>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="write.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Write And Prepare Commit</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="read.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Read and Data Evolution</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#commit-process-overview">Commit Process Overview</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#detailed-process">Detailed Process</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#collect-file-changes">Collect File Changes</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#compact-merge-manifest-files">Compact (Merge) Manifest Files</a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#full-compaction">Full Compaction</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#minor-compaction">Minor Compaction</a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#compaction-rules">Compaction Rules</a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-the-base-manifest-list">Generate the Base Manifest List</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-new-manifest-files-and-the-delta-manifest-list">Generate New Manifest Files and the Delta Manifest List</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#generate-the-snapshot-and-hint-file">Generate the Snapshot and HINT File</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/user_guide/commit.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

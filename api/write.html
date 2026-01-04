@@ -1,0 +1,1128 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Write &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/write';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Commit" href="commit.html" />
+    <link rel="prev" title="Catalog" href="catalog.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Write</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="write">
+<h1>Write<a class="headerlink" href="#write" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-write"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWriteE">
+<span id="_CPPv3N6paimon14FileStoreWriteE"></span><span id="_CPPv2N6paimon14FileStoreWriteE"></span><span id="paimon::FileStoreWrite"></span><span class="target" id="classpaimon_1_1_file_store_write"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileStoreWrite</span></span></span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWriteE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Interface for write operations in a file store. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWriteD0Ev">
+<span id="_CPPv3N6paimon14FileStoreWriteD0Ev"></span><span id="_CPPv2N6paimon14FileStoreWriteD0Ev"></span><span id="paimon::FileStoreWrite::~FileStoreWrite"></span><span class="target" id="classpaimon_1_1_file_store_write_1a3e27d7e6658286dcfea264f616d7e40e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileStoreWrite</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWriteD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE">
+<span id="_CPPv3N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE"></span><span id="_CPPv2N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE"></span><span id="paimon::FileStoreWrite::Write__std::unique_ptr:RecordBatch:RR"></span><span class="target" id="classpaimon_1_1_file_store_write_1ae1bf5795b039951efb0bcda6ac07ad01"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Write</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">batch</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Support write an input <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> to internal buffer or file. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWrite13PrepareCommitEb7int64_t">
+<span id="_CPPv3N6paimon14FileStoreWrite13PrepareCommitEb7int64_t"></span><span id="_CPPv2N6paimon14FileStoreWrite13PrepareCommitEb7int64_t"></span><span id="paimon::FileStoreWrite::PrepareCommit__b.int64_t"></span><span class="target" id="classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">CommitMessage</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">PrepareCommit</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">wait_compaction</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">true</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">commit_identifier</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">BATCH_WRITE_COMMIT_IDENTIFIER</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWrite13PrepareCommitEb7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Generate a list of commit messages with the latest generated data file meta information of the current snapshot. </p>
+<p>When we need commit, call PrepareCommit to get the current <code class="docutils literal notranslate"><span class="pre">CommitMessage</span></code>s with the latest generated data file meta information of the current snapshot.</p>
+<p>This function is designed to be called when a commit is required. Depending on the writing scenario, the behavior will differ:</p>
+<p><ul class="simple">
+<li><p>For batch write, simply call <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672"><span class="std std-ref"><span class="pre">PrepareCommit()</span></span></a></code> without any parameters.</p></li>
+<li><p>For streaming write, you need to provide both parameters: <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672"><span class="std std-ref"><span class="pre">PrepareCommit(bool</span> <span class="pre">wait_compaction,</span> <span class="pre">int64_t</span> <span class="pre">commit_identifier)</span></span></a></code>.</p></li>
+</ul>
+</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>wait_compaction</strong> – Indicates whether to wait for any ongoing compaction process to complete. </p></li>
+<li><p><strong>commit_identifier</strong> – A unique identifier for the commit operation. This parameter is only relevant in streaming write scenarios.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing <code class="docutils literal notranslate"><span class="pre">std::vector&lt;std::shared_ptr&lt;</span><span class="pre">CommitMessage</span><span class="pre">&gt;&gt;</span></code> objects, representing the generated commit messages. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon14FileStoreWrite10GetMetricsEv">
+<span id="_CPPv3NK6paimon14FileStoreWrite10GetMetricsEv"></span><span id="_CPPv2NK6paimon14FileStoreWrite10GetMetricsEv"></span><span id="paimon::FileStoreWrite::GetMetricsC"></span><span class="target" id="classpaimon_1_1_file_store_write_1a4d1000108e73778e282da532c4e30b6c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Metrics</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMetrics</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon14FileStoreWrite10GetMetricsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWrite5CloseEv">
+<span id="_CPPv3N6paimon14FileStoreWrite5CloseEv"></span><span id="_CPPv2N6paimon14FileStoreWrite5CloseEv"></span><span id="paimon::FileStoreWrite::Close"></span><span class="target" id="classpaimon_1_1_file_store_write_1abd0cf68d64b0243b826b12dcd4716ac9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWrite5CloseEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE">
+<span id="_CPPv3N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE"></span><span id="_CPPv2N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE"></span><span id="paimon::FileStoreWrite::Create__std::unique_ptr:WriteContext:"></span><span class="target" id="classpaimon_1_1_file_store_write_1a8045c3defdd61ac75f1108834daddd46"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon14FileStoreWriteE" title="paimon::FileStoreWrite"><span class="n"><span class="pre">FileStoreWrite</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12WriteContextE" title="paimon::WriteContext"><span class="n"><span class="pre">WriteContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">context</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_write"><span class="std std-ref"><span class="pre">FileStoreWrite</span></span></a></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>context</strong> – A unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code> used for write operations.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_write"><span class="std std-ref"><span class="pre">FileStoreWrite</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilderE">
+<span id="_CPPv3N6paimon19WriteContextBuilderE"></span><span id="_CPPv2N6paimon19WriteContextBuilderE"></span><span id="paimon::WriteContextBuilder"></span><span class="target" id="classpaimon_1_1_write_context_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteContextBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder"><span class="std std-ref"><span class="pre">WriteContextBuilder</span></span></a></code> used to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code>, has input validation. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE"></span><span id="paimon::WriteContextBuilder::WriteContextBuilder__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a6ad9a69a9e46607f1e94d19deda365af"></span><span class="sig-name descname"><span class="n"><span class="pre">WriteContextBuilder</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_user</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder"><span class="std std-ref"><span class="pre">WriteContextBuilder</span></span></a></code> with required parameters. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root_path</strong> – The root path of the table. </p></li>
+<li><p><strong>commit_user</strong> – The user identifier for commit operations. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilderD0Ev">
+<span id="_CPPv3N6paimon19WriteContextBuilderD0Ev"></span><span id="_CPPv2N6paimon19WriteContextBuilderD0Ev"></span><span id="paimon::WriteContextBuilder::~WriteContextBuilder"></span><span class="target" id="classpaimon_1_1_write_context_builder_1aff1f3c2273a608227aa43889237c4e78"></span><span class="sig-name descname"><span class="n"><span class="pre">~WriteContextBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::WriteContextBuilder::SetOptions__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a1adf3f18f8780a7da951272ae795abe5"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetOptions</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The options map will clear the options added by <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> before. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>options</strong> – The configuration options map. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="paimon::WriteContextBuilder::AddOption__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">AddOption</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">key</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </p>
+<p>If you want to add multiple options, call <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> multiple times or use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder_1a1adf3f18f8780a7da951272ae795abe5"><span class="std std-ref"><span class="pre">SetOptions()</span></span></a></code> instead. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – The option key. </p></li>
+<li><p><strong>value</strong> – The option value. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder17WithStreamingModeEb">
+<span id="_CPPv3N6paimon19WriteContextBuilder17WithStreamingModeEb"></span><span id="_CPPv2N6paimon19WriteContextBuilder17WithStreamingModeEb"></span><span id="paimon::WriteContextBuilder::WithStreamingMode__b"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a44f08b858246970933fa263b8428983f"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithStreamingMode</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">is_streaming_mode</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder17WithStreamingModeEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set whether to enable streaming mode (default is false) </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb">
+<span id="_CPPv3N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb"></span><span id="_CPPv2N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb"></span><span id="paimon::WriteContextBuilder::WithIgnorePreviousFiles__b"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a8e834e02efd5eb174d08e200d89908be"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithIgnorePreviousFiles</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">ignore_previous_files</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set whether the write operation should ignore previously stored files. </p>
+<p>(default is false) </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::WriteContextBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a27e4da341f9e6c6e3a71e97a1cb4be39"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom memory pool for memory management. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>memory_pool</strong> – The memory pool to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">
+<span id="_CPPv3N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="_CPPv2N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="paimon::WriteContextBuilder::WithExecutor__std::shared_ptr:Executor:CR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a2eee68bec2e79f0f0dbddff6a52711ae"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithExecutor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set custom executor for task execution. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>executor</strong> – The executor to use. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder11WithWriteIdE7int32_t">
+<span id="_CPPv3N6paimon19WriteContextBuilder11WithWriteIdE7int32_t"></span><span id="_CPPv2N6paimon19WriteContextBuilder11WithWriteIdE7int32_t"></span><span id="paimon::WriteContextBuilder::WithWriteId__int32_t"></span><span class="target" id="classpaimon_1_1_write_context_builder_1ad8028f23e6eaba79e40318ee94c2dcc5"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithWriteId</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">write_id</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder11WithWriteIdE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>For postpone bucket mode in pk table, <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder_1ad8028f23e6eaba79e40318ee94c2dcc5"><span class="std std-ref"><span class="pre">WithWriteId()</span></span></a></code> supposed to be used. </p>
+<p>Each worker must have its own unique <code class="docutils literal notranslate"><span class="pre">write_id</span></code> within a task, which is used as the prefix for its data files. This ensures that files from the same worker share the same prefix and can be consumed by the same compaction reader to preserve input order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE">
+<span id="_CPPv3N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE"></span><span id="_CPPv2N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE"></span><span id="paimon::WriteContextBuilder::WithBranch__ssCR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a82d651fbd10b459afa53bfab69579253"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithBranch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">branch</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Write to specific branch, default is main. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE">
+<span id="_CPPv3N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE"></span><span id="_CPPv2N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE"></span><span id="paimon::WriteContextBuilder::WithWriteSchema__std::vector:ss:CR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a30d7e66dfe2f42f2b832f530f3922acb"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithWriteSchema</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">write_schema</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>For data evolution, user can write partial specific fields from table schema. </p>
+<p>If not set, write all fields in table. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::WriteContextBuilder::WithFileSystemSchemeToIdentifierMap__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_write_context_builder_1ab2553c687ce23775477e9d861cd3fd70"></span><a class="reference internal" href="#_CPPv4N6paimon19WriteContextBuilderE" title="paimon::WriteContextBuilder"><span class="n"><span class="pre">WriteContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithFileSystemSchemeToIdentifierMap</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">fs_scheme_to_identifier_map</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the file system scheme to identifier mapping for custom file system configurations. </p>
+<p>This allows using different file system implementations for different URI schemes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If not set, use default file system (configured in <code class="docutils literal notranslate"><a class="reference internal" href="defs.html#structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3"><span class="std std-ref"><span class="pre">Options::FILE_SYSTEM</span></span></a></code>). </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fs_scheme_to_identifier_map</strong> – Map from URI scheme to file system identifier. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon19WriteContextBuilder6FinishEv">
+<span id="_CPPv3N6paimon19WriteContextBuilder6FinishEv"></span><span id="_CPPv2N6paimon19WriteContextBuilder6FinishEv"></span><span id="paimon::WriteContextBuilder::Finish"></span><span class="target" id="classpaimon_1_1_write_context_builder_1a6b4ea339ae0baf164b5664323f27051b"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12WriteContextE" title="paimon::WriteContext"><span class="n"><span class="pre">WriteContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon19WriteContextBuilder6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build and return a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code> instance with input validation. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result containing the constructed <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12WriteContextE">
+<span id="_CPPv3N6paimon12WriteContextE"></span><span id="_CPPv2N6paimon12WriteContextE"></span><span id="paimon::WriteContext"></span><span class="target" id="classpaimon_1_1_write_context"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriteContext</span></span></span><a class="headerlink" href="#_CPPv4N6paimon12WriteContextE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code> is some configuration for write operations. </p>
+<p>Please do not use this class directly, use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context_builder"><span class="std std-ref"><span class="pre">WriteContextBuilder</span></span></a></code> to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_write_context"><span class="std std-ref"><span class="pre">WriteContext</span></span></a></code> which has input validation. <div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#classpaimon_1_1_write_context_builder"><span class="std std-ref">WriteContextBuilder</span></a></p>
+</div>
+</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::WriteContext::WriteContext__ssCR.ssCR.b.b.b.std::optional:int32_t:CR.ssCR.std::vector:ss:CR.std::shared_ptr:MemoryPool:CR.std::shared_ptr:Executor:CR.std::map:ss.ss:CR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_write_context_1af009b92bf243b4959254c017ba643aab"></span><span class="sig-name descname"><span class="n"><span class="pre">WriteContext</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_user</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">is_streaming_mode</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">ignore_num_bucket_check</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">ignore_previous_files</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">write_id</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">branch</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">write_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">fs_scheme_to_identifier_map</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12WriteContextD0Ev">
+<span id="_CPPv3N6paimon12WriteContextD0Ev"></span><span id="_CPPv2N6paimon12WriteContextD0Ev"></span><span id="paimon::WriteContext::~WriteContext"></span><span class="target" id="classpaimon_1_1_write_context_1a94375365d1fe2193ddab679a66b4bc51"></span><span class="sig-name descname"><span class="n"><span class="pre">~WriteContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon12WriteContextD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext11GetRootPathEv">
+<span id="_CPPv3NK6paimon12WriteContext11GetRootPathEv"></span><span id="_CPPv2NK6paimon12WriteContext11GetRootPathEv"></span><span id="paimon::WriteContext::GetRootPathC"></span><span class="target" id="classpaimon_1_1_write_context_1a6c0da302853f5f3fe06ecd21f61c795d"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetRootPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext11GetRootPathEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext13GetCommitUserEv">
+<span id="_CPPv3NK6paimon12WriteContext13GetCommitUserEv"></span><span id="_CPPv2NK6paimon12WriteContext13GetCommitUserEv"></span><span id="paimon::WriteContext::GetCommitUserC"></span><span class="target" id="classpaimon_1_1_write_context_1a46355d924bb90e10d8b2b8ff10d8af84"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetCommitUser</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext13GetCommitUserEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv">
+<span id="_CPPv3NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv"></span><span id="_CPPv2NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv"></span><span id="paimon::WriteContext::GetFileSystemSchemeToIdentifierMapC"></span><span class="target" id="classpaimon_1_1_write_context_1a725006f0e7047bc41188752709ffc8d0"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetFileSystemSchemeToIdentifierMap</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext10GetOptionsEv">
+<span id="_CPPv3NK6paimon12WriteContext10GetOptionsEv"></span><span id="_CPPv2NK6paimon12WriteContext10GetOptionsEv"></span><span id="paimon::WriteContext::GetOptionsC"></span><span class="target" id="classpaimon_1_1_write_context_1a222134b39787d3b00b43f44f73ebef01"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetOptions</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext10GetOptionsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext15IsStreamingModeEv">
+<span id="_CPPv3NK6paimon12WriteContext15IsStreamingModeEv"></span><span id="_CPPv2NK6paimon12WriteContext15IsStreamingModeEv"></span><span id="paimon::WriteContext::IsStreamingModeC"></span><span class="target" id="classpaimon_1_1_write_context_1a3a04d08ac7c091d3bcec5a72f7033a4a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsStreamingMode</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext15IsStreamingModeEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext20IgnoreNumBucketCheckEv">
+<span id="_CPPv3NK6paimon12WriteContext20IgnoreNumBucketCheckEv"></span><span id="_CPPv2NK6paimon12WriteContext20IgnoreNumBucketCheckEv"></span><span id="paimon::WriteContext::IgnoreNumBucketCheckC"></span><span class="target" id="classpaimon_1_1_write_context_1a5ee5cb57d2d6b66f7f5dc8f6f2554657"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IgnoreNumBucketCheck</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext20IgnoreNumBucketCheckEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext19IgnorePreviousFilesEv">
+<span id="_CPPv3NK6paimon12WriteContext19IgnorePreviousFilesEv"></span><span id="_CPPv2NK6paimon12WriteContext19IgnorePreviousFilesEv"></span><span id="paimon::WriteContext::IgnorePreviousFilesC"></span><span class="target" id="classpaimon_1_1_write_context_1a56134cbb082b0f9dc93b454aba654d85"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IgnorePreviousFiles</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext19IgnorePreviousFilesEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext10GetWriteIdEv">
+<span id="_CPPv3NK6paimon12WriteContext10GetWriteIdEv"></span><span id="_CPPv2NK6paimon12WriteContext10GetWriteIdEv"></span><span id="paimon::WriteContext::GetWriteIdC"></span><span class="target" id="classpaimon_1_1_write_context_1a306872d254a0eea1fa7a1dca69f449e1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetWriteId</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext10GetWriteIdEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext9GetBranchEv">
+<span id="_CPPv3NK6paimon12WriteContext9GetBranchEv"></span><span id="_CPPv2NK6paimon12WriteContext9GetBranchEv"></span><span id="paimon::WriteContext::GetBranchC"></span><span class="target" id="classpaimon_1_1_write_context_1ac65f3c22060d4bc32948c6253025e464"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetBranch</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext9GetBranchEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext14GetWriteSchemaEv">
+<span id="_CPPv3NK6paimon12WriteContext14GetWriteSchemaEv"></span><span id="_CPPv2NK6paimon12WriteContext14GetWriteSchemaEv"></span><span id="paimon::WriteContext::GetWriteSchemaC"></span><span class="target" id="classpaimon_1_1_write_context_1abe6b1d911dc999349729de9d81264bfd"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetWriteSchema</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext14GetWriteSchemaEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext13GetMemoryPoolEv">
+<span id="_CPPv3NK6paimon12WriteContext13GetMemoryPoolEv"></span><span id="_CPPv2NK6paimon12WriteContext13GetMemoryPoolEv"></span><span id="paimon::WriteContext::GetMemoryPoolC"></span><span class="target" id="classpaimon_1_1_write_context_1a08746e29dabc0b6049cdf80c635516b3"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext13GetMemoryPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12WriteContext11GetExecutorEv">
+<span id="_CPPv3NK6paimon12WriteContext11GetExecutorEv"></span><span id="_CPPv2NK6paimon12WriteContext11GetExecutorEv"></span><span id="paimon::WriteContext::GetExecutorC"></span><span class="target" id="classpaimon_1_1_write_context_1ad0f5adcff5b157f79675ee3de5b69483"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetExecutor</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon12WriteContext11GetExecutorEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatchE">
+<span id="_CPPv3N6paimon11RecordBatchE"></span><span id="_CPPv2N6paimon11RecordBatchE"></span><span id="paimon::RecordBatch"></span><span class="target" id="classpaimon_1_1_record_batch"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatch</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatchE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> encapsulates a batch of data with the same schema, supporting different types such as <code class="docutils literal notranslate"><span class="pre">INSERT</span></code>, <code class="docutils literal notranslate"><span class="pre">UPDATE_BEFORE</span></code>, <code class="docutils literal notranslate"><span class="pre">UPDATE_AFTER</span></code>, and <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>. </p>
+<p>It is typically used in streaming write or batch processing scenarios, with underlying data stored in the Apache Arrow format. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Do not use this class directly, use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch_builder"><span class="std std-ref"><span class="pre">RecordBatchBuilder</span></span></a></code> to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> which has input validation. </p>
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-types">Public Types</p>
+<dl class="cpp enum-class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch7RowKindE">
+<span id="_CPPv3N6paimon11RecordBatch7RowKindE"></span><span id="_CPPv2N6paimon11RecordBatch7RowKindE"></span><span class="target" id="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0a"></span><span class="k"><span class="pre">enum</span></span><span class="w"> </span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">RowKind</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int8_t</span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch7RowKindE" title="Link to this definition">#</a><br /></dt>
+<dd><p><em>Values:</em></p>
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch7RowKind6INSERTE">
+<span id="_CPPv3N6paimon11RecordBatch7RowKind6INSERTE"></span><span id="_CPPv2N6paimon11RecordBatch7RowKind6INSERTE"></span><span class="target" id="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0aa61ee777e7f71dc466c3b2c685d8d313b"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">INSERT</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch7RowKind6INSERTE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE">
+<span id="_CPPv3N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE"></span><span id="_CPPv2N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE"></span><span class="target" id="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0aa0010102a0c3aaeac36d7a3fbaf32dd32"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">UPDATE_BEFORE</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch7RowKind12UPDATE_AFTERE">
+<span id="_CPPv3N6paimon11RecordBatch7RowKind12UPDATE_AFTERE"></span><span id="_CPPv2N6paimon11RecordBatch7RowKind12UPDATE_AFTERE"></span><span class="target" id="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0aa517ff52883d47ba5a0e051b1f2dba855"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">UPDATE_AFTER</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch7RowKind12UPDATE_AFTERE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp enumerator">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch7RowKind6DELETEE">
+<span id="_CPPv3N6paimon11RecordBatch7RowKind6DELETEE"></span><span id="_CPPv2N6paimon11RecordBatch7RowKind6DELETEE"></span><span class="target" id="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0aa32f68a60cef40faedbc6af20298c1a1e"></span><span class="k"><span class="pre">enumerator</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DELETE</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch7RowKind6DELETEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray">
+<span id="_CPPv3N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray"></span><span id="_CPPv2N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray"></span><span id="paimon::RecordBatch::RecordBatch__std::map:ss.ss:CR.int32_t.std::vector:RowKind:CR.ArrowArrayP"></span><span class="target" id="classpaimon_1_1_record_batch_1ac98d98c988c9dfb71b256d08cd7e6b8b"></span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partition</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">bucket</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatch7RowKindE" title="paimon::RecordBatch::RowKind"><span class="n"><span class="pre">RowKind</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">row_kinds</span></span>, <span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">data</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>1. Data cannot be reused, as it will be released after Write. 2. If a partition field’s value is null, it should be represented as “__DEFAULT_PARTITION__”(or a user-defined default value) in the partition map. However, in the Arrow array, partition column values MUST NOT be set to “__DEFAULT_PARTITION__” (or a user-defined default value). Instead, they should be properly set as actual nulls. If used, it may lead to behavioral inconsistencies between C++ Paimon and Java Paimon. </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatchD0Ev">
+<span id="_CPPv3N6paimon11RecordBatchD0Ev"></span><span id="_CPPv2N6paimon11RecordBatchD0Ev"></span><span id="paimon::RecordBatch::~RecordBatch"></span><span class="target" id="classpaimon_1_1_record_batch_1a3a2ddf4d69cd6bb12b10b222009cfb4f"></span><span class="sig-name descname"><span class="n"><span class="pre">~RecordBatch</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatchD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch11RecordBatchERR11RecordBatch">
+<span id="_CPPv3N6paimon11RecordBatch11RecordBatchERR11RecordBatch"></span><span id="_CPPv2N6paimon11RecordBatch11RecordBatchERR11RecordBatch"></span><span id="paimon::RecordBatch::RecordBatch__RecordBatchRR"></span><span class="target" id="classpaimon_1_1_record_batch_1a961cb9397e1fbbd11f084f21e1c4f1f9"></span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatch</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERR11RecordBatch" title="paimon::RecordBatch::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERR11RecordBatch" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatchaSERR11RecordBatch">
+<span id="_CPPv3N6paimon11RecordBatchaSERR11RecordBatch"></span><span id="_CPPv2N6paimon11RecordBatchaSERR11RecordBatch"></span><span id="paimon::RecordBatch::assign-operator__RecordBatchRR"></span><span class="target" id="classpaimon_1_1_record_batch_1a8399e346bd2bb78063aceeaa515d6c49"></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatchaSERR11RecordBatch" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch11RecordBatchERK11RecordBatch">
+<span id="_CPPv3N6paimon11RecordBatch11RecordBatchERK11RecordBatch"></span><span id="_CPPv2N6paimon11RecordBatch11RecordBatchERK11RecordBatch"></span><span id="paimon::RecordBatch::RecordBatch__RecordBatchCR"></span><span class="target" id="classpaimon_1_1_record_batch_1a28f62b4f026fe40d01ffdff5492d1841"></span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERK11RecordBatch" title="paimon::RecordBatch::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERK11RecordBatch" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatchaSERK11RecordBatch">
+<span id="_CPPv3N6paimon11RecordBatchaSERK11RecordBatch"></span><span id="_CPPv2N6paimon11RecordBatchaSERK11RecordBatch"></span><span id="paimon::RecordBatch::assign-operator__RecordBatchCR"></span><span class="target" id="classpaimon_1_1_record_batch_1a4895037fbdc780d95cea69d69619d639"></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatchaSERK11RecordBatch" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11RecordBatch12GetPartitionEv">
+<span id="_CPPv3NK6paimon11RecordBatch12GetPartitionEv"></span><span id="_CPPv2NK6paimon11RecordBatch12GetPartitionEv"></span><span id="paimon::RecordBatch::GetPartitionC"></span><span class="target" id="classpaimon_1_1_record_batch_1a66483e15233da6ea984e8f63a580349f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetPartition</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11RecordBatch12GetPartitionEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11RecordBatch9GetBucketEv">
+<span id="_CPPv3NK6paimon11RecordBatch9GetBucketEv"></span><span id="_CPPv2NK6paimon11RecordBatch9GetBucketEv"></span><span id="paimon::RecordBatch::GetBucketC"></span><span class="target" id="classpaimon_1_1_record_batch_1a0757cbb2c3d91ffa8ad2ae050eae7a80"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetBucket</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11RecordBatch9GetBucketEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11RecordBatch7GetDataEv">
+<span id="_CPPv3NK6paimon11RecordBatch7GetDataEv"></span><span id="_CPPv2NK6paimon11RecordBatch7GetDataEv"></span><span id="paimon::RecordBatch::GetDataC"></span><span class="target" id="classpaimon_1_1_record_batch_1adec8d0c567772fe3f08ce4bcc3ac317b"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetData</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11RecordBatch7GetDataEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11RecordBatch10GetRowKindEv">
+<span id="_CPPv3NK6paimon11RecordBatch10GetRowKindEv"></span><span id="_CPPv2NK6paimon11RecordBatch10GetRowKindEv"></span><span id="paimon::RecordBatch::GetRowKindC"></span><span class="target" id="classpaimon_1_1_record_batch_1a8f8d3e88aa7c12fe8214edcb7666569f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatch7RowKindE" title="paimon::RecordBatch::RowKind"><span class="n"><span class="pre">RowKind</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetRowKind</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11RecordBatch10GetRowKindEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11RecordBatch9SetBucketE7int32_t">
+<span id="_CPPv3N6paimon11RecordBatch9SetBucketE7int32_t"></span><span id="_CPPv2N6paimon11RecordBatch9SetBucketE7int32_t"></span><span id="paimon::RecordBatch::SetBucket__int32_t"></span><span class="target" id="classpaimon_1_1_record_batch_1a050159c885e4dbb22222ac7323497b40"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetBucket</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">bucket</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11RecordBatch9SetBucketE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11RecordBatch18HasSpecifiedBucketEv">
+<span id="_CPPv3NK6paimon11RecordBatch18HasSpecifiedBucketEv"></span><span id="_CPPv2NK6paimon11RecordBatch18HasSpecifiedBucketEv"></span><span id="paimon::RecordBatch::HasSpecifiedBucketC"></span><span class="target" id="classpaimon_1_1_record_batch_1ae49a4b4833cd80d8a028920c39ff8b7a"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">HasSpecifiedBucket</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon11RecordBatch18HasSpecifiedBucketEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilderE">
+<span id="_CPPv3N6paimon18RecordBatchBuilderE"></span><span id="_CPPv2N6paimon18RecordBatchBuilderE"></span><span id="paimon::RecordBatchBuilder"></span><span class="target" id="classpaimon_1_1_record_batch_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatchBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Builder for constructing <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> instances. </p>
+<p>This class provides a convenient way to build <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> objects by setting various properties such as data, row kinds, partition information, and bucket id. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray">
+<span id="_CPPv3N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray"></span><span id="_CPPv2N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray"></span><span id="paimon::RecordBatchBuilder::RecordBatchBuilder__ArrowArrayP"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a50a11c1390641da7422cca4d6a6bc91e"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">RecordBatchBuilder</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">data</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch_builder"><span class="std std-ref"><span class="pre">RecordBatchBuilder</span></span></a></code> with Arrow data. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – Arrow array containing the record data. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilderD0Ev">
+<span id="_CPPv3N6paimon18RecordBatchBuilderD0Ev"></span><span id="_CPPv2N6paimon18RecordBatchBuilderD0Ev"></span><span id="paimon::RecordBatchBuilder::~RecordBatchBuilder"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a11dadf9531891f3c423bab2d369f3bb7"></span><span class="sig-name descname"><span class="n"><span class="pre">~RecordBatchBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray">
+<span id="_CPPv3N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray"></span><span id="_CPPv2N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray"></span><span id="paimon::RecordBatchBuilder::MoveData__ArrowArrayP"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a0ea882b567b227ff801d6fdfdebafa11"></span><a class="reference internal" href="#_CPPv4N6paimon18RecordBatchBuilderE" title="paimon::RecordBatchBuilder"><span class="n"><span class="pre">RecordBatchBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">MoveData</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">data</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><p>Move new Arrow data into the builder, replacing existing data. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – New Arrow array data. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE">
+<span id="_CPPv3N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE"></span><span id="_CPPv2N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE"></span><span id="paimon::RecordBatchBuilder::SetRowKinds__std::vector:RecordBatch::RowKind:CR"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a3f8e5e6c3b64fd3c51ffa8814863a5d2"></span><a class="reference internal" href="#_CPPv4N6paimon18RecordBatchBuilderE" title="paimon::RecordBatchBuilder"><span class="n"><span class="pre">RecordBatchBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetRowKinds</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatch7RowKindE" title="paimon::RecordBatch::RowKind"><span class="n"><span class="pre">RowKind</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">row_kinds</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the row kinds for each record in the batch. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">row_kinds</span></code> must have the same length as the number of records in the data. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>row_kinds</strong> – A vector of row kinds, including INSERT, UPDATE_BEFORE, UPDATE_AFTER and DELETE. If not set, default value is <code class="docutils literal notranslate"><span class="pre">INSERT</span></code>. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::RecordBatchBuilder::SetPartition__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a0be4dc9d6c1cdd796a3d7a17db2e000b"></span><a class="reference internal" href="#_CPPv4N6paimon18RecordBatchBuilderE" title="paimon::RecordBatchBuilder"><span class="n"><span class="pre">RecordBatchBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetPartition</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">data</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the partition information for this record batch. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data</strong> – Map of partition column names to their string values. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder9SetBucketE7int32_t">
+<span id="_CPPv3N6paimon18RecordBatchBuilder9SetBucketE7int32_t"></span><span id="_CPPv2N6paimon18RecordBatchBuilder9SetBucketE7int32_t"></span><span id="paimon::RecordBatchBuilder::SetBucket__int32_t"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1a9ae069dc8bcf27178f13aa867c7da331"></span><a class="reference internal" href="#_CPPv4N6paimon18RecordBatchBuilderE" title="paimon::RecordBatchBuilder"><span class="n"><span class="pre">RecordBatchBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetBucket</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">bucket</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder9SetBucketE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set the bucket id for this record batch. </p>
+<p>If not set, default value is <code class="docutils literal notranslate"><span class="pre">-1</span></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bucket</strong> – The bucket id for data distribution. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18RecordBatchBuilder6FinishEv">
+<span id="_CPPv3N6paimon18RecordBatchBuilder6FinishEv"></span><span id="_CPPv2N6paimon18RecordBatchBuilder6FinishEv"></span><span id="paimon::RecordBatchBuilder::Finish"></span><span class="target" id="classpaimon_1_1_record_batch_builder_1abbc31d51d4892d4d76afda9b259d544c"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11RecordBatchE" title="paimon::RecordBatch"><span class="n"><span class="pre">RecordBatch</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18RecordBatchBuilder6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build and return the final <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> instance. </p>
+<p>This method validates the configuration and creates <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_record_batch"><span class="std std-ref"><span class="pre">RecordBatch</span></span></a></code> with all the specified properties. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="catalog.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Catalog</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="commit.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Commit</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWriteE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStoreWrite</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWriteD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileStoreWrite()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE"><code class="docutils literal notranslate"><span class="pre">Write()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWrite13PrepareCommitEb7int64_t"><code class="docutils literal notranslate"><span class="pre">PrepareCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon14FileStoreWrite10GetMetricsEv"><code class="docutils literal notranslate"><span class="pre">GetMetrics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWrite5CloseEv"><code class="docutils literal notranslate"><span class="pre">Close()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::WriteContextBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">WriteContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~WriteContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">SetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">AddOption()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder17WithStreamingModeEb"><code class="docutils literal notranslate"><span class="pre">WithStreamingMode()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb"><code class="docutils literal notranslate"><span class="pre">WithIgnorePreviousFiles()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"><code class="docutils literal notranslate"><span class="pre">WithExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder11WithWriteIdE7int32_t"><code class="docutils literal notranslate"><span class="pre">WithWriteId()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">WithBranch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">WithWriteSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">WithFileSystemSchemeToIdentifierMap()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon19WriteContextBuilder6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12WriteContextE"><code class="docutils literal notranslate"><span class="pre">paimon::WriteContext</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">WriteContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12WriteContextD0Ev"><code class="docutils literal notranslate"><span class="pre">~WriteContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext11GetRootPathEv"><code class="docutils literal notranslate"><span class="pre">GetRootPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext13GetCommitUserEv"><code class="docutils literal notranslate"><span class="pre">GetCommitUser()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv"><code class="docutils literal notranslate"><span class="pre">GetFileSystemSchemeToIdentifierMap()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext10GetOptionsEv"><code class="docutils literal notranslate"><span class="pre">GetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext15IsStreamingModeEv"><code class="docutils literal notranslate"><span class="pre">IsStreamingMode()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext20IgnoreNumBucketCheckEv"><code class="docutils literal notranslate"><span class="pre">IgnoreNumBucketCheck()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext19IgnorePreviousFilesEv"><code class="docutils literal notranslate"><span class="pre">IgnorePreviousFiles()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext10GetWriteIdEv"><code class="docutils literal notranslate"><span class="pre">GetWriteId()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext9GetBranchEv"><code class="docutils literal notranslate"><span class="pre">GetBranch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext14GetWriteSchemaEv"><code class="docutils literal notranslate"><span class="pre">GetWriteSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12WriteContext11GetExecutorEv"><code class="docutils literal notranslate"><span class="pre">GetExecutor()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatchE"><code class="docutils literal notranslate"><span class="pre">paimon::RecordBatch</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch7RowKindE"><code class="docutils literal notranslate"><span class="pre">RowKind</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch7RowKind6INSERTE"><code class="docutils literal notranslate"><span class="pre">INSERT</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE"><code class="docutils literal notranslate"><span class="pre">UPDATE_BEFORE</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch7RowKind12UPDATE_AFTERE"><code class="docutils literal notranslate"><span class="pre">UPDATE_AFTER</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch7RowKind6DELETEE"><code class="docutils literal notranslate"><span class="pre">DELETE</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">RecordBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatchD0Ev"><code class="docutils literal notranslate"><span class="pre">~RecordBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERR11RecordBatch"><code class="docutils literal notranslate"><span class="pre">RecordBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatchaSERR11RecordBatch"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch11RecordBatchERK11RecordBatch"><code class="docutils literal notranslate"><span class="pre">RecordBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatchaSERK11RecordBatch"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11RecordBatch12GetPartitionEv"><code class="docutils literal notranslate"><span class="pre">GetPartition()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11RecordBatch9GetBucketEv"><code class="docutils literal notranslate"><span class="pre">GetBucket()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11RecordBatch7GetDataEv"><code class="docutils literal notranslate"><span class="pre">GetData()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11RecordBatch10GetRowKindEv"><code class="docutils literal notranslate"><span class="pre">GetRowKind()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11RecordBatch9SetBucketE7int32_t"><code class="docutils literal notranslate"><span class="pre">SetBucket()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11RecordBatch18HasSpecifiedBucketEv"><code class="docutils literal notranslate"><span class="pre">HasSpecifiedBucket()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::RecordBatchBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">RecordBatchBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~RecordBatchBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">MoveData()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE"><code class="docutils literal notranslate"><span class="pre">SetRowKinds()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">SetPartition()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder9SetBucketE7int32_t"><code class="docutils literal notranslate"><span class="pre">SetBucket()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18RecordBatchBuilder6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/write.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

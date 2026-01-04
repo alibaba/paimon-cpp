@@ -1,0 +1,312 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_function_visitor" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FunctionVisitor</compoundname>
+    <includes refid="function__visitor_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h</includes>
+    <templateparamlist>
+      <param>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1af9314ce379e89077c46cd3fcfaca76ae" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FunctionVisitor&lt; T &gt;::~FunctionVisitor</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FunctionVisitor</name>
+        <qualifiedname>paimon::FunctionVisitor::~FunctionVisitor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="34" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a1b5cb370e21f4e498d921036ceead405" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitIsNotNull</definition>
+        <argsstring>()=0</argsstring>
+        <name>VisitIsNotNull</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitIsNotNull</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a9daf300c2c8f065ae12c515b14ae2387">VisitIsNotNull</reimplementedby>
+        <briefdescription>
+<para>Evaluates the IS NOT NULL predicate on the indexed column. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="37" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a8afe8c5ada434c3134f0cad4e5af38bc" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitIsNull</definition>
+        <argsstring>()=0</argsstring>
+        <name>VisitIsNull</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitIsNull</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1aab36bf149e33b71f963b89b1270a881d">VisitIsNull</reimplementedby>
+        <briefdescription>
+<para>Evaluates the IS NULL predicate on the indexed column. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="40" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1af745a4e85ca02dd9693ccf513bf01dae" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitEqual</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitEqual</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitEqual</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a558e538048d59cb5413da1ccd09a9675">VisitEqual</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the equality (==) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="43" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a1af81d98d01c2e87a7814fe906fea0f7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitNotEqual</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitNotEqual</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitNotEqual</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1aecf551234e70423934f380d1356b7343">VisitNotEqual</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the inequality (!=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="46" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1ae9b18b37aa036bb5ae3ac7299cbf4a74" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitLessThan</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitLessThan</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitLessThan</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1adf7c4ce733768247291c5328138818f6">VisitLessThan</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the less-than (&lt;) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="49" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a31e6d052bd6aa26dc85fd375aefd402d" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitLessOrEqual</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitLessOrEqual</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitLessOrEqual</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a39afec2fae4175c59acf0cf3a5719a97">VisitLessOrEqual</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the less-than-or-equal (&lt;=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="52" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a476cbf57433a84b9e06b81f8a9967e86" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitGreaterThan</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitGreaterThan</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitGreaterThan</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a4b02900deeff72acc61b2502a3dc3758">VisitGreaterThan</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the greater-than (&gt;) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="55" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1ab69382b764629572d66d879b8704ebf1" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitGreaterOrEqual</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitGreaterOrEqual</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitGreaterOrEqual</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a3f9f42b10b1012a12dbe7085f9d1f8cb">VisitGreaterOrEqual</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the greater-than-or-equal (&gt;=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="58" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1af084765e656e7989a390c793ca48507a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitIn</definition>
+        <argsstring>(const std::vector&lt; Literal &gt; &amp;literals)=0</argsstring>
+        <name>VisitIn</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitIn</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1ac431ea1d2f3355daeb1bca1c1b67715e">VisitIn</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &gt; &amp;</type>
+          <declname>literals</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the IN predicate against a list of literals. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="61" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1aa39876a5c1f4d2a8f423403ba840cc90" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitNotIn</definition>
+        <argsstring>(const std::vector&lt; Literal &gt; &amp;literals)=0</argsstring>
+        <name>VisitNotIn</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitNotIn</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1ad0710577b26687597c5c28ea72dd9564">VisitNotIn</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &gt; &amp;</type>
+          <declname>literals</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the NOT IN predicate against a list of literals. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="64" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1adce72b1f0226f7415d907c2f37275261" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitStartsWith</definition>
+        <argsstring>(const Literal &amp;prefix)=0</argsstring>
+        <name>VisitStartsWith</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitStartsWith</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1aa5f77ea1cbf05f4ba6db521056bdf9ef">VisitStartsWith</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>prefix</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values start with the given prefix. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="67" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a0912a7c916bc37d64508e96447be76fe" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitEndsWith</definition>
+        <argsstring>(const Literal &amp;suffix)=0</argsstring>
+        <name>VisitEndsWith</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitEndsWith</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a62202cc09795a88939600441d6e9096b">VisitEndsWith</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>suffix</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values end with the given prefix. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="70" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_visitor_1a9bf050077573e5a8633b64dfe28c02cd" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>virtual Result&lt; T &gt; paimon::FunctionVisitor&lt; T &gt;::VisitContains</definition>
+        <argsstring>(const Literal &amp;literal)=0</argsstring>
+        <name>VisitContains</name>
+        <qualifiedname>paimon::FunctionVisitor::VisitContains</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_file_index_reader_1a6e3e91b4bef4608775157a6dcb2db655">VisitContains</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values contain the given substring. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="73" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A visitor interface for evaluating filter predicates on indexed columns. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><parameterlist kind="templateparam"><parameteritem>
+<parameternamelist>
+<parametername>T</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The result type produced by each visit method (e.g., a file index result or global index result). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h" bodystart="32" bodyend="74"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_function_visitor_1a9bf050077573e5a8633b64dfe28c02cd" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitContains</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a0912a7c916bc37d64508e96447be76fe" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitEndsWith</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af745a4e85ca02dd9693ccf513bf01dae" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ab69382b764629572d66d879b8704ebf1" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitGreaterOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a476cbf57433a84b9e06b81f8a9967e86" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitGreaterThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af084765e656e7989a390c793ca48507a" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1b5cb370e21f4e498d921036ceead405" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitIsNotNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a8afe8c5ada434c3134f0cad4e5af38bc" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitIsNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a31e6d052bd6aa26dc85fd375aefd402d" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitLessOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ae9b18b37aa036bb5ae3ac7299cbf4a74" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitLessThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1af81d98d01c2e87a7814fe906fea0f7" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitNotEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1aa39876a5c1f4d2a8f423403ba840cc90" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitNotIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1adce72b1f0226f7415d907c2f37275261" prot="public" virt="pure-virtual"><scope>paimon::FunctionVisitor</scope><name>VisitStartsWith</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af9314ce379e89077c46cd3fcfaca76ae" prot="public" virt="virtual"><scope>paimon::FunctionVisitor</scope><name>~FunctionVisitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

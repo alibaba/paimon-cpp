@@ -1,0 +1,178 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_format_writer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FormatWriter</compoundname>
+    <includes refid="format__writer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1ad93f4f889e5f6a84e443a56032c23e33" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FormatWriter::~FormatWriter</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FormatWriter</name>
+        <qualifiedname>paimon::FormatWriter::~FormatWriter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="29" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1a2e7a64e6f91b3cfb5abddd4f3c15c05e" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FormatWriter::AddBatch</definition>
+        <argsstring>(::ArrowArray *batch)=0</argsstring>
+        <name>AddBatch</name>
+        <qualifiedname>paimon::FormatWriter::AddBatch</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">::ArrowArray</ref> *</type>
+          <declname>batch</declname>
+        </param>
+        <briefdescription>
+<para>Add a batch of records to the format writer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>batch</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to an <ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref> containing the batch data to write. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> indicating success (OK) or failure with error information. </para>
+</simplesect>
+<simplesect kind="note"><para>The batch must conform to the schema expected by the writer. </para>
+</simplesect>
+<simplesect kind="note"><para>This method can be called multiple times to write data incrementally. </para>
+</simplesect>
+<simplesect kind="note"><para>After calling <computeroutput><ref refid="classpaimon_1_1_format_writer_1a5baab67a1a5a3b42a6477dc0bf8eadc7" kindref="member">Finish()</ref></computeroutput>, this method should not be called again. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="37" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1ad542d387b7ff77e9a38c782c66a7b743" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FormatWriter::Flush</definition>
+        <argsstring>()=0</argsstring>
+        <name>Flush</name>
+        <qualifiedname>paimon::FormatWriter::Flush</qualifiedname>
+        <briefdescription>
+<para>Flushes all intermediate buffered data to the format writer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Error status returned if the encoder cannot be flushed, or if the output stream return an error. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="43" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1a5baab67a1a5a3b42a6477dc0bf8eadc7" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FormatWriter::Finish</definition>
+        <argsstring>()=0</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::FormatWriter::Finish</qualifiedname>
+        <briefdescription>
+<para>Finishes the writing. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This must flush all internal buffer, finish encoding, and write footers.</para>
+<para><simplesect kind="note"><para>The writer is not expected to handle any more records via <computeroutput><ref refid="classpaimon_1_1_format_writer_1a2e7a64e6f91b3cfb5abddd4f3c15c05e" kindref="member">AddBatch()</ref></computeroutput> after this method is called.</para>
+</simplesect>
+<simplesect kind="warning"><para>This method <bold>MUST NOT</bold> close the stream that the writer writes to. Closing the stream is expected to happen through the invoker of this method afterwards.</para>
+</simplesect>
+<simplesect kind="return"><para>Error status returned if the finalization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="55" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1a3a2e1e327fe9bf5e8f4a3aa8bdb76a43" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>virtual Result&lt; bool &gt; paimon::FormatWriter::ReachTargetSize</definition>
+        <argsstring>(bool suggested_check, int64_t target_size) const =0</argsstring>
+        <name>ReachTargetSize</name>
+        <qualifiedname>paimon::FormatWriter::ReachTargetSize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>suggested_check</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>target_size</declname>
+        </param>
+        <briefdescription>
+<para>Check if the writer has reached the <computeroutput>target_size</computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>suggested_check</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Whether it needs to be checked, but subclasses can also decide whether to check it themselves. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>target_size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The size of the target. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>True if the target size was reached, otherwise false. </para>
+</simplesect>
+<simplesect kind="return"><para>Error status returned if calculating the length fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="64" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_writer_1a87e5ca9131746f86812b1c7a45ec7536" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> &gt;</type>
+        <definition>virtual std::shared_ptr&lt; Metrics &gt; paimon::FormatWriter::GetWriterMetrics</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetWriterMetrics</name>
+        <qualifiedname>paimon::FormatWriter::GetWriterMetrics</qualifiedname>
+        <briefdescription>
+<para>Get metrics of the writer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The accumulated writer metrics to current state. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="68" column="29"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>File format writer, each writer corresponds to a data file. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h" bodystart="27" bodyend="69"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_format_writer_1a2e7a64e6f91b3cfb5abddd4f3c15c05e" prot="public" virt="pure-virtual"><scope>paimon::FormatWriter</scope><name>AddBatch</name></member>
+      <member refid="classpaimon_1_1_format_writer_1a5baab67a1a5a3b42a6477dc0bf8eadc7" prot="public" virt="pure-virtual"><scope>paimon::FormatWriter</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_format_writer_1ad542d387b7ff77e9a38c782c66a7b743" prot="public" virt="pure-virtual"><scope>paimon::FormatWriter</scope><name>Flush</name></member>
+      <member refid="classpaimon_1_1_format_writer_1a87e5ca9131746f86812b1c7a45ec7536" prot="public" virt="pure-virtual"><scope>paimon::FormatWriter</scope><name>GetWriterMetrics</name></member>
+      <member refid="classpaimon_1_1_format_writer_1a3a2e1e327fe9bf5e8f4a3aa8bdb76a43" prot="public" virt="pure-virtual"><scope>paimon::FormatWriter</scope><name>ReachTargetSize</name></member>
+      <member refid="classpaimon_1_1_format_writer_1ad93f4f889e5f6a84e443a56032c23e33" prot="public" virt="virtual"><scope>paimon::FormatWriter</scope><name>~FormatWriter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

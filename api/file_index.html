@@ -1,0 +1,1025 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>File Index &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/file_index';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="GLobal Index" href="global_index.html" />
+    <link rel="prev" title="Data Types" href="data_types.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">File Index</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="file-index">
+<h1>File Index<a class="headerlink" href="#file-index" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-file-index"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11FileIndexerE">
+<span id="_CPPv3N6paimon11FileIndexerE"></span><span id="_CPPv2N6paimon11FileIndexerE"></span><span id="paimon::FileIndexer"></span><span class="target" id="classpaimon_1_1_file_indexer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexer</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11FileIndexerE" title="Link to this definition">#</a><br /></dt>
+<dd><p>File index interface. To read and write a file index. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11FileIndexerD0Ev">
+<span id="_CPPv3N6paimon11FileIndexerD0Ev"></span><span id="_CPPv2N6paimon11FileIndexerD0Ev"></span><span id="paimon::FileIndexer::~FileIndexer"></span><span class="target" id="classpaimon_1_1_file_indexer_1a81138fb5658ade9140d7cf0b4d8a1066"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileIndexer</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon11FileIndexerD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::FileIndexer::CreateReader__ArrowSchemaP.int32_t.int32_t.std::shared_ptr:InputStream:CR.std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_file_indexer_1a072c568a47206e4591bab167a9efa056"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexReaderE" title="paimon::FileIndexReader"><span class="n"><span class="pre">FileIndexReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReader</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_schema</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">start</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">input_stream</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_reader"><span class="std std-ref"><span class="pre">FileIndexReader</span></span></a></code> with input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arrow_schema</strong> – ArrowSchema derived from arrow schema or struct type with specified indexed field. </p></li>
+<li><p><strong>start</strong> – Start position of input stream. </p></li>
+<li><p><strong>length</strong> – Length of index bytes. </p></li>
+<li><p><strong>input_stream</strong> – Input stream for read index. </p></li>
+<li><p><strong>pool</strong> – Memory pool for memory allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_reader"><span class="std std-ref"><span class="pre">FileIndexReader</span></span></a></code> to read index. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::FileIndexer::CreateWriter__ArrowSchemaP.std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_file_indexer_1a3a2bd3d51fe4c0b4cabfde03093ac622"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexWriterE" title="paimon::FileIndexWriter"><span class="n"><span class="pre">FileIndexWriter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateWriter</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_writer"><span class="std std-ref"><span class="pre">FileIndexWriter</span></span></a></code> for arrow schema. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arrow_schema</strong> – ArrowSchema derived from arrow schema or struct type with specified indexed field. </p></li>
+<li><p><strong>pool</strong> – Memory pool for memory allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_writer"><span class="std std-ref"><span class="pre">FileIndexWriter</span></span></a></code> to write index. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18FileIndexerFactoryE">
+<span id="_CPPv3N6paimon18FileIndexerFactoryE"></span><span id="_CPPv2N6paimon18FileIndexerFactoryE"></span><span id="paimon::FileIndexerFactory"></span><span class="target" id="classpaimon_1_1_file_indexer_factory"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexerFactory</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Factory</span></span><a class="headerlink" href="#_CPPv4N6paimon18FileIndexerFactoryE" title="Link to this definition">#</a><br /></dt>
+<dd><p>File index factory to construct <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_indexer"><span class="std std-ref"><span class="pre">FileIndexer</span></span></a></code>. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18FileIndexerFactoryD0Ev">
+<span id="_CPPv3N6paimon18FileIndexerFactoryD0Ev"></span><span id="_CPPv2N6paimon18FileIndexerFactoryD0Ev"></span><span id="paimon::FileIndexerFactory::~FileIndexerFactory"></span><span class="target" id="classpaimon_1_1_file_indexer_factory_1ac7b13b1c7b547963759a8b6834e5466d"></span><span class="sig-name descname"><span class="n"><span class="pre">~FileIndexerFactory</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon18FileIndexerFactoryD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileIndexerFactory::Create__std::map:ss.ss:CRC"></span><span class="target" id="classpaimon_1_1_file_indexer_factory_1a16c259977fadcacbb4a9e70e7049e25a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11FileIndexerE" title="paimon::FileIndexer"><span class="n"><span class="pre">FileIndexer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_indexer"><span class="std std-ref"><span class="pre">FileIndexer</span></span></a></code> with specified options. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileIndexerFactory::Get__ssCR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_file_indexer_factory_1ab846071e83f40bb078d22d87addc045f"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11FileIndexerE" title="paimon::FileIndexer"><span class="n"><span class="pre">FileIndexer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">identifier</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_indexer"><span class="std std-ref"><span class="pre">FileIndexer</span></span></a></code> according to identifier and options. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexWriterE">
+<span id="_CPPv3N6paimon15FileIndexWriterE"></span><span id="_CPPv2N6paimon15FileIndexWriterE"></span><span id="paimon::FileIndexWriter"></span><span class="target" id="classpaimon_1_1_file_index_writer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexWriter</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexWriterE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Interface for writing file-level index data from Arrow batches. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexWriterD0Ev">
+<span id="_CPPv3N6paimon15FileIndexWriterD0Ev"></span><span id="_CPPv2N6paimon15FileIndexWriterD0Ev"></span><span id="paimon::FileIndexWriter::~FileIndexWriter"></span><span class="target" id="classpaimon_1_1_file_index_writer_1a16a9f15a3ae3bafe482ab9817b635358"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileIndexWriter</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexWriterD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexWriter8AddBatchEP10ArrowArray">
+<span id="_CPPv3N6paimon15FileIndexWriter8AddBatchEP10ArrowArray"></span><span id="_CPPv2N6paimon15FileIndexWriter8AddBatchEP10ArrowArray"></span><span id="paimon::FileIndexWriter::AddBatch__ArrowArrayP"></span><span class="target" id="classpaimon_1_1_file_index_writer_1a2a9d1adbc19116d4a70be6010c3cf975"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AddBatch</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">batch</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexWriter8AddBatchEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><p>Adds a batch of data to the index writer. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>batch</strong> – Pointer to a C ArrowArray derived from arrow struct array contain specified indexed field. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">Status::OK()</span></code> on success; otherwise, an error indicating failure (e.g., schema mismatch). </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileIndexWriter15SerializedBytesEv">
+<span id="_CPPv3NK6paimon15FileIndexWriter15SerializedBytesEv"></span><span id="_CPPv2NK6paimon15FileIndexWriter15SerializedBytesEv"></span><span id="paimon::FileIndexWriter::SerializedBytesC"></span><span class="target" id="classpaimon_1_1_file_index_writer_1a80294f183ab62fcdcae39e22e64cc4e0"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SerializedBytes</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileIndexWriter15SerializedBytesEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Serializes the built index into a byte buffer. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method returns the complete serialized form of the index after all batches have been added. It can be called only once and typically assumes no further calls to <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_writer_1a2a9d1adbc19116d4a70be6010c3cf975"><span class="std std-ref"><span class="pre">AddBatch()</span></span></a></code> will occur afterward.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A unique pointer to a byte array containing the serialized index data, or an error if serialization fails. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReaderE">
+<span id="_CPPv3N6paimon15FileIndexReaderE"></span><span id="_CPPv2N6paimon15FileIndexReaderE"></span><span id="paimon::FileIndexReader"></span><span class="target" id="classpaimon_1_1_file_index_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexReader</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="predicate.html#_CPPv4I0EN6paimon15FunctionVisitorE" title="paimon::FunctionVisitor"><span class="n"><span class="pre">FunctionVisitor</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates filter predicates against a file-level index to determine file eligibility. </p>
+<p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_reader"><span class="std std-ref"><span class="pre">FileIndexReader</span></span></a></code> implements the <code class="docutils literal notranslate"><a class="reference internal" href="predicate.html#classpaimon_1_1_function_visitor"><span class="std std-ref"><span class="pre">FunctionVisitor</span></span></a></code> interface specialized to produce <code class="docutils literal notranslate"><span class="pre">std::shared_ptr&lt;</span><a class="reference internal" href="#classpaimon_1_1_file_index_result"><span class="std std-ref"><span class="pre">FileIndexResult</span></span></a><span class="pre">&gt;</span></code> objects. It reads pre-built file-level index data (e.g., bitmap, bsi or bloom filters) from index file and evaluates whether a given data file may contain rows matching a specific predicate. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader14VisitIsNotNullEv">
+<span id="_CPPv3N6paimon15FileIndexReader14VisitIsNotNullEv"></span><span id="_CPPv2N6paimon15FileIndexReader14VisitIsNotNullEv"></span><span id="paimon::FileIndexReader::VisitIsNotNull"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a9daf300c2c8f065ae12c515b14ae2387"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitIsNotNull</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader14VisitIsNotNullEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the IS NOT NULL predicate on the indexed column. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader11VisitIsNullEv">
+<span id="_CPPv3N6paimon15FileIndexReader11VisitIsNullEv"></span><span id="_CPPv2N6paimon15FileIndexReader11VisitIsNullEv"></span><span id="paimon::FileIndexReader::VisitIsNull"></span><span class="target" id="classpaimon_1_1_file_index_reader_1aab36bf149e33b71f963b89b1270a881d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitIsNull</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader11VisitIsNullEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the IS NULL predicate on the indexed column. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader10VisitEqualERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader10VisitEqualERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader10VisitEqualERK7Literal"></span><span id="paimon::FileIndexReader::VisitEqual__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a558e538048d59cb5413da1ccd09a9675"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitEqual</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader10VisitEqualERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the equality (==) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader13VisitNotEqualERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader13VisitNotEqualERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader13VisitNotEqualERK7Literal"></span><span id="paimon::FileIndexReader::VisitNotEqual__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1aecf551234e70423934f380d1356b7343"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitNotEqual</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader13VisitNotEqualERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the inequality (!=) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader13VisitLessThanERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader13VisitLessThanERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader13VisitLessThanERK7Literal"></span><span id="paimon::FileIndexReader::VisitLessThan__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1adf7c4ce733768247291c5328138818f6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitLessThan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader13VisitLessThanERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the less-than (&lt;) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal"></span><span id="paimon::FileIndexReader::VisitLessOrEqual__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a39afec2fae4175c59acf0cf3a5719a97"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitLessOrEqual</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the less-than-or-equal (&lt;=) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader16VisitGreaterThanERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader16VisitGreaterThanERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader16VisitGreaterThanERK7Literal"></span><span id="paimon::FileIndexReader::VisitGreaterThan__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a4b02900deeff72acc61b2502a3dc3758"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitGreaterThan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader16VisitGreaterThanERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the greater-than (&gt;) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal"></span><span id="paimon::FileIndexReader::VisitGreaterOrEqual__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a3f9f42b10b1012a12dbe7085f9d1f8cb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitGreaterOrEqual</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the greater-than-or-equal (&gt;=) predicate against the given literal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE">
+<span id="_CPPv3N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE"></span><span id="_CPPv2N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE"></span><span id="paimon::FileIndexReader::VisitIn__std::vector:Literal:CR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1ac431ea1d2f3355daeb1bca1c1b67715e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitIn</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literals</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the IN predicate against a list of literals. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE">
+<span id="_CPPv3N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE"></span><span id="_CPPv2N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE"></span><span id="paimon::FileIndexReader::VisitNotIn__std::vector:Literal:CR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1ad0710577b26687597c5c28ea72dd9564"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitNotIn</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literals</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates the NOT IN predicate against a list of literals. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader15VisitStartsWithERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader15VisitStartsWithERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader15VisitStartsWithERK7Literal"></span><span id="paimon::FileIndexReader::VisitStartsWith__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1aa5f77ea1cbf05f4ba6db521056bdf9ef"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitStartsWith</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">prefix</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader15VisitStartsWithERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates whether string values start with the given prefix. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader13VisitEndsWithERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader13VisitEndsWithERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader13VisitEndsWithERK7Literal"></span><span id="paimon::FileIndexReader::VisitEndsWith__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a62202cc09795a88939600441d6e9096b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitEndsWith</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">suffix</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader13VisitEndsWithERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates whether string values end with the given prefix. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexReader13VisitContainsERK7Literal">
+<span id="_CPPv3N6paimon15FileIndexReader13VisitContainsERK7Literal"></span><span id="_CPPv2N6paimon15FileIndexReader13VisitContainsERK7Literal"></span><span id="paimon::FileIndexReader::VisitContains__LiteralCR"></span><span class="target" id="classpaimon_1_1_file_index_reader_1a6e3e91b4bef4608775157a6dcb2db655"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitContains</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="predicate.html#_CPPv4N6paimon7LiteralE" title="paimon::Literal"><span class="n"><span class="pre">Literal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">literal</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexReader13VisitContainsERK7Literal" title="Link to this definition">#</a><br /></dt>
+<dd><p>Evaluates whether string values contain the given substring. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormatE">
+<span id="_CPPv3N6paimon15FileIndexFormatE"></span><span id="_CPPv2N6paimon15FileIndexFormatE"></span><span id="paimon::FileIndexFormat"></span><span class="target" id="classpaimon_1_1_file_index_format"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexFormat</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormatE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Defines the on-disk format and versioning for Paimon file-level indexes. </p>
+<p>File index file format. Put all column and offset in the header.</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::FileIndexFormat::CreateReader__std::shared_ptr:InputStream:CR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_file_index_format_1ac515aada8b5be997429df54417413678"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexFormat6ReaderE" title="paimon::FileIndexFormat::Reader"><span class="n"><span class="pre">Reader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReader</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">input_stream</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_format_1_1_reader"><span class="std std-ref"><span class="pre">Reader</span></span></a></code> to parse a index file (may contain multiple indexes) from the given input stream. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_stream</strong> – Input stream containing serialized index data. </p></li>
+<li><p><strong>pool</strong> – Memory pool for temporary allocations during reading. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A unique pointer to a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_index_format_1_1_reader"><span class="std std-ref"><span class="pre">Reader</span></span></a></code> on success, or an error if the stream is invalid (e.g., wrong magic, unsupported version, or corrupted data). </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat5MAGICE">
+<span id="_CPPv3N6paimon15FileIndexFormat5MAGICE"></span><span id="_CPPv2N6paimon15FileIndexFormat5MAGICE"></span><span id="paimon::FileIndexFormat::MAGIC__int64_tC"></span><span class="target" id="classpaimon_1_1_file_index_format_1a51305096c29a68fe830eb04c79a50b8c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MAGIC</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat5MAGICE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE">
+<span id="_CPPv3N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE"></span><span id="_CPPv2N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE"></span><span id="paimon::FileIndexFormat::EMPTY_INDEX_FLAG__int32_tC"></span><span class="target" id="classpaimon_1_1_file_index_format_1ae9b162819107a6cb361f2665a643157d"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">EMPTY_INDEX_FLAG</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat3V_1E">
+<span id="_CPPv3N6paimon15FileIndexFormat3V_1E"></span><span id="_CPPv2N6paimon15FileIndexFormat3V_1E"></span><span id="paimon::FileIndexFormat::V_1__int32_tC"></span><span class="target" id="classpaimon_1_1_file_index_format_1a8f5a2d0c97bea216d8fd4a0923be40c2"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">V_1</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat3V_1E" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat6ReaderE">
+<span id="_CPPv3N6paimon15FileIndexFormat6ReaderE"></span><span id="_CPPv2N6paimon15FileIndexFormat6ReaderE"></span><span id="paimon::FileIndexFormat::Reader"></span><span class="target" id="classpaimon_1_1_file_index_format_1_1_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Reader</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat6ReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><a class="reference internal" href="#classpaimon_1_1_file_index_format_1_1_reader"><span class="std std-ref">Reader</span></a> for file index file. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexFormat6ReaderD0Ev">
+<span id="_CPPv3N6paimon15FileIndexFormat6ReaderD0Ev"></span><span id="_CPPv2N6paimon15FileIndexFormat6ReaderD0Ev"></span><span id="paimon::FileIndexFormat::Reader::~Reader"></span><span class="target" id="classpaimon_1_1_file_index_format_1_1_reader_1a7484d04c20db1a4010d775b80199ca1f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~Reader</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexFormat6ReaderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema">
+<span id="_CPPv3NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema"></span><span id="_CPPv2NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema"></span><span id="paimon::FileIndexFormat::Reader::ReadColumnIndex__ssCR.ArrowSchemaPC"></span><span class="target" id="classpaimon_1_1_file_index_format_1_1_reader_1a6f77a1642670fa64bae9888c8f516d18"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexReaderE" title="paimon::FileIndexReader"><span class="n"><span class="pre">FileIndexReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadColumnIndex</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">column_name</span></span>, <span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_schema</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema" title="Link to this definition">#</a><br /></dt>
+<dd><p>Reads index data for a specific column from the index file. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column_name</strong> – Name of the column to retrieve index data for. </p></li>
+<li><p><strong>arrow_schema</strong> – Arrow schema that must contain a field corresponding to <code class="docutils literal notranslate"><span class="pre">column_name</span></code>. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A vector of shared pointers to <a class="reference internal" href="#classpaimon_1_1_file_index_reader"><span class="std std-ref">FileIndexReader</span></a> objects, each corresponding to a different index type; or an error if the column is not indexed or the index is malformed. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResultE">
+<span id="_CPPv3N6paimon15FileIndexResultE"></span><span id="_CPPv2N6paimon15FileIndexResultE"></span><span id="paimon::FileIndexResult"></span><span class="target" id="classpaimon_1_1_file_index_result"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileIndexResult</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">enable_shared_from_this</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResultE" title="Link to this definition">#</a><br /></dt>
+<dd><p>File index result to decide whether filter a file. </p>
+<p>Subclassed by <a class="reference internal" href="#classpaimon_1_1_bitmap_index_result"><span class="std std-ref">paimon::BitmapIndexResult</span></a>, paimon::Remain, paimon::Skip</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResultD0Ev">
+<span id="_CPPv3N6paimon15FileIndexResultD0Ev"></span><span id="_CPPv2N6paimon15FileIndexResultD0Ev"></span><span id="paimon::FileIndexResult::~FileIndexResult"></span><span class="target" id="classpaimon_1_1_file_index_result_1a606652e02127a4ff25ceb16523b3a219"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileIndexResult</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResultD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileIndexResult8IsRemainEv">
+<span id="_CPPv3NK6paimon15FileIndexResult8IsRemainEv"></span><span id="_CPPv2NK6paimon15FileIndexResult8IsRemainEv"></span><span id="paimon::FileIndexResult::IsRemainC"></span><span class="target" id="classpaimon_1_1_file_index_result_1a09dd9fb3c6aaf92dca100bf62e6d684b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsRemain</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileIndexResult8IsRemainEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the file is remained. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE">
+<span id="_CPPv3N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="_CPPv2N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="paimon::FileIndexResult::And__std::shared_ptr:FileIndexResult:CR"></span><span class="target" id="classpaimon_1_1_file_index_result_1aad183054045c2000e120921278ec81de"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">And</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Compute the intersection of the current result with the provided result. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE">
+<span id="_CPPv3N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="_CPPv2N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="paimon::FileIndexResult::Or__std::shared_ptr:FileIndexResult:CR"></span><span class="target" id="classpaimon_1_1_file_index_result_1a0c7e7d61e45bc4e4abe66f926d8561f1"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Or</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Compute the union of the current result with the provided result. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileIndexResult8ToStringEv">
+<span id="_CPPv3NK6paimon15FileIndexResult8ToStringEv"></span><span id="_CPPv2NK6paimon15FileIndexResult8ToStringEv"></span><span id="paimon::FileIndexResult::ToStringC"></span><span class="target" id="classpaimon_1_1_file_index_result_1a8141fe8daef18f552b0bd01a1b6ad6d5"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileIndexResult8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResult6RemainEv">
+<span id="_CPPv3N6paimon15FileIndexResult6RemainEv"></span><span id="_CPPv2N6paimon15FileIndexResult6RemainEv"></span><span id="paimon::FileIndexResult::Remain"></span><span class="target" id="classpaimon_1_1_file_index_result_1a6f56e0bf2501247a97f9d68456eb6e3e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Remain</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResult6RemainEv" title="Link to this definition">#</a><br /></dt>
+<dd><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is a singleton-like utility; all calls return equivalent objects. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A shared instance representing “retain the file”. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileIndexResult4SkipEv">
+<span id="_CPPv3N6paimon15FileIndexResult4SkipEv"></span><span id="_CPPv2N6paimon15FileIndexResult4SkipEv"></span><span id="paimon::FileIndexResult::Skip"></span><span class="target" id="classpaimon_1_1_file_index_result_1aa3f2676efb24a9a9ef200fbed194c45a"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Skip</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileIndexResult4SkipEv" title="Link to this definition">#</a><br /></dt>
+<dd><div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is a singleton-like utility; all calls return equivalent objects. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A shared instance representing “skip the file”. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResultE">
+<span id="_CPPv3N6paimon17BitmapIndexResultE"></span><span id="_CPPv2N6paimon17BitmapIndexResultE"></span><span id="paimon::BitmapIndexResult"></span><span class="target" id="classpaimon_1_1_bitmap_index_result"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BitmapIndexResult</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResultE" title="Link to this definition">#</a><br /></dt>
+<dd><p>The implementation of bitmap file index result, represents row granularity. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The inner bitmap in <a class="reference internal" href="#classpaimon_1_1_bitmap_index_result"><span class="std std-ref">BitmapIndexResult</span></a> is lazily initialized only when the result is about to be used. </p>
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-types">Public Types</p>
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResult14BitmapSupplierE">
+<span id="_CPPv3N6paimon17BitmapIndexResult14BitmapSupplierE"></span><span id="_CPPv2N6paimon17BitmapIndexResult14BitmapSupplierE"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1a0dd789149efd006c74a0eb08023117db"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BitmapSupplier</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">function</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">RoaringBitmap32</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">(</span></span><span class="p"><span class="pre">)</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResult14BitmapSupplierE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier">
+<span id="_CPPv3N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier"></span><span id="_CPPv2N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier"></span><span id="paimon::BitmapIndexResult::BitmapIndexResult__BitmapSupplier"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1ac5404e988458bb0136941ab3435f3d08"></span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BitmapIndexResult</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon17BitmapIndexResult14BitmapSupplierE" title="paimon::BitmapIndexResult::BitmapSupplier"><span class="n"><span class="pre">BitmapSupplier</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">bitmap_supplier</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResultD0Ev">
+<span id="_CPPv3N6paimon17BitmapIndexResultD0Ev"></span><span id="_CPPv2N6paimon17BitmapIndexResultD0Ev"></span><span id="paimon::BitmapIndexResult::~BitmapIndexResult"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1a5e369625c353b873f30d1b29352c7248"></span><span class="sig-name descname"><span class="n"><span class="pre">~BitmapIndexResult</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResultD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17BitmapIndexResult8IsRemainEv">
+<span id="_CPPv3NK6paimon17BitmapIndexResult8IsRemainEv"></span><span id="_CPPv2NK6paimon17BitmapIndexResult8IsRemainEv"></span><span id="paimon::BitmapIndexResult::IsRemainC"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1a376e69106cfc7b59339a2396bc9d7fe9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsRemain</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon17BitmapIndexResult8IsRemainEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the file is remained. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE">
+<span id="_CPPv3N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="_CPPv2N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="paimon::BitmapIndexResult::And__std::shared_ptr:FileIndexResult:CR"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1ac8a278b501a57fb71a43190bf2617e81"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">And</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Compute the intersection of the current result with the provided result. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE">
+<span id="_CPPv3N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="_CPPv2N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"></span><span id="paimon::BitmapIndexResult::Or__std::shared_ptr:FileIndexResult:CR"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1ae42303c66939824af06d1ed6ba5b5d50"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Or</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileIndexResultE" title="paimon::FileIndexResult"><span class="n"><span class="pre">FileIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Compute the union of the current result with the provided result. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17BitmapIndexResult9GetBitmapEv">
+<span id="_CPPv3NK6paimon17BitmapIndexResult9GetBitmapEv"></span><span id="_CPPv2NK6paimon17BitmapIndexResult9GetBitmapEv"></span><span id="paimon::BitmapIndexResult::GetBitmapC"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1adfecd4895bf6042e61782e2d4fac88e7"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">RoaringBitmap32</span></span><span class="p"><span class="pre">*</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetBitmap</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon17BitmapIndexResult9GetBitmapEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Inner <code class="docutils literal notranslate"><span class="pre">RoaringBitmap32</span></code>. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17BitmapIndexResult8ToStringEv">
+<span id="_CPPv3NK6paimon17BitmapIndexResult8ToStringEv"></span><span id="_CPPv2NK6paimon17BitmapIndexResult8ToStringEv"></span><span id="paimon::BitmapIndexResult::ToStringC"></span><span class="target" id="classpaimon_1_1_bitmap_index_result_1aafeed8a56468750949e973d28adb0ac6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4NK6paimon17BitmapIndexResult8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="data_types.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Data Types</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="global_index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">GLobal Index</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11FileIndexerE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11FileIndexerD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileIndexer()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">CreateReader()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">CreateWriter()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18FileIndexerFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexerFactory</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18FileIndexerFactoryD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileIndexerFactory()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Get()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexWriterD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileIndexWriter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexWriter8AddBatchEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">AddBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileIndexWriter15SerializedBytesEv"><code class="docutils literal notranslate"><span class="pre">SerializedBytes()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexReader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader14VisitIsNotNullEv"><code class="docutils literal notranslate"><span class="pre">VisitIsNotNull()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader11VisitIsNullEv"><code class="docutils literal notranslate"><span class="pre">VisitIsNull()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader10VisitEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitEqual()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader13VisitNotEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitNotEqual()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader13VisitLessThanERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitLessThan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitLessOrEqual()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader16VisitGreaterThanERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitGreaterThan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitGreaterOrEqual()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">VisitIn()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE"><code class="docutils literal notranslate"><span class="pre">VisitNotIn()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader15VisitStartsWithERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitStartsWith()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader13VisitEndsWithERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitEndsWith()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexReader13VisitContainsERK7Literal"><code class="docutils literal notranslate"><span class="pre">VisitContains()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormatE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexFormat</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">CreateReader()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat5MAGICE"><code class="docutils literal notranslate"><span class="pre">MAGIC</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE"><code class="docutils literal notranslate"><span class="pre">EMPTY_INDEX_FLAG</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat3V_1E"><code class="docutils literal notranslate"><span class="pre">V_1</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat6ReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexFormat::Reader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexFormat6ReaderD0Ev"><code class="docutils literal notranslate"><span class="pre">~Reader()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema"><code class="docutils literal notranslate"><span class="pre">ReadColumnIndex()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::FileIndexResult</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResultD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileIndexResult8IsRemainEv"><code class="docutils literal notranslate"><span class="pre">IsRemain()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"><code class="docutils literal notranslate"><span class="pre">And()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"><code class="docutils literal notranslate"><span class="pre">Or()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileIndexResult8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResult6RemainEv"><code class="docutils literal notranslate"><span class="pre">Remain()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileIndexResult4SkipEv"><code class="docutils literal notranslate"><span class="pre">Skip()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::BitmapIndexResult</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResult14BitmapSupplierE"><code class="docutils literal notranslate"><span class="pre">BitmapSupplier</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier"><code class="docutils literal notranslate"><span class="pre">BitmapIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResultD0Ev"><code class="docutils literal notranslate"><span class="pre">~BitmapIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17BitmapIndexResult8IsRemainEv"><code class="docutils literal notranslate"><span class="pre">IsRemain()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE"><code class="docutils literal notranslate"><span class="pre">And()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE"><code class="docutils literal notranslate"><span class="pre">Or()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17BitmapIndexResult9GetBitmapEv"><code class="docutils literal notranslate"><span class="pre">GetBitmap()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17BitmapIndexResult8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/file_index.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

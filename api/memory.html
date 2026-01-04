@@ -1,0 +1,955 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Memory &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/memory';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Executor" href="executor.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Memory</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="memory">
+<h1>Memory<a class="headerlink" href="#memory" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-memory"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13GetMemoryPoolEv">
+<span id="_CPPv3N6paimon13GetMemoryPoolEv"></span><span id="_CPPv2N6paimon13GetMemoryPoolEv"></span><span id="paimon::GetMemoryPool"></span><span class="target" id="namespacepaimon_1ae2688243d30a03f67aae1b058af30b56"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetMemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon13GetMemoryPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a default implementation of memory pool. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Unique pointer to a newly created <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_memory_pool"><span class="std std-ref"><span class="pre">MemoryPool</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon14GetDefaultPoolEv">
+<span id="_CPPv3N6paimon14GetDefaultPoolEv"></span><span id="_CPPv2N6paimon14GetDefaultPoolEv"></span><span id="paimon::GetDefaultPool"></span><span class="target" id="namespacepaimon_1af2363ca49fc078c7f28ce9e712000776"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-prename descclassname"><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span></span><span class="sig-name descname"><span class="n"><span class="pre">GetDefaultPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon14GetDefaultPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get a system-wide singleton memory pool. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Shared pointer to the singleton <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_memory_pool"><span class="std std-ref"><span class="pre">MemoryPool</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPoolE">
+<span id="_CPPv3N6paimon10MemoryPoolE"></span><span id="_CPPv2N6paimon10MemoryPoolE"></span><span id="paimon::MemoryPool"></span><span class="target" id="classpaimon_1_1_memory_pool"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MemoryPool</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPoolE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract base class for memory pool implementations that provides controlled memory management. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPoolD0Ev">
+<span id="_CPPv3N6paimon10MemoryPoolD0Ev"></span><span id="_CPPv2N6paimon10MemoryPoolD0Ev"></span><span id="paimon::MemoryPool::~MemoryPool"></span><span class="target" id="classpaimon_1_1_memory_pool_1a4435d02cf128290cafb8d8c858e4525f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~MemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPoolD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPoolaSERK10MemoryPool">
+<span id="_CPPv3N6paimon10MemoryPoolaSERK10MemoryPool"></span><span id="_CPPv2N6paimon10MemoryPoolaSERK10MemoryPool"></span><span id="paimon::MemoryPool::assign-operator__MemoryPoolCR"></span><span class="target" id="classpaimon_1_1_memory_pool_1a6df2efb77c2de09c69d3e1d2e254f91b"></span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPoolaSERK10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPoolaSER10MemoryPool">
+<span id="_CPPv3N6paimon10MemoryPoolaSER10MemoryPool"></span><span id="_CPPv2N6paimon10MemoryPoolaSER10MemoryPool"></span><span id="paimon::MemoryPool::assign-operator__MemoryPoolR"></span><span class="target" id="classpaimon_1_1_memory_pool_1a6a017f751b12c3d6b7a545b2836e7314"></span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPoolaSER10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPoolaSERR10MemoryPool">
+<span id="_CPPv3N6paimon10MemoryPoolaSERR10MemoryPool"></span><span id="_CPPv2N6paimon10MemoryPoolaSERR10MemoryPool"></span><span id="paimon::MemoryPool::assign-operator__MemoryPoolRR"></span><span class="target" id="classpaimon_1_1_memory_pool_1a4cda413e13079d73915d8898920e942b"></span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPoolaSERR10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool6MallocE8uint64_t8uint64_t">
+<span id="_CPPv3N6paimon10MemoryPool6MallocE8uint64_t8uint64_t"></span><span id="_CPPv2N6paimon10MemoryPool6MallocE8uint64_t8uint64_t"></span><span id="paimon::MemoryPool::Malloc__uint64_t.uint64_t"></span><span class="target" id="classpaimon_1_1_memory_pool_1a9468e0ed21976e12baec04a429b14093"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">Malloc</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">alignment</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool6MallocE8uint64_t8uint64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Allocate memory from the pool. </p>
+<p>Allocates a block of memory with the specified size and alignment. The returned memory is uninitialized and must be properly constructed before use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> – Number of bytes to allocate. </p></li>
+<li><p><strong>alignment</strong> – Memory alignment requirement (0 for default alignment). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to allocated memory, or nullptr on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t">
+<span id="_CPPv3N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t"></span><span id="_CPPv2N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t"></span><span id="paimon::MemoryPool::Realloc__voidP.s.s.uint64_t"></span><span class="target" id="classpaimon_1_1_memory_pool_1a55a75ddd27b62957c8958f9504451a8d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">Realloc</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">p</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">old_size</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">new_size</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">alignment</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Reallocate memory to a new size. </p>
+<p>Changes the size of a previously allocated memory block. The contents of the memory block are preserved up to the minimum of the old and new sizes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> – Pointer to the memory block to reallocate. </p></li>
+<li><p><strong>old_size</strong> – Current size of the memory block. </p></li>
+<li><p><strong>new_size</strong> – New desired size of the memory block. </p></li>
+<li><p><strong>alignment</strong> – Memory alignment requirement (0 for default alignment). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pointer to the reallocated memory block. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool4FreeEPv8uint64_t">
+<span id="_CPPv3N6paimon10MemoryPool4FreeEPv8uint64_t"></span><span id="_CPPv2N6paimon10MemoryPool4FreeEPv8uint64_t"></span><span id="paimon::MemoryPool::Free__voidP.uint64_t"></span><span class="target" id="classpaimon_1_1_memory_pool_1a448b0754687971d7c6e8c402a2ea259c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Free</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">p</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool4FreeEPv8uint64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Deallocate memory back to the pool. </p>
+<p>Releases a previously allocated memory block back to the pool. The size must match the size used during allocation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> – Pointer to the memory block to deallocate. </p></li>
+<li><p><strong>size</strong> – Size of the memory block (must match allocation size). </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10MemoryPool12CurrentUsageEv">
+<span id="_CPPv3NK6paimon10MemoryPool12CurrentUsageEv"></span><span id="_CPPv2NK6paimon10MemoryPool12CurrentUsageEv"></span><span id="paimon::MemoryPool::CurrentUsageC"></span><span class="target" id="classpaimon_1_1_memory_pool_1ac3c1883dd08f8fe6cde59dc0c065ec3c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CurrentUsage</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10MemoryPool12CurrentUsageEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get current memory usage. </p>
+<p>Returns the amount of memory currently allocated from this pool. This includes all outstanding allocations that have not been freed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Current memory usage in bytes. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10MemoryPool14MaxMemoryUsageEv">
+<span id="_CPPv3NK6paimon10MemoryPool14MaxMemoryUsageEv"></span><span id="_CPPv2NK6paimon10MemoryPool14MaxMemoryUsageEv"></span><span id="paimon::MemoryPool::MaxMemoryUsageC"></span><span class="target" id="classpaimon_1_1_memory_pool_1a1cdf31515d6770fb9874efbf6945d47d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MaxMemoryUsage</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10MemoryPool14MaxMemoryUsageEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get peak memory usage. </p>
+<p>Returns the maximum amount of memory that has been allocated from this pool at any point in time since its creation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Peak memory usage in bytes. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args">
+<span id="_CPPv3I0DpEN6paimon10MemoryPool14AllocateUniqueEDpRR4Args"></span><span id="_CPPv2I0DpEN6paimon10MemoryPool14AllocateUniqueEDpRR4Args"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="sig-name descname"><span class="n"><span class="pre">Args</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classpaimon_1_1_memory_pool_1a3c53c16dd1878e1838699367bcffaed8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args" title="paimon::MemoryPool::AllocateUnique::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args" title="paimon::MemoryPool::AllocateUnique::T"><span class="n"><span class="pre">T</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocateUnique</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args" title="paimon::MemoryPool::AllocateUnique::Args"><span class="n"><span class="pre">Args</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">...</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">args</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args" title="Link to this definition">#</a><br /></dt>
+<dd><p>Allocate an object on the pool and return a unique_ptr with custom deleter. </p>
+<p>This method provides a convenient way to allocate objects that are automatically managed by the memory pool. The returned unique_ptr will automatically deallocate the memory through the pool when it goes out of scope.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>T</strong> – Type of object to allocate. </p></li>
+<li><p><strong>Args</strong> – Types of constructor arguments. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>args</strong> – Constructor arguments to forward to T’s constructor. </p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>unique_ptr managing the allocated object with pool-aware deleter. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE">
+<span id="_CPPv3I0EN6paimon10MemoryPool15AllocatorDeleteE"></span><span id="_CPPv2I0EN6paimon10MemoryPool15AllocatorDeleteE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">T</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocatorDelete</span></span></span><a class="headerlink" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Custom deleter for use with std::unique_ptr that integrates with memory pools. </p>
+<p><a class="reference internal" href="#classpaimon_1_1_memory_pool_1_1_allocator_delete"><span class="std std-ref">AllocatorDelete</span></a> provides automatic memory deallocation through the memory pool when used with std::unique_ptr. It stores both the pool reference and the allocation size to ensure proper cleanup.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Template Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>T</strong> – Type of object being managed. </p>
+</dd>
+</dl>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv">
+<span id="_CPPv3N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv"></span><span id="_CPPv2N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv"></span><span id="paimon::MemoryPool::AllocatorDelete::AllocatorDelete"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a23d976384aa3a484b4f51ae1af3dab60"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocatorDelete</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t">
+<span id="_CPPv3N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t"></span><span id="_CPPv2N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t"></span><span id="paimon::MemoryPool::AllocatorDelete::AllocatorDelete__MemoryPoolR.s"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1acee78a003cdec0b47616271666cc9660"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocatorDelete</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_pool</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_size</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete">
+<span id="_CPPv3N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete"></span><span id="_CPPv2N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete"></span><span id="paimon::MemoryPool::AllocatorDelete::AllocatorDelete__AllocatorDeleteCR"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a09b9001fcf608a9a48d804e5ba075667"></span><span class="sig-name descname"><span class="n"><span class="pre">AllocatorDelete</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete" title="paimon::MemoryPool::AllocatorDelete::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteaSER15AllocatorDeleteRK15AllocatorDeleteI1UE">
+<span id="_CPPv3I0EN6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDeleteI1UE"></span><span id="_CPPv2I0EN6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDeleteI1UE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">U</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae976d304e48920bbffaa78f0c052f266"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteaSER15AllocatorDeleteRK15AllocatorDeleteI1UE" title="paimon::MemoryPool::AllocatorDelete::operator=::U"><span class="n"><span class="pre">U</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteaSER15AllocatorDeleteRK15AllocatorDeleteI1UE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete">
+<span id="_CPPv3N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete"></span><span id="_CPPv2N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete"></span><span id="paimon::MemoryPool::AllocatorDelete::assign-operator__AllocatorDeleteCR"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae83c7130c70d49cfca58f866c651412c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete">
+<span id="_CPPv3N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete"></span><span id="_CPPv2N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete"></span><span id="paimon::MemoryPool::AllocatorDelete::assign-operator__AllocatorDeleteRR"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1abdb459c2c8680f9ff6e9678d4bd154c8"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE">
+<span id="_CPPv3I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE"></span><span id="_CPPv2I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE"></span><span class="k"><span class="pre">template</span></span><span class="p"><span class="pre">&lt;</span></span><span class="k"><span class="pre">typename</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">U</span></span></span><span class="p"><span class="pre">&gt;</span></span><br /><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aef1eb10feccbd4d48652aee499783c69"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocatorDelete</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE" title="paimon::MemoryPool::AllocatorDelete::AllocatorDelete"><span class="n"><span class="pre">AllocatorDelete</span></span></a><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE" title="paimon::MemoryPool::AllocatorDelete::AllocatorDelete::U"><span class="n"><span class="pre">U</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv">
+<span id="_CPPv3NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv"></span><span id="_CPPv2NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv"></span><span id="paimon::MemoryPool::AllocatorDelete::GetPoolC"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1aa5c3b320a9a95302b2e4155567ac3fbc"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv">
+<span id="_CPPv3NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv"></span><span id="_CPPv2NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv"></span><span id="paimon::MemoryPool::AllocatorDelete::GetSizeC"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1ae0e518d7a0d93bb4c2bfdcec5e14891e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetSize</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10MemoryPool15AllocatorDeleteclEP1T">
+<span id="_CPPv3NK6paimon10MemoryPool15AllocatorDeleteclEP1T"></span><span id="_CPPv2NK6paimon10MemoryPool15AllocatorDeleteclEP1T"></span><span id="paimon::MemoryPool::AllocatorDelete::call-operator__TPC"></span><span class="target" id="classpaimon_1_1_memory_pool_1_1_allocator_delete_1a27416e5c6171e136ca88c39226892a09"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">()</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE" title="paimon::MemoryPool::AllocatorDelete::T"><span class="n"><span class="pre">T</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">p</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDeleteclEP1T" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5BytesE">
+<span id="_CPPv3N6paimon5BytesE"></span><span id="_CPPv2N6paimon5BytesE"></span><span id="paimon::Bytes"></span><span class="target" id="classpaimon_1_1_bytes"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><a class="headerlink" href="#_CPPv4N6paimon5BytesE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A memory-managed byte array class that provides efficient storage and manipulation of binary data. </p>
+<p><a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> is a RAII wrapper around raw memory that integrates with Paimon’s memory pool system for efficient memory allocation and deallocation. It provides safe access to byte arrays with automatic memory management and supports move semantics for efficient transfers. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes5BytesEv">
+<span id="_CPPv3N6paimon5Bytes5BytesEv"></span><span id="_CPPv2N6paimon5Bytes5BytesEv"></span><span id="paimon::Bytes::Bytes"></span><span class="target" id="classpaimon_1_1_bytes_1af31cb27c438a4e59d9aee9e4d9761e27"></span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon5Bytes5BytesEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Default constructor creating an empty <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. </p>
+<p>Creates a <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object with no allocated memory. The object will have null data pointer and zero size. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes5BytesE6size_tP10MemoryPool">
+<span id="_CPPv3N6paimon5Bytes5BytesE6size_tP10MemoryPool"></span><span id="_CPPv2N6paimon5Bytes5BytesE6size_tP10MemoryPool"></span><span id="paimon::Bytes::Bytes__s.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_bytes_1a145a3eaebffb74d156e3d9f553f762f9"></span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Bytes5BytesE6size_tP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructor that allocates memory of specified size. </p>
+<p>Allocates a new byte array of the given size using the provided memory pool. The allocated memory is uninitialized.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>size</strong> – Number of bytes to allocate. </p></li>
+<li><p><strong>pool</strong> – Memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool">
+<span id="_CPPv3N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool"></span><span id="_CPPv2N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool"></span><span id="paimon::Bytes::Bytes__ssCR.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_bytes_1a151a522ee8b4b24113182cbd4e4b8315"></span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">str</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructor that creates a copy of a string. </p>
+<p>Allocates memory and copies the contents of the provided string into the new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>str</strong> – String to copy data from. </p></li>
+<li><p><strong>pool</strong> – Memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes5BytesERK5Bytes">
+<span id="_CPPv3N6paimon5Bytes5BytesERK5Bytes"></span><span id="_CPPv2N6paimon5Bytes5BytesERK5Bytes"></span><span id="paimon::Bytes::Bytes__BytesCR"></span><span class="target" id="classpaimon_1_1_bytes_1a246f6db5220806ec66b898210eb986c2"></span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5Bytes5BytesERK5Bytes" title="paimon::Bytes::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon5Bytes5BytesERK5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5BytesaSERK5Bytes">
+<span id="_CPPv3N6paimon5BytesaSERK5Bytes"></span><span id="_CPPv2N6paimon5BytesaSERK5Bytes"></span><span id="paimon::Bytes::assign-operator__BytesCR"></span><span class="target" id="classpaimon_1_1_bytes_1aa4acb59bfd93d52d1fe275161d42b536"></span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">delete</span></span><a class="headerlink" href="#_CPPv4N6paimon5BytesaSERK5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes5BytesERR5Bytes">
+<span id="_CPPv3N6paimon5Bytes5BytesERR5Bytes"></span><span id="_CPPv2N6paimon5Bytes5BytesERR5Bytes"></span><span id="paimon::Bytes::Bytes__BytesRR"></span><span class="target" id="classpaimon_1_1_bytes_1a5572560920a30a12b7e3654376309988"></span><span class="sig-name descname"><span class="n"><span class="pre">Bytes</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon5Bytes5BytesERR5Bytes" title="paimon::Bytes::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N6paimon5Bytes5BytesERR5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5BytesaSERR5Bytes">
+<span id="_CPPv3N6paimon5BytesaSERR5Bytes"></span><span id="_CPPv2N6paimon5BytesaSERR5Bytes"></span><span id="paimon::Bytes::assign-operator__BytesRR"></span><span class="target" id="classpaimon_1_1_bytes_1a132b19b29dff61ee2d8c84ea88f4360a"></span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">=</span></span></span><span class="sig-paren">(</span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&amp;</span></span><span class="p"><span class="pre">&amp;</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">noexcept</span></span><a class="headerlink" href="#_CPPv4N6paimon5BytesaSERR5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5BytesD0Ev">
+<span id="_CPPv3N6paimon5BytesD0Ev"></span><span id="_CPPv2N6paimon5BytesD0Ev"></span><span id="paimon::Bytes::~Bytes"></span><span class="target" id="classpaimon_1_1_bytes_1ad4178495fb2cf73f21a8fd39266ec86c"></span><span class="sig-name descname"><span class="n"><span class="pre">~Bytes</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5BytesD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5ByteseqERK5Bytes">
+<span id="_CPPv3NK6paimon5ByteseqERK5Bytes"></span><span id="_CPPv2NK6paimon5ByteseqERK5Bytes"></span><span id="paimon::Bytes::eq-operator__BytesCRC"></span><span class="target" id="classpaimon_1_1_bytes_1affc08878c8ff37b0476f8e8b60eb49bb"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">==</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5ByteseqERK5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5BytesltERK5Bytes">
+<span id="_CPPv3NK6paimon5BytesltERK5Bytes"></span><span id="_CPPv2NK6paimon5BytesltERK5Bytes"></span><span id="paimon::Bytes::lt-operator__BytesCRC"></span><span class="target" id="classpaimon_1_1_bytes_1ab3046290142f31faa72aea060cbc5d49"></span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">&lt;</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5BytesltERK5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5BytesixE6size_t">
+<span id="_CPPv3NK6paimon5BytesixE6size_t"></span><span id="_CPPv2NK6paimon5BytesixE6size_t"></span><span id="paimon::Bytes::subscript-operator__sC"></span><span class="target" id="classpaimon_1_1_bytes_1a9e767f140b6b38f268d6d900fd884ab4"></span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">[]</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">idx</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5BytesixE6size_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5Bytes7compareERK5Bytes">
+<span id="_CPPv3NK6paimon5Bytes7compareERK5Bytes"></span><span id="_CPPv2NK6paimon5Bytes7compareERK5Bytes"></span><span id="paimon::Bytes::compare__BytesCRC"></span><span class="target" id="classpaimon_1_1_bytes_1a6db1a89480677662811766afc1e61e0e"></span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">compare</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5Bytes7compareERK5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd><p>Compare this <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object with another. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Negative value if this &lt; other; 0 if equal; positive value if this &gt; other. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5Bytes4dataEv">
+<span id="_CPPv3NK6paimon5Bytes4dataEv"></span><span id="_CPPv2NK6paimon5Bytes4dataEv"></span><span id="paimon::Bytes::dataC"></span><span class="target" id="classpaimon_1_1_bytes_1a16740bcc9dbaefee3a2f829ec05be475"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">data</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5Bytes4dataEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get pointer to the raw data. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A pointer to the underlying byte array. The pointer remains valid as long as the <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object exists and is not moved from. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon5Bytes4sizeEv">
+<span id="_CPPv3NK6paimon5Bytes4sizeEv"></span><span id="_CPPv2NK6paimon5Bytes4sizeEv"></span><span id="paimon::Bytes::sizeC"></span><span class="target" id="classpaimon_1_1_bytes_1a0c808c1893967e523481bbe19bda6347"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">size</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon5Bytes4sizeEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the size of the byte array. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool">
+<span id="_CPPv3N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool"></span><span id="_CPPv2N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool"></span><span id="paimon::Bytes::CopyOf__BytesCR.s.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_bytes_1ae0b0e80ce8bd911427d85b2479f734cb"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CopyOf</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">bytes</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">size</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a copy of existing <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> with specified size. </p>
+<p>Creates a new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object by copying data from an existing <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. The copy will have the specified size, which may be different from the source object’s size (truncation or padding may occur).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bytes</strong> – Source <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object to copy from. </p></li>
+<li><p><strong>size</strong> – Size of the new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. </p></li>
+<li><p><strong>pool</strong> – Memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique pointer to the newly created <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool">
+<span id="_CPPv3N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool"></span><span id="_CPPv2N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool"></span><span id="paimon::Bytes::AllocateBytes__int32_t.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_bytes_1a3ffe7a792a70e2797964eb9ffcb4dfab"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocateBytes</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Allocate a new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object with specified length. </p>
+<p>Factory method that creates a new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object with uninitialized memory of the specified length.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>length</strong> – Number of bytes to allocate. </p></li>
+<li><p><strong>pool</strong> – Memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique pointer to the newly allocated <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool">
+<span id="_CPPv3N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool"></span><span id="_CPPv2N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool"></span><span id="paimon::Bytes::AllocateBytes__ssCR.MemoryPoolP"></span><span class="target" id="classpaimon_1_1_bytes_1a0292ba33e9432638cf961cd02e20684a"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AllocateBytes</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">str</span></span>, <a class="reference internal" href="#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool" title="Link to this definition">#</a><br /></dt>
+<dd><p>Allocate a new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object from string data. </p>
+<p>Factory method that creates a new <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object and copies the contents of the provided string into it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>str</strong> – String to copy data from. </p></li>
+<li><p><strong>pool</strong> – Memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Unique pointer to the newly allocated <a class="reference internal" href="#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> object. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="executor.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Executor</p>
+      </div>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon14GetDefaultPoolEv"><code class="docutils literal notranslate"><span class="pre">GetDefaultPool()</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPoolE"><code class="docutils literal notranslate"><span class="pre">paimon::MemoryPool</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPoolD0Ev"><code class="docutils literal notranslate"><span class="pre">~MemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPoolaSERK10MemoryPool"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPoolaSER10MemoryPool"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPoolaSERR10MemoryPool"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool6MallocE8uint64_t8uint64_t"><code class="docutils literal notranslate"><span class="pre">Malloc()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t"><code class="docutils literal notranslate"><span class="pre">Realloc()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool4FreeEPv8uint64_t"><code class="docutils literal notranslate"><span class="pre">Free()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10MemoryPool12CurrentUsageEv"><code class="docutils literal notranslate"><span class="pre">CurrentUsage()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10MemoryPool14MaxMemoryUsageEv"><code class="docutils literal notranslate"><span class="pre">MaxMemoryUsage()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args"><code class="docutils literal notranslate"><span class="pre">AllocateUnique()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE"><code class="docutils literal notranslate"><span class="pre">paimon::MemoryPool::AllocatorDelete</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv"><code class="docutils literal notranslate"><span class="pre">AllocatorDelete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t"><code class="docutils literal notranslate"><span class="pre">AllocatorDelete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete"><code class="docutils literal notranslate"><span class="pre">AllocatorDelete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteaSER15AllocatorDeleteRK15AllocatorDeleteI1UE"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE"><code class="docutils literal notranslate"><span class="pre">AllocatorDelete()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv"><code class="docutils literal notranslate"><span class="pre">GetPool()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv"><code class="docutils literal notranslate"><span class="pre">GetSize()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10MemoryPool15AllocatorDeleteclEP1T"><code class="docutils literal notranslate"><span class="pre">operator()()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5BytesE"><code class="docutils literal notranslate"><span class="pre">paimon::Bytes</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes5BytesEv"><code class="docutils literal notranslate"><span class="pre">Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes5BytesE6size_tP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes5BytesERK5Bytes"><code class="docutils literal notranslate"><span class="pre">Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5BytesaSERK5Bytes"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes5BytesERR5Bytes"><code class="docutils literal notranslate"><span class="pre">Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5BytesaSERR5Bytes"><code class="docutils literal notranslate"><span class="pre">operator=()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5BytesD0Ev"><code class="docutils literal notranslate"><span class="pre">~Bytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5ByteseqERK5Bytes"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5BytesltERK5Bytes"><code class="docutils literal notranslate"><span class="pre">operator&lt;()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5BytesixE6size_t"><code class="docutils literal notranslate"><span class="pre">operator[]()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5Bytes7compareERK5Bytes"><code class="docutils literal notranslate"><span class="pre">compare()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5Bytes4dataEv"><code class="docutils literal notranslate"><span class="pre">data()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon5Bytes4sizeEv"><code class="docutils literal notranslate"><span class="pre">size()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">CopyOf()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">AllocateBytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool"><code class="docutils literal notranslate"><span class="pre">AllocateBytes()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/memory.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

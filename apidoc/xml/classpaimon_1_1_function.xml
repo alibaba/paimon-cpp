@@ -1,0 +1,174 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_function" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Function</compoundname>
+    <includes refid="function_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="enum" id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dc" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>Type</name>
+        <qualifiedname>paimon::Function::Type</qualifiedname>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dcadbd9c38e0339e6c34bd48cafc59be388" prot="public">
+          <name>IS_NULL</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca05dd132ba23ff57c0ca5ec4100c31fdc" prot="public">
+          <name>IS_NOT_NULL</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca969f331a87d8c958473c32b4d0e61a44" prot="public">
+          <name>EQUAL</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca4ea2d378cdec20f59330f113297bc1ce" prot="public">
+          <name>NOT_EQUAL</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca1625ef4fe09f68fa20d3ff6e02cd5c8e" prot="public">
+          <name>GREATER_THAN</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dcaa6872139811c4046ad15aa6763956a4f" prot="public">
+          <name>GREATER_OR_EQUAL</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dcaa327176a0a845c117bdfadec134a95e9" prot="public">
+          <name>LESS_THAN</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca93d39e6064b3c462e437e20cd8b2bdab" prot="public">
+          <name>LESS_OR_EQUAL</name>
+          <initializer>= 8</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dcac86ee0d9d7ed3e7b4fdbf486fa6c0ebb" prot="public">
+          <name>IN</name>
+          <initializer>= 9</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dcaf43267050fc487181424367e8496f2f9" prot="public">
+          <name>NOT_IN</name>
+          <initializer>= 10</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca558ffc8f5770d8e4f95f51d822685532" prot="public">
+          <name>AND</name>
+          <initializer>= 11</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dca1d00e7dce692e8dc3f6877f035e3a616" prot="public">
+          <name>OR</name>
+          <initializer>= 12</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" line="28" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" bodystart="28" bodyend="41"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_function_1a56c7c5f77f752fe739c9560bac08ed22" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Function::~Function</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Function</name>
+        <qualifiedname>paimon::Function::~Function</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" line="42" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_1a21935cc8cd44b2734f8ab6fb8e8143db" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dc" kindref="member">Type</ref></type>
+        <definition>virtual Type paimon::Function::GetType</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetType</name>
+        <qualifiedname>paimon::Function::GetType</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" line="43" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_function_1aa7cd256e7c828b608245e3e9a7e8c3e8" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::Function::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Function::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" line="44" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_function" kindref="compound">Function</ref></computeroutput> represents a predicate function used in query expressions and filtering operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>It serves as the base class for all predicate functions in Paimon. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" line="26" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function.h" bodystart="26" bodyend="45"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_function_1a21935cc8cd44b2734f8ab6fb8e8143db" prot="public" virt="pure-virtual"><scope>paimon::Function</scope><name>GetType</name></member>
+      <member refid="classpaimon_1_1_function_1aa7cd256e7c828b608245e3e9a7e8c3e8" prot="public" virt="pure-virtual"><scope>paimon::Function</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_function_1aa863a7d5f36a89c6765ea0118bb9a1dc" prot="public" virt="non-virtual"><scope>paimon::Function</scope><name>Type</name></member>
+      <member refid="classpaimon_1_1_function_1a56c7c5f77f752fe739c9560bac08ed22" prot="public" virt="virtual"><scope>paimon::Function</scope><name>~Function</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

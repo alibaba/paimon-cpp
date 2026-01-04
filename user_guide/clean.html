@@ -1,0 +1,693 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Data Cleanup &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'user_guide/clean';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Prefetch" href="prefetch.html" />
+    <link rel="prev" title="Read and Data Evolution" href="read.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="schema.html">Schema</a></li>
+<li class="toctree-l1"><a class="reference internal" href="snapshot.html">Snapshot</a></li>
+<li class="toctree-l1"><a class="reference internal" href="manifest.html">Manifest</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="primary_key_table.html">Primary Key Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="append_only_table.html">Append Only Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write And Prepare Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read and Data Evolution</a></li>
+
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Data Cleanup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="prefetch.html">Prefetch</a></li>
+
+
+<li class="toctree-l1"><a class="reference internal" href="arrow.html">Memory Format</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../user_guide.html" class="nav-link">User Guide</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Data Cleanup</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="data-cleanup">
+<h1>Data Cleanup<a class="headerlink" href="#data-cleanup" title="Link to this heading">#</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The entire data cleanup feature supports only append tables, and cleanup of index manifests, changelog, statistics are not supported. Do not use this feature with primary key tables.</p>
+</div>
+<p>This document describes three cleanup capabilities:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#orphan-file-cleanup"><span class="std std-ref">Orphan File Cleanup</span></a></p></li>
+<li><p><a class="reference internal" href="#expiring-partitions"><span class="std std-ref">Expiring Partitions</span></a></p></li>
+<li><p><a class="reference internal" href="#expiring-snapshots"><span class="std std-ref">Expiring Snapshots</span></a></p></li>
+</ul>
+<section id="orphan-file-cleanup">
+<span id="id1"></span><h2>Orphan File Cleanup<a class="headerlink" href="#orphan-file-cleanup" title="Link to this heading">#</a></h2>
+<section id="description">
+<h3>Description<a class="headerlink" href="#description" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Orphan file cleanup currently supports only append tables.</p></li>
+<li><p>It runs as an independent task: construct a <code class="docutils literal notranslate"><span class="pre">CleanContext</span></code> and
+launch an <code class="docutils literal notranslate"><span class="pre">OrphanFilesCleaner</span></code>.</p></li>
+</ul>
+</section>
+<section id="detailed-steps">
+<h3>Detailed Steps<a class="headerlink" href="#detailed-steps" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>List all Paimon-specific subdirectories under the table directory
+(e.g., <code class="docutils literal notranslate"><span class="pre">manifest/</span></code>, <code class="docutils literal notranslate"><span class="pre">snapshot/</span></code>, <code class="docutils literal notranslate"><span class="pre">f1=10/bucket-0</span></code>, …).</p></li>
+<li><p>Based on the subdirectories from step 1, enumerate all Paimon files
+in the table directory.</p></li>
+<li><p>Using snapshot information, determine all in-use <code class="docutils literal notranslate"><span class="pre">manifest</span></code> files
+and data files.</p></li>
+<li><p>Compute the set of files that appear in step 2 but not in step 3
+(i.e., orphan files). Among those, delete files whose modification
+time is earlier than <code class="docutils literal notranslate"><span class="pre">older_than_ms</span></code>.</p></li>
+</ol>
+</section>
+<section id="performance-considerations">
+<h3>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Steps 1, 2, and 4 use an executor to parallelize I/O operations.</p></li>
+<li><p>Orphan file cleanup may take a long time; you can pass an executor
+with more threads to accelerate the process.</p></li>
+</ul>
+<div class="tip admonition">
+<p class="admonition-title">TODO</p>
+<ul class="simple">
+<li><p>Support cleanup of index manifests, changelog, statistics, etc.</p></li>
+</ul>
+</div>
+</section>
+</section>
+<section id="expiring-partitions">
+<span id="id2"></span><h2>Expiring Partitions<a class="headerlink" href="#expiring-partitions" title="Link to this heading">#</a></h2>
+<section id="id3">
+<h3>Description<a class="headerlink" href="#id3" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Executed within the Commit task. First construct a <code class="docutils literal notranslate"><span class="pre">FileStoreCommit</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DropPartition</span></code> uses a mark-delete strategy. Calling <code class="docutils literal notranslate"><span class="pre">DropPartition</span></code>
+will send an <code class="docutils literal notranslate"><span class="pre">Overwrite</span></code> message, marking all data files in the
+specified partition as <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>.</p></li>
+<li><p>A new snapshot is committed afterward. Actual deletion of data files
+occurs as snapshots expire.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Detailed Steps<a class="headerlink" href="#id4" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Build a <code class="docutils literal notranslate"><span class="pre">ScanFilter</span></code> for the partition and use the latest snapshot
+to scan the partition.</p></li>
+<li><p>Iterate over the scanned data file list (<code class="docutils literal notranslate"><span class="pre">ManifestEntries</span></code>) and
+rewrite each entry’s type to <code class="docutils literal notranslate"><span class="pre">DELETE</span></code>.</p></li>
+<li><p>Commit using the rewritten <code class="docutils literal notranslate"><span class="pre">ManifestEntries</span></code>. If the commit fails,
+retry a limited number of times.</p></li>
+</ol>
+</section>
+</section>
+<section id="expiring-snapshots">
+<span id="id5"></span><h2>Expiring Snapshots<a class="headerlink" href="#expiring-snapshots" title="Link to this heading">#</a></h2>
+<section id="id6">
+<h3>Description<a class="headerlink" href="#id6" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Executed within the Commit task. First construct a <code class="docutils literal notranslate"><span class="pre">FileStoreCommit</span></code>.</p></li>
+<li><p>The following optional configuration parameters control snapshot
+expiration:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot.num-retained.min</span></code>: The minimum number of completed
+snapshots to retain (&gt;= 1). Default: 10.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot.num-retained.max</span></code>: The maximum number of completed
+snapshots to retain (&gt;= <code class="docutils literal notranslate"><span class="pre">snapshot.num-retained.min</span></code>). Default:
+<code class="docutils literal notranslate"><span class="pre">int32</span></code> max value.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot.time-retained</span></code>: The maximum age of completed snapshots
+to retain. Default: 1 hour.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">snapshot.expire.limit</span></code>: The maximum number of snapshots allowed
+to expire at a time. Default: 10.</p></li>
+</ul>
+</li>
+<li><p>The snapshot expiration interface deletes data files according to the
+expiration policy and returns the number of snapshots deleted.</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>Detailed Steps<a class="headerlink" href="#id7" title="Link to this heading">#</a></h3>
+<ol class="arabic simple">
+<li><p>Use <code class="docutils literal notranslate"><span class="pre">snapshot_manager</span></code> to find <code class="docutils literal notranslate"><span class="pre">earliest_snapshot_id</span></code> and
+<code class="docutils literal notranslate"><span class="pre">latest_snapshot_id</span></code>.</p></li>
+<li><p>Based on <code class="docutils literal notranslate"><span class="pre">earliest/latest_snapshot_id</span></code> and the expire config,
+determine the range of snapshots to clean.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Consumer subscription management (consumer manager) is not
+currently supported. Users must ensure that snapshots to be expired
+are not in use.</p>
+</div>
+<ol class="arabic simple" start="3">
+<li><p>Verify that the snapshot range is continuous. Normally, it is
+continuous. If a snapshot is missing, assume earlier snapshots were
+already cleaned and the missing files are orphaned remnants due to
+I/O exceptions; they are out of scope for this cleanup.</p></li>
+<li><p>Clean data files for the updated expiration range.</p>
+<ul class="simple">
+<li><p>To decide whether a file from a snapshot should be deleted, check if it was marked <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> in the delta of the subsequent snapshot.</p></li>
+<li><p>For an expiration range <code class="docutils literal notranslate"><span class="pre">[begin,</span> <span class="pre">end)</span></code>, iterate over <code class="docutils literal notranslate"><span class="pre">(begin,end]</span></code> and delete data files whose type is <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> in each <code class="docutils literal notranslate"><span class="pre">snapshot.DeltaManifestList()</span></code>.</p></li>
+<li><p>If a file underwent multiple <code class="docutils literal notranslate"><span class="pre">ADD</span></code> and <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> operations, deletion follows the operation order:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">ADD</span></code> then <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> → the file is deleted.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DELETE</span></code> then <code class="docutils literal notranslate"><span class="pre">ADD</span></code> → the initial <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> does not apply (file did not exist yet); the subsequent <code class="docutils literal notranslate"><span class="pre">ADD</span></code> ensures the file remains.</p></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>Clean meta files:
+- Preserve manifests used by the last snapshot in the cleanup range (<code class="docutils literal notranslate"><span class="pre">end_exclusive_id</span></code>).
+- Delete manifest files used by snapshots from <code class="docutils literal notranslate"><span class="pre">begin_inclusive_id</span></code> to <code class="docutils literal notranslate"><span class="pre">end_exclusive_id</span></code> (exclusive) and delete the snapshot files themselves.</p></li>
+<li><p>Rewrite <code class="docutils literal notranslate"><span class="pre">EarliestHint</span></code> to <code class="docutils literal notranslate"><span class="pre">end_exclusive_id</span></code>.</p></li>
+<li><p>Return the number of snapshots deleted, i.e., <code class="docutils literal notranslate"><span class="pre">end_exclusive_id</span> <span class="pre">-</span> <span class="pre">begin_inclusive_id</span></code>.</p></li>
+</ol>
+</section>
+<section id="id8">
+<h3>Performance Considerations<a class="headerlink" href="#id8" title="Link to this heading">#</a></h3>
+<ul class="simple">
+<li><p>Step 4 uses an executor to parallelize file deletions.</p></li>
+<li><p>If deletion is slow, pass an executor with more threads to accelerate
+the process.</p></li>
+</ul>
+<div class="tip admonition">
+<p class="admonition-title">TODO</p>
+<ul class="simple">
+<li><p>Preserve tag (savepoint) data via <code class="docutils literal notranslate"><span class="pre">tagManager</span></code>.</p></li>
+<li><p>Delete changelog files.</p></li>
+<li><p>Remove empty directories.</p></li>
+</ul>
+</div>
+</section>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="read.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Read and Data Evolution</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="prefetch.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Prefetch</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#orphan-file-cleanup">Orphan File Cleanup</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#description">Description</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#detailed-steps">Detailed Steps</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#performance-considerations">Performance Considerations</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expiring-partitions">Expiring Partitions</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id3">Description</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id4">Detailed Steps</a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#expiring-snapshots">Expiring Snapshots</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id6">Description</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id7">Detailed Steps</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#id8">Performance Considerations</a></li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/user_guide/clean.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_d44c64559bbebec7f509842c48db8b23" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include</compoundname>
+    <innerdir refid="dir_d5ce83a91c1ada980bd794a9f3314520">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon</innerdir>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/"/>
+  </compounddef>
+</doxygen>
