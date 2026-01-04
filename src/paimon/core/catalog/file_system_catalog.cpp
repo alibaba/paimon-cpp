@@ -39,8 +39,6 @@ class Schema;
 struct ArrowSchema;
 
 namespace paimon {
-class TableSchema;
-
 FileSystemCatalog::FileSystemCatalog(const std::shared_ptr<FileSystem>& fs,
                                      const std::string& warehouse)
     : fs_(fs), warehouse_(warehouse), logger_(Logger::GetLogger("FileSystemCatalog")) {}
@@ -104,7 +102,9 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
         return Status::Invalid(
             fmt::format("database {} is not exist", identifier.GetDatabaseName()));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool table_exist, TableExists(identifier));
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                           TableSchemaExists(identifier));
+    bool table_exist = (latest_schema != std::nullopt);
     if (table_exist) {
         if (ignore_if_exists) {
             return Status::OK();
@@ -128,17 +128,14 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
     return Status::OK();
 }
 
-Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+Result<std::optional<std::shared_ptr<TableSchema>>> FileSystemCatalog::TableSchemaExists(
+    const Identifier& identifier) const {
     if (IsSystemTable(identifier)) {
-        return Status::NotImplemented("do not support checking TableExists for system table.");
+        return Status::NotImplemented(
+            "do not support checking TableSchemaExists for system table.");
     }
     SchemaManager schema_manager(fs_, NewDataTablePath(warehouse_, identifier));
-    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
-                           schema_manager.Latest());
-    if (latest_schema == std::nullopt) {
-        return false;
-    }
-    return true;
+    return schema_manager.Latest();
 }
 
 bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
@@ -212,19 +209,14 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
     }
 }
 
-Result<std::optional<std::shared_ptr<Schema>>> FileSystemCatalog::LoadTableSchema(
+Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
-    if (IsSystemTable(identifier)) {
-        return Status::NotImplemented("do not support loading schema for system table.");
-    }
-    SchemaManager schema_manager(fs_, NewDataTablePath(warehouse_, identifier));
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
-                           schema_manager.Latest());
-    if (latest_schema.has_value()) {
-        std::shared_ptr<Schema> schema = std::make_shared<SchemaImpl>(*latest_schema);
-        return std::optional<std::shared_ptr<Schema>>(schema);
+                           TableSchemaExists(identifier));
+    if (!latest_schema) {
+        return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
     }
-    return std::optional<std::shared_ptr<Schema>>();
+    return std::make_shared<SchemaImpl>(*latest_schema);
 }
 
 }  // namespace paimon

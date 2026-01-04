@@ -311,6 +311,34 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
         /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0, /*total_buckets=*/std::nullopt,
         expected_data_increment, CompactIncrement({}, {}, {}));
     ASSERT_TRUE(expected_commit_message->TEST_Equal(*index_commit_msg_impl));
+
+    {
+        // test invalid write task with none-registered index type
+        ASSERT_NOK_WITH_MSG(
+            GlobalIndexWriteTask::WriteIndex(
+                table_path, "f0", "invalid",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({Range(0, 7)})),
+                /*options=*/{}, pool_),
+            "Unknown index type invalid, may not registered");
+    }
+    {
+        // test invalid range mismatch
+        ASSERT_NOK_WITH_MSG(
+            GlobalIndexWriteTask::WriteIndex(
+                table_path, "f0", "bitmap",
+                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({Range(0, 8)})),
+                /*options=*/{}, pool_),
+            "specified range length 9 mismatch indexed range length 8");
+    }
+    {
+        // test invalid multiple ranges
+        ASSERT_NOK_WITH_MSG(GlobalIndexWriteTask::WriteIndex(
+                                table_path, "f0", "bitmap",
+                                std::make_shared<IndexedSplitImpl>(
+                                    split, std::vector<Range>({Range(0, 6), Range(7, 7)})),
+                                /*options=*/{}, pool_),
+                            "GlobalIndexWriteTask only supports a single contiguous range.");
+    }
 }
 
 TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
@@ -662,6 +690,13 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
                              index_reader->VisitEqual(Literal(FieldType::STRING, "Alice", 5)));
         ASSERT_EQ(index_result->ToString(), "{0,7}");
 
+        {
+            // test non-exist index type
+            ASSERT_OK_AND_ASSIGN(auto non_exist_index_reader,
+                                 range_scanner->CreateReader("f0", "non-exist"));
+            ASSERT_FALSE(non_exist_index_reader);
+        }
+
         // test evaluator
         ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
         auto predicate =
@@ -972,6 +1007,15 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                                      /*file_system=*/nullptr, pool_));
         ASSERT_NOK_WITH_MSG(global_index_scan->CreateRangeScan(Range(0, 8)),
                             "input range contain multiple partitions, fail to create range scan");
+    }
+    {
+        // test invalid partition input
+        ASSERT_NOK_WITH_MSG(
+            GlobalIndexScan::Create(
+                table_path, /*snapshot_id=*/std::nullopt,
+                /*partitions=*/std::vector<std::map<std::string, std::string>>(), lumina_options,
+                /*file_system=*/nullptr, pool_),
+            "invalid input partition, supposed to be null or at least one partition");
     }
 }
 
@@ -1696,11 +1740,123 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     std::vector<float> query = {11.0f, 11.0f, 11.0f, 11.0f};
     ASSERT_OK_AND_ASSIGN(auto topk_result, index_readers[0]->VisitTopK(1, query, /*filter=*/nullptr,
                                                                        /*predicate*/ nullptr));
-    ASSERT_EQ(topk_result->ToString(), "row ids: {7}, scores: {0}");
+    ASSERT_EQ(topk_result->ToString(), "row ids: {7}, scores: {0.00}");
 
     // query f2
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f2"));
     ASSERT_EQ(index_readers.size(), 0);
+}
+
+TEST_P(GlobalIndexTest, TestIOException) {
+    if (GetParam() == "lance") {
+        return;
+    }
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+
+    auto schema = arrow::schema(fields);
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1]
+    ])")
+                         .ValueOrDie();
+
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.dimension", "4"},
+        {"lumina.indextype", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "encoding.rawf32"},
+        {"lumina.search.threadcount", "10"}};
+    std::string table_path;
+    bool write_run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 2000; i += paimon::test::RandomNumber(20, 30)) {
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        dir_ = UniqueTestDirectory::Create("local");
+        // create table and write data
+        CreateTable(/*partition_keys=*/{}, schema, options);
+        table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+        ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+        ASSERT_OK(Commit(table_path, commit_msgs));
+
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        // write bitmap index
+        auto bitmap_index_write_status =
+            WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
+                       /*options=*/{}, Range(0, 3));
+        CHECK_HOOK_STATUS(bitmap_index_write_status, i);
+        // write lumina index
+        auto lumina_index_write_status =
+            WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                       /*options=*/lumina_options, Range(0, 3));
+        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(lumina_index_write_status);
+        write_run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(write_run_complete);
+
+    // read for bitmap
+    bool read_run_complete = false;
+    for (size_t i = 0; i < 2000; i += paimon::test::RandomNumber(20, 30)) {
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto result_fields = fields;
+        result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1]
+    ])")
+                .ValueOrDie();
+
+        auto plan_result = ScanGlobalIndexAndData(table_path, predicate);
+        CHECK_HOOK_STATUS(plan_result.status(), i);
+        auto plan = std::move(plan_result).value();
+        auto read_status = ReadData(table_path, write_cols, expected_array, predicate, plan);
+        CHECK_HOOK_STATUS(read_status, i);
+        read_run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(read_run_complete);
+
+    // read for lumina
+    read_run_complete = false;
+    for (size_t i = 0; i < 2000; i += paimon::test::RandomNumber(20, 30)) {
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        auto global_index_scan_result =
+            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                    /*partitions=*/std::nullopt, lumina_options,
+                                    /*file_system=*/nullptr, pool_);
+        CHECK_HOOK_STATUS(global_index_scan_result.status(), i);
+        auto global_index_scan = std::move(global_index_scan_result).value();
+        auto range_scanner_result = global_index_scan->CreateRangeScan(Range(0, 3));
+        CHECK_HOOK_STATUS(range_scanner_result.status(), i);
+        auto range_scanner = std::move(range_scanner_result).value();
+        auto lumina_reader_result = range_scanner->CreateReader("f1", "lumina");
+        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(lumina_reader_result.status());
+        auto lumina_reader = std::move(lumina_reader_result).value();
+
+        std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
+        auto topk_result = lumina_reader->VisitTopK(1, query, /*filter=*/nullptr,
+                                                    /*predicate*/ nullptr);
+        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(topk_result.status());
+        ASSERT_EQ(topk_result.value()->ToString(), "row ids: {3}, scores: {0.01}");
+        read_run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(read_run_complete);
 }
 
 std::vector<std::string> GetTestValuesForGlobalIndexTest() {

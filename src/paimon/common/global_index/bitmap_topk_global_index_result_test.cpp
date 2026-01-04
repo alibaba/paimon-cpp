@@ -143,9 +143,10 @@ TEST_F(BitmapTopKGlobalIndexResultTest, TestAndBitmapResult) {
             ASSERT_OK_AND_ASSIGN(auto result, index_result1->And(index_result2));
             ASSERT_EQ(result->ToString(), expected_str);
         };
-    check_and_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {1, 2, 7}, "row ids: {1,2}, scores: {1.1,1.2}");
+    check_and_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {1, 2, 7},
+                     "row ids: {1,2}, scores: {1.10,1.20}");
     check_and_result({1, 2, 3}, {100.1f, 100.2f, 100.3f}, {1, 2, 3},
-                     "row ids: {1,2,3}, scores: {100.1,100.2,100.3}");
+                     "row ids: {1,2,3}, scores: {100.10,100.20,100.30}");
     check_and_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {100, 200, 300}, "row ids: {}, scores: {}");
     check_and_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {}, "row ids: {}, scores: {}");
     check_and_result({}, {}, {}, "row ids: {}, scores: {}");
@@ -177,14 +178,14 @@ TEST_F(BitmapTopKGlobalIndexResultTest, TestOr) {
         ASSERT_EQ(result->ToString(), expected_str);
     };
     check_or_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {100, 200, 300}, {100.1f, 200.1f, 300.1f},
-                    "row ids: {1,2,3,100,200,300}, scores: {1.1,1.2,1.3,100.1,200.1,300.1}");
+                    "row ids: {1,2,3,100,200,300}, scores: {1.10,1.20,1.30,100.10,200.10,300.10}");
     check_or_result({1, 2, 3}, {1.1f, 1.2f, 1.3f}, {}, {},
-                    "row ids: {1,2,3}, scores: {1.1,1.2,1.3}");
+                    "row ids: {1,2,3}, scores: {1.10,1.20,1.30}");
     check_or_result({}, {}, {}, {}, "row ids: {}, scores: {}");
     check_or_result(
         {1, 2, 3, RoaringBitmap64::MAX_VALUE}, {1.1f, 1.2f, 1.3f, 1.4f},
         {RoaringBitmap32::MAX_VALUE}, {0.12f},
-        "row ids: {1,2,3,2147483647,9223372036854775807}, scores: {1.1,1.2,1.3,0.12,1.4}");
+        "row ids: {1,2,3,2147483647,9223372036854775807}, scores: {1.10,1.20,1.30,0.12,1.40}");
 }
 
 TEST_F(BitmapTopKGlobalIndexResultTest, TestOrBitmapResult) {
@@ -243,7 +244,7 @@ TEST_F(BitmapTopKGlobalIndexResultTest, TestAddOffset) {
         auto index_result = std::make_shared<BitmapTopKGlobalIndexResult>(
             RoaringBitmap64::From(ids), std::move(scores));
         ASSERT_OK_AND_ASSIGN(auto result_with_offset, index_result->AddOffset(10));
-        ASSERT_EQ(result_with_offset->ToString(), "row ids: {11,12,13}, scores: {1.1,1.2,1.3}");
+        ASSERT_EQ(result_with_offset->ToString(), "row ids: {11,12,13}, scores: {1.10,1.20,1.30}");
     }
     {
         std::vector<int64_t> ids = {};

@@ -51,4 +51,12 @@ namespace paimon::test {
             }                                                                                \
         }                                                                                    \
     }
+
+#define CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(status) \
+    {                                                   \
+        auto __s = (status);                            \
+        if (!__s.ok()) {                                \
+            continue;                                   \
+        }                                               \
+    }
 }  // namespace paimon::test

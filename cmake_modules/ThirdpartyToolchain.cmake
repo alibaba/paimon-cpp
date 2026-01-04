@@ -552,6 +552,9 @@ macro(build_avro)
     get_target_property(AVRO_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(AVRO_ZLIB_ROOT "${AVRO_ZLIB_INCLUDE_DIR}" DIRECTORY)
 
+    get_target_property(AVRO_FMT_INCLUDE_DIR fmt INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(AVRO_FMT_ROOT "${AVRO_FMT_INCLUDE_DIR}" DIRECTORY)
+
     set(AVRO_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
     set(AVRO_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
 
@@ -563,6 +566,7 @@ macro(build_avro)
         "-DAVRO_BUILD_TESTS=OFF"
         "-DAVRO_BUILD_EXECUTABLES=OFF"
         "-DZLIB_ROOT=${AVRO_ZLIB_ROOT}"
+        "-Dfmt_ROOT=${AVRO_FMT_ROOT}"
         "-Dzstd_ROOT=${AVRO_ZSTD_ROOT}"
         "-DSnappy_ROOT=${AVRO_SNAPPY_ROOT}")
     externalproject_add(avro_ep
@@ -571,7 +575,7 @@ macro(build_avro)
                         SOURCE_SUBDIR "lang/c++"
                         CMAKE_ARGS ${AVRO_CMAKE_ARGS}
                         BUILD_BYPRODUCTS "${AVRO_STATIC_LIB}"
-                        DEPENDS zlib zstd snappy)
+                        DEPENDS fmt zlib zstd snappy)
 
     file(MAKE_DIRECTORY "${AVRO_INCLUDE_DIR}")
 

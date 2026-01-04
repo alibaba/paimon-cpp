@@ -200,6 +200,11 @@ TEST_F(LuminaGlobalIndexTest, TestSimple) {
                                                /*predicate*/ nullptr));
         CheckResult(topk_result, {3l, 1l, 2l}, {0.01f, 2.01f, 2.21f});
     }
+    {
+        // visit equal will return all rows
+        ASSERT_OK_AND_ASSIGN(auto is_null_result, reader->VisitIsNull());
+        ASSERT_EQ(is_null_result->ToString(), "{0,1,2,3}");
+    }
 }
 
 TEST_F(LuminaGlobalIndexTest, TestWithFilter) {

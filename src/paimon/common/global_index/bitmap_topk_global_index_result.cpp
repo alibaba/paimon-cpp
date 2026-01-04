@@ -143,7 +143,13 @@ const std::vector<float>& BitmapTopKGlobalIndexResult::GetScores() const {
 }
 
 std::string BitmapTopKGlobalIndexResult::ToString() const {
-    return fmt::format("row ids: {}, scores: {{{}}}", bitmap_.ToString(), fmt::join(scores_, ","));
+    std::vector<std::string> formatted_scores;
+    formatted_scores.reserve(scores_.size());
+    for (const auto& score : scores_) {
+        formatted_scores.push_back(fmt::format("{:.2f}", score));
+    }
+    return fmt::format("row ids: {}, scores: {{{}}}", bitmap_.ToString(),
+                       fmt::join(formatted_scores, ","));
 }
 
 }  // namespace paimon
