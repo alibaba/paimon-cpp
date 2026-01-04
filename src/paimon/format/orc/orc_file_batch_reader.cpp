@@ -241,6 +241,8 @@ Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
         include_fields.push_back(field_name);
     }
     row_reader_options.include(include_fields);
+    // In order to avoid issue like https://github.com/alibaba/paimon-cpp/issues/42, we explicitly
+    // set GMT timezone.
     row_reader_options.setTimezoneName("GMT");
     row_reader_options.searchArgument(std::move(search_arg));
 

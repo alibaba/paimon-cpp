@@ -239,6 +239,8 @@ Result<::orc::WriterOptions> OrcFormatWriter::PrepareWriterOptions(
                            OptionsUtils::GetValueFromMap<size_t>(options, ORC_ROW_INDEX_STRIDE,
                                                                  DEFAULT_ROW_INDEX_STRIDE));
     writer_options.setRowIndexStride(row_index_stride);
+    // In order to avoid issue like https://github.com/alibaba/paimon-cpp/issues/42, we explicitly
+    // set GMT timezone.
     writer_options.setTimezoneName("GMT");
     return writer_options;
 }
