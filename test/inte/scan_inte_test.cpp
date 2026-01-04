@@ -1230,7 +1230,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) 
     // check data splits
     auto result_data_splits = CollectDataSplits(result_plan);
     auto meta = std::make_shared<DataFileMeta>(
-        "data-05b19a2d-18d8-4620-b8ab-cd8f862d96d1-0.orc", /*file_size=*/974, /*row_count=*/6,
+        "data-14a30421-7650-486c-9876-66a1fa4356ff-0.orc", /*file_size=*/1004, /*row_count=*/6,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
         BinaryRowGenerator::GenerateStats(
@@ -1242,7 +1242,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter) 
             {0, 0, 1, 0, 1, 1}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/5, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
-        /*creation_time=*/Timestamp(1729183876992ll, 0),
+        /*creation_time=*/Timestamp(1767506722625ll, 0),
         /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Compact(),
         /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
         /*first_row_id=*/std::nullopt,
@@ -1296,7 +1296,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2)
     }
 
     auto meta = std::make_shared<DataFileMeta>(
-        "data-05b19a2d-18d8-4620-b8ab-cd8f862d96d1-0.orc", /*file_size=*/974, /*row_count=*/6,
+        "data-14a30421-7650-486c-9876-66a1fa4356ff-0.orc", /*file_size=*/1004, /*row_count=*/6,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
         BinaryRowGenerator::GenerateStats(
@@ -1308,7 +1308,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2)
             {0, 0, 1, 0, 1, 1}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/5, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
-        /*creation_time=*/Timestamp(1729183876992ll, 0),
+        /*creation_time=*/Timestamp(1767506722625ll, 0),
         /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Compact(),
         /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
         /*first_row_id=*/std::nullopt,

@@ -524,6 +524,27 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
     }
     {
+        // test greater or equal predicate which bitmap index is not support, will return all range
+        auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                          FieldType::INT, Literal(10));
+        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+    }
+    {
+        // test less than predicate which bitmap index is not support, will return all range
+        auto predicate = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                    FieldType::INT, Literal(10));
+        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+    }
+    {
+        // test less or equal predicate which bitmap index is not support, will return all range
+        auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                       FieldType::INT, Literal(10));
+        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+    }
+    {
         // test a predicate for field with no index
         auto f3_predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                     FieldType::DOUBLE, Literal(1.2));

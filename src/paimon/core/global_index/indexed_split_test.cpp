@@ -131,6 +131,10 @@ TEST(IndexedSplitTest, TestIndexedSplitWithScore) {
         std::make_shared<IndexedSplitImpl>(expected_data_split, ranges, scores);
 
     ASSERT_EQ(*result_indexed_split, *expected_indexed_split) << result_indexed_split->ToString();
+    ASSERT_TRUE(
+        result_indexed_split->ToString().find(
+            "rowRanges=[[55, 56],[270, 270],[1001, 1002]], scores=[1.01,2.1,-1.32,4.23,50.74]") !=
+        std::string::npos);
     ASSERT_OK_AND_ASSIGN(std::string serialize_bytes, Split::Serialize(result_indexed_split, pool));
     ASSERT_EQ(serialize_bytes,
               std::string(reinterpret_cast<char*>(split_bytes.data()), split_bytes.size()));

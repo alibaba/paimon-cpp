@@ -99,7 +99,6 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     set_option_category("Test")
 
     define_option(PAIMON_BUILD_TESTS "Build the Paimon googletest unit tests" OFF)
-    define_option(PAIMON_BUILD_EXAMPLE "Build the Paimon example" OFF)
 
     if(PAIMON_BUILD_SHARED)
         set(PAIMON_TEST_LINKAGE_DEFAULT "shared")

@@ -630,9 +630,9 @@ TEST_P(ReadInteTest, TestAppendReadWithComplexTypePredicate) {
     std::vector<std::string> file_list_1;
     std::vector<std::string> file_list_2;
     if (param.file_format == "orc") {
-        file_list_0 = {"data-05b19a2d-18d8-4620-b8ab-cd8f862d96d1-0.orc"};
-        file_list_1 = {"data-d336eb91-df17-4932-8206-4199579a2cbd-0.orc"};
-        file_list_2 = {"data-b35d2ec8-b4a5-4c23-9652-bd8d9fabdee0-0.orc"};
+        file_list_0 = {"data-14a30421-7650-486c-9876-66a1fa4356ff-0.orc"};
+        file_list_1 = {"data-d39c4ccc-6245-460c-bd70-632bd2b26234-0.orc"};
+        file_list_2 = {"data-b20718c4-b2e1-4928-b563-11539edc9572-0.orc"};
     } else if (param.file_format == "parquet") {
         file_list_0 = {"data-f8754699-0c43-4e53-be00-7e8af1754913-0.parquet"};
         file_list_1 = {"data-ac0894ca-fc13-49c8-bb22-4556c8ee416c-0.parquet"};
@@ -668,7 +668,7 @@ TEST_P(ReadInteTest, TestAppendReadWithComplexTypePredicate) {
                                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
     ASSERT_TRUE(result_array);
-    ASSERT_TRUE(result_array->Equals(*expected_array));
+    ASSERT_TRUE(result_array->Equals(*expected_array)) << result_array->ToString();
 }
 
 TEST_P(ReadInteTest, TestAppendReadWithPredicateOnlyPushdown) {

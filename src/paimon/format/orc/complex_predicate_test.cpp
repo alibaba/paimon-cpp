@@ -122,7 +122,7 @@ class ComplexPredicateTest : public ::testing::Test {
 TEST_F(ComplexPredicateTest, TestSimple) {
     std::string file_name = paimon::test::GetDataDir() +
                             "/orc/append_complex_data.db/append_complex_data/f1=10/bucket-0/"
-                            "data-05b19a2d-18d8-4620-b8ab-cd8f862d96d1-0.orc";
+                            "data-14a30421-7650-486c-9876-66a1fa4356ff-0.orc";
     arrow::FieldVector fields = {
         arrow::field("f1", arrow::int32()),
         arrow::field("f2", arrow::int32()),
