@@ -100,10 +100,8 @@ class PAIMON_EXPORT Catalog {
     /// @note System tables will not be supported.
     ///
     /// @param identifier The identifier (database and table name) of the table to load.
-    /// @return A result containing table schema if the table exists, or std::nullopt if it
-    /// doesn't, or an error status on failure.
-    virtual Result<std::optional<std::shared_ptr<Schema>>> LoadTableSchema(
-        const Identifier& identifier) const = 0;
+    /// @return A result containing table schema if the table exists, or an error status on failure.
+    virtual Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const = 0;
 };
 
 }  // namespace paimon
