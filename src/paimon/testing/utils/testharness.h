@@ -46,6 +46,7 @@
 #pragma once
 
 #include <filesystem>
+#include <fstream>
 #include <map>
 #include <memory>
 #include <string>
@@ -68,6 +69,26 @@ std::map<std::string, std::string> GetJindoTestOptions();
 std::string GetJindoTestDir();
 
 int64_t RandomNumber(int64_t min, int64_t max);
+
+class OsReleaseDetector {
+ public:
+    static bool IsDebian() {
+        std::ifstream file("/etc/os-release");
+        if (!file.is_open()) {
+            return false;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+            if (line.find("ID=") == 0) {
+                if (line.find("debian") != std::string::npos) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+};
 
 ::testing::AssertionResult AssertStatus(const char* s_expr, const Status& s);
 

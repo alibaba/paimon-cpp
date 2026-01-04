@@ -242,6 +242,8 @@ Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
     }
     row_reader_options.include(include_fields);
     row_reader_options.searchArgument(std::move(search_arg));
+    // refer: https://github.com/apache/arrow/pull/34591
+    row_reader_options.setTimezoneName("GMT");
 
     PAIMON_ASSIGN_OR_RAISE(
         bool enable_lazy_decoding,

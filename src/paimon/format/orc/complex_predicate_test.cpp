@@ -61,14 +61,6 @@ class ComplexPredicateTest : public ::testing::Test {
     void SetUp() override {
         pool_ = GetDefaultPool();
         batch_size_ = 10;
-
-        arrow::FieldVector fields = {
-            arrow::field("f1", arrow::int32()),
-            arrow::field("f2", arrow::int32()),
-            arrow::field("f3", arrow::date32()),
-            arrow::field("f4", arrow::timestamp(arrow::TimeUnit::NANO)),
-            arrow::field("f5", arrow::decimal128(23, 5)),
-        };
     }
     void TearDown() override {}
 
@@ -131,8 +123,24 @@ TEST_F(ComplexPredicateTest, TestSimple) {
         arrow::field("f5", arrow::decimal128(23, 5)),
     };
     auto read_schema = arrow::schema(fields);
-    auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    std::shared_ptr<arrow::StructArray> expected_array;
+    if (::paimon::test::OsReleaseDetector::IsDebian()) {
+        // refer: https://github.com/eggert/tz/blob/main/asia#L653
+        // When using the Asia/Shanghai timezone under Debian, timestamps prior to 1901 have an
+        // additional offset of 5 minutes and 43 seconds
+        expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
+            [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
+            [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],
+            [10, 1, 100,   "2008-12-28 00:00:00.00012345",  "-123.45000"],
+            [10, 1, null,  "1899-01-01 01:05:03.001001001", "0.00000"],
+            [10, 1, 20006, "2024-10-10 10:10:10.100100100", "1728551410100.10010"]
+        ])")
+                .ValueOrDie());
+    } else {
+        expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
         [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
         [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
         [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],
@@ -140,7 +148,8 @@ TEST_F(ComplexPredicateTest, TestSimple) {
         [10, 1, null,  "1899-01-01 00:59:20.001001001", "0.00000"],
         [10, 1, 20006, "2024-10-10 10:10:10.100100100", "1728551410100.10010"]
     ])")
-            .ValueOrDie());
+                .ValueOrDie());
+    }
 
     //  date
     {
