@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/global_index/global_index_evaluator_impl.h"
 #include "paimon/global_index/global_indexer.h"
 #include "paimon/global_index/global_indexer_factory.h"
@@ -106,9 +108,11 @@ Result<std::shared_ptr<GlobalIndexReader>> RowRangeGlobalIndexScannerImpl::Creat
     // TODO(xinyu.lxy): c_arrow_schema may contains additional associated fields.
     auto arrow_field = DataField::ConvertDataFieldToArrowField(field);
     auto arrow_schema = arrow::schema({arrow_field});
+
     ArrowSchema c_arrow_schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*arrow_schema, &c_arrow_schema));
     auto index_io_metas = ToGlobalIndexIOMetas(entries);
+    ScopeGuard guard([&]() { ArrowSchemaRelease(&c_arrow_schema); });
     return indexer->CreateReader(&c_arrow_schema, index_file_manager_, index_io_metas, pool_);
 }
 
