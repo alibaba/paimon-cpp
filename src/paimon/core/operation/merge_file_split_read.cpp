@@ -268,8 +268,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
                            table_schema.TrimmedPrimaryKeys());
     PAIMON_RETURN_NOT_OK(
         SplitKeyAndNonKeyField(trimmed_key_fields, need_fields, &key_fields, &non_key_fields));
-    
-    // 4. construct value fields: key fields are put before non-key fields    
+
+    // 4. construct value fields: key fields are put before non-key fields
     std::vector<DataField> value_fields;
     value_fields.insert(value_fields.end(), key_fields.begin(), key_fields.end());
     value_fields.insert(value_fields.end(), non_key_fields.begin(), non_key_fields.end());
@@ -301,9 +301,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
 }
 
 Status MergeFileSplitRead::SplitKeyAndNonKeyField(
-    const std::vector<std::string>& trimmed_key_fields,
-    const std::vector<DataField>& read_fields, std::vector<DataField>* key_fields,
-    std::vector<DataField>* non_key_fields) {
+    const std::vector<std::string>& trimmed_key_fields, const std::vector<DataField>& read_fields,
+    std::vector<DataField>* key_fields, std::vector<DataField>* non_key_fields) {
     for (const auto& field : read_fields) {
         auto iter = std::find(trimmed_key_fields.begin(), trimmed_key_fields.end(), field.Name());
         if (iter == trimmed_key_fields.end()) {

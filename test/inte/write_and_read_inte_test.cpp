@@ -662,7 +662,7 @@ TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldPartialInPKField) {
     ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits, data));
     ASSERT_TRUE(success);
 }
-    
+
 std::vector<std::pair<std::string, std::string>> GetTestValuesForWriteAndReadInteTest() {
     std::vector<std::pair<std::string, std::string>> values = {{"parquet", "local"}};
 #ifdef PAIMON_ENABLE_ORC
