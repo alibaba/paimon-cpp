@@ -140,7 +140,7 @@ class MergeFileSplitRead : public AbstractSplitRead {
         std::shared_ptr<FieldsComparator>* sequence_fields_comparator);
 
     static Status SplitKeyAndNonKeyField(const std::vector<std::string>& trimmed_key_fields,
-                                         const std::shared_ptr<arrow::Schema>& raw_read_schema,
+                                         const std::vector<DataField>& read_fields,
                                          std::vector<DataField>* key_fields,
                                          std::vector<DataField>* non_key_fields);
 
