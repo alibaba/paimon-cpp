@@ -1,0 +1,76 @@
+/*
+ * Copyright 2024-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "paimon/common/sst/block_iterator.h"
+#include "paimon/common/sst/block_reader.h"
+
+namespace paimon {
+
+BlockIterator::BlockIterator(std::weak_ptr<BlockReader>& reader) : reader_(reader) {}
+
+BlockIterator::~BlockIterator() = default;
+
+bool BlockIterator::HasNext() const {
+    return polled_.get() || input_->IsReadable();
+}
+
+std::unique_ptr<BlockEntry> BlockIterator::Next() {
+    if (!HasNext()) {
+        throw std::invalid_argument("no such element");
+    }
+    if (polled_.get()) {
+        auto result = std::move(polled_);
+        return result;
+    }
+    return ReadEntry();
+}
+
+std::unique_ptr<BlockEntry> BlockIterator::ReadEntry() {
+    int key_length = input_->ReadVarLenInt();
+    auto key = input_->ReadSlice(key_length);
+    int value_length = input_->ReadVarLenInt();
+    auto value = input_->ReadSlice(value_length);
+    return std::make_unique<BlockEntry>(key, value);
+}
+
+bool BlockIterator::SeekTo(std::shared_ptr<paimon::MemorySlice> target_key) {
+    int left = 0;
+    auto reader = reader_.lock();
+    int right = reader->RecordCount() - 1;
+
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+
+        input_->SetPosition(reader->SeekTo(mid));
+        auto mid_entry = ReadEntry();
+        int compare = reader->Comparator()(mid_entry->Key(), target_key);
+
+        if (compare == 0) {
+            polled_ = std::move(mid_entry);
+            return true;
+        } else if (compare > 0) {
+            polled_ = std::move(mid_entry);
+            right = mid - 1;
+        } else {
+            polled_.reset();
+            left = mid + 1;
+        }
+    }
+
+    return false;
+}
+
+}  // namespace paimon

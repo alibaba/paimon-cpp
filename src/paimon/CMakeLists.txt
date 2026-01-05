@@ -57,11 +57,17 @@ set(PAIMON_COMMON_SRCS
     common/io/data_output_stream.cpp
     common/io/memory_segment_output_stream.cpp
     common/io/offset_input_stream.cpp
+    common/io/cache/cache.cpp
+    common/io/cache/cache_key.cpp
+    common/io/cache/cache_manager.cpp
     common/logging/logging.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
     common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
+    common/memory/memory_slice.cpp
+    common/memory/memory_slice_input.cpp
+    common/memory/memory_slice_output.cpp
     common/metrics/metrics_impl.cpp
     common/options/memory_size.cpp
     common/options/time_duration.cpp
@@ -90,6 +96,13 @@ set(PAIMON_COMMON_SRCS
     common/reader/reader_utils.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
+    common/sst/block_handle.cpp
+    common/sst/block_iterator.cpp
+    common/sst/block_trailer.cpp
+    common/sst/block_reader.cpp
+    common/sst/block_writer.cpp
+    common/sst/sst_file_reader.cpp
+    common/sst/sst_file_writer.cpp
     common/types/data_field.cpp
     common/types/data_type.cpp
     common/types/data_type_json_parser.cpp
@@ -409,6 +422,14 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     common/factories/factory_creator_test.cpp
                     common/factories/io_hook_test.cpp
+                    STATIC_LINK_LIBS
+                    paimon_shared
+                    test_utils_static
+                    ${GTEST_LINK_TOOLCHAIN})
+
+    add_paimon_test(common_sst_test
+                    SOURCES
+                    common/sst/sst_file_io_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
