@@ -149,9 +149,41 @@ class RapidJsonUtil {
     template <typename T>
     static T GetValue(const rapidjson::Value& value);
 
-    static std::string MapToJsonString(const std::map<std::string, std::string>& map);
+    static std::string MapToJsonString(const std::map<std::string, std::string>& map) {
+        rapidjson::Document d;
+        d.SetObject();
+        rapidjson::Document::AllocatorType& allocator = d.GetAllocator();
+
+        for (const auto& kv : map) {
+            d.AddMember(rapidjson::Value(kv.first.c_str(), allocator),
+                        rapidjson::Value(kv.second.c_str(), allocator), allocator);
+        }
+
+        rapidjson::StringBuffer buffer;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+        d.Accept(writer);
+
+        return buffer.GetString();
+    }
     static Result<std::map<std::string, std::string>> MapFromJsonString(
-        const std::string& json_str);
+        const std::string& json_str) {
+        rapidjson::Document doc;
+        doc.Parse(json_str.c_str());
+        if (doc.HasParseError() || !doc.IsObject()) {
+            return Status::Invalid("deserialize failed: parse error or not JSON object: ",
+                                   json_str);
+        }
+
+        std::map<std::string, std::string> result;
+        for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
+            if (!it->name.IsString() || !it->value.IsString()) {
+                return Status::Invalid(
+                    "deserialize failed: non-string key or value in JSON object: ", json_str);
+            }
+            result[it->name.GetString()] = it->value.GetString();
+        }
+        return result;
+    }
 };
 
 template <typename T>

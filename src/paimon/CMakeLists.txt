@@ -105,7 +105,6 @@ set(PAIMON_COMMON_SRCS
     common/utils/range.cpp
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
-    common/utils/rapidjson_util.cpp
     common/utils/status.cpp
     common/utils/string_utils.cpp)
 
