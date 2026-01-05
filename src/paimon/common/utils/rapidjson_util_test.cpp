@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "paimon/testing/utils/testharness.h"
 #include "rapidjson/allocators.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
@@ -127,6 +128,17 @@ TEST(RapidJsonUtilTest, TestSerializeAndDeserialize) {
     double non_exist_value = 0.0;
     non_exist_value = RapidJsonUtil::DeserializeKeyValue<double>(doc2, "non_exist_key", 2.333);
     ASSERT_EQ(2.333, non_exist_value);
+}
+
+TEST(RapidJsonUtilTest, TestMapJsonString) {
+    std::map<std::string, std::string> m1 = {{"key1", "value1"}, {"key2", "value2"}};
+    std::string result;
+    ASSERT_OK(RapidJsonUtil::ToJsonString(m1, &result));
+    ASSERT_EQ(result, "{\"key1\":\"value1\",\"key2\":\"value2\"}");
+
+    std::map<std::string, std::string> m2;
+    ASSERT_OK(RapidJsonUtil::FromJsonString(result, &m2));
+    ASSERT_EQ(m1, m2);
 }
 
 }  // namespace paimon::test

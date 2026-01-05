@@ -98,6 +98,9 @@ class PAIMON_EXPORT StringUtils {
     static std::string Replace(const std::string& text, const std::string& search_string,
                                const std::string& replacement, int32_t max);
 
+    static std::string ReplaceLast(const std::string& text, const std::string& old_str,
+                                   const std::string& new_str);
+
     static bool StartsWith(const std::string& str, const std::string& prefix, size_t start_pos = 0);
 
     static bool EndsWith(const std::string& str, const std::string& suffix);

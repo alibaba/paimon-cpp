@@ -40,6 +40,16 @@ std::string StringUtils::Replace(const std::string& text, const std::string& sea
     return str;
 }
 
+std::string StringUtils::ReplaceLast(const std::string& text, const std::string& old_str,
+                                     const std::string& new_str) {
+    std::string str = text;
+    size_t pos = str.rfind(old_str);
+    if (pos != std::string::npos) {
+        str.replace(pos, old_str.size(), new_str);
+    }
+    return str;
+}
+
 bool StringUtils::StartsWith(const std::string& str, const std::string& prefix, size_t start_pos) {
     return (str.size() >= prefix.size()) && (str.compare(start_pos, prefix.size(), prefix) == 0);
 }

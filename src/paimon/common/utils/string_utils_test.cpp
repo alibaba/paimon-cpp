@@ -113,6 +113,28 @@ TEST_F(StringUtilsTest, TestReplaceAll) {
     }
 }
 
+TEST_F(StringUtilsTest, TestReplaceLast) {
+    {
+        std::string origin = "a/b/c//";
+        std::string expect = "a/b/c/_";
+        std::string actual = StringUtils::ReplaceLast(origin, "/", "_");
+        ASSERT_EQ(expect, actual);
+    }
+    {
+        std::string origin = "a/b/c//";
+        std::string expect = "a/b/c//";
+        std::string actual = StringUtils::ReplaceLast(origin, "_", "/");
+        ASSERT_EQ(expect, actual);
+    }
+
+    {
+        std::string origin = "how is is you";
+        std::string expect = "how is are you";
+        std::string actual = StringUtils::ReplaceLast(origin, "is", "are");
+        ASSERT_EQ(expect, actual);
+    }
+}
+
 TEST_F(StringUtilsTest, TestReplaceWithMaxCount) {
     {
         std::string origin = "how is is you";
