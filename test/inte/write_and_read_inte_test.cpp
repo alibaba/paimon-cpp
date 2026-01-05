@@ -533,6 +533,136 @@ TEST_P(WriteAndReadInteTest, TestPkTimestampType) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldInPKField) {
+    arrow::FieldVector fields = {
+        arrow::field("p1", arrow::utf8()),
+        arrow::field("p2", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::float64()),
+    };
+    auto schema = arrow::schema(fields);
+    auto [file_format, file_system] = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},       {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, file_system},       {Options::SEQUENCE_FIELD, "p2"},
+        {"orc.read.enable-lazy-decoding", "true"}, {"orc.dictionary-key-size-threshold", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(test_dir_, schema, /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"p1", "p2"}, options,
+                                                         /*is_streaming_mode=*/true));
+    int64_t commit_identifier = 0;
+    std::string data_1 = R"([
+            ["banana", 2, 12, 13.0],
+            ["lucy", 0, 14, 5.2],
+            ["dog", 1, 1, 4.1],
+            ["banana", 2, 2, 3.0],
+            ["mouse", 3, 100, 10.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data_1,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch_1), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    std::string data_2 = R"([
+            ["apple", 0, 20, 23.0],
+            ["banana", 1, 200, 20.3],
+            ["dog", 1, 21, 24.1],
+            ["mouse", 3, 200, 20.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data_2,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(commit_msgs,
+                         helper->WriteAndCommit(std::move(batch_2), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string data = R"([
+            [0, "apple", 0, 20, 23.0],
+            [0, "banana", 1, 200, 20.3],
+            [0, "banana", 2, 2, 3.0],
+            [0, "dog", 1, 21, 24.1],
+            [0, "lucy", 0, 14, 5.2],
+            [0, "mouse", 3, 200, 20.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits, data));
+    ASSERT_TRUE(success);
+}
+
+TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldPartialInPKField) {
+    arrow::FieldVector fields = {
+        arrow::field("p1", arrow::utf8()),
+        arrow::field("p2", arrow::int32()),
+        arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::float64()),
+    };
+    auto schema = arrow::schema(fields);
+    auto [file_format, file_system] = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format},
+        {Options::TARGET_FILE_SIZE, "1024"},       {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, file_system},       {Options::SEQUENCE_FIELD, "p2,f1"},
+        {"orc.read.enable-lazy-decoding", "true"}, {"orc.dictionary-key-size-threshold", "1"},
+    };
+    if (file_system == "jindo") {
+        options = AddOptionsForJindo(options);
+    }
+    ASSERT_OK_AND_ASSIGN(auto helper, TestHelper::Create(test_dir_, schema, /*partition_keys=*/{},
+                                                         /*primary_keys=*/{"p1", "p2"}, options,
+                                                         /*is_streaming_mode=*/true));
+    int64_t commit_identifier = 0;
+    std::string data_1 = R"([
+            ["banana", 2, 12, 13.0],
+            ["lucy", 0, 14, 5.2],
+            ["dog", 1, 1, 4.1],
+            ["banana", 2, 2, 3.0],
+            ["mouse", 3, 100, 10.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data_1,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch_1), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    std::string data_2 = R"([
+            ["apple", 0, 20, 23.0],
+            ["banana", 1, 200, 20.3],
+            ["dog", 1, 21, 24.1],
+            ["mouse", 3, 10, 20.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_2,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data_2,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(commit_msgs,
+                         helper->WriteAndCommit(std::move(batch_2), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    std::string data = R"([
+            [0, "apple", 0, 20, 23.0],
+            [0, "banana", 1, 200, 20.3],
+            [0, "banana", 2, 12, 13.0],
+            [0, "dog", 1, 21, 24.1],
+            [0, "lucy", 0, 14, 5.2],
+            [0, "mouse", 3, 100, 10.3]
+    ])";
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type, data_splits, data));
+    ASSERT_TRUE(success);
+}
+
 std::vector<std::pair<std::string, std::string>> GetTestValuesForWriteAndReadInteTest() {
     std::vector<std::pair<std::string, std::string>> values = {{"parquet", "local"}};
 #ifdef PAIMON_ENABLE_ORC

@@ -247,15 +247,11 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     std::shared_ptr<FieldsComparator>* key_comparator,
     std::shared_ptr<FieldsComparator>* interval_partition_comparator,
     std::shared_ptr<FieldsComparator>* sequence_fields_comparator) {
-    std::vector<DataField> key_fields;
-    std::vector<DataField> non_key_fields;
-    // 1. split user raw read schema to key and non-key fields
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_key_fields,
-                           table_schema.TrimmedPrimaryKeys());
-    PAIMON_RETURN_NOT_OK(
-        SplitKeyAndNonKeyField(trimmed_key_fields, raw_read_schema, &key_fields, &non_key_fields));
-    // 2. add user defined sequence field in non-key fields
-    PAIMON_RETURN_NOT_OK(CompleteSequenceField(table_schema, options, &non_key_fields));
+    // 1. add user raw read schema to need_fields
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> need_fields,
+                           DataField::ConvertArrowSchemaToDataFields(raw_read_schema));
+    // 2. add user defined sequence field to need_fields
+    PAIMON_RETURN_NOT_OK(CompleteSequenceField(table_schema, options, &need_fields));
     if (options.GetMergeEngine() == MergeEngine::PARTIAL_UPDATE) {
         // add sequence group fields for partial update
         std::map<std::string, std::vector<std::string>> value_field_to_seq_group_field;
@@ -263,18 +259,26 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
         PAIMON_RETURN_NOT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
             options, &value_field_to_seq_group_field, &seq_group_key_set));
         PAIMON_RETURN_NOT_OK(PartialUpdateMergeFunction::CompleteSequenceGroupFields(
-            table_schema, value_field_to_seq_group_field, &non_key_fields));
+            table_schema, value_field_to_seq_group_field, &need_fields));
     }
-    // 3. construct value fields: key fields are put before non-key fields
+    // 3. split need_fields to key and non-key fields
+    std::vector<DataField> key_fields;
+    std::vector<DataField> non_key_fields;
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_key_fields,
+                           table_schema.TrimmedPrimaryKeys());
+    PAIMON_RETURN_NOT_OK(
+        SplitKeyAndNonKeyField(trimmed_key_fields, need_fields, &key_fields, &non_key_fields));
+
+    // 4. construct value fields: key fields are put before non-key fields
     std::vector<DataField> value_fields;
     value_fields.insert(value_fields.end(), key_fields.begin(), key_fields.end());
     value_fields.insert(value_fields.end(), non_key_fields.begin(), non_key_fields.end());
     *value_schema = DataField::ConvertDataFieldsToArrowSchema(value_fields);
-    // 4. create sequence field comparator
+    // 5. create sequence field comparator
     PAIMON_ASSIGN_OR_RAISE(
         *sequence_fields_comparator,
         PrimaryKeyTableUtils::CreateSequenceFieldsComparator(value_fields, options));
-    // 5. complete key fields to all trimmed primary key
+    // 6. complete key fields to all trimmed primary key
     key_fields.clear();
     PAIMON_ASSIGN_OR_RAISE(key_fields, table_schema.GetFields(trimmed_key_fields));
     PAIMON_ASSIGN_OR_RAISE(
@@ -285,7 +289,7 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
         *interval_partition_comparator,
         FieldsComparator::Create(key_fields,
                                  /*is_ascending_order=*/true, /*use_view=*/false));
-    // 6. construct actual read fields: special + key + non-key value
+    // 7. construct actual read fields: special + key + non-key value
     std::vector<DataField> read_fields;
     std::vector<DataField> special_fields(
         {SpecialFields::SequenceNumber(), SpecialFields::ValueKind()});
@@ -297,11 +301,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
 }
 
 Status MergeFileSplitRead::SplitKeyAndNonKeyField(
-    const std::vector<std::string>& trimmed_key_fields,
-    const std::shared_ptr<arrow::Schema>& raw_read_schema, std::vector<DataField>* key_fields,
-    std::vector<DataField>* non_key_fields) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> read_fields,
-                           DataField::ConvertArrowSchemaToDataFields(raw_read_schema));
+    const std::vector<std::string>& trimmed_key_fields, const std::vector<DataField>& read_fields,
+    std::vector<DataField>* key_fields, std::vector<DataField>* non_key_fields) {
     for (const auto& field : read_fields) {
         auto iter = std::find(trimmed_key_fields.begin(), trimmed_key_fields.end(), field.Name());
         if (iter == trimmed_key_fields.end()) {
