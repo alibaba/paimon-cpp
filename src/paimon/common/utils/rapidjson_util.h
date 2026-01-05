@@ -75,7 +75,7 @@ class RapidJsonUtil {
             PAIMON_ASSIGN_OR_RAISE(*obj, MapFromJsonString(json_str));
         } else {
             rapidjson::Document doc;
-            if (!obj || !FromJson(json_str, &doc)) {
+            if (!FromJson(json_str, &doc)) {
                 return Status::Invalid("deserialize failed: ", json_str);
             }
             try {

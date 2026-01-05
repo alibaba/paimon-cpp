@@ -45,9 +45,11 @@ Result<std::map<std::string, std::string>> RapidJsonUtil::MapFromJsonString(
 
     std::map<std::string, std::string> result;
     for (auto it = doc.MemberBegin(); it != doc.MemberEnd(); ++it) {
-        if (it->name.IsString() && it->value.IsString()) {
-            result[it->name.GetString()] = it->value.GetString();
+        if (!it->name.IsString() || !it->value.IsString()) {
+            return Status::Invalid("deserialize failed: non-string key or value in JSON object: ",
+                                   json_str);
         }
+        result[it->name.GetString()] = it->value.GetString();
     }
     return result;
 }
