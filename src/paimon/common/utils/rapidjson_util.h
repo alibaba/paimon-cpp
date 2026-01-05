@@ -41,6 +41,7 @@ class RapidJsonUtil {
     RapidJsonUtil() = delete;
     ~RapidJsonUtil() = delete;
 
+    // if T is custom type, T must have ToJson()
     template <typename T>
     static inline Status ToJsonString(const T& obj, std::string* json_str) {
         rapidjson::Document doc;
@@ -66,6 +67,7 @@ class RapidJsonUtil {
         return Status::OK();
     }
 
+    // if T is custom type, T must have FromJson()
     template <typename T>
     static inline Status FromJsonString(const std::string& json_str, T* obj) {
         if (!obj) {
