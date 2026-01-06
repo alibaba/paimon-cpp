@@ -40,7 +40,7 @@ void BlockWriter::Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& val
 
 void BlockWriter::Reset() {
     positions_.clear();
-    block_ = std::make_shared<MemorySliceOutput>(1024, pool_);
+    block_ = std::make_shared<MemorySliceOutput>(size_, pool_.get());
     aligned_size_ = 0;
     aligned_ = true;
 }

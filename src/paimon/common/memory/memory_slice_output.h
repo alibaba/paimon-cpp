@@ -34,7 +34,7 @@ class PAIMON_EXPORT MemorySliceOutput {
  public:
     MemorySliceOutput() = default;
 
-    MemorySliceOutput(int32_t size, std::shared_ptr<MemoryPool>& pool);
+    MemorySliceOutput(int32_t estimated_size, MemoryPool* pool);
 
     int32_t Size() const;
     void Reset();
@@ -45,15 +45,15 @@ class PAIMON_EXPORT MemorySliceOutput {
     void WriteInt(int32_t value);
     void WriteVarLenInt(int32_t value);
     void WriteLong(int64_t value);
-    void RwiteVarLenLong(int64_t value);
-    void WriteBytes(std::shared_ptr<Bytes>& source);
-    void WriteBytes(std::shared_ptr<Bytes>& source, int source_index, int length);
+    void WriteVarLenLong(int64_t value);
+    void WriteBytes(const std::shared_ptr<Bytes>& source);
+    void WriteBytes(const std::shared_ptr<Bytes>& source, int source_index, int length);
 
  private:
     void EnsureSize(int bytes);
 
  private:
- std::shared_ptr<MemoryPool> pool_;
+    MemoryPool* pool_;
     MemorySegment segment_;
     int32_t size_;
 };

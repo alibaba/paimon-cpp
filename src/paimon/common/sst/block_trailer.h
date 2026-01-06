@@ -25,29 +25,31 @@
 
 namespace paimon {
 
+/** Trailer of a block. */
 class BlockTrailer {
  public:
-    static std::unique_ptr<BlockTrailer> ReadBlockTrailer(std::unique_ptr<MemorySliceInput>& input);
+    static std::unique_ptr<BlockTrailer> ReadBlockTrailer(std::shared_ptr<MemorySliceInput>& input);
 
     static void WriteBlockTrailer(std::unique_ptr<BlockTrailer>& trailer,
                                   std::unique_ptr<MemorySliceInput>& input);
 
  public:
-    BlockTrailer(int8_t compression_type, int32_t crc32c);
+    BlockTrailer(int8_t compression_type, int32_t crc32c)
+        : crc32c_(crc32c), compression_type_(compression_type) {}
 
     ~BlockTrailer() = default;
 
     int32_t Crc32c() const;
-    char CompressionType() const;
+    int8_t CompressionType() const;
 
     std::string ToString() const;
-    std::shared_ptr<Bytes> ToBytes();
+    std::shared_ptr<MemorySlice> WriteBlockTrailer(MemoryPool* pool);
 
  public:
     static constexpr int32_t ENCODED_LENGTH = 5;
 
  private:
     int32_t crc32c_;
-    char compression_type_;
+    int8_t compression_type_;
 };
 }  // namespace paimon

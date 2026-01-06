@@ -18,10 +18,10 @@
 
 namespace paimon {
 
-MemorySliceOutput::MemorySliceOutput(int32_t size, std::shared_ptr<MemoryPool>& pool) {
-    size_ = size;
+MemorySliceOutput::MemorySliceOutput(int32_t estimated_size, MemoryPool* pool) {
+    size_ = 0;
     pool_ = pool;
-    segment_ = MemorySegment::Wrap(std::make_unique<Bytes>(size, pool.get()));
+    segment_ = MemorySegment::Wrap(Bytes::AllocateBytes(estimated_size, pool));
 }
 
 int32_t MemorySliceOutput::Size() const {
@@ -32,7 +32,7 @@ void MemorySliceOutput::Reset() {
 }
 std::unique_ptr<MemorySlice> MemorySliceOutput::ToSlice() {
     auto segment = std::make_shared<MemorySegment>(segment_);
-    return std::make_unique<MemorySlice>(segment, 0, segment_.Size());
+    return std::make_unique<MemorySlice>(segment, 0, size_);
 }
 
 void MemorySliceOutput::WriteByte(int8_t value) {
@@ -64,7 +64,7 @@ void MemorySliceOutput::WriteVarLenInt(int32_t value) {
     }
     WriteByte((int8_t)value);
 }
-void MemorySliceOutput::RwiteVarLenLong(int64_t value) {
+void MemorySliceOutput::WriteVarLenLong(int64_t value) {
     if (value < 0) {
         throw std::invalid_argument("negative value: v=" + std::to_string(value));
     }
@@ -74,12 +74,14 @@ void MemorySliceOutput::RwiteVarLenLong(int64_t value) {
     }
     WriteByte((int8_t)value);
 }
-void MemorySliceOutput::WriteBytes(std::shared_ptr<Bytes>& source) {
+void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source) {
     WriteBytes(source, 0, source->size());
 }
-void MemorySliceOutput::WriteBytes(std::shared_ptr<Bytes>& source, int source_index, int length) {
+void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source, int source_index,
+                                   int length) {
     EnsureSize(size_ + length);
-    segment_.Put(size_, source, source_index, length);
+    std::string_view sv{source->data(), source->size()};
+    segment_.Put(size_, sv, source_index, length);
     size_ += length;
 }
 
@@ -87,13 +89,14 @@ void MemorySliceOutput::EnsureSize(int size) {
     if (size <= segment_.Size()) {
         return;
     }
-    int capacity = segment_.Size();
+    int32_t capacity = segment_.Size();
     int min_capacity = segment_.Size() + size;
     while (capacity < min_capacity) {
         capacity <<= 1;
     }
 
-    MemorySegment new_segment = MemorySegment::Wrap(std::make_unique<Bytes>(capacity, pool_));
+    MemorySegment new_segment =
+        MemorySegment::Wrap(std::move(Bytes::AllocateBytes(capacity, pool_)));
     segment_.CopyTo(0, &new_segment, 0, segment_.Size());
     segment_ = new_segment;
 }

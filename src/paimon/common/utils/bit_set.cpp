@@ -17,8 +17,6 @@
 #include "paimon/common/utils/bit_set.h"
 namespace paimon {
 
-BitSet::BitSet(int64_t byte_length) : byte_length_(byte_length) {}
-
 Status BitSet::SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset) {
     if (!segment) {
         return Status::Invalid("MemorySegment can not be null.");

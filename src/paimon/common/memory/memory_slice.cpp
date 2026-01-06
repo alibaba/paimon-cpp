@@ -16,9 +16,13 @@
 
 #include "paimon/common/memory/memory_slice.h"
 
+#include "paimon/common/memory/memory_slice_input.h"
+
 namespace paimon {
 std::shared_ptr<MemorySlice> MemorySlice::Wrap(std::shared_ptr<Bytes>& bytes) {
-    return std::make_shared<MemorySlice>(MemorySegment::Wrap(bytes), 0, bytes->size());
+    auto segment = MemorySegment::Wrap(bytes);
+    auto ptr = std::make_shared<MemorySegment>(segment);
+    return std::make_shared<MemorySlice>(ptr, 0, ptr->Size());
 }
 
 std::shared_ptr<MemorySlice> MemorySlice::Wrap(std::shared_ptr<MemorySegment>& segment) {
@@ -28,11 +32,11 @@ std::shared_ptr<MemorySlice> MemorySlice::Wrap(std::shared_ptr<MemorySegment>& s
 MemorySlice::MemorySlice(std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length)
     : segment_(segment), offset_(offset), length_(length) {}
 
-std::unique_ptr<MemorySlice> MemorySlice::Slice(int32_t index, int32_t length) {
+std::shared_ptr<MemorySlice> MemorySlice::Slice(int32_t index, int32_t length) {
     if (index == 0 && length == length_) {
-        return std::make_unique<MemorySlice>(*this);
+        return shared_from_this();
     }
-    return std::make_unique<MemorySlice>(segment_, offset_ + index, length);
+    return std::make_shared<MemorySlice>(segment_, offset_ + index, length);
 }
 
 int32_t MemorySlice::Length() const {
@@ -63,9 +67,15 @@ int64_t MemorySlice::ReadLong(int position) {
     return segment_->GetValue<int64_t>(offset_ + position);
 }
 
+std::string_view MemorySlice::ReadStringView() {
+    auto array = segment_->GetArray();
+    return {array->data() + offset_, static_cast<size_t>(length_)};
+}
+
 std::shared_ptr<Bytes> MemorySlice::CopyBytes(MemoryPool* pool) {
     auto bytes = std::make_shared<Bytes>(length_, pool);
-    // todo copy
+    auto target = MemorySegment::Wrap(bytes);
+    segment_->CopyTo(offset_, &target, 0, length_);
     return bytes;
 }
 
@@ -88,13 +98,11 @@ bool MemorySlice::operator>=(const MemorySlice& other) const {
     return Compare(other) >= 0;
 }
 std::shared_ptr<MemorySliceInput> MemorySlice::ToInput() {
-    return std::make_shared<MemorySliceInput>(this);
+    auto self = shared_from_this();
+    return std::make_shared<MemorySliceInput>(self);
 }
 
 int32_t MemorySlice::Compare(const MemorySlice& other) const {
-    if (!segment_ && !other.segment_) return 0;
-    if (!segment_) return -1;
-    if (!other.segment_) return 1;
     int32_t len = std::min(length_, other.length_);
     for (int32_t i = 0; i < len; ++i) {
         unsigned char byte1 = static_cast<unsigned char>(segment_->Get(offset_ + i));

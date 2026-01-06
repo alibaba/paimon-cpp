@@ -27,7 +27,7 @@
 namespace paimon {
 class MemoryPool;
 
-/// BitSe based on MemorySegment.
+/// BitSet based on MemorySegment.
 class PAIMON_EXPORT BitSet {
  public:
     BitSet(int64_t byte_length) : byte_length_(byte_length) {}

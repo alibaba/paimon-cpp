@@ -44,35 +44,18 @@ class Cache {
 
 class NoCache : public Cache {
  public:
-    NoCache() {}
-
     std::shared_ptr<CacheValue> Get(
         const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier)
-        override {
-        return supplier(key);
-    }
-
-    void Put(const std::shared_ptr<CacheKey>& key, std::shared_ptr<CacheValue>& value) override {
-        // do nothing
-    }
-
-    void Invalidate(const std::shared_ptr<CacheKey>& key) override {
-        // do nothing
-    }
-
-    void InvalidateAll() override {
-        // do nothing
-    }
-
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() override {
-        return {};
-    }
+        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier);
+    void Put(const std::shared_ptr<CacheKey>& key, std::shared_ptr<CacheValue>& value) override;
+    void Invalidate(const std::shared_ptr<CacheKey>& key) override;
+    void InvalidateAll() override;
+    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() override;
 };
 
 class CacheValue {
  public:
-    CacheValue(MemorySegment&& segment) : segment_(std::make_shared<MemorySegment>(segment)) {}
+    CacheValue(std::shared_ptr<MemorySegment>& segment) : segment_(segment) {}
 
     std::shared_ptr<MemorySegment> GetSegment() {
         return segment_;

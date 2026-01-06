@@ -40,6 +40,7 @@ Status BloomFilter::AddHash(int64_t hash1) {
         int32_t pos = combined_hash % bit_set_->GetBitLength();
         bit_set_->Set(pos);
     }
+    return Status::OK();
 }
 
 bool BloomFilter::TestHash(int64_t hash64) const {

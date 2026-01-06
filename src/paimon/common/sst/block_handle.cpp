@@ -15,6 +15,9 @@
  */
 
 #include "paimon/common/sst/block_handle.h"
+
+#include "paimon/common/memory/memory_slice_output.h"
+
 namespace paimon {
 
 std::shared_ptr<BlockHandle> BlockHandle::ReadBlockHandle(
@@ -40,12 +43,13 @@ int32_t BlockHandle::GetFullBlockSize() const {
 
 std::string BlockHandle::ToString() const {
     return "BlockHandle{offset=" + std::to_string(offset_) + ", size=" + std::to_string(size_) +
-           '}';
+           "}";
 }
 
-std::shared_ptr<Bytes> BlockHandle::ToBytes(MemoryPool* pool) {
-    std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(BlockHandle::MAX_ENCODED_LENGTH, pool);
-    // todo
-    return bytes;
+std::shared_ptr<MemorySlice> BlockHandle::WriteBlockHandle(MemoryPool* pool) {
+    auto output = std::make_shared<MemorySliceOutput>(MAX_ENCODED_LENGTH, pool);
+    output->WriteVarLenLong(offset_);
+    output->WriteVarLenLong(size_);
+    return output->ToSlice();
 }
 }  // namespace paimon

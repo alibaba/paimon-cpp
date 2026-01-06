@@ -24,7 +24,8 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Bloom filter baseed on MemorySegment.
+
+/// Bloom filter based on MemorySegment.
 class PAIMON_EXPORT BloomFilter {
  public:
     BloomFilter(int64_t expected_entries, int32_t byte_length);

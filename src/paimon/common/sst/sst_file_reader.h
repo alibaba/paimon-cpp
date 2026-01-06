@@ -33,11 +33,18 @@
 namespace paimon {
 class SstFileIterator;
 
+/**
+ * An SST File Reader which serves point queries and range queries. Users can call {@code
+ * createIterator} to create a file iterator and then use seek and read methods to do range queries.
+ *
+ * <p>Note that this class is NOT thread-safe.
+ */
 class SstFileReader {
  public:
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool, std::unique_ptr<BlockCache> block_cache,
+    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
+                  std::unique_ptr<BlockCache>&& block_cache,
                   std::shared_ptr<BlockHandle> index_block_handle,
-                  std::unique_ptr<BloomFilter> bloom_filter,
+                  std::unique_ptr<BloomFilter>&& bloom_filter,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
                       comparator);
@@ -45,17 +52,28 @@ class SstFileReader {
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
-    std::shared_ptr<Bytes> Lookup(std::shared_ptr<Bytes>& key);
+    /**
+     * Lookup the specified key in the file.
+     *
+     * @param key serialized key
+     * @return corresponding serialized value, nullptr if not found.
+     */
+    std::shared_ptr<Bytes> Lookup(std::shared_ptr<Bytes> key);
 
     std::unique_ptr<BlockIterator> GetNextBlock(std::unique_ptr<BlockIterator>& index_iterator);
 
-    std::unique_ptr<BlockReader> ReadBlock(std::shared_ptr<BlockHandle>&& handle, bool index);
+    /**
+     * @param blockHandle The block handle.
+     * @param index Whether read the block as an index.
+     * @return The reader of the target block.
+     */
+    std::shared_ptr<BlockReader> ReadBlock(std::shared_ptr<BlockHandle>&& handle, bool index);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
     std::unique_ptr<BlockCache> block_cache_;
     std::unique_ptr<BloomFilter> bloom_filter_;
-    std::unique_ptr<BlockReader> index_block_reader_;
+    std::shared_ptr<BlockReader> index_block_reader_;
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator_;
 };

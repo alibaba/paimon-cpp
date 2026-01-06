@@ -26,7 +26,7 @@ class BlockReader;
 
 class BlockIterator {
  public:
-    BlockIterator(std::weak_ptr<BlockReader>& reader) : reader_(reader) {}
+    BlockIterator(std::shared_ptr<BlockReader>& reader);
 
     ~BlockIterator() = default;
 
@@ -39,9 +39,9 @@ class BlockIterator {
     bool SeekTo(std::shared_ptr<paimon::MemorySlice> target_key);
 
  private:
-    std::unique_ptr<MemorySliceInput> input_;
+    std::shared_ptr<MemorySliceInput> input_;
     std::unique_ptr<BlockEntry> polled_;
-    std::weak_ptr<BlockReader> reader_;
+    std::shared_ptr<BlockReader> reader_;
 };
 
 }  // namespace paimon

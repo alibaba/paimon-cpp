@@ -38,7 +38,7 @@ class CacheManager {
         std::shared_ptr<CacheKey>& key,
         std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader);
 
-    void CacheManager::InvalidPage(std::shared_ptr<CacheKey>& key);
+    void InvalidPage(std::shared_ptr<CacheKey>& key);
 
  private:
     std::unique_ptr<Cache> data_cache_;

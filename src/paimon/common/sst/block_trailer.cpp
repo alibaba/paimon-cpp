@@ -16,34 +16,34 @@
 
 #include "paimon/common/sst/block_trailer.h"
 
+#include "paimon/common/memory/memory_slice_output.h"
+
 namespace paimon {
 
 std::unique_ptr<BlockTrailer> BlockTrailer::ReadBlockTrailer(
-    std::unique_ptr<MemorySliceInput>& input) {
+    std::shared_ptr<MemorySliceInput>& input) {
     auto compress = input->ReadUnsignedByte();
     auto crc32c = input->ReadInt();
     return std::make_unique<BlockTrailer>(compress, crc32c);
 }
 
-BlockTrailer::BlockTrailer(int8_t compression_type, int32_t crc32c)
-    : compression_type_(compression_type), crc32c_(crc32c) {}
-
 int32_t BlockTrailer::Crc32c() const {
     return crc32c_;
 }
 
-char BlockTrailer::CompressionType() const {
+int8_t BlockTrailer::CompressionType() const {
     return compression_type_;
 }
 
 std::string BlockTrailer::ToString() const {
     return "BlockTrailer{compression_type=" + std::to_string(compression_type_) + ", crc32c_=0x" +
-           std::to_string(crc32c_) + '}';
+           std::to_string(crc32c_) + "}";
 }
 
-std::shared_ptr<Bytes> BlockTrailer::ToBytes() {
-    std::shared_ptr<Bytes> bytes = std::make_shared<Bytes>(ENCODED_LENGTH);
-    // todo
-    return bytes;
+std::shared_ptr<MemorySlice> BlockTrailer::WriteBlockTrailer(MemoryPool* pool) {
+    auto output = std::make_shared<MemorySliceOutput>(ENCODED_LENGTH, pool);
+    output->WriteByte(compression_type_);
+    output->WriteInt(crc32c_);
+    return output->ToSlice();
 }
 }  // namespace paimon

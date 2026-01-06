@@ -18,29 +18,30 @@
 
 namespace paimon {
 
-std::unique_ptr<BlockReader> BlockReader::Create(
+std::shared_ptr<BlockReader> BlockReader::Create(
     std::shared_ptr<MemorySlice> block,
-    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>&
-        comparator) {
+    std::function<int32_t(const std::shared_ptr<MemorySlice>&,
+                          const std::shared_ptr<MemorySlice>&)>& comparator) {
     BlockAlignedType type = From(block->ReadByte(block->Length() - 1));
     int size = block->ReadInt(block->Length() - 5);
     if (type == BlockAlignedType::ALIGNED) {
-        return std::make_unique<AlignedBlockReader>(block->Slice(0, block->Length() - 5), size,
-                                                    comparator);
+        auto data = block->Slice(0, block->Length() - 5);
+        return std::make_shared<AlignedBlockReader>(data, size, comparator);
     } else {
         int index_length = size * 4;
         int index_offset = block->Length() - 5 - index_length;
         auto data = block->Slice(0, index_offset);
         auto index = block->Slice(index_offset, index_length);
-        return std::make_unique<UnAlignedBlockReader>(data, index, comparator);
+        return std::make_shared<UnAlignedBlockReader>(data, index, comparator);
     }
 }
 
 std::unique_ptr<BlockIterator> BlockReader::Iterator() {
-    return std::make_unique<BlockIterator>(this);
+    std::shared_ptr<BlockReader> ptr = shared_from_this();
+    return std::make_unique<BlockIterator>(ptr);
 }
 
-std::shared_ptr<MemorySliceInput> BlockReader::ToInput() {
+std::shared_ptr<MemorySliceInput> BlockReader::BlockInput() {
     return block_->ToInput();
 }
 

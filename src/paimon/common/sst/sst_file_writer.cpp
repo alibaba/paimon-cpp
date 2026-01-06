@@ -25,12 +25,13 @@ class MemoryPool;
 
 Status SstFileWriter::Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value) {
     Write(std::move(key), std::move(value));
+    return Status::OK();
 }
 
 Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) {
     data_block_writer_->Write(key, value);
     last_key_ = key;
-    if (data_block_writer_->Size() > block_size_) {
+    if (data_block_writer_->Memory() > block_size_) {
         auto res = Flush();
         if (!res.ok()) {
             return res;
@@ -39,7 +40,7 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
     if (bloom_filter_) {
         bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key));
     }
-    record_count_++;
+    return Status::OK();
 }
 
 Status SstFileWriter::Flush() {
@@ -51,8 +52,10 @@ Status SstFileWriter::Flush() {
         return handle.status();
     }
 
-    auto bytes = handle.value()->ToBytes();
-    index_block_writer_->Write(last_key_, bytes);
+    auto slice = handle.value()->WriteBlockHandle(pool_.get());
+    auto value = slice->CopyBytes(pool_.get());
+    index_block_writer_->Write(last_key_, value);
+    return Status::OK();
 }
 
 Result<std::shared_ptr<BlockHandle>> SstFileWriter::WriteIndexBlock() {
@@ -66,10 +69,12 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     auto bitSet = bloom_filter_->GetBitSet();
     auto segment = bitSet->GetMemorySegment();
 
-    auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos(), bitSet->GetBitLength(),
-                                                      bloom_filter_->GetExpectedEntries());
-    auto bytes = std::make_shared<Bytes>(segment->GetArray());
-    WriteBytes(bytes);
+    auto handle = std::make_shared<BloomFilterHandle>(
+        out_->GetPos().value(), bitSet->GetBitLength(), bloom_filter_->GetExpectedEntries());
+
+    auto bytes = segment->GetArray();
+    WriteBytes(bytes->data(), bytes->size());
+
     return handle;
 }
 
@@ -79,27 +84,29 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     if (!ret.ok()) {
         return ret.status();
     }
-    auto size = writer->Size();
 
+    auto& block_data = ret.value();
+    auto size = block_data->Length();
     // todo attempt to compress the block
-    auto& memory_slice = ret.value();
-    auto bytes = memory_slice->GetHeapMemory();
-    auto crc32 = arrow::internal::crc32(0, bytes->data(), bytes->size());
-    auto trailer = std::make_shared<BlockTrailer>(0, crc32)->ToBytes();
+    auto view = block_data->ReadStringView();
+    auto crc32 = arrow::internal::crc32(0, view.data(), view.size());
+    auto trailer = std::make_shared<BlockTrailer>(0, crc32)->WriteBlockTrailer(pool_.get());
+    auto trailer_data = trailer->ReadStringView();
 
     auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), size);
 
     // 1. write data
-    WriteBytes(bytes);
+    WriteBytes(view.data(), view.size());
 
-    // write trailer
-    WriteBytes(trailer);
+    // 2. write trailer
+    WriteBytes(trailer_data.data(), trailer_data.size());
 
     writer->Reset();
     return block_handle;
 }
 
-Status SstFileWriter::WriteBytes(std::shared_ptr<Bytes>& bytes) {
-    out_->Write(bytes->data(), bytes->size());
+Status SstFileWriter::WriteBytes(const char* data, size_t size) {
+    out_->Write(data, size);
+    return Status::OK();
 }
 }  // namespace paimon

@@ -31,7 +31,7 @@ namespace paimon {
 /// Enumeration for stream seek origin positions.
 enum class PAIMON_EXPORT BlockAlignedType { ALIGNED = 0, UNALIGNED = 1 };
 
-BlockAlignedType From(int8_t v) {
+inline BlockAlignedType From(int8_t v) {
     if (v == 0) {
         return BlockAlignedType::ALIGNED;
     } else if (v == 1) {

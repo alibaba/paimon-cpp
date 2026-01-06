@@ -17,32 +17,26 @@
 #include "paimon/common/io/cache/cache.h"
 
 namespace paimon {
-    
-class NoCache : public Cache {
- public:
-    NoCache() {}
+std::shared_ptr<CacheValue> NoCache::Get(
+    const std::shared_ptr<CacheKey>& key,
+    std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier) {
+    return supplier(key);
+}
 
-    std::shared_ptr<CacheValue> Get(
-        const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier)
-        override {
-        return supplier(key);
-    }
+void NoCache::Put(const std::shared_ptr<CacheKey>& key, std::shared_ptr<CacheValue>& value) {
+    // do nothing
+}
 
-    void Put(const std::shared_ptr<CacheKey>& key, std::shared_ptr<CacheValue>& value) override {
-        // do nothing
-    }
+void NoCache::Invalidate(const std::shared_ptr<CacheKey>& key) {
+    // do nothing
+}
 
-    void Invalidate(const std::shared_ptr<CacheKey>& key) override {
-        // do nothing
-    }
+void NoCache::InvalidateAll() {
+    // do nothing
+}
 
-    void InvalidateAll() override {
-        // do nothing
-    }
+std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> NoCache::AsMap() {
+    return {};
+}
 
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() override {
-        return {};
-    }
-};
 }  // namespace paimon

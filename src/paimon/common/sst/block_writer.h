@@ -24,10 +24,39 @@
 #include "paimon/result.h"
 
 namespace paimon {
+
+/**
+ * Writer to build a Block. A block is designed for storing and random-accessing k-v pairs. The
+ * layout is as below:
+ *
+ * <pre>
+ *     +---------------+
+ *     | Block Trailer |
+ *     +------------------------------------------------+
+ *     |       Block CRC23C      |     Compression      |
+ *     +------------------------------------------------+
+ *     +---------------+
+ *     |  Block Data   |
+ *     +---------------+--------------------------------+----+
+ *     | key len | key bytes | value len | value bytes  |    |
+ *     +------------------------------------------------+    |
+ *     | key len | key bytes | value len | value bytes  |    +-> Key-Value pairs
+ *     +------------------------------------------------+    |
+ *     |                  ... ...                       |    |
+ *     +------------------------------------------------+----+
+ *     | entry pos | entry pos |     ...    | entry pos |    +-> optional, for unaligned block
+ *     +------------------------------------------------+----+
+ *     |   entry num  /  entry size   |   aligned type  |
+ *     +------------------------------------------------+
+ * </pre>
+ */
 class BlockWriter {
  public:
-    BlockWriter(const std::shared_ptr<MemoryPool>& pool, bool aligned = true)
-        : pool_(pool), aligned_(aligned) {}
+    BlockWriter(int32_t size, std::shared_ptr<MemoryPool>& pool, bool aligned = true)
+        : size_(size), pool_(pool), aligned_(aligned) {
+        block_ = std::make_shared<MemorySliceOutput>(size, pool_.get());
+        aligned_size_ = 0;
+    }
 
     ~BlockWriter() = default;
 
@@ -39,10 +68,19 @@ class BlockWriter {
         return positions_.size();
     }
 
+    int32_t Memory() const {
+        int memory = block_->Size() + 5;
+        if (!aligned_) {
+            memory += positions_.size() * 4;
+        }
+        return memory;
+    }
+
     Result<std::unique_ptr<paimon::MemorySlice>> Finish();
 
  private:
-    const std::shared_ptr<MemoryPool>& pool_;
+    int32_t size_;
+    std::shared_ptr<MemoryPool> pool_;
 
     std::vector<int32_t> positions_;
     std::shared_ptr<MemorySliceOutput> block_;

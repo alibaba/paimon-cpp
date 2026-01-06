@@ -23,7 +23,9 @@ std::shared_ptr<MemorySegment> CacheManager::GetPage(
     std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader) {
     auto& cache = key->IsIndex() ? index_cache_ : data_cache_;
     auto supplier = [&reader](const std::shared_ptr<CacheKey>& k) -> std::shared_ptr<CacheValue> {
-        return std::make_shared<CacheValue>(reader(k).value());
+        auto segment = reader(k).value();
+        auto ptr = std::make_shared<MemorySegment>(segment);
+        return std::make_shared<CacheValue>(ptr);
     };
     return cache->Get(key, supplier)->GetSegment();
 }

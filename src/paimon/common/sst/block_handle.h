@@ -38,7 +38,7 @@ class BlockHandle {
     int32_t GetFullBlockSize() const;
 
     std::string ToString() const;
-    std::shared_ptr<Bytes> ToBytes(MemoryPool* pool);
+    std::shared_ptr<MemorySlice> WriteBlockHandle(MemoryPool* pool);
 
  public:
     static constexpr int32_t MAX_ENCODED_LENGTH = 9 + 5;

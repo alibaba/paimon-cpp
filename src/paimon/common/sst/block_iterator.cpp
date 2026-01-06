@@ -15,13 +15,13 @@
  */
 
 #include "paimon/common/sst/block_iterator.h"
+
 #include "paimon/common/sst/block_reader.h"
 
 namespace paimon {
-
-BlockIterator::BlockIterator(std::weak_ptr<BlockReader>& reader) : reader_(reader) {}
-
-BlockIterator::~BlockIterator() = default;
+BlockIterator::BlockIterator(std::shared_ptr<BlockReader>& reader) : reader_(reader) {
+    input_ = reader->BlockInput();
+}
 
 bool BlockIterator::HasNext() const {
     return polled_.get() || input_->IsReadable();
@@ -32,8 +32,7 @@ std::unique_ptr<BlockEntry> BlockIterator::Next() {
         throw std::invalid_argument("no such element");
     }
     if (polled_.get()) {
-        auto result = std::move(polled_);
-        return result;
+        return std::move(polled_);
     }
     return ReadEntry();
 }
@@ -48,15 +47,14 @@ std::unique_ptr<BlockEntry> BlockIterator::ReadEntry() {
 
 bool BlockIterator::SeekTo(std::shared_ptr<paimon::MemorySlice> target_key) {
     int left = 0;
-    auto reader = reader_.lock();
-    int right = reader->RecordCount() - 1;
+    int right = reader_->RecordCount() - 1;
 
     while (left <= right) {
         int mid = left + (right - left) / 2;
 
-        input_->SetPosition(reader->SeekTo(mid));
+        input_->SetPosition(reader_->SeekTo(mid));
         auto mid_entry = ReadEntry();
-        int compare = reader->Comparator()(mid_entry->Key(), target_key);
+        int compare = reader_->Comparator()(mid_entry->Key(), target_key);
 
         if (compare == 0) {
             polled_ = std::move(mid_entry);

@@ -30,9 +30,10 @@
 namespace paimon {
 class BlockIterator;
 
-class BlockReader {
+/** Reader for a block. */
+class BlockReader : public std::enable_shared_from_this<BlockReader> {
  public:
-    static std::unique_ptr<BlockReader> Create(
+    static std::shared_ptr<BlockReader> Create(
         std::shared_ptr<MemorySlice> block,
         std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                               const std::shared_ptr<MemorySlice>&)>& comparator);
@@ -42,7 +43,7 @@ class BlockReader {
     std::unique_ptr<BlockIterator> Iterator();
     virtual int32_t SeekTo(int32_t record_position) = 0;
 
-    std::shared_ptr<MemorySliceInput> ToInput();
+    std::shared_ptr<MemorySliceInput> BlockInput();
 
     int32_t RecordCount() const;
 

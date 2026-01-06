@@ -110,6 +110,8 @@ set(PAIMON_COMMON_SRCS
     common/types/row_type.cpp
     common/utils/arrow/mem_utils.cpp
     common/utils/binary_row_partition_computer.cpp
+    common/utils/bit_set.cpp
+    common/utils/bloom_filter.cpp
     common/utils/bloom_filter64.cpp
     common/utils/bucket_id_calculator.cpp
     common/utils/decimal_utils.cpp
@@ -427,12 +429,15 @@ if(PAIMON_BUILD_TESTS)
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
-    add_paimon_test(common_sst_test
+    add_paimon_test(common_sst_file_format_test
                     SOURCES
                     common/sst/sst_file_io_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
+                    "-Wl,--whole-archive"
+                    paimon_local_file_system_static
+                    "-Wl,--no-whole-archive"
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(core_test

@@ -31,7 +31,7 @@ class MemoryPool;
 class MemorySliceInput;
 
 ///  Slice of a MemorySegment.
-class PAIMON_EXPORT MemorySlice: public std::enable_shared_from_this<MemorySlice> {
+class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlice> {
  public:
     static std::shared_ptr<MemorySlice> Wrap(std::shared_ptr<Bytes>& bytes);
     static std::shared_ptr<MemorySlice> Wrap(std::shared_ptr<MemorySegment>& segment);
@@ -40,7 +40,7 @@ class PAIMON_EXPORT MemorySlice: public std::enable_shared_from_this<MemorySlice
     MemorySlice() = default;
 
     MemorySlice(std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length);
-    std::unique_ptr<MemorySlice> Slice(int32_t index, int32_t length);
+    std::shared_ptr<MemorySlice> Slice(int32_t index, int32_t length);
 
     int32_t Length() const;
     int32_t Offset() const;
@@ -50,6 +50,7 @@ class PAIMON_EXPORT MemorySlice: public std::enable_shared_from_this<MemorySlice
     int32_t ReadInt(int position);
     int16_t ReadShort(int position);
     int64_t ReadLong(int position);
+    std::string_view ReadStringView();
 
     std::shared_ptr<Bytes> CopyBytes(MemoryPool* pool);
 

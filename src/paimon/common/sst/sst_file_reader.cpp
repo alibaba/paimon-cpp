@@ -20,8 +20,8 @@
 namespace paimon {
 
 SstFileReader::SstFileReader(
-    const std::shared_ptr<MemoryPool>& pool, std::unique_ptr<BlockCache> block_cache,
-    std::shared_ptr<BlockHandle> index_block_handle, std::unique_ptr<BloomFilter> bloom_filter,
+    const std::shared_ptr<MemoryPool>& pool, std::unique_ptr<BlockCache>&& block_cache,
+    std::shared_ptr<BlockHandle> index_block_handle, std::unique_ptr<BloomFilter>&& bloom_filter,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator)
     : pool_(pool),
@@ -35,7 +35,7 @@ std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {
     return std::make_unique<SstFileIterator>(this, index_block_reader_->Iterator());
 }
 
-std::shared_ptr<Bytes> SstFileReader::Lookup(std::shared_ptr<Bytes>& key) {
+std::shared_ptr<Bytes> SstFileReader::Lookup(std::shared_ptr<Bytes> key) {
     if (bloom_filter_.get() && !bloom_filter_->TestHash(MurmurHashUtils::HashBytes(key))) {
         return nullptr;
     }
@@ -48,7 +48,7 @@ std::shared_ptr<Bytes> SstFileReader::Lookup(std::shared_ptr<Bytes>& key) {
         // seek the current iterator to the key
         auto current = GetNextBlock(index_block_iterator);
         if (current->SeekTo(key_slice)) {
-            return current->Next()->Value()->CopyBytes();
+            return current->Next()->Value()->CopyBytes(pool_.get());
         }
     }
     return nullptr;
@@ -61,7 +61,7 @@ std::unique_ptr<BlockIterator> SstFileReader::GetNextBlock(
     return ReadBlock(BlockHandle::ReadBlockHandle(input), false)->Iterator();
 }
 
-std::unique_ptr<BlockReader> SstFileReader::ReadBlock(std::shared_ptr<BlockHandle>&& handle,
+std::shared_ptr<BlockReader> SstFileReader::ReadBlock(std::shared_ptr<BlockHandle>&& handle,
                                                       bool index) {
     // read block trailer
     auto trailer_data = block_cache_->GetBlock(handle->Offset() + handle->Size(),

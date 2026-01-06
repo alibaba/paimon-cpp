@@ -45,60 +45,85 @@ namespace paimon::test {
 class SstFileIOTest : public ::testing::Test {
  public:
     void SetUp() override {
-        fields_ = {arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int64()),
-                   arrow::field("f2", arrow::boolean())};
-        data_type_ = arrow::struct_(fields_);
+        dir_ = paimon::test::UniqueTestDirectory::Create();
+        fs_ = dir_->GetFileSystem();
+        index_path_ = dir_->Str() + "/sst_file_test.data";
+        pool_ = GetDefaultPool();
     }
 
-    void TearDown() override {}
+    void TearDown() override {
+        fs_->Delete(dir_->Str());
+    }
 
- private:
-    arrow::FieldVector fields_;
-    std::shared_ptr<arrow::DataType> data_type_;
+ protected:
+    std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
+    std::shared_ptr<paimon::FileSystem> fs_;
+    std::string index_path_;
+    std::shared_ptr<paimon::MemoryPool> pool_;
 };
 
 TEST_F(SstFileIOTest, TestSimple) {
-    auto dir = paimon::test::UniqueTestDirectory::Create("local");
-    auto fs = dir->GetFileSystem();
-    std::string index_path = dir->Str() + "/sst_file_test.data";
     // write content
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                         fs->Create(index_path, /*overwrite=*/false));
-    auto pool = GetDefaultPool();
+                         fs_->Create(index_path_, /*overwrite=*/false));
 
-    auto writer = std::make_shared<SstFileWriter>(out, 10, pool);
-    writer->Write(std::make_shared<Bytes>("k1", pool), std::make_shared<Bytes>("1", pool));
-    writer->Write(std::make_shared<Bytes>("k2", pool), std::make_shared<Bytes>("2", pool));
-    writer->Write(std::make_shared<Bytes>("k3", pool), std::make_shared<Bytes>("3", pool));
-    writer->Write(std::make_shared<Bytes>("k4", pool), std::make_shared<Bytes>("4", pool));
-    writer->Write(std::make_shared<Bytes>("k5", pool), std::make_shared<Bytes>("5", pool));
+    auto writer = std::make_shared<SstFileWriter>(out, 50, pool_);
+    for (size_t i = 1; i <= 5; i++) {
+        std::string key = "k" + std::to_string(i);
+        std::string value = std::to_string(i);
+        writer->Write(std::make_shared<Bytes>(key, pool_.get()),
+                      std::make_shared<Bytes>(value, pool_.get()));
+    }
+    for (size_t i = 10; i <= 20; i++) {
+        std::string key = "k9" + std::to_string(i);
+        std::string value = "looooooooooong-值-" + std::to_string(i);
+        writer->Write(std::make_shared<Bytes>(key, pool_.get()),
+                      std::make_shared<Bytes>(value, pool_.get()));
+    }
+    ASSERT_OK(writer->Flush());
+
+    ASSERT_EQ(6, writer->IndexWriter()->Size());
+
     auto bloom_filter_handle = writer->WriteBloomFilter();
     ASSERT_OK(bloom_filter_handle);
     auto index_block_handle = writer->WriteIndexBlock();
     ASSERT_OK(index_block_handle);
-    ASSERT_OK(writer->Flush());
 
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(index_path));
+    ASSERT_OK(out->Flush());
+    ASSERT_OK(out->Close());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(index_path_));
     auto cache_manager = std::make_unique<CacheManager>();
-    auto block_cache = std::make_unique<BlockCache>(index_path, in, pool, cache_manager);
-    auto comparator = [](const std::string& a, const std::string& b) -> int32_t {
-        if (a == b) {
+    auto block_cache = std::make_unique<BlockCache>(index_path_, in, pool_, cache_manager);
+    auto comparator = [](const std::shared_ptr<MemorySlice>& a,
+                         const std::shared_ptr<MemorySlice>& b) -> int32_t {
+        std::string_view va = a->ReadStringView();
+        std::string_view vb = b->ReadStringView();
+        if (va == vb) {
             return 0;
         }
-        return a > b ? 1 : -1;
+        return va > vb ? 1 : -1;
     };
 
-    auto reader = std::make_shared<SstFileReader>(pool, block_cache, index_block_handle.value(),
-                                                  nullptr, comparator);
-    auto k1 = std::make_shared<Bytes>("k4", pool);
-    auto v1 = reader->Lookup(k1);
-    ASSERT_EQ(v1, std::make_shared<Bytes>("4", pool));
+    auto reader = std::make_shared<SstFileReader>(pool_, std::move(block_cache),
+                                                  index_block_handle.value(), nullptr, comparator);
+    std::string k0 = "k0";
+    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
 
-    auto k2 = std::make_shared<Bytes>("k44", pool);
-    auto v2 = reader->Lookup(k1);
-    ASSERT_EQ(v1.get(), nullptr);
+    std::string k4 = "k4";
+    auto v4 = reader->Lookup(std::make_shared<Bytes>(k4, pool_.get()));
+    ASSERT_TRUE(v4);
+    std::string string4{v4->data(), v4->size()};
+    ASSERT_EQ("4", string4);
 
-    fs->Delete(index_path);
+    std::string k55 = "k55";
+    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k55, pool_.get())));
+
+    std::string k915 = "k915";
+    auto v15 = reader->Lookup(std::make_shared<Bytes>(k915, pool_.get()));
+    ASSERT_TRUE(v15);
+    std::string string15{v15->data(), v15->size()};
+    ASSERT_EQ("looooooooooong-值-15", string15);
 }
 
 }  // namespace paimon::test
