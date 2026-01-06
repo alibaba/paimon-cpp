@@ -301,7 +301,7 @@ Result<std::string> FileStoreCommitImpl::GetLastCommitTableRequest() {
 Result<std::vector<ManifestEntry>> FileStoreCommitImpl::GetAllFiles(
     const Snapshot& snapshot, const std::vector<std::map<std::string, std::string>>& partitions) {
     auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/nullptr, partitions,
-                                                    /*bucket_filter=*/std::nullopt);
+                                                    /*bucket_filter=*/std::nullopt, /*vector_search=*/nullptr);
     PAIMON_ASSIGN_OR_RAISE(
         auto scan, AppendOnlyFileStoreScan::Create(
                        snapshot_manager_, schema_manager_, manifest_list_, manifest_file_,
@@ -447,7 +447,7 @@ Result<std::vector<ManifestEntry>> FileStoreCommitImpl::ReadAllEntriesFromChange
     std::vector<std::map<std::string, std::string>> partition_filters(partitions.begin(),
                                                                       partitions.end());
     auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/nullptr, partition_filters,
-                                                    /*bucket_filter=*/std::nullopt);
+                                                    /*bucket_filter=*/std::nullopt, /*vector_search=*/nullptr);
     PAIMON_ASSIGN_OR_RAISE(
         auto scan, AppendOnlyFileStoreScan::Create(
                        snapshot_manager_, schema_manager_, manifest_list_, manifest_file_,

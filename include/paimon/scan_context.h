@@ -25,6 +25,7 @@
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate.h"
+#include "paimon/predicate/vector_search.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
@@ -97,13 +98,18 @@ class PAIMON_EXPORT ScanFilter {
  public:
     ScanFilter(const std::shared_ptr<Predicate>& predicate,
                const std::vector<std::map<std::string, std::string>>& partition_filters,
-               const std::optional<int32_t>& bucket_filter)
+               const std::optional<int32_t>& bucket_filter,
+               const std::shared_ptr<VectorSearch>& vector_search)
         : predicates_(predicate),
+          vector_search_(vector_search),
           bucket_filter_(bucket_filter),
           partition_filters_(partition_filters) {}
 
     std::shared_ptr<Predicate> GetPredicate() const {
         return predicates_;
+    }
+    std::shared_ptr<VectorSearch> GetVectorSearch() const {
+        return vector_search_;
     }
     std::optional<int32_t> GetBucketFilter() const {
         return bucket_filter_;
@@ -114,6 +120,7 @@ class PAIMON_EXPORT ScanFilter {
 
  private:
     std::shared_ptr<Predicate> predicates_;
+    std::shared_ptr<VectorSearch> vector_search_;
     std::optional<int32_t> bucket_filter_;
     std::vector<std::map<std::string, std::string>> partition_filters_;
 };
@@ -141,6 +148,9 @@ class PAIMON_EXPORT ScanContextBuilder {
     /// data retrieval.
     ScanContextBuilder& SetGlobalIndexResult(
         const std::shared_ptr<GlobalIndexResult>& global_index_result);
+
+    /// Set vector search for similarity search.
+    ScanContextBuilder& SetVectorSearch(const std::shared_ptr<VectorSearch>& vector_search);
     /// The options added or set in `ScanContextBuilder` have high priority and will be merged with
     /// the options in table schema.
     ScanContextBuilder& AddOption(const std::string& key, const std::string& value);

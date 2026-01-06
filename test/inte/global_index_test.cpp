@@ -25,7 +25,7 @@
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/global_index/bitmap_topk_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/global_index_scan.h"
 #include "paimon/global_index/global_index_write_task.h"
 #include "paimon/predicate/literal.h"
@@ -141,11 +141,14 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
 
     Result<std::shared_ptr<Plan>> ScanGlobalIndexAndData(
         const std::string& table_path, const std::shared_ptr<Predicate>& predicate,
+        const std::shared_ptr<VectorSearch>& vector_search = nullptr,
         const std::map<std::string, std::string>& options = {},
         const std::shared_ptr<GlobalIndexResult>& index_result = nullptr) const {
         ScanContextBuilder scan_context_builder(table_path);
-        scan_context_builder.SetPredicate(predicate).SetOptions(options).SetGlobalIndexResult(
-            index_result);
+        scan_context_builder.SetPredicate(predicate)
+            .SetVectorSearch(vector_search)
+            .SetOptions(options)
+            .SetGlobalIndexResult(index_result);
         PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
@@ -153,8 +156,8 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
     }
 
     Result<std::shared_ptr<Plan>> ScanDataWithIndexResult(
-        const std::string& table_path, const std::shared_ptr<Predicate>& predicate,
-        const std::vector<Range>& row_ranges, const std::map<int64_t, float>& id_to_score) const {
+        const std::string& table_path, const std::vector<Range>& row_ranges,
+        const std::map<int64_t, float>& id_to_score) const {
         std::shared_ptr<GlobalIndexResult> index_result;
         if (id_to_score.empty()) {
             index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
@@ -167,10 +170,11 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
             for (auto iter = bitmap.Begin(); iter != bitmap.End(); ++iter) {
                 scores.push_back(id_to_score.at(*iter));
             }
-            index_result =
-                std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));
+            index_result = std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                                 std::move(scores));
         }
-        return ScanGlobalIndexAndData(table_path, predicate, /*options=*/{}, index_result);
+        return ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, /*vector_search=*/nullptr,
+                                      /*options=*/{}, index_result);
     }
 
     Status ReadData(const std::string& table_path, const std::vector<std::string>& read_schema,
@@ -435,7 +439,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
     ASSERT_OK_AND_ASSIGN(auto evaluator, scanner_impl->CreateIndexEvaluator());
     {
         // test with non predicate
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(nullptr));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(/*predicate=*/nullptr, /*vector_search=*/nullptr));
         ASSERT_FALSE(index_result);
     }
     {
@@ -443,7 +448,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,7}");
     }
     {
@@ -451,35 +457,40 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{1,2,3,4,5,6}");
     }
     {
         // test equal predicate for f1
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(20));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{4,6,7}");
     }
     {
         // test equal predicate for f2
         auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                  FieldType::INT, Literal(1));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,4,5}");
     }
     {
         // test is null predicate
         auto predicate =
             PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{7}");
     }
     {
         // test is not null predicate
         auto predicate =
             PredicateBuilder::IsNotNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6}");
     }
     {
@@ -488,7 +499,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
             {Literal(FieldType::STRING, "Alice", 5), Literal(FieldType::STRING, "Bob", 3),
              Literal(FieldType::STRING, "Lucy", 4)});
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,4,5,7}");
     }
     {
@@ -497,7 +509,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
             {Literal(FieldType::STRING, "Alice", 5), Literal(FieldType::STRING, "Bob", 3),
              Literal(FieldType::STRING, "Lucy", 4)});
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{2,3,6}");
     }
     {
@@ -508,7 +521,8 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{7}");
     }
     {
@@ -519,14 +533,16 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,4,6,7}");
     }
     {
         // test non-result
         auto predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                  FieldType::INT, Literal(30));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{}");
     }
     {
@@ -541,42 +557,48 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 
         ASSERT_OK_AND_ASSIGN(auto predicate,
                              PredicateBuilder::And({f1_predicate, f2_predicate, f0_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{}");
     }
     {
         // test greater than predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
                                                        FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
     }
     {
         // test greater or equal predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/1, /*field_name=*/"f1",
                                                           FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
     }
     {
         // test less than predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
     }
     {
         // test less or equal predicate which bitmap index is not support, will return all range
         auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/1, /*field_name=*/"f1",
                                                        FieldType::INT, Literal(10));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
     }
     {
         // test a predicate for field with no index
         auto f3_predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
                                                     FieldType::DOUBLE, Literal(1.2));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(f3_predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(f3_predicate, /*vector_search=*/nullptr));
         ASSERT_FALSE(index_result);
     }
 }
@@ -618,7 +640,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(index_result.value()->ToString(), "{0,7}");
     }
     {
@@ -629,7 +652,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
         auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
                                                     FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f0_predicate, f1_predicate}));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_FALSE(index_result);
     }
 }
@@ -661,7 +685,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
     auto predicate =
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Alice", 5));
-    ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+    ASSERT_OK_AND_ASSIGN(auto index_result,
+                         evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
     ASSERT_FALSE(index_result);
 }
 
@@ -702,7 +727,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto evaluator_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto evaluator_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_EQ(evaluator_result.value()->ToString(), "{1,2,3,4,5,6}");
     }
     {
@@ -719,7 +745,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
         auto predicate =
             PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                        Literal(FieldType::STRING, "Alice", 5));
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_FALSE(index_result);
     }
 }
@@ -760,7 +787,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                 auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
                                                          FieldType::INT, Literal(1));
 
-                ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+                ASSERT_OK_AND_ASSIGN(auto index_result,
+                                     evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
                 ASSERT_FALSE(index_result);
             }
             {
@@ -768,7 +796,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                 auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
                                                             FieldType::STRING,
                                                             Literal(FieldType::STRING, "Bob", 3));
-                ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+                ASSERT_OK_AND_ASSIGN(auto index_result,
+                                     evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
                 ASSERT_EQ(index_result.value()->ToString(), "{0,2,3}");
             }
             {
@@ -776,7 +805,8 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                 auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
                                                          FieldType::STRING,
                                                          Literal(FieldType::STRING, "Alice", 5));
-                ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+                ASSERT_OK_AND_ASSIGN(auto index_result,
+                                     evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
                 ASSERT_EQ(index_result.value()->ToString(), "{0}");
             }
         };
@@ -813,7 +843,8 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
         PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                    Literal(FieldType::STRING, "Bob", 3));
 
-    ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+    ASSERT_OK_AND_ASSIGN(auto index_result,
+                         evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
     ASSERT_FALSE(index_result);
 }
 
@@ -914,9 +945,8 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     write_data_and_index(src_array2, {{"f2", "20"}}, Range(4, 8));
 
     auto scan_and_check_result = [&](const std::map<std::string, std::string>& partition,
-                                     const Range& expected_range,
-                                     GlobalIndexReader::TopKPreFilter filter, int32_t k,
-                                     const std::string& bitmap_result,
+                                     const Range& expected_range, VectorSearch::PreFilter filter,
+                                     int32_t limit, const std::string& bitmap_result,
                                      const std::string& lumina_result,
                                      const std::vector<Range>& read_row_ranges,
                                      const std::shared_ptr<arrow::Array>& expected_array,
@@ -946,7 +976,8 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                     Literal(FieldType::STRING, "Paul", 4));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({predicate1, predicate2}));
 
-        ASSERT_OK_AND_ASSIGN(auto index_result, evaluator->Evaluate(predicate));
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_TRUE(index_result);
         ASSERT_EQ(index_result.value()->ToString(), bitmap_result);
 
@@ -954,15 +985,26 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         ASSERT_OK_AND_ASSIGN(auto lumina_reader, range_scanner->CreateReader("f1", "lumina"));
 
         std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
-        ASSERT_OK_AND_ASSIGN(auto topk_result, lumina_reader->VisitTopK(k, query, filter,
-                                                                        /*predicate*/ nullptr));
-        ASSERT_EQ(topk_result->ToString(), lumina_result);
+        auto vector_search = std::make_shared<VectorSearch>("f1", limit, query, filter,
+                                                            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             lumina_reader->VisitVectorSearch(vector_search));
+        ASSERT_EQ(vector_search_result->ToString(), lumina_result);
+
+        // check evaluate predicate and vector search
+        vector_search->pre_filter = nullptr;
+        ASSERT_OK_AND_ASSIGN(auto compound_index_result,
+                             evaluator->Evaluate(predicate, vector_search));
+        ASSERT_TRUE(compound_index_result);
+        ASSERT_EQ(compound_index_result.value()->ToString(), lumina_result);
 
         // check read array
         std::vector<std::string> read_field_names = schema->field_names();
         read_field_names.push_back("_INDEX_SCORE");
-        ASSERT_OK_AND_ASSIGN(auto result_with_offset, topk_result->AddOffset(expected_range.from));
+        ASSERT_OK_AND_ASSIGN(auto result_with_offset,
+                             compound_index_result.value()->AddOffset(expected_range.from));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
+                                                               /*vector_search=*/nullptr,
                                                                /*options=*/{}, result_with_offset));
         ASSERT_OK(ReadData(table_path, read_field_names, expected_array,
                            /*predicate=*/nullptr, plan));
@@ -983,7 +1025,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 [0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21]
     ])")
                 .ValueOrDie();
-        scan_and_check_result({{"f2", "10"}}, Range(0, 3), filter, /*k=*/2, "{0}",
+        scan_and_check_result({{"f2", "10"}}, Range(0, 3), filter, /*limit=*/2, "{0}",
                               "row ids: {0}, scores: {4.21}", {Range(0, 0)}, expected_array,
                               id_to_score1);
     }
@@ -995,7 +1037,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
 [0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1, 322.21]
     ])")
                 .ValueOrDie();
-        scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter, /*k=*/1, "{3,4}",
+        scan_and_check_result({{"f2", "20"}}, Range(4, 8), filter, /*limit=*/1, "{3,4}",
                               "row ids: {4}, scores: {322.21}", {Range(4, 4)}, expected_array,
                               id_to_score2);
     }
@@ -1066,8 +1108,8 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
         // check read array
         std::vector<std::string> read_field_names = schema->field_names();
         read_field_names.push_back("_INDEX_SCORE");
-        ASSERT_OK_AND_ASSIGN(auto plan, ScanDataWithIndexResult(table_path, /*predicate=*/nullptr,
-                                                                read_row_ranges, id_to_score));
+        ASSERT_OK_AND_ASSIGN(auto plan,
+                             ScanDataWithIndexResult(table_path, read_row_ranges, id_to_score));
         ASSERT_OK(ReadData(table_path, read_field_names, expected_array,
                            /*predicate=*/nullptr, plan));
     };
@@ -1236,9 +1278,209 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(
-            auto plan,
-            ScanGlobalIndexAndData(table_path, predicate, {{"global-index.enabled", "false"}}));
+            auto plan, ScanGlobalIndexAndData(table_path, predicate, /*vector_search=*/nullptr,
+                                              {{"global-index.enabled", "false"}}));
         ASSERT_OK(ReadData(table_path, write_cols, expected_all_array, predicate, plan));
+    }
+}
+
+TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.dimension", "4"},
+        {"lumina.indextype", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "encoding.rawf32"},
+        {"lumina.search.threadcount", "10"}};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1],
+["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
+["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
+["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
+["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
+["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    auto result_fields = fields;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    {
+        // read when no index is built
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+[0, "Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+[0, "Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+[0, "Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1],
+[0, "Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
+[0, "Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
+[0, "Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
+[0, "Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+
+    // write and commit bitmap global index
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap", /*options=*/{},
+                         Range(0, 8)));
+
+    auto read_cols = write_cols;
+    read_cols.push_back("_INDEX_SCORE");
+    result_fields.insert(result_fields.end(), SpecialFields::IndexScore().ArrowField());
+    {
+        // read when only bitmap index is built
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, null],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1, null]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, predicate, plan));
+    }
+
+    // write and commit lumina global index
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                         /*options=*/lumina_options, Range(0, 8)));
+
+    // scan and read with global index
+    {
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, predicate, plan));
+    }
+    {
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21],
+[0, "Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1, 398.01]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, predicate, plan));
+    }
+    {
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Bob", 3));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1, 2.01],
+[0, "Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1, 360.01]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, predicate, plan));
+    }
+    {
+        // test only has vector search with pre_filter
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
+            /*filter=*/[](int64_t row_id) { return row_id == 1 || row_id == 5; },
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1, 2.01],
+[0, "Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1, 360.01]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, /*predicate=*/nullptr, plan));
+    }
+    {
+        // test only has vector search with no pre_filter
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/2, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
+            /*filter=*/nullptr,
+            /*predicate=*/nullptr);
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, vector_search,
+                                                               lumina_options));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1, 2.01], 
+[0, "Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1, 0.01]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, read_cols, expected_array, /*predicate=*/nullptr, plan));
+    }
+    {
+        // test invalid vector search
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Bob", 3));
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
+            /*filter=*/[](int64_t row_id) { return true; },
+            /*predicate=*/nullptr);
+        ASSERT_NOK_WITH_MSG(
+            ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_options),
+            "Predicate result and pre_filter in VectorSearch conflict");
     }
 }
 
@@ -1738,9 +1980,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f1"));
     ASSERT_EQ(index_readers.size(), 1);
     std::vector<float> query = {11.0f, 11.0f, 11.0f, 11.0f};
-    ASSERT_OK_AND_ASSIGN(auto topk_result, index_readers[0]->VisitTopK(1, query, /*filter=*/nullptr,
-                                                                       /*predicate*/ nullptr));
-    ASSERT_EQ(topk_result->ToString(), "row ids: {7}, scores: {0.00}");
+    ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                         index_readers[0]->VisitVectorSearch(
+                             std::make_shared<VectorSearch>("f1", 1, query, /*filter=*/nullptr,
+                                                            /*predicate*/ nullptr)));
+    ASSERT_EQ(vector_search_result->ToString(), "row ids: {7}, scores: {0.00}");
 
     // query f2
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f2"));
@@ -1760,7 +2004,7 @@ TEST_P(GlobalIndexTest, TestIOException) {
     auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
 ["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
-["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Alice", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
 ["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1]
     ])")
                          .ValueOrDie();
@@ -1804,55 +2048,36 @@ TEST_P(GlobalIndexTest, TestIOException) {
     }
     ASSERT_TRUE(write_run_complete);
 
-    // read for bitmap
+    // read for bitmap and lumina
     bool read_run_complete = false;
     for (size_t i = 0; i < 2000; i += paimon::test::RandomNumber(20, 30)) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+
+        auto result_fields = fields;
+        result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+        result_fields.insert(result_fields.end(), SpecialFields::IndexScore().ArrowField());
+        auto read_cols = write_cols;
+        read_cols.push_back("_INDEX_SCORE");
+
         auto predicate =
             PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        auto result_fields = fields;
-        result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+            /*predicate*/ nullptr);
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
-[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1]
+[0, "Alice", [1.0, 0.0, 1.0, 0.0], 10, 13.1, 2.21]
     ])")
                 .ValueOrDie();
 
-        auto plan_result = ScanGlobalIndexAndData(table_path, predicate);
-        CHECK_HOOK_STATUS(plan_result.status(), i);
+        auto plan_result =
+            ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_options);
+        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(plan_result.status());
         auto plan = std::move(plan_result).value();
-        auto read_status = ReadData(table_path, write_cols, expected_array, predicate, plan);
+        auto read_status = ReadData(table_path, read_cols, expected_array, predicate, plan);
         CHECK_HOOK_STATUS(read_status, i);
-        read_run_complete = true;
-        break;
-    }
-    ASSERT_TRUE(read_run_complete);
-
-    // read for lumina
-    read_run_complete = false;
-    for (size_t i = 0; i < 2000; i += paimon::test::RandomNumber(20, 30)) {
-        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
-        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
-        auto global_index_scan_result =
-            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                    /*partitions=*/std::nullopt, lumina_options,
-                                    /*file_system=*/nullptr, pool_);
-        CHECK_HOOK_STATUS(global_index_scan_result.status(), i);
-        auto global_index_scan = std::move(global_index_scan_result).value();
-        auto range_scanner_result = global_index_scan->CreateRangeScan(Range(0, 3));
-        CHECK_HOOK_STATUS(range_scanner_result.status(), i);
-        auto range_scanner = std::move(range_scanner_result).value();
-        auto lumina_reader_result = range_scanner->CreateReader("f1", "lumina");
-        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(lumina_reader_result.status());
-        auto lumina_reader = std::move(lumina_reader_result).value();
-
-        std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
-        auto topk_result = lumina_reader->VisitTopK(1, query, /*filter=*/nullptr,
-                                                    /*predicate*/ nullptr);
-        CHECK_HOOK_STATUS_WITHOUT_MESSAGE_CHECK(topk_result.status());
-        ASSERT_EQ(topk_result.value()->ToString(), "row ids: {3}, scores: {0.01}");
         read_run_complete = true;
         break;
     }

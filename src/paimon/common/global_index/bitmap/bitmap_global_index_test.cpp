@@ -216,9 +216,10 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
         // result
         CheckResult(reader->VisitGreaterThan(lit_c).value(), {0, 1, 2, 3, 4});
 
-        // test visit topk
-        ASSERT_NOK_WITH_MSG(reader->VisitTopK(10, {1.0f, 2.0f}, nullptr, nullptr),
-                            "FileIndexReaderWrapper is not supposed to handle topk query");
+        // test visit vector search
+        ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr)),
+                            "FileIndexReaderWrapper is not supposed to handle vector search query");
     };
 
     {

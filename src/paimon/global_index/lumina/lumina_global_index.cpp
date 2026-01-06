@@ -28,7 +28,7 @@
 #include "lumina/core/Types.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/string_utils.h"
-#include "paimon/global_index/bitmap_topk_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/lumina/lumina_file_reader.h"
 #include "paimon/global_index/lumina/lumina_file_writer.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
@@ -281,29 +281,29 @@ LuminaIndexReader::LuminaIndexReader(
       searcher_(std::move(searcher)),
       searcher_with_filter_(std::move(searcher_with_filter)) {}
 
-Result<std::shared_ptr<TopKGlobalIndexResult>> LuminaIndexReader::VisitTopK(
-    int32_t k, const std::vector<float>& query, TopKPreFilter filter,
-    const std::shared_ptr<Predicate>& predicate) {
-    if (predicate) {
-        return Status::NotImplemented("lumina index not support predicate in VisitTopK");
+Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitVectorSearch(
+    const std::shared_ptr<VectorSearch>& vector_search) {
+    if (vector_search->predicate) {
+        return Status::NotImplemented("lumina index not support predicate in VisitVectorSearch");
     }
     auto search_options = search_options_;
-    search_options.Set(::lumina::core::kTopK, k);
+    search_options.Set(::lumina::core::kTopK, vector_search->limit);
 
-    ::lumina::api::Query lumina_query(query.data(), query.size());
+    ::lumina::api::Query lumina_query(vector_search->query.data(), vector_search->query.size());
     ::lumina::api::LuminaSearcher::SearchResult search_result;
-    if (!filter) {
+    if (!vector_search->pre_filter) {
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(search_result,
                                            searcher_->Search(lumina_query, search_options, *pool_));
     } else {
         search_options.Set(::lumina::core::kSearchThreadSafeFilter, true);
-        auto lumina_filter = [filter](::lumina::core::VectorId id) -> bool { return filter(id); };
+        auto lumina_filter = [filter = vector_search->pre_filter](
+                                 ::lumina::core::VectorId id) -> bool { return filter(id); };
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
             search_result, searcher_with_filter_->SearchWithFilter(lumina_query, lumina_filter,
                                                                    search_options, *pool_));
     }
 
-    // prepare BitmapTopKGlobalIndexResult
+    // prepare BitmapVectorSearchGlobalIndexResult
     std::map<int64_t, float> id_to_score;
     for (const auto& [id, score] : search_result.topk) {
         id_to_score[id] = score;
@@ -316,7 +316,8 @@ Result<std::shared_ptr<TopKGlobalIndexResult>> LuminaIndexReader::VisitTopK(
         bitmap.Add(id);
         scores.push_back(score);
     }
-    return std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));
+    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                 std::move(scores));
 }
 
 }  // namespace paimon::lumina

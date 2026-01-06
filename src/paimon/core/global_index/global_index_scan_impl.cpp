@@ -143,7 +143,7 @@ Status GlobalIndexScanImpl::Scan() {
 
 Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::ParallelScan(
     const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
-    const std::shared_ptr<Executor>& executor) {
+    const std::shared_ptr<VectorSearch>& vector_search, const std::shared_ptr<Executor>& executor) {
     std::vector<std::shared_ptr<RowRangeGlobalIndexScannerImpl>> range_scanners;
     range_scanners.reserve(ranges.size());
     for (const auto& range : ranges) {
@@ -163,12 +163,12 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::P
         const auto& scanner = range_scanners[i];
         const auto& range = ranges[i];
         auto search_index =
-            [&scanner, &predicate,
+            [&scanner, &predicate, &vector_search,
              &range]() -> Result<std::optional<std::shared_ptr<GlobalIndexResult>>> {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
                                    scanner->CreateIndexEvaluator());
             PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
-                                   evaluator->Evaluate(predicate));
+                                   evaluator->Evaluate(predicate, vector_search));
             if (!index_result) {
                 return index_result;
             }
@@ -196,17 +196,16 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::P
     }
 
     // union result from multiple ranges
-    std::shared_ptr<GlobalIndexResult> final_global_index_result =
-        BitmapGlobalIndexResult::FromRanges({});
+    std::optional<std::shared_ptr<GlobalIndexResult>> final_global_index_result;
 
     for (size_t i = 0; i < results.size(); ++i) {
-        if (results[i]) {
-            PAIMON_ASSIGN_OR_RAISE(final_global_index_result,
-                                   final_global_index_result->Or(results[i].value()));
+        std::shared_ptr<GlobalIndexResult> result =
+            results[i] ? results[i].value() : BitmapGlobalIndexResult::FromRanges({ranges[i]});
+        if (!final_global_index_result) {
+            final_global_index_result = result;
         } else {
-            PAIMON_ASSIGN_OR_RAISE(
-                final_global_index_result,
-                final_global_index_result->Or(BitmapGlobalIndexResult::FromRanges({ranges[i]})));
+            PAIMON_ASSIGN_OR_RAISE(final_global_index_result,
+                                   final_global_index_result.value()->Or(result));
         }
     }
     return std::optional<std::shared_ptr<GlobalIndexResult>>(final_global_index_result);

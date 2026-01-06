@@ -26,13 +26,15 @@ namespace paimon {
 DataEvolutionBatchScan::DataEvolutionBatchScan(
     const std::string& table_path, const std::shared_ptr<SnapshotReader>& snapshot_reader,
     std::unique_ptr<DataTableBatchScan>&& batch_scan,
-    const std::shared_ptr<GlobalIndexResult>& global_index_result, const CoreOptions& core_options,
+    const std::shared_ptr<GlobalIndexResult>& global_index_result,
+    const std::shared_ptr<VectorSearch>& vector_search, const CoreOptions& core_options,
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<Executor>& executor)
     : AbstractTableScan(core_options, snapshot_reader),
       pool_(pool),
       table_path_(table_path),
       batch_scan_(std::move(batch_scan)),
       global_index_result_(global_index_result),
+      vector_search_(vector_search),
       executor_(executor) {}
 
 Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
@@ -54,12 +56,13 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     batch_scan_->WithRowRanges(row_ranges.value());
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> data_plan, batch_scan_->CreatePlan());
     std::map<int64_t, float> id_to_score;
-    if (auto topk_result =
-            std::dynamic_pointer_cast<TopKGlobalIndexResult>(final_global_index_result)) {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TopKGlobalIndexResult::TopKIterator> topk_iter,
-                               topk_result->CreateTopKIterator());
-        while (topk_iter->HasNext()) {
-            auto [id, score] = topk_iter->NextWithScore();
+    if (auto vector_search_result =
+            std::dynamic_pointer_cast<VectorSearchGlobalIndexResult>(final_global_index_result)) {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<VectorSearchGlobalIndexResult::VectorSearchIterator> vector_search_iter,
+            vector_search_result->CreateVectorSearchIterator());
+        while (vector_search_iter->HasNext()) {
+            auto [id, score] = vector_search_iter->NextWithScore();
             id_to_score[id] = score;
         }
     }
@@ -108,7 +111,7 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
 Result<std::optional<std::shared_ptr<GlobalIndexResult>>> DataEvolutionBatchScan::EvalGlobalIndex()
     const {
     auto predicate = batch_scan_->GetNonPartitionPredicate();
-    if (!predicate) {
+    if (!predicate && !vector_search_) {
         return std::optional<std::shared_ptr<GlobalIndexResult>>();
     }
     if (!core_options_.GlobalIndexEnabled()) {
@@ -136,8 +139,9 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> DataEvolutionBatchScan
 
     std::vector<Range> non_indexed_row_ranges =
         Range(0, next_row_id.value() - 1).Exclude(indexed_row_ranges);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
-                           index_scan_impl->ParallelScan(indexed_row_ranges, predicate, executor_));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
+        index_scan_impl->ParallelScan(indexed_row_ranges, predicate, vector_search_, executor_));
     if (!index_result) {
         return std::optional<std::shared_ptr<GlobalIndexResult>>();
     }

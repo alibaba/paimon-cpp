@@ -28,7 +28,7 @@
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/global_index/bitmap_topk_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/testing/utils/testharness.h"
@@ -93,10 +93,10 @@ class LuminaGlobalIndexTest : public ::testing::Test {
         return result_metas[0];
     }
 
-    void CheckResult(const std::shared_ptr<TopKGlobalIndexResult>& result,
+    void CheckResult(const std::shared_ptr<VectorSearchGlobalIndexResult>& result,
                      const std::vector<int64_t>& expected_ids,
                      const std::vector<float>& expected_scores) const {
-        auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result);
         ASSERT_TRUE(typed_result);
         ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
         ASSERT_TRUE(bitmap);
@@ -188,17 +188,19 @@ TEST_F(LuminaGlobalIndexTest, TestSimple) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
     {
         // recall all data
-        ASSERT_OK_AND_ASSIGN(auto topk_result,
-                             reader->VisitTopK(/*k=*/4, query_, /*filter=*/nullptr,
-                                               /*predicate*/ nullptr));
-        CheckResult(topk_result, {3l, 1l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr,
+                                 /*predicate*/ nullptr)));
+        CheckResult(vector_search_result, {3l, 1l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
     }
     {
-        // small topk
-        ASSERT_OK_AND_ASSIGN(auto topk_result,
-                             reader->VisitTopK(/*k=*/3, query_, /*filter=*/nullptr,
-                                               /*predicate*/ nullptr));
-        CheckResult(topk_result, {3l, 1l, 2l}, {0.01f, 2.01f, 2.21f});
+        // small limit
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/3, query_, /*filter=*/nullptr,
+                                 /*predicate*/ nullptr)));
+        CheckResult(vector_search_result, {3l, 1l, 2l}, {0.01f, 2.01f, 2.21f});
     }
     {
         // visit equal will return all rows
@@ -217,22 +219,27 @@ TEST_F(LuminaGlobalIndexTest, TestWithFilter) {
     ASSERT_OK_AND_ASSIGN(auto reader,
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
     {
-        ASSERT_OK_AND_ASSIGN(auto topk_result,
-                             reader->VisitTopK(/*k=*/2, query_, /*filter=*/nullptr,
-                                               /*predicate*/ nullptr));
-        CheckResult(topk_result, {3l, 1l}, {0.01f, 2.01f});
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/2, query_, /*filter=*/nullptr,
+                                 /*predicate*/ nullptr)));
+        CheckResult(vector_search_result, {3l, 1l}, {0.01f, 2.01f});
     }
     {
         auto filter = [](int64_t id) -> bool { return id < 3; };
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/2, query_, filter,
-                                                                 /*predicate*/ nullptr));
-        CheckResult(topk_result, {1l, 2l}, {2.01f, 2.21f});
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/2, query_, filter,
+                                 /*predicate*/ nullptr)));
+        CheckResult(vector_search_result, {1l, 2l}, {2.01f, 2.21f});
     }
     {
         auto filter = [](int64_t id) -> bool { return id < 3; };
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(/*k=*/4, query_, filter,
-                                                                 /*predicate*/ nullptr));
-        CheckResult(topk_result, {1l, 2l, 0l}, {2.01f, 2.21f, 4.21f});
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                 /*field_name=*/"f0", /*limit=*/4, query_, filter,
+                                 /*predicate*/ nullptr)));
+        CheckResult(vector_search_result, {1l, 2l, 0l}, {2.01f, 2.21f, 4.21f});
     }
 }
 
@@ -374,11 +381,13 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         {
             ASSERT_OK_AND_ASSIGN(auto reader,
                                  CreateGlobalIndexReader(index_root, data_type_, options_, meta));
-            ASSERT_NOK_WITH_MSG(
-                reader->VisitTopK(/*k=*/2, query_, /*filter=*/nullptr,
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f01",
-                                                          FieldType::BIGINT, Literal(5l))),
-                "lumina index not support predicate in VisitTopK");
+            ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(
+                std::make_shared<VectorSearch>(
+                    "f1",
+                    /*limit=*/2, query_, /*filter=*/nullptr,
+                    PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f01",
+                                            FieldType::BIGINT, Literal(5l)))),
+                "lumina index not support predicate in VisitVectorSearch");
         }
     }
 }
@@ -397,20 +406,26 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
 
     auto search_with_filter = [&]() {
-        int32_t k = paimon::test::RandomNumber(0, 99);
+        int32_t limit = paimon::test::RandomNumber(0, 99);
         auto filter = [](int64_t id) -> bool { return id % 2; };
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(k, query_, filter,
-                                                                 /*predicate*/ nullptr));
-        auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(topk_result);
+        ASSERT_OK_AND_ASSIGN(
+            auto vector_search_result,
+            reader->VisitVectorSearch(std::make_shared<VectorSearch>("f0", limit, query_, filter,
+                                                                     /*predicate*/ nullptr)));
+        auto typed_result =
+            std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(vector_search_result);
         ASSERT_TRUE(typed_result);
-        ASSERT_EQ(typed_result->bitmap_.Cardinality(), k);
+        ASSERT_EQ(typed_result->bitmap_.Cardinality(), limit);
     };
 
     auto search = [&]() {
         int32_t k = paimon::test::RandomNumber(0, 99);
-        ASSERT_OK_AND_ASSIGN(auto topk_result, reader->VisitTopK(k, query_, /*filter=*/nullptr,
-                                                                 /*predicate*/ nullptr));
-        auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(topk_result);
+        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
+                             reader->VisitVectorSearch(
+                                 std::make_shared<VectorSearch>("f0", k, query_, /*filter=*/nullptr,
+                                                                /*predicate*/ nullptr)));
+        auto typed_result =
+            std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(vector_search_result);
         ASSERT_TRUE(typed_result);
         ASSERT_EQ(typed_result->bitmap_.Cardinality(), k);
     };
