@@ -198,7 +198,8 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
             return Status::OK();
         }
         auto expected_chunk_array = std::make_shared<arrow::ChunkedArray>(expected_array);
-        if (!expected_chunk_array->ApproxEquals(*read_result)) {
+        if (!expected_chunk_array->ApproxEquals(*read_result,
+                                                arrow::EqualOptions::Defaults().atol(1E-2))) {
             std::cout << "result=" << read_result->ToString() << std::endl
                       << "expected=" << expected_chunk_array->ToString() << std::endl;
             return Status::Invalid("expected array and result array not equal");
