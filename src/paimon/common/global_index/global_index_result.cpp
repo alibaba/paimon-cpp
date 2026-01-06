@@ -90,8 +90,10 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> GlobalIndexResult::Serialize(
         PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, bitmap_result->GetBitmap());
         WriteBitmapAndScores(bitmap, {}, &out, pool.get());
     } else if (auto bitmap_vector_search_result =
-                   std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(global_index_result)) {
-        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, bitmap_vector_search_result->GetBitmap());
+                   std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(
+                       global_index_result)) {
+        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap,
+                               bitmap_vector_search_result->GetBitmap());
         const auto& scores = bitmap_vector_search_result->GetScores();
         WriteBitmapAndScores(bitmap, scores, &out, pool.get());
     } else {
@@ -130,7 +132,8 @@ Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexResult::Deserialize(
         PAIMON_ASSIGN_OR_RAISE(float score, in.ReadValue<float>());
         scores.push_back(score);
     }
-    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap), std::move(scores));
+    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                 std::move(scores));
 }
 
 Result<std::vector<Range>> GlobalIndexResult::ToRanges() const {

@@ -36,7 +36,7 @@ namespace paimon {
 /// ids** that start from 0 — not global row ids in the entire table.
 /// The `GlobalIndexResult` can be converted to global row ids by calling `AddOffset()`.
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
- public:   
+ public:
     /// VisitVectorSearch performs approximate vector similarity search.
     /// @note `VisitVectorSearch` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
     /// thread-safe.

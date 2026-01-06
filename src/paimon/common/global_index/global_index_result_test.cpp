@@ -127,7 +127,8 @@ TEST_F(GlobalIndexResultTest, TestSerializeAndDeserializeWithScore) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> index_result,
                          GlobalIndexResult::Deserialize(reinterpret_cast<char*>(byte_buffer.data()),
                                                         byte_buffer.size(), pool));
-    auto typed_result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(index_result);
+    auto typed_result =
+        std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(index_result);
     ASSERT_TRUE(typed_result);
 
     auto bitmap = RoaringBitmap64::From(

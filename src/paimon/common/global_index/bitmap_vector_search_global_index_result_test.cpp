@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+
 #include "gtest/gtest.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/roaring_bitmap32.h"
 namespace paimon::test {

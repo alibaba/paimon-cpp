@@ -381,13 +381,12 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         {
             ASSERT_OK_AND_ASSIGN(auto reader,
                                  CreateGlobalIndexReader(index_root, data_type_, options_, meta));
-            ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(
-                std::make_shared<VectorSearch>(
-                    "f1",
-                    /*limit=*/2, query_, /*filter=*/nullptr,
-                    PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f01",
-                                            FieldType::BIGINT, Literal(5l)))),
-                "lumina index not support predicate in VisitVectorSearch");
+            ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(std::make_shared<VectorSearch>(
+                                    "f1",
+                                    /*limit=*/2, query_, /*filter=*/nullptr,
+                                    PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f01",
+                                                            FieldType::BIGINT, Literal(5l)))),
+                                "lumina index not support predicate in VisitVectorSearch");
         }
     }
 }

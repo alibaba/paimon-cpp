@@ -50,6 +50,8 @@ class PAIMON_EXPORT TableRead {
     /// @param splits A vector of shared pointers to `Split` instances representing the
     ///                    data to be read.
     /// @return A Result containing a unique pointer to the `BatchReader` instance.
+    /// @note `BatchReader`s created by the same `TableRead` are not thread-safe for
+    /// concurrent reading.
     virtual Result<std::unique_ptr<BatchReader>> CreateReader(
         const std::vector<std::shared_ptr<Split>>& splits);
 

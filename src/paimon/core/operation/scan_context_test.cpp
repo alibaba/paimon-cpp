@@ -50,8 +50,7 @@ TEST(ScanContextTest, TestSetFilter) {
     builder.SetPredicate(predicate);
     std::vector<float> query = {1.0, 2.0};
     VectorSearch::PreFilter pre_filter = [](int64_t id) -> bool { return id % 2; };
-    builder.SetVectorSearch(
-        std::make_shared<VectorSearch>("f0", 10, query, pre_filter, nullptr));
+    builder.SetVectorSearch(std::make_shared<VectorSearch>("f0", 10, query, pre_filter, nullptr));
     std::vector<Range> row_ranges = {Range(1, 2), Range(4, 5)};
     auto global_index_result = BitmapGlobalIndexResult::FromRanges(row_ranges);
     builder.SetGlobalIndexResult(global_index_result);

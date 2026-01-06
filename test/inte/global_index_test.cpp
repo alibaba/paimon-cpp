@@ -1441,8 +1441,8 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
             "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
             /*filter=*/[](int64_t row_id) { return row_id == 1 || row_id == 5; },
             /*predicate=*/nullptr);
-        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, vector_search,
-                                                               lumina_options));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
+                                                               vector_search, lumina_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1458,8 +1458,8 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
             "f1", /*limit=*/2, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
             /*filter=*/nullptr,
             /*predicate=*/nullptr);
-        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, vector_search,
-                                                               lumina_options));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
+                                                               vector_search, lumina_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
