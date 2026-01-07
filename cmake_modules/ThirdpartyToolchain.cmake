@@ -250,7 +250,8 @@ macro(build_fmt)
 
     set(FMT_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${FMT_PREFIX}
-        "-DCMAKE_CXX_FLAGS=${FMT_CMAKE_CXX_FLAGS}" "-DCMAKE_C_FLAGS=${FMT_CMAKE_C_FLAGS}")
+        "-DCMAKE_CXX_FLAGS=${FMT_CMAKE_CXX_FLAGS}" "-DCMAKE_C_FLAGS=${FMT_CMAKE_C_FLAGS}"
+        -DFMT_TEST=OFF -DFMT_DOC=OFF)
     set(FMT_CONFIGURE CMAKE_ARGS ${FMT_CMAKE_ARGS})
     externalproject_add(fmt_ep
                         URL ${FMT_SOURCE_URL}
@@ -363,7 +364,7 @@ macro(build_lz4)
         "${LZ4_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}lz4${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
     set(LZ4_LIBRARIES ${LZ4_STATIC_LIB})
-    set(LZ4_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${LZ4_PREFIX})
+    set(LZ4_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${LZ4_PREFIX} -DLZ4_BUILD_CLI=OFF -DLZ4_BUILD_LEGACY_LZ4C=OFF)
 
     set(LZ4_CONFIGURE SOURCE_SUBDIR "build/cmake" CMAKE_ARGS ${LZ4_CMAKE_ARGS})
     externalproject_add(lz4_ep
@@ -701,6 +702,9 @@ macro(build_arrow)
     set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
     set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
     string(REPLACE "-Werror" "" ARROW_CMAKE_CXX_FLAGS ${ARROW_CMAKE_CXX_FLAGS})
+    # Fix for thrift Mutex.h missing #include <cstdint> (GCC 15 strictness)
+    # Use -include to force include cstdint for all C++ files
+    string(APPEND ARROW_CMAKE_CXX_FLAGS " -include cstdint")
 
     set(ARROW_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/arrow_ep-install")
     set(ARROW_HOME "${ARROW_PREFIX}")
