@@ -37,7 +37,7 @@ TEST(BloomFilterTest, TestOneSegmentBuilder) {
     auto ptr = std::make_shared<MemorySegment>(seg);
     bloom_filter->SetMemorySegment(ptr);
 
-    std::mt19937_64 engine(std::random_device{}());
+    std::mt19937_64 engine(std::random_device{}());  // NOLINT(whitespace/braces)
     std::uniform_int_distribution<int32_t> distribution(0, items);
     std::set<int32_t> test_data;
     for (int32_t i = 0; i < items; i++) {
@@ -103,7 +103,7 @@ TEST(BloomFilterTest, TestBloomFilter) {
     auto pool = GetDefaultPool();
     auto bloom_filter = std::make_shared<BloomFilter>(100, 1024);
 
-    std::mt19937_64 engine(std::random_device{}());
+    std::mt19937_64 engine(std::random_device{}());  // NOLINT(whitespace/braces)
     std::uniform_int_distribution<int32_t> distribution(0, items);
 
     // segments 1
