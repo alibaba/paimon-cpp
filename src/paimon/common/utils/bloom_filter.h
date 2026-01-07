@@ -29,7 +29,7 @@ namespace paimon {
 class PAIMON_EXPORT BloomFilter {
  public:
     static int32_t OptimalNumOfBits(int64_t expect_entries, double fpp);
-    static int32_t OptimalNumOfHashFunctions(int64_t expect_entries, long bit_size);
+    static int32_t OptimalNumOfHashFunctions(int64_t expect_entries, int64_t bit_size);
     static std::shared_ptr<BloomFilter> Create(int64_t expect_entries, double fpp);
 
  public:

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "block_writer.h"
+#include "paimon/common/sst/block_writer.h"
 
 #include "paimon/common/sst/block_aligned_type.h"
 

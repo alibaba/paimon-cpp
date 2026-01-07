@@ -50,7 +50,7 @@ int8_t MemorySliceInput::ReadByte() {
 }
 
 int8_t MemorySliceInput::ReadUnsignedByte() {
-    return (short)(ReadByte() & 0xFF);
+    return static_cast<int8_t>(ReadByte() & 0xFF);
 }
 
 int32_t MemorySliceInput::ReadInt() {
@@ -71,15 +71,15 @@ int32_t MemorySliceInput::ReadVarLenInt() {
 }
 
 int64_t MemorySliceInput::ReadLong() {
-    long v = slice_->ReadLong(position_);
+    int64_t v = slice_->ReadLong(position_);
     position_ += 8;
     return v;
 }
 
 int64_t MemorySliceInput::ReadVarLenLong() {
-    long result = 0;
+    int64_t result = 0;
     for (int offset = 0; offset < 64; offset += 7) {
-        long b = ReadUnsignedByte();
+        int64_t b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
         if ((b & 0x80) == 0) {
             return result;

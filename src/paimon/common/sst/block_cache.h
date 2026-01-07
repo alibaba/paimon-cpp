@@ -52,7 +52,7 @@ class BlockCache {
     }
 
  private:
-    Result<MemorySegment> ReadFrom(long offset, int length) {
+    Result<MemorySegment> ReadFrom(int64_t offset, int length) {
         in_->Seek(offset, SeekOrigin::FS_SEEK_SET);
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
         in_->Read(segment.GetHeapMemory()->data(), length);

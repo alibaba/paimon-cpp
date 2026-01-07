@@ -63,7 +63,7 @@ void BitSet::Clear() {
         index += 8;
     }
     while (index < byte_length_) {
-        segment_->PutValue(offset_ + index, (char)0);
+        segment_->PutValue(offset_ + index, static_cast<char>(0));
         index += 1;
     }
 }

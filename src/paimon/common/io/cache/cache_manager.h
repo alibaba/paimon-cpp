@@ -30,8 +30,8 @@ class CacheManager {
  public:
     CacheManager() {
         // todo implements cache
-        data_cache_ = std::make_unique<NoCache>();
-        index_cache_ = std::make_unique<NoCache>();
+        data_cache_ = std::make_shared<NoCache>();
+        index_cache_ = std::make_shared<NoCache>();
     }
 
     std::shared_ptr<MemorySegment> GetPage(
@@ -41,8 +41,8 @@ class CacheManager {
     void InvalidPage(std::shared_ptr<CacheKey>& key);
 
  private:
-    std::unique_ptr<Cache> data_cache_;
-    std::unique_ptr<Cache> index_cache_;
+    std::shared_ptr<Cache> data_cache_;
+    std::shared_ptr<Cache> index_cache_;
 };
 
 }  // namespace paimon

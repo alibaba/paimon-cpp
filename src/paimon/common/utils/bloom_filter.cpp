@@ -23,7 +23,7 @@
 
 namespace paimon {
 
-int32_t BloomFilter::OptimalNumOfBits(long expect_entries, double fpp) {
+int32_t BloomFilter::OptimalNumOfBits(int64_t expect_entries, double fpp) {
     if (expect_entries <= 0 || fpp <= 0.0 || fpp >= 1.0) {
         return 0;
     }
@@ -33,7 +33,7 @@ int32_t BloomFilter::OptimalNumOfBits(long expect_entries, double fpp) {
     return static_cast<int32_t>(result);
 }
 
-int32_t BloomFilter::OptimalNumOfHashFunctions(int64_t expect_entries, long bit_size) {
+int32_t BloomFilter::OptimalNumOfHashFunctions(int64_t expect_entries, int64_t bit_size) {
     if (expect_entries <= 0) {
         return 1;
     }
@@ -43,13 +43,14 @@ int32_t BloomFilter::OptimalNumOfHashFunctions(int64_t expect_entries, long bit_
 }
 
 std::shared_ptr<BloomFilter> BloomFilter::Create(int64_t expect_entries, double fpp) {
-    int bytes = (int)ceil(BloomFilter::OptimalNumOfBits(expect_entries, fpp) / 8.0);
+    int bytes = static_cast<int>(ceil(BloomFilter::OptimalNumOfBits(expect_entries, fpp) / 8.0));
     return std::make_shared<BloomFilter>(expect_entries, bytes);
 }
 
 BloomFilter::BloomFilter(int64_t expected_entries, int32_t byte_length)
     : expected_entries_(expected_entries) {
-    num_hash_functions_ = OptimalNumOfHashFunctions(expected_entries, (int64_t)byte_length << 3);
+    num_hash_functions_ =
+        OptimalNumOfHashFunctions(expected_entries, static_cast<int64_t>(byte_length) << 3);
     bit_set_ = std::make_shared<BitSet>(byte_length);
 }
 

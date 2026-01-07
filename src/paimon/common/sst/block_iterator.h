@@ -26,7 +26,7 @@ class BlockReader;
 
 class BlockIterator {
  public:
-    BlockIterator(std::shared_ptr<BlockReader>& reader);
+    explicit BlockIterator(std::shared_ptr<BlockReader>& reader);
 
     ~BlockIterator() = default;
 

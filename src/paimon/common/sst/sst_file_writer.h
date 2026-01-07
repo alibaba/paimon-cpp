@@ -43,7 +43,8 @@ class SstFileWriter {
     SstFileWriter(std::shared_ptr<OutputStream> out, std::shared_ptr<MemoryPool>& pool,
                   std::shared_ptr<BloomFilter> bloom_filter, int32_t block_size)
         : out_(out), pool_(pool), bloom_filter_(bloom_filter), block_size_(block_size) {
-        data_block_writer_ = std::make_unique<BlockWriter>((int32_t)(block_size * 1.1), pool);
+        data_block_writer_ =
+            std::make_unique<BlockWriter>(static_cast<int32_t>(block_size * 1.1), pool);
         index_block_writer_ =
             std::make_unique<BlockWriter>(BlockHandle::MAX_ENCODED_LENGTH * 1024, pool);
     }

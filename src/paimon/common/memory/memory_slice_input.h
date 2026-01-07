@@ -34,7 +34,7 @@ class PAIMON_EXPORT MemorySliceInput {
  public:
     MemorySliceInput() = default;
 
-    MemorySliceInput(std::shared_ptr<MemorySlice>& slice);
+    explicit MemorySliceInput(std::shared_ptr<MemorySlice>& slice);
 
     int32_t Position() const;
     void SetPosition(int32_t position);

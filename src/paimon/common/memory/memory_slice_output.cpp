@@ -37,7 +37,7 @@ std::unique_ptr<MemorySlice> MemorySliceOutput::ToSlice() {
 
 void MemorySliceOutput::WriteByte(int8_t value) {
     EnsureSize(size_ + 1);
-    segment_.Put(size_++, (char)value);
+    segment_.Put(size_++, static_cast<char>(value));
 }
 void MemorySliceOutput::WriteShort(int16_t value) {
     EnsureSize(size_ + 2);
