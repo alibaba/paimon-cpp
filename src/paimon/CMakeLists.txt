@@ -47,7 +47,7 @@ set(PAIMON_COMMON_SRCS
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
     common/global_index/complete_index_score_batch_reader.cpp
-    common/global_index/bitmap_topk_global_index_result.cpp
+    common/global_index/bitmap_vector_search_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
     common/global_index/global_index_result.cpp
     common/global_index/global_indexer_factory.cpp
@@ -333,7 +333,7 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp
-                    common/global_index/bitmap_topk_global_index_result_test.cpp
+                    common/global_index/bitmap_vector_search_global_index_result_test.cpp
                     common/global_index/bitmap/bitmap_global_index_test.cpp
                     common/io/byte_array_input_stream_test.cpp
                     common/io/data_input_output_stream_test.cpp

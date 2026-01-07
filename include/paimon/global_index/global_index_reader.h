@@ -22,6 +22,7 @@
 
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/function_visitor.h"
+#include "paimon/predicate/vector_search.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -36,36 +37,13 @@ namespace paimon {
 /// The `GlobalIndexResult` can be converted to global row ids by calling `AddOffset()`.
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
  public:
-    /// TopKPreFilter: A lightweight pre-filtering function applied **before** similarity scoring.
-    /// It operates solely on **local row ids** and is typically driven by other global index, such
-    /// as bitmap, or range index. This filter enables early pruning of irrelevant candidates (e.g.,
-    /// "only consider rows with label X"), significantly reducing the search space. Returns true to
-    /// include the row in Top-K computation; false to exclude it.
-    ///
-    /// @note Must be thread-safe.
-    using TopKPreFilter = std::function<bool(int64_t)>;
-
-    /// VisitTopK performs approximate top-k similarity search.
-    ///
-    /// @param k         Number of top results to return.
-    /// @param query     The query vector (must match the dimensionality of the indexed vectors).
-    /// @param filter    A pre-filter based on **local row ids**, implemented by leveraging other
-    /// global index
-    ///                   structures (e.g., bitmap index) for efficient candidate pruning.
-    /// @param predicate A runtime filtering condition that may involve graph traversal of
-    ///                   structured attributes. **Using this parameter often yields better
-    ///                   filtering accuracy** because during index construction, the underlying
-    ///                   graph was built with explicit consideration of field connectivity (e.g.,
-    ///                   relationships between attributes). As a result, predicates can leverage
-    ///                   this pre-established semantic structure to perform more meaningful and
-    ///                   context-aware filtering at query time.
-    /// @note All fields referenced in the predicate must have been materialized
-    ///       in the index during build to ensure availability.
-    /// @note `VisitTopK` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
+    /// VisitVectorSearch performs approximate vector similarity search.
+    /// @note `VisitVectorSearch` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
     /// thread-safe.
-    virtual Result<std::shared_ptr<TopKGlobalIndexResult>> VisitTopK(
-        int32_t k, const std::vector<float>& query, TopKPreFilter filter,
-        const std::shared_ptr<Predicate>& predicate) = 0;
+    /// @warning `VisitVectorSearch` may return error status when it is incorrectly invoked (e.g.,
+    /// BitmapGlobalIndexReader call `VisitVectorSearch`).
+    virtual Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+        const std::shared_ptr<VectorSearch>& vector_search) = 0;
 };
 
 }  // namespace paimon
