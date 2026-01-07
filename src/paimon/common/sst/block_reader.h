@@ -38,7 +38,7 @@ class BlockReader : public std::enable_shared_from_this<BlockReader> {
         std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                               const std::shared_ptr<MemorySlice>&)>& comparator);
 
-    ~BlockReader() = default;
+    virtual ~BlockReader() = default;
 
     std::unique_ptr<BlockIterator> Iterator();
     virtual int32_t SeekTo(int32_t record_position) = 0;
