@@ -24,6 +24,9 @@
 
 namespace paimon {
 
+/// The prefetch file batch reader extends the basic FileBatchReader interface for prefetch read,
+/// if a format implementation inherits from this class, it will automatically support the C++
+/// Paimon prefetch capability and integrate with the Paimon prefetch framework.
 class PAIMON_EXPORT PrefetchFileBatchReader : public FileBatchReader {
  public:
     /// Seeks to a specific row in the file.
