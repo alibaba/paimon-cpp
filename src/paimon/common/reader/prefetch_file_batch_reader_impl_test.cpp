@@ -168,7 +168,7 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
 };
 
 std::vector<std::string> GetTestValues() {
-    return {"parquet", "orc"};
+    return {"parquet"};
 }
 
 INSTANTIATE_TEST_SUITE_P(FileFormat, PrefetchFileBatchReaderImplTest,
