@@ -19,7 +19,7 @@
 #include <functional>
 #include <memory>
 
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/common/memory/memory_slice.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/status.h"
 #include "paimon/visibility.h"
@@ -30,17 +30,31 @@ class MemoryPool;
 /// BitSet based on MemorySegment.
 class PAIMON_EXPORT BitSet {
  public:
-    BitSet(int64_t byte_length) : byte_length_(byte_length) {}
+    BitSet(int64_t byte_length) : byte_length_(byte_length), bit_size_(byte_length << 3) {}
 
-    Status SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset);
+    Status SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset = 0);
     void UnsetMemorySegment();
 
-    std::shared_ptr<MemorySegment> GetMemorySegment();
-    int64_t GetBitLength();
-    int64_t GetByteLength();
+    std::shared_ptr<MemorySegment>& GetMemorySegment() {
+        return segment_;
+    }
 
-    Status Set(int32_t index);
-    bool Get(int32_t index);
+    std::shared_ptr<MemorySlice> ToSlice() {
+        return std::make_shared<MemorySlice>(segment_, offset_, byte_length_);
+    }
+
+    int32_t Offset() const {
+        return offset_;
+    }
+    int64_t BitSize() const {
+        return bit_size_;
+    }
+    int64_t ByteLength() const {
+        return byte_length_;
+    }
+
+    Status Set(unsigned int index);
+    bool Get(unsigned int index);
     void Clear();
 
  private:
@@ -48,7 +62,7 @@ class PAIMON_EXPORT BitSet {
 
  private:
     int64_t byte_length_;
-    int64_t bit_length_;
+    int64_t bit_size_;
     int32_t offset_;
     std::shared_ptr<MemorySegment> segment_;
 };

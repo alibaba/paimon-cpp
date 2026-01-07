@@ -36,34 +36,22 @@ void BitSet::UnsetMemorySegment() {
     segment_.reset();
 }
 
-std::shared_ptr<MemorySegment> BitSet::GetMemorySegment() {
-    return segment_;
-}
-
-int64_t BitSet::GetBitLength() {
-    return bit_length_;
-}
-
-
-int64_t BitSet::GetByteLength() {
-    return byte_length_;
-}
-
-Status BitSet::Set(int32_t index) {
-    if (index >= bit_length_) {
+Status BitSet::Set(unsigned int index) {
+    if (index >= bit_size_) {
         return Status::IndexError("Index out of bound");
     }
-    int32_t byteIndex = index >> 3;
+    unsigned int byteIndex = index >> 3;
     auto val = segment_->Get(offset_ + byteIndex);
     val |= (1 << (index & BYTE_INDEX_MASK));
+    segment_->PutValue(offset_ + byteIndex, val);
     return Status::OK();
 }
 
-bool BitSet::Get(int32_t index) {
-    if (index >= bit_length_) {
+bool BitSet::Get(unsigned int index) {
+    if (index >= bit_size_) {
         return false;
     }
-    int32_t byteIndex = index >> 3;
+    unsigned int byteIndex = index >> 3;
     auto val = segment_->Get(offset_ + byteIndex);
     return (val & (1 << (index & BYTE_INDEX_MASK))) != 0;
 }

@@ -20,14 +20,11 @@
 namespace paimon {
 
 SstFileReader::SstFileReader(
-    const std::shared_ptr<MemoryPool>& pool, std::unique_ptr<BlockCache>&& block_cache,
-    std::shared_ptr<BlockHandle> index_block_handle, std::unique_ptr<BloomFilter>&& bloom_filter,
+    const std::shared_ptr<MemoryPool>& pool, std::shared_ptr<BlockCache> block_cache,
+    std::shared_ptr<BlockHandle> index_block_handle, std::shared_ptr<BloomFilter> bloom_filter,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator)
-    : pool_(pool),
-      block_cache_(std::move(block_cache)),
-      bloom_filter_(std::move(bloom_filter)),
-      comparator_(comparator) {
+    : pool_(pool), block_cache_(block_cache), bloom_filter_(bloom_filter), comparator_(comparator) {
     index_block_reader_ = ReadBlock(std::move(index_block_handle), true);
 }
 

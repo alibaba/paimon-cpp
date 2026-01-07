@@ -23,6 +23,7 @@
 #include "paimon/common/sst/bloom_filter_handle.h"
 #include "paimon/common/utils/bit_set.h"
 #include "paimon/common/utils/bloom_filter.h"
+#include "paimon/common/utils/murmurhash_utils.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 
@@ -39,9 +40,9 @@ class MemoryPool;
  */
 class SstFileWriter {
  public:
-    SstFileWriter(std::shared_ptr<OutputStream> out, int32_t block_size,
-                  std::shared_ptr<MemoryPool>& pool)
-        : out_(out), block_size_(block_size), pool_(pool) {
+    SstFileWriter(std::shared_ptr<OutputStream> out, std::shared_ptr<MemoryPool>& pool,
+                  std::shared_ptr<BloomFilter> bloom_filter, int32_t block_size)
+        : out_(out), pool_(pool), bloom_filter_(bloom_filter), block_size_(block_size) {
         data_block_writer_ = std::make_unique<BlockWriter>((int32_t)(block_size * 1.1), pool);
         index_block_writer_ =
             std::make_unique<BlockWriter>(BlockHandle::MAX_ENCODED_LENGTH * 1024, pool);
@@ -52,6 +53,8 @@ class SstFileWriter {
     Status Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
 
     Status Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value);
+
+    Status Write(std::shared_ptr<MemorySlice>& slice);
 
     Status Flush();
 
@@ -74,13 +77,11 @@ class SstFileWriter {
 
     std::shared_ptr<Bytes> last_key_;
 
-    // Nullable
+    const std::shared_ptr<MemoryPool>& pool_;
+
     std::shared_ptr<BloomFilter> bloom_filter_;
 
     int32_t block_size_;
-
-    const std::shared_ptr<MemoryPool>& pool_;
-
     std::unique_ptr<BlockWriter> data_block_writer_;
     std::unique_ptr<BlockWriter> index_block_writer_;
 };

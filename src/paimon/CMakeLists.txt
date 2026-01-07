@@ -382,6 +382,8 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/concurrent_hash_map_test.cpp
                     common/utils/projected_row_test.cpp
                     common/utils/projected_array_test.cpp
+                    common/utils/bit_set_test.cpp
+                    common/utils/bloom_filter_test.cpp
                     common/utils/bloom_filter64_test.cpp
                     common/utils/xxhash_test.cpp
                     common/utils/bucket_id_calculator_test.cpp

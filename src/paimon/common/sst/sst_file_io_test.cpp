@@ -67,25 +67,35 @@ TEST_F(SstFileIOTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs_->Create(index_path_, /*overwrite=*/false));
 
-    auto writer = std::make_shared<SstFileWriter>(out, 50, pool_);
+    // write data
+    auto bf = BloomFilter::Create(30, 0.01);
+    auto seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
+    auto seg_ptr = std::make_shared<MemorySegment>(seg_for_bf);
+    bf->SetMemorySegment(seg_ptr);
+    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50);
+    std::set<int32_t> value_hash;
     for (size_t i = 1; i <= 5; i++) {
         std::string key = "k" + std::to_string(i);
         std::string value = std::to_string(i);
         writer->Write(std::make_shared<Bytes>(key, pool_.get()),
                       std::make_shared<Bytes>(value, pool_.get()));
+        auto bytes = std::make_shared<Bytes>(key, pool_.get());
+        value_hash.insert(MurmurHashUtils::HashBytes(bytes));
     }
     for (size_t i = 10; i <= 20; i++) {
         std::string key = "k9" + std::to_string(i);
         std::string value = "looooooooooong-值-" + std::to_string(i);
         writer->Write(std::make_shared<Bytes>(key, pool_.get()),
                       std::make_shared<Bytes>(value, pool_.get()));
+        auto bytes = std::make_shared<Bytes>(key, pool_.get());
+        value_hash.insert(MurmurHashUtils::HashBytes(bytes));
     }
     ASSERT_OK(writer->Flush());
 
     ASSERT_EQ(6, writer->IndexWriter()->Size());
 
-    auto bloom_filter_handle = writer->WriteBloomFilter();
-    ASSERT_OK(bloom_filter_handle);
+    auto bloom_filter_handle_ret = writer->WriteBloomFilter();
+    ASSERT_OK(bloom_filter_handle_ret);
     auto index_block_handle = writer->WriteIndexBlock();
     ASSERT_OK(index_block_handle);
 
@@ -105,20 +115,41 @@ TEST_F(SstFileIOTest, TestSimple) {
         return va > vb ? 1 : -1;
     };
 
-    auto reader = std::make_shared<SstFileReader>(pool_, std::move(block_cache),
-                                                  index_block_handle.value(), nullptr, comparator);
+    // bloom filter test
+    auto bloom_filter_handle = bloom_filter_handle_ret.value();
+    auto entries = bloom_filter_handle->ExpectedEntries();
+    auto offset = bloom_filter_handle->Offset();
+    auto size = bloom_filter_handle->Size();
+    in->Seek(offset, SeekOrigin::FS_SEEK_SET);
+    auto bloom_filer_bytes = Bytes::AllocateBytes(size, pool_.get());
+    in->Read(bloom_filer_bytes->data(), bloom_filer_bytes->size());
+    auto seg = MemorySegment::Wrap(std::move(bloom_filer_bytes));
+    auto ptr = std::make_shared<MemorySegment>(seg);
+    auto bloom_filter = std::make_shared<BloomFilter>(entries, size);
+    bloom_filter->SetMemorySegment(ptr);
+    for (const auto& value : value_hash) {
+        ASSERT_TRUE(bloom_filter->TestHash(value));
+    }
+
+    // test read
+    auto reader = std::make_shared<SstFileReader>(
+        pool_, std::move(block_cache), index_block_handle.value(), bloom_filter, comparator);
+    // not exist key
     std::string k0 = "k0";
     ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
 
+    // k4
     std::string k4 = "k4";
     auto v4 = reader->Lookup(std::make_shared<Bytes>(k4, pool_.get()));
     ASSERT_TRUE(v4);
     std::string string4{v4->data(), v4->size()};
     ASSERT_EQ("4", string4);
 
+    // not exist key
     std::string k55 = "k55";
     ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k55, pool_.get())));
 
+    // k915
     std::string k915 = "k915";
     auto v15 = reader->Lookup(std::make_shared<Bytes>(k915, pool_.get()));
     ASSERT_TRUE(v15);

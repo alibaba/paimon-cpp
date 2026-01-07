@@ -28,23 +28,34 @@ namespace paimon {
 /// Bloom filter based on MemorySegment.
 class PAIMON_EXPORT BloomFilter {
  public:
+    static int32_t OptimalNumOfBits(int64_t expect_entries, double fpp);
+    static int32_t OptimalNumOfHashFunctions(int64_t expect_entries, long bit_size);
+    static std::shared_ptr<BloomFilter> Create(int64_t expect_entries, double fpp);
+
+ public:
     BloomFilter(int64_t expected_entries, int32_t byte_length);
 
     int32_t GetNumHashFunctions() const {
         return num_hash_functions_;
     }
 
-    int64_t GetExpectedEntries() const {
+    int64_t ExpectedEntries() const {
         return expected_entries_;
+    }
+
+    int64_t ByteLength() const {
+        return bit_set_->ByteLength();
     }
 
     std::shared_ptr<BitSet> GetBitSet() {
         return bit_set_;
     }
 
-    Status AddHash(int64_t hash64);
+    Status SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset = 0);
 
-    bool TestHash(int64_t hash64) const;
+    Status AddHash(int32_t hash1);
+
+    bool TestHash(int32_t hash1) const;
 
     void Reset();
 

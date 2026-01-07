@@ -18,7 +18,6 @@
 
 #include "arrow/util/crc32.h"
 #include "paimon/common/sst/block_trailer.h"
-#include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
 class MemoryPool;
@@ -37,10 +36,15 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
             return res;
         }
     }
-    if (bloom_filter_) {
+    if (bloom_filter_.get()) {
         bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key));
     }
     return Status::OK();
+}
+
+Status SstFileWriter::Write(std::shared_ptr<MemorySlice>& slice) {
+    auto data = slice->ReadStringView();
+    return WriteBytes(data.data(), data.size());
 }
 
 Status SstFileWriter::Flush() {
@@ -66,14 +70,13 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     if (!bloom_filter_.get()) {
         return Status::OK();
     }
-    auto bitSet = bloom_filter_->GetBitSet();
-    auto segment = bitSet->GetMemorySegment();
 
-    auto handle = std::make_shared<BloomFilterHandle>(
-        out_->GetPos().value(), bitSet->GetBitLength(), bloom_filter_->GetExpectedEntries());
+    auto data = bloom_filter_->GetBitSet()->ToSlice()->ReadStringView();
 
-    auto bytes = segment->GetArray();
-    WriteBytes(bytes->data(), bytes->size());
+    auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos().value(), data.size(),
+                                                      bloom_filter_->ExpectedEntries());
+
+    WriteBytes(data.data(), data.size());
 
     return handle;
 }

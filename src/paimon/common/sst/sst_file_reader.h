@@ -41,10 +41,9 @@ class SstFileIterator;
  */
 class SstFileReader {
  public:
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                  std::unique_ptr<BlockCache>&& block_cache,
+    SstFileReader(const std::shared_ptr<MemoryPool>& pool, std::shared_ptr<BlockCache> block_cache,
                   std::shared_ptr<BlockHandle> index_block_handle,
-                  std::unique_ptr<BloomFilter>&& bloom_filter,
+                  std::shared_ptr<BloomFilter> bloom_filter,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
                       comparator);
@@ -71,8 +70,8 @@ class SstFileReader {
 
  private:
     std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<BlockCache> block_cache_;
-    std::unique_ptr<BloomFilter> bloom_filter_;
+    std::shared_ptr<BlockCache> block_cache_;
+    std::shared_ptr<BloomFilter> bloom_filter_;
     std::shared_ptr<BlockReader> index_block_reader_;
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator_;
