@@ -169,20 +169,16 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_EQ(3, reader->GetNumberOfRows());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(0, reader->GetNextRowToRead());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
     ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(1, reader->GetNextRowToRead());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
     ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(2, reader->GetNextRowToRead());
     ArrowArrayRelease(batch2.first.get());
     ArrowSchemaRelease(batch2.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
     ASSERT_EQ(2, reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(3, reader->GetNextRowToRead());
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
@@ -212,10 +208,8 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbersWithBitmap) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, roaring));
     ASSERT_EQ(3, reader->GetNumberOfRows());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(1, reader->GetNextRowToRead());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(3, reader->GetNextRowToRead());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
@@ -254,7 +248,6 @@ TEST_F(BlobFileBatchReaderTest, InvalidScenario) {
                                         /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
         ASSERT_NOK_WITH_MSG(reader->GetFileSchema(),
                             "blob file has no self-describing file schema");
-        ASSERT_NOK_WITH_MSG(reader->GenReadRanges({}), "gen read ranges not implemented");
         ASSERT_TRUE(reader->GetReaderMetrics());
         ASSERT_NOK_WITH_MSG(reader->NextBatch(),
                             "target type is nullptr, call SetReadSchema first");
@@ -292,7 +285,6 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_EQ(0, reader->GetNumberOfRows());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_EQ(0, reader->GetNextRowToRead());
     ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch));
 }

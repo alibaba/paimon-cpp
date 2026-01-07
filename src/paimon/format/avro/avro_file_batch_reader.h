@@ -43,11 +43,6 @@ class AvroFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Status SeekToRow(uint64_t row_number) override {
-        assert(false);
-        return Status::NotImplemented("not implemented");
-    }
-
     uint64_t GetPreviousBatchFirstRowNumber() const override {
         assert(false);
         return -1;
@@ -58,25 +53,9 @@ class AvroFileBatchReader : public FileBatchReader {
         return -1;
     }
 
-    uint64_t GetNextRowToRead() const override {
-        assert(false);
-        return -1;
-    }
-
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
         assert(false);
         return nullptr;
-    }
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        assert(false);
-        return Status::NotImplemented("not implemented");
-    }
-
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        assert(false);
-        return Status::NotImplemented("not implemented");
     }
 
     void Close() override {
