@@ -993,9 +993,9 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         ASSERT_EQ(vector_search_result->ToString(), lumina_result);
 
         // check evaluate predicate and vector search
-        vector_search->pre_filter = nullptr;
+        auto vector_search_without_filter = vector_search->ReplacePreFilter(nullptr);
         ASSERT_OK_AND_ASSIGN(auto compound_index_result,
-                             evaluator->Evaluate(predicate, vector_search));
+                             evaluator->Evaluate(predicate, vector_search_without_filter));
         ASSERT_TRUE(compound_index_result);
         ASSERT_EQ(compound_index_result.value()->ToString(), lumina_result);
 

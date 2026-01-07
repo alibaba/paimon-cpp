@@ -32,10 +32,11 @@ class PAIMON_EXPORT GlobalIndexEvaluator {
     ///
     /// @param predicate The filter predicate to evaluate.
     /// @param vector_search The vector similarity search to evaluate.
-    /// @note When both `predicate` and `vector_search` are present,
-    /// `predicate` is applied FIRST as a pre-filter to narrow the vector search space,
-    /// and vector similarity search is performed ONLY on the pre-filtered subset.
-
+    /// @note When both `predicate` and `vector_search` are present, the predicate
+    ///       is used to constrain the vector search space (for example, via a
+    ///       pre-filter callback that may be applied during vector search), so
+    ///       vector similarity scoring is effectively limited to rows that satisfy
+    ///       the predicate.
     /// @return A `Result` containing:
     ///         - `std::nullopt` if the predicate cannot be evaluated by this index (e.g., field has
     ///         no index),

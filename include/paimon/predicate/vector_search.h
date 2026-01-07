@@ -43,6 +43,11 @@ struct PAIMON_EXPORT VectorSearch {
           pre_filter(_pre_filter),
           predicate(_predicate) {}
 
+    
+    std::shared_ptr<VectorSearch> ReplacePreFilter(PreFilter _pre_filter) const {
+        return std::make_shared<VectorSearch>(field_name, limit, query, _pre_filter, predicate);
+    }
+    
     /// Search field name.
     std::string field_name;
     /// Number of top results to return.
