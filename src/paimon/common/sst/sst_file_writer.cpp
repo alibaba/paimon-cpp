@@ -76,7 +76,7 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos().value(), data.size(),
                                                       bloom_filter_->ExpectedEntries());
 
-    WriteBytes(data.data(), data.size());
+    PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
 
     return handle;
 }
@@ -99,17 +99,20 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), size);
 
     // 1. write data
-    WriteBytes(view.data(), view.size());
+    PAIMON_RETURN_NOT_OK(WriteBytes(view.data(), view.size()));
 
     // 2. write trailer
-    WriteBytes(trailer_data.data(), trailer_data.size());
+    PAIMON_RETURN_NOT_OK(WriteBytes(trailer_data.data(), trailer_data.size()));
 
     writer->Reset();
     return block_handle;
 }
 
 Status SstFileWriter::WriteBytes(const char* data, size_t size) {
-    out_->Write(data, size);
+    auto ret = out_->Write(data, size);
+    if (!ret.ok()) {
+        return ret.status();
+    }
     return Status::OK();
 }
 }  // namespace paimon

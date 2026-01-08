@@ -62,7 +62,7 @@ class SstFileReader {
     std::unique_ptr<BlockIterator> GetNextBlock(std::unique_ptr<BlockIterator>& index_iterator);
 
     /**
-     * @param blockHandle The block handle.
+     * @param handle The block handle.
      * @param index Whether read the block as an index.
      * @return The reader of the target block.
      */

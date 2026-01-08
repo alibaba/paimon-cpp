@@ -21,7 +21,6 @@
 
 #include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/common/memory/memory_segment.h"
-#include "paimon/core/key_value.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
@@ -53,9 +52,9 @@ class BlockCache {
 
  private:
     Result<MemorySegment> ReadFrom(int64_t offset, int length) {
-        in_->Seek(offset, SeekOrigin::FS_SEEK_SET);
+        PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
-        in_->Read(segment.GetHeapMemory()->data(), length);
+        PAIMON_RETURN_NOT_OK(in_->Read(segment.GetHeapMemory()->data(), length));
         return std::move(segment);
     }
 
