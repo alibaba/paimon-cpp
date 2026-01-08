@@ -35,7 +35,7 @@
 #include "arrow/c/abi.h"
 #include "paimon/common/utils/threadsafe_queue.h"
 #include "paimon/reader/batch_reader.h"
-#include "paimon/reader/file_batch_reader.h"
+#include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/utils/roaring_bitmap32.h"
@@ -50,21 +50,21 @@ class Executor;
 class Predicate;
 class Metrics;
 
-class PrefetchFileBatchReader : public FileBatchReader {
+class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
  public:
-    static Result<std::unique_ptr<PrefetchFileBatchReader>> Create(
+    static Result<std::unique_ptr<PrefetchFileBatchReaderImpl>> Create(
         const std::string& data_file_path, const ReaderBuilder* reader_builder,
         const std::shared_ptr<FileSystem>& fs, uint32_t prefetch_max_parallel_num,
         int32_t batch_size, uint32_t prefetch_batch_count, bool enable_adaptive_prefetch_strategy,
         const std::shared_ptr<Executor>& executor, bool initialize_read_ranges);
 
-    ~PrefetchFileBatchReader() override;
+    ~PrefetchFileBatchReaderImpl() override;
 
-    Result<ReadBatch> NextBatch() override {
+    Result<FileBatchReader::ReadBatch> NextBatch() override {
         return Status::Invalid(
             "paimon inner reader PrefetchFileBatchReader should use NextBatchWithBitmap");
     }
-    Result<ReadBatchWithBitmap> NextBatchWithBitmap() override;
+    Result<FileBatchReader::ReadBatchWithBitmap> NextBatchWithBitmap() override;
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override;
 
@@ -90,7 +90,7 @@ class PrefetchFileBatchReader : public FileBatchReader {
 
     Status RefreshReadRanges();
 
-    inline FileBatchReader* GetFirstReader() const {
+    inline PrefetchFileBatchReader* GetFirstReader() const {
         return readers_[0].get();
     }
 
@@ -105,10 +105,10 @@ class PrefetchFileBatchReader : public FileBatchReader {
         uint64_t previous_batch_first_row_num;
     };
 
-    PrefetchFileBatchReader(std::vector<std::unique_ptr<FileBatchReader>>&& readers,
-                            int32_t batch_size, uint32_t prefetch_queue_capacity,
-                            bool enable_adaptive_prefetch_strategy,
-                            const std::shared_ptr<Executor>& executor);
+    PrefetchFileBatchReaderImpl(
+        const std::vector<std::shared_ptr<PrefetchFileBatchReader>>& readers, int32_t batch_size,
+        uint32_t prefetch_queue_capacity, bool enable_adaptive_prefetch_strategy,
+        const std::shared_ptr<Executor>& executor);
 
     Status CleanUp();
     void Workloop();
@@ -130,10 +130,10 @@ class PrefetchFileBatchReader : public FileBatchReader {
     Status EnsureReaderPosition(size_t reader_idx,
                                 const std::pair<uint64_t, uint64_t>& read_range) const;
     Status HandleReadResult(size_t reader_idx, const std::pair<uint64_t, uint64_t>& read_range,
-                            ReadBatchWithBitmap&& read_batch_with_bitmap);
+                            FileBatchReader::ReadBatchWithBitmap&& read_batch_with_bitmap);
 
  private:
-    std::vector<std::unique_ptr<FileBatchReader>> readers_;
+    std::vector<std::shared_ptr<PrefetchFileBatchReader>> readers_;
     // The meaning of readers_pos_ is: all data before this pos has been filtered out or effectively
     // consumed, and the data after this pos may need to be read in the next round of reading.
     std::vector<std::unique_ptr<std::atomic<uint64_t>>> readers_pos_;

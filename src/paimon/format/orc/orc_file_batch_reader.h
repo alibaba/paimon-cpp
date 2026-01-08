@@ -48,13 +48,6 @@ class OrcFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Status SeekToRow(uint64_t row_number) override;
-
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        assert(false);
-        return Status::NotImplemented("set read ranges not implemented");
-    }
-
     // Important: output ArrowArray is allocated on arrow_pool_ whose lifecycle holds in
     // OrcFileBatchReader. Therefore, we need to hold BatchReader when using output ArrowArray.
     Result<ReadBatch> NextBatch() override;
@@ -67,18 +60,7 @@ class OrcFileBatchReader : public FileBatchReader {
         return reader_->getNumberOfRows();
     }
 
-    uint64_t GetNextRowToRead() const override {
-        assert(false);
-        return -1;
-    }
-
     std::shared_ptr<Metrics> GetReaderMetrics() const override;
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        assert(false);
-        return Status::NotImplemented("gen read ranges not implemented");
-    }
 
     void Close() override {
         metrics_ = GetReaderMetrics();
