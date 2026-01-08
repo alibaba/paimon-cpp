@@ -22,11 +22,6 @@
 namespace paimon {
 class MemoryPool;
 
-Status SstFileWriter::Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value) {
-    Write(std::move(key), std::move(value));
-    return Status::OK();
-}
-
 Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) {
     data_block_writer_->Write(key, value);
     last_key_ = key;
@@ -37,7 +32,7 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
         }
     }
     if (bloom_filter_.get()) {
-        bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key));
+        PAIMON_RETURN_NOT_OK(bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key)));
     }
     return Status::OK();
 }

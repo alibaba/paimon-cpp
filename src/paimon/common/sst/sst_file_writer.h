@@ -51,8 +51,6 @@ class SstFileWriter {
 
     ~SstFileWriter() = default;
 
-    Status Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
-
     Status Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value);
 
     Status Write(std::shared_ptr<MemorySlice>& slice);
