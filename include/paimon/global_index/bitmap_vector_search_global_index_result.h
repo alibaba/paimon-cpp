@@ -26,24 +26,25 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Represents a Top-K global index result that combines a Roaring bitmap of candidate row ids
-/// with an array of associated relevance scores.
+/// Represents a vector search global index result that combines a Roaring bitmap of candidate row
+/// ids with an array of associated relevance scores.
 ///
-/// **Important Ordering Note**: Despite inheriting from TopKGlobalIndexResult, the results are
+/// **Important Ordering Note**: Despite inheriting from VectorSearchGlobalIndexResult, the results
+/// are
 /// **NOT sorted by score**. Instead, both the bitmap and the score vector are ordered by
 /// **ascending row id**. This design enables efficient merging and set operations while preserving
 /// row id-to-score mapping.
-class PAIMON_EXPORT BitmapTopKGlobalIndexResult : public TopKGlobalIndexResult {
+class PAIMON_EXPORT BitmapVectorSearchGlobalIndexResult : public VectorSearchGlobalIndexResult {
  public:
-    BitmapTopKGlobalIndexResult(RoaringBitmap64&& bitmap, std::vector<float>&& scores)
+    BitmapVectorSearchGlobalIndexResult(RoaringBitmap64&& bitmap, std::vector<float>&& scores)
         : bitmap_(std::move(bitmap)), scores_(std::move(scores)) {
         assert(static_cast<size_t>(bitmap_.Cardinality()) == scores_.size());
     }
 
-    class TopKIterator : public TopKGlobalIndexResult::TopKIterator {
+    class VectorSearchIterator : public VectorSearchGlobalIndexResult::VectorSearchIterator {
      public:
-        TopKIterator(const RoaringBitmap64* bitmap, RoaringBitmap64::Iterator&& iter,
-                     const float* scores)
+        VectorSearchIterator(const RoaringBitmap64* bitmap, RoaringBitmap64::Iterator&& iter,
+                             const float* scores)
             : bitmap_(bitmap), iter_(std::move(iter)), scores_(scores) {}
 
         bool HasNext() const override {
@@ -65,8 +66,8 @@ class PAIMON_EXPORT BitmapTopKGlobalIndexResult : public TopKGlobalIndexResult {
 
     Result<std::unique_ptr<GlobalIndexResult::Iterator>> CreateIterator() const override;
 
-    Result<std::unique_ptr<TopKGlobalIndexResult::TopKIterator>> CreateTopKIterator()
-        const override;
+    Result<std::unique_ptr<VectorSearchGlobalIndexResult::VectorSearchIterator>>
+    CreateVectorSearchIterator() const override;
 
     Result<std::shared_ptr<GlobalIndexResult>> And(
         const std::shared_ptr<GlobalIndexResult>& other) override;

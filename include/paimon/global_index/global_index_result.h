@@ -76,7 +76,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     /// Serializes a GlobalIndexResult object into a byte array.
     ///
     /// @note This method only supports the following concrete implementations:
-    ///       - BitmapTopKGlobalIndexResult
+    ///       - BitmapVectorSearchGlobalIndexResult
     ///       - BitmapGlobalIndexResult
     ///
     /// @param global_index_result The GlobalIndexResult instance to serialize (must not be null).
@@ -91,7 +91,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     ///
     /// @note The concrete type of the deserialized object is determined by metadata
     ///       embedded in the buffer. Currently, only the following types are supported:
-    ///       - BitmapTopKGlobalIndexResult
+    ///       - BitmapVectorSearchGlobalIndexResult
     ///       - BitmapGlobalIndexResult
     ///
     /// @param buffer Pointer to the serialized byte data (must not be null).
@@ -106,18 +106,18 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     static constexpr int32_t VERSION = 1;
 };
 
-/// Represents the result of a Top-K query against a global index.
-/// This class encapsulates a set of top-K candidates (row id + score pairs) and provides
+/// Represents the result of a vector search query against a global index.
+/// This class encapsulates a set of search candidates (row id + score pairs) and provides
 /// an iterator interface to traverse them.
-class PAIMON_EXPORT TopKGlobalIndexResult : public GlobalIndexResult {
+class PAIMON_EXPORT VectorSearchGlobalIndexResult : public GlobalIndexResult {
  public:
-    /// An iterator over the top-K results, returning (row_id, score) pairs.
+    /// An iterator over the vector search results, returning (row_id, score) pairs.
     ///
     /// @note The results are **NOT sorted by score**. Instead, they are returned in **ascending
     ///       order of row_id**.
-    class TopKIterator {
+    class VectorSearchIterator {
      public:
-        virtual ~TopKIterator() = default;
+        virtual ~VectorSearchIterator() = default;
 
         /// Checks whether more row ids are available.
         virtual bool HasNext() const = 0;
@@ -132,7 +132,7 @@ class PAIMON_EXPORT TopKGlobalIndexResult : public GlobalIndexResult {
         virtual std::pair<int64_t, float> NextWithScore() = 0;
     };
 
-    /// Creates a new iterator for traversing the Top-K results.
-    virtual Result<std::unique_ptr<TopKIterator>> CreateTopKIterator() const = 0;
+    /// Creates a new iterator for traversing the vector search results.
+    virtual Result<std::unique_ptr<VectorSearchIterator>> CreateVectorSearchIterator() const = 0;
 };
 }  // namespace paimon

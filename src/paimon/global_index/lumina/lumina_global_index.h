@@ -89,9 +89,12 @@ class LuminaIndexReader : public GlobalIndexReader {
         std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
         const std::shared_ptr<LuminaMemoryPool>& pool);
 
-    Result<std::shared_ptr<TopKGlobalIndexResult>> VisitTopK(
-        int32_t k, const std::vector<float>& query, TopKPreFilter filter,
-        const std::shared_ptr<Predicate>& predicate) override;
+    ~LuminaIndexReader() override {
+        [[maybe_unused]] auto status = searcher_->Close();
+    }
+
+    Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+        const std::shared_ptr<VectorSearch>& vector_search) override;
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
         return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});

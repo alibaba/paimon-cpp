@@ -49,6 +49,7 @@ class GlobalIndexScanImpl : public GlobalIndexScan {
 
     Result<std::optional<std::shared_ptr<GlobalIndexResult>>> ParallelScan(
         const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
+        const std::shared_ptr<VectorSearch>& vector_search,
         const std::shared_ptr<Executor>& executor);
 
  private:

@@ -54,6 +54,7 @@ class ScanContextBuilder::Impl {
         bucket_filter_ = std::nullopt;
         partition_filters_.clear();
         predicates_.reset();
+        vector_search_.reset();
         global_index_result_.reset();
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
@@ -67,6 +68,7 @@ class ScanContextBuilder::Impl {
     std::optional<int32_t> bucket_filter_;
     std::vector<std::map<std::string, std::string>> partition_filters_;
     std::shared_ptr<Predicate> predicates_;
+    std::shared_ptr<VectorSearch> vector_search_;
     std::shared_ptr<GlobalIndexResult> global_index_result_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
@@ -101,6 +103,12 @@ ScanContextBuilder& ScanContextBuilder::SetPartitionFilter(
 
 ScanContextBuilder& ScanContextBuilder::SetPredicate(const std::shared_ptr<Predicate>& predicate) {
     impl_->predicates_ = predicate;
+    return *this;
+}
+
+ScanContextBuilder& ScanContextBuilder::SetVectorSearch(
+    const std::shared_ptr<VectorSearch>& vector_search) {
+    impl_->vector_search_ = vector_search;
     return *this;
 }
 
@@ -141,7 +149,7 @@ Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
     auto ctx = std::make_unique<ScanContext>(
         impl_->path_, impl_->is_streaming_mode_, impl_->limit_,
         std::make_shared<ScanFilter>(impl_->predicates_, impl_->partition_filters_,
-                                     impl_->bucket_filter_),
+                                     impl_->bucket_filter_, impl_->vector_search_),
         impl_->global_index_result_, impl_->memory_pool_, impl_->executor_, impl_->options_);
     impl_->Reset();
     return ctx;

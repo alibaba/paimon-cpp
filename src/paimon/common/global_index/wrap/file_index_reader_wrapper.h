@@ -114,10 +114,10 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
         return transform_(file_index_result);
     }
 
-    Result<std::shared_ptr<TopKGlobalIndexResult>> VisitTopK(
-        int32_t k, const std::vector<float>& query, TopKPreFilter filter,
-        const std::shared_ptr<Predicate>& predicate) override {
-        return Status::Invalid("FileIndexReaderWrapper is not supposed to handle topk query");
+    Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+        const std::shared_ptr<VectorSearch>& vector_search) override {
+        return Status::Invalid(
+            "FileIndexReaderWrapper is not supposed to handle vector search query");
     }
 
  private:

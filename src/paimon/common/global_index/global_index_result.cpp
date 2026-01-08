@@ -20,7 +20,7 @@
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/global_index/bitmap_topk_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
@@ -89,15 +89,17 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> GlobalIndexResult::Serialize(
             std::dynamic_pointer_cast<BitmapGlobalIndexResult>(global_index_result)) {
         PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, bitmap_result->GetBitmap());
         WriteBitmapAndScores(bitmap, {}, &out, pool.get());
-    } else if (auto bitmap_topk_result =
-                   std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(global_index_result)) {
-        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, bitmap_topk_result->GetBitmap());
-        const auto& scores = bitmap_topk_result->GetScores();
+    } else if (auto bitmap_vector_search_result =
+                   std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(
+                       global_index_result)) {
+        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap,
+                               bitmap_vector_search_result->GetBitmap());
+        const auto& scores = bitmap_vector_search_result->GetScores();
         WriteBitmapAndScores(bitmap, scores, &out, pool.get());
     } else {
         return Status::Invalid(
             "invalid GlobalIndexResult, must be BitmapGlobalIndexResult or "
-            "BitmapTopKGlobalIndexResult");
+            "BitmapVectorSearchGlobalIndexResult");
     }
     return MemorySegmentUtils::CopyToBytes(out.Segments(), 0, out.CurrentSize(), pool.get());
 }
@@ -130,7 +132,8 @@ Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexResult::Deserialize(
         PAIMON_ASSIGN_OR_RAISE(float score, in.ReadValue<float>());
         scores.push_back(score);
     }
-    return std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));
+    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                 std::move(scores));
 }
 
 Result<std::vector<Range>> GlobalIndexResult::ToRanges() const {

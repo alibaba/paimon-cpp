@@ -39,10 +39,6 @@ class LanceFileBatchReader : public FileBatchReader {
     Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
-    Status SeekToRow(uint64_t row_number) override {
-        return Status::Invalid("do not support seek to specific row in lance format");
-    }
-
     Result<ReadBatch> NextBatch() override;
 
     uint64_t GetPreviousBatchFirstRowNumber() const override {
@@ -55,23 +51,9 @@ class LanceFileBatchReader : public FileBatchReader {
         return num_rows_;
     }
 
-    uint64_t GetNextRowToRead() const override {
-        assert(false);
-        return -1;
-    }
-
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
         // TODO(xinyu.lxy): support metrics in reader
         return metrics_;
-    }
-
-    Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
-        bool* need_prefetch) const override {
-        return Status::Invalid("do not support generating read ranges in lance format");
-    }
-
-    Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override {
-        return Status::Invalid("do not support setting read ranges in lance format");
     }
 
     void Close() override {

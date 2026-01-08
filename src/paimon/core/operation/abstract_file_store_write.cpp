@@ -245,7 +245,8 @@ Result<int32_t> AbstractFileStoreWrite::ScanExistingFileMetas(
         partition_filters.push_back(part_values_map);
     }
     auto scan_filter = std::make_shared<ScanFilter>(
-        /*predicate=*/nullptr, partition_filters, std::optional<int32_t>(bucket));
+        /*predicate=*/nullptr, partition_filters, std::optional<int32_t>(bucket),
+        /*vector_search=*/nullptr);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,

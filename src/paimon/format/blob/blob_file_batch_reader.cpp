@@ -278,11 +278,6 @@ Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::ToArrowArray(
     return array;
 }
 
-Status BlobFileBatchReader::SeekToRow(uint64_t row_number) {
-    assert(false);
-    return Status::NotImplemented("blob file batch reader seek to row is not supported.");
-}
-
 int32_t BlobFileBatchReader::GetIndexLength(const int8_t* bytes, int32_t offset) {
     return (bytes[offset + 3] << 24) | ((bytes[offset + 2] & 0xff) << 16) |
            ((bytes[offset + 1] & 0xff) << 8) | (bytes[offset] & 0xff);

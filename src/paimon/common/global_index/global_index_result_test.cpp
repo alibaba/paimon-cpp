@@ -20,7 +20,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/global_index/bitmap_topk_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -127,14 +127,15 @@ TEST_F(GlobalIndexResultTest, TestSerializeAndDeserializeWithScore) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<GlobalIndexResult> index_result,
                          GlobalIndexResult::Deserialize(reinterpret_cast<char*>(byte_buffer.data()),
                                                         byte_buffer.size(), pool));
-    auto typed_result = std::dynamic_pointer_cast<BitmapTopKGlobalIndexResult>(index_result);
+    auto typed_result =
+        std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(index_result);
     ASSERT_TRUE(typed_result);
 
     auto bitmap = RoaringBitmap64::From(
         {10l, 2147483647l, 2147483649l, 2147483651l, 2147483653l, 2247483647l});
     std::vector<float> scores = {1.01f, -1.32f, 4.23f, 50.74f, -100.25f, 2.10f};
     auto expected_result =
-        std::make_shared<BitmapTopKGlobalIndexResult>(std::move(bitmap), std::move(scores));
+        std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap), std::move(scores));
     ASSERT_EQ(expected_result->ToString(), typed_result->ToString());
     ASSERT_OK_AND_ASSIGN(auto serialize_bytes, GlobalIndexResult::Serialize(index_result, pool));
     ASSERT_EQ(byte_buffer, std::vector<uint8_t>(serialize_bytes->data(),
@@ -146,6 +147,6 @@ TEST_F(GlobalIndexResultTest, TestInvalidSerialize) {
     auto result = std::make_shared<FakeGlobalIndexResult>(std::vector<int64_t>({1, 3, 5, 100}));
     ASSERT_NOK_WITH_MSG(GlobalIndexResult::Serialize(result, pool),
                         "invalid GlobalIndexResult, must be BitmapGlobalIndexResult or "
-                        "BitmapTopKGlobalIndexResult");
+                        "BitmapVectorSearchGlobalIndexResult");
 }
 }  // namespace paimon::test

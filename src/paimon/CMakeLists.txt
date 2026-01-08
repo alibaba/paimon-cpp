@@ -47,7 +47,7 @@ set(PAIMON_COMMON_SRCS
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
     common/global_index/complete_index_score_batch_reader.cpp
-    common/global_index/bitmap_topk_global_index_result.cpp
+    common/global_index/bitmap_vector_search_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
     common/global_index/global_index_result.cpp
     common/global_index/global_indexer_factory.cpp
@@ -86,7 +86,7 @@ set(PAIMON_COMMON_SRCS
     common/reader/batch_reader.cpp
     common/reader/concat_batch_reader.cpp
     common/reader/predicate_batch_reader.cpp
-    common/reader/prefetch_file_batch_reader.cpp
+    common/reader/prefetch_file_batch_reader_impl.cpp
     common/reader/reader_utils.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
@@ -333,7 +333,7 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp
-                    common/global_index/bitmap_topk_global_index_result_test.cpp
+                    common/global_index/bitmap_vector_search_global_index_result_test.cpp
                     common/global_index/bitmap/bitmap_global_index_test.cpp
                     common/io/byte_array_input_stream_test.cpp
                     common/io/data_input_output_stream_test.cpp
@@ -351,7 +351,7 @@ if(PAIMON_BUILD_TESTS)
                     common/predicate/predicate_validator_test.cpp
                     common/reader/concat_batch_reader_test.cpp
                     common/reader/predicate_batch_reader_test.cpp
-                    common/reader/prefetch_file_batch_reader_test.cpp
+                    common/reader/prefetch_file_batch_reader_impl_test.cpp
                     common/reader/reader_utils_test.cpp
                     common/reader/complete_row_kind_batch_reader_test.cpp
                     common/reader/data_evolution_file_reader_test.cpp

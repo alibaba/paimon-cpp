@@ -52,8 +52,7 @@ class PAIMON_EXPORT RowRangeGlobalIndexScanner {
     ///         - Successful with several readers if the indexes exist and load correctly;
     ///         - Successful with an empty vector if no index was built for the given field;
     ///         - Error returns when loading fails (e.g., file corruption, I/O error, unsupported
-    ///         format) or the predicate method was incorrectly invoked (e.g., VisitTopK was invoked
-    ///         incorrectly).
+    ///           format).
     virtual Result<std::vector<std::shared_ptr<GlobalIndexReader>>> CreateReaders(
         const std::string& field_name) const = 0;
 };
