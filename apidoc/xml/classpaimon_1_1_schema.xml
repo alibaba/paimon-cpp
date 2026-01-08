@@ -1,0 +1,222 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_schema" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Schema</compoundname>
+    <includes refid="schema_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a35d10462804c6538919a9f8fd597e35a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Schema::~Schema</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Schema</name>
+        <qualifiedname>paimon::Schema::~Schema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="36" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1adb2b80cff7d763a887df26d35004e61c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt;::ArrowSchema &gt; &gt; paimon::Schema::GetArrowSchema</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetArrowSchema</name>
+        <qualifiedname>paimon::Schema::GetArrowSchema</qualifiedname>
+        <briefdescription>
+<para>Get the Arrow C schema representation of this table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A result containing an <ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref>, or an error status if conversion fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="40" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a86ebde8a32316069856601c05c9d1a28" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>virtual std::vector&lt; std::string &gt; paimon::Schema::FieldNames</definition>
+        <argsstring>() const =0</argsstring>
+        <name>FieldNames</name>
+        <qualifiedname>paimon::Schema::FieldNames</qualifiedname>
+        <briefdescription>
+<para>Get the names of all fields in the table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A vector of field names. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="44" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a89cb83fa62726492e9e025ab42678ea0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>virtual int64_t paimon::Schema::Id</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Id</name>
+        <qualifiedname>paimon::Schema::Id</qualifiedname>
+        <briefdescription>
+<para>Get the unique identifier of this table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The schema id </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="48" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a56fe82d6a66c2b806a79cb5543d26ae6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; std::string &gt; &amp; paimon::Schema::PrimaryKeys</definition>
+        <argsstring>() const =0</argsstring>
+        <name>PrimaryKeys</name>
+        <qualifiedname>paimon::Schema::PrimaryKeys</qualifiedname>
+        <briefdescription>
+<para>Get the list of primary key field names. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A reference to the vector of primary key names; empty if no primary keys are defined. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="53" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a4cf0cdde5da8363a0e3671ca5b64e973" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; std::string &gt; &amp; paimon::Schema::PartitionKeys</definition>
+        <argsstring>() const =0</argsstring>
+        <name>PartitionKeys</name>
+        <qualifiedname>paimon::Schema::PartitionKeys</qualifiedname>
+        <briefdescription>
+<para>Get the list of partition key field names. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A reference to the vector of partition key names; empty if the table is not partitioned. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="58" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1aee91a8e1d58756969c584a68a63e13b5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+        <definition>virtual const std::vector&lt; std::string &gt; &amp; paimon::Schema::BucketKeys</definition>
+        <argsstring>() const =0</argsstring>
+        <name>BucketKeys</name>
+        <qualifiedname>paimon::Schema::BucketKeys</qualifiedname>
+        <briefdescription>
+<para>Get the list of bucket key field names used for bucketing. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A reference to the vector of bucket key names. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="62" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a5bd83f6d9c0ed0a0f20de8527ab2d22b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>virtual int32_t paimon::Schema::NumBuckets</definition>
+        <argsstring>() const =0</argsstring>
+        <name>NumBuckets</name>
+        <qualifiedname>paimon::Schema::NumBuckets</qualifiedname>
+        <briefdescription>
+<para>Get the number of buckets configured for this table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The number of buckets. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="66" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a55838916a908bff73c438f6f6092d9ce" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>virtual int32_t paimon::Schema::HighestFieldId</definition>
+        <argsstring>() const =0</argsstring>
+        <name>HighestFieldId</name>
+        <qualifiedname>paimon::Schema::HighestFieldId</qualifiedname>
+        <briefdescription>
+<para>Get the highest field id assigned in this schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The maximum field id. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="70" column="21"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a91867179fdd7e0a9d5fa1109d6aceaac" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>virtual const std::map&lt; std::string, std::string &gt; &amp; paimon::Schema::Options</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Options</name>
+        <qualifiedname>paimon::Schema::Options</qualifiedname>
+        <briefdescription>
+<para>Get the table-level options associated with this schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A reference to the map of option key-value pairs (e.g., file format, filesystem). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="74" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_schema_1a6a9fcbaa6b332a4104b2006fe59df200" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::optional&lt; std::string &gt;</type>
+        <definition>virtual std::optional&lt; std::string &gt; paimon::Schema::Comment</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Comment</name>
+        <qualifiedname>paimon::Schema::Comment</qualifiedname>
+        <briefdescription>
+<para>Get an optional comment describing the table. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The table comment if set, or std::nullopt otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="78" column="27"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>This interface provides access to TableSchema-related information. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h" bodystart="34" bodyend="79"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_schema_1aee91a8e1d58756969c584a68a63e13b5" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>BucketKeys</name></member>
+      <member refid="classpaimon_1_1_schema_1a6a9fcbaa6b332a4104b2006fe59df200" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>Comment</name></member>
+      <member refid="classpaimon_1_1_schema_1a86ebde8a32316069856601c05c9d1a28" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>FieldNames</name></member>
+      <member refid="classpaimon_1_1_schema_1adb2b80cff7d763a887df26d35004e61c" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>GetArrowSchema</name></member>
+      <member refid="classpaimon_1_1_schema_1a55838916a908bff73c438f6f6092d9ce" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>HighestFieldId</name></member>
+      <member refid="classpaimon_1_1_schema_1a89cb83fa62726492e9e025ab42678ea0" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>Id</name></member>
+      <member refid="classpaimon_1_1_schema_1a5bd83f6d9c0ed0a0f20de8527ab2d22b" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>NumBuckets</name></member>
+      <member refid="classpaimon_1_1_schema_1a91867179fdd7e0a9d5fa1109d6aceaac" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>Options</name></member>
+      <member refid="classpaimon_1_1_schema_1a4cf0cdde5da8363a0e3671ca5b64e973" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>PartitionKeys</name></member>
+      <member refid="classpaimon_1_1_schema_1a56fe82d6a66c2b806a79cb5543d26ae6" prot="public" virt="pure-virtual"><scope>paimon::Schema</scope><name>PrimaryKeys</name></member>
+      <member refid="classpaimon_1_1_schema_1a35d10462804c6538919a9f8fd597e35a" prot="public" virt="virtual"><scope>paimon::Schema</scope><name>~Schema</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,1093 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="status_8h" kind="file" language="C++">
+    <compoundname>status.h</compoundname>
+    <includes local="no">cstring</includes>
+    <includes local="no">iosfwd</includes>
+    <includes local="no">memory</includes>
+    <includes local="no">string</includes>
+    <includes local="no">utility</includes>
+    <includes local="yes">paimon/compare.h</includes>
+    <includes local="yes">paimon/macros.h</includes>
+    <includes refid="string__builder_8h" local="yes">paimon/string_builder.h</includes>
+    <includes refid="visibility_8h" local="yes">paimon/visibility.h</includes>
+    <includedby refid="api_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/api.h</includedby>
+    <includedby refid="catalog_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h</includedby>
+    <includedby refid="file__store__commit_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h</includedby>
+    <includedby refid="file__store__write_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h</includedby>
+    <includedby refid="file__system_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includedby>
+    <includedby refid="global__index__writer_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h</includedby>
+    <includedby refid="buffered__input__stream_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h</includedby>
+    <includedby refid="byte__array__input__stream_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_array_input_stream.h</includedby>
+    <includedby refid="data__input__stream_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h</includedby>
+    <includedby refid="result_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/result.h</includedby>
+    <includedby refid="bucket__id__calculator_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/bucket_id_calculator.h</includedby>
+    <includedby refid="roaring__bitmap32_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h</includedby>
+    <includedby refid="roaring__bitmap64_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h</label>
+        <link refid="status_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>paimon/string_builder.h</label>
+        <link refid="string__builder_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>paimon/visibility.h</label>
+        <link refid="visibility_8h"/>
+      </node>
+      <node id="2">
+        <label>cstring</label>
+      </node>
+      <node id="3">
+        <label>iosfwd</label>
+      </node>
+      <node id="4">
+        <label>memory</label>
+      </node>
+      <node id="10">
+        <label>ostream</label>
+      </node>
+      <node id="7">
+        <label>paimon/compare.h</label>
+      </node>
+      <node id="8">
+        <label>paimon/macros.h</label>
+      </node>
+      <node id="11">
+        <label>sstream</label>
+      </node>
+      <node id="5">
+        <label>string</label>
+      </node>
+      <node id="6">
+        <label>utility</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/api.h</label>
+        <link refid="api_8h"/>
+      </node>
+      <node id="3">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h</label>
+        <link refid="catalog_8h"/>
+      </node>
+      <node id="28">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h</label>
+        <link refid="commit__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h</label>
+        <link refid="commit__message_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/blob.h</label>
+        <link refid="blob_8h"/>
+      </node>
+      <node id="31">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h</label>
+        <link refid="timestamp_8h"/>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="15">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h</label>
+        <link refid="bitmap__index__result_8h"/>
+      </node>
+      <node id="36">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h</label>
+        <link refid="file__index__format_8h"/>
+      </node>
+      <node id="37">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h</label>
+        <link refid="file__index__reader_8h"/>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h</label>
+        <link refid="file__index__result_8h"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_writer.h</label>
+        <link refid="file__index__writer_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+      </node>
+      <node id="8">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h</label>
+        <link refid="file__indexer_8h"/>
+      </node>
+      <node id="40">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer_factory.h</label>
+        <link refid="file__indexer__factory_8h"/>
+      </node>
+      <node id="4">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h</label>
+        <link refid="file__store__commit_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h</label>
+        <link refid="file__store__write_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h</label>
+        <link refid="column__stats_8h"/>
+      </node>
+      <node id="19">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h</label>
+        <link refid="file__format_8h"/>
+      </node>
+      <node id="41">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h</label>
+        <link refid="file__format__factory_8h"/>
+      </node>
+      <node id="42">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h</label>
+        <link refid="format__stats__extractor_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h</label>
+        <link refid="reader__builder_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="6">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</label>
+        <link refid="file__system_8h"/>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system_factory.h</label>
+        <link refid="file__system__factory_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h</label>
+        <link refid="bitmap__global__index__result_8h"/>
+      </node>
+      <node id="24">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h</label>
+        <link refid="bitmap__vector__search__global__index__result_8h"/>
+      </node>
+      <node id="44">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h</label>
+        <link refid="global__index__reader_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="45" relation="include">
+        </childnode>
+      </node>
+      <node id="43">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h</label>
+        <link refid="global__index__result_8h"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+      </node>
+      <node id="46">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h</label>
+        <link refid="global__index__scan_8h"/>
+      </node>
+      <node id="35">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h</label>
+        <link refid="global__index__write__task_8h"/>
+      </node>
+      <node id="25">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h</label>
+        <link refid="global__index__writer_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h</label>
+        <link refid="global__indexer_8h"/>
+      </node>
+      <node id="48">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer_factory.h</label>
+        <link refid="global__indexer__factory_8h"/>
+      </node>
+      <node id="34">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/indexed_split.h</label>
+        <link refid="indexed__split_8h"/>
+        <childnode refid="35" relation="include">
+        </childnode>
+      </node>
+      <node id="49">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_reader.h</label>
+        <link refid="global__index__file__reader_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io/global_index_file_writer.h</label>
+        <link refid="global__index__file__writer_8h"/>
+        <childnode refid="11" relation="include">
+        </childnode>
+      </node>
+      <node id="45">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h</label>
+        <link refid="row__range__global__index__scanner_8h"/>
+        <childnode refid="46" relation="include">
+        </childnode>
+      </node>
+      <node id="12">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/buffered_input_stream.h</label>
+        <link refid="buffered__input__stream_8h"/>
+      </node>
+      <node id="13">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_array_input_stream.h</label>
+        <link refid="byte__array__input__stream_8h"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="26">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h</label>
+        <link refid="data__input__stream_8h"/>
+      </node>
+      <node id="30">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h</label>
+        <link refid="file__meta__utils_8h"/>
+      </node>
+      <node id="50">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h</label>
+        <link refid="orphan__files__cleaner_8h"/>
+      </node>
+      <node id="51">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h</label>
+        <link refid="function__visitor_8h"/>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="44" relation="include">
+        </childnode>
+      </node>
+      <node id="53">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/leaf_predicate.h</label>
+        <link refid="leaf__predicate_8h"/>
+        <childnode refid="51" relation="include">
+        </childnode>
+      </node>
+      <node id="52">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h</label>
+        <link refid="literal_8h"/>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="53" relation="include">
+        </childnode>
+      </node>
+      <node id="54">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/predicate_builder.h</label>
+        <link refid="predicate__builder_8h"/>
+      </node>
+      <node id="55">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h</label>
+        <link refid="read__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/batch_reader.h</label>
+        <link refid="batch__reader_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h</label>
+        <link refid="file__batch__reader_8h"/>
+        <childnode refid="18" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+      </node>
+      <node id="20">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h</label>
+        <link refid="prefetch__file__batch__reader_8h"/>
+      </node>
+      <node id="56">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h</label>
+        <link refid="record__batch_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/result.h</label>
+        <link refid="result_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+        <childnode refid="40" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="41" relation="include">
+        </childnode>
+        <childnode refid="42" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="43" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="48" relation="include">
+        </childnode>
+        <childnode refid="49" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="50" relation="include">
+        </childnode>
+        <childnode refid="51" relation="include">
+        </childnode>
+        <childnode refid="52" relation="include">
+        </childnode>
+        <childnode refid="54" relation="include">
+        </childnode>
+        <childnode refid="55" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="56" relation="include">
+        </childnode>
+        <childnode refid="47" relation="include">
+        </childnode>
+        <childnode refid="57" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="58" relation="include">
+        </childnode>
+        <childnode refid="61" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="60" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="63" relation="include">
+        </childnode>
+      </node>
+      <node id="47">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h</label>
+        <link refid="scan__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="57">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/schema/schema.h</label>
+        <link refid="schema_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h</label>
+        <link refid="status_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+        <childnode refid="26" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="62" relation="include">
+        </childnode>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/data_split.h</label>
+        <link refid="data__split_8h"/>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="59">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/plan.h</label>
+        <link refid="plan_8h"/>
+        <childnode refid="60" relation="include">
+        </childnode>
+      </node>
+      <node id="58">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h</label>
+        <link refid="split_8h"/>
+        <childnode refid="33" relation="include">
+        </childnode>
+        <childnode refid="59" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+      </node>
+      <node id="61">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h</label>
+        <link refid="startup__mode_8h"/>
+      </node>
+      <node id="21">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h</label>
+        <link refid="table__read_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="60">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h</label>
+        <link refid="table__scan_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="62">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/bucket_id_calculator.h</label>
+        <link refid="bucket__id__calculator_8h"/>
+      </node>
+      <node id="14">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap32.h</label>
+        <link refid="roaring__bitmap32_8h"/>
+        <childnode refid="15" relation="include">
+        </childnode>
+        <childnode refid="16" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h</label>
+        <link refid="roaring__bitmap64_8h"/>
+        <childnode refid="23" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+      </node>
+      <node id="63">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h</label>
+        <link refid="write__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="classpaimon_1_1_status_detail" prot="public">paimon::StatusDetail</innerclass>
+    <innerclass refid="classpaimon_1_1_status" prot="public">paimon::Status</innerclass>
+    <innerclass refid="structpaimon_1_1_status_1_1_state" prot="private">paimon::Status::State</innerclass>
+    <innernamespace refid="namespacepaimon">paimon</innernamespace>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="status_8h_1ab771d7e526ad1be20f504600a933c9f0" prot="public" static="no">
+        <name>PAIMON_RETURN_IF_</name>
+        <param><defname>condition</defname></param>
+        <param><defname>status</defname></param>
+        <param><defname>_</defname></param>
+        <initializer>    <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">do</ref> {                                        \
+        <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">if</ref> (<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_PREDICT_FALSE</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">condition</ref>)) {  \
+            <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">return</ref> (status);                    \
+        }                                       \
+    } <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">while</ref> (0)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="433" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="433" bodyend="438"/>
+      </memberdef>
+      <memberdef kind="define" id="status_8h_1a4c0566b68bbf7abc0370123fa866e047" prot="public" static="no">
+        <name>PAIMON_RETURN_IF</name>
+        <param><defname>condition</defname></param>
+        <param><defname>status</defname></param>
+        <initializer>    <ref refid="status_8h_1ab771d7e526ad1be20f504600a933c9f0" kindref="member">PAIMON_RETURN_IF_</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">condition</ref>, status, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_STRINGIFY</ref>(status))</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="442" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="442" bodyend="443"/>
+      </memberdef>
+      <memberdef kind="define" id="status_8h_1ac82b4785c68ea7f84ff829b8c7bc8ef9" prot="public" static="no">
+        <name>PAIMON_RETURN_NOT_OK</name>
+        <param><defname>status</defname></param>
+        <initializer>    <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">do</ref> {                                                                    \
+        <ref refid="classpaimon_1_1_status" kindref="compound">::paimon::Status</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__s</ref> = ::paimon::internal::GenericToStatus(status); \
+        <ref refid="status_8h_1ab771d7e526ad1be20f504600a933c9f0" kindref="member">PAIMON_RETURN_IF_</ref>(!__s.ok(), <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">__s</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_STRINGIFY</ref>(status));        \
+    } <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">while</ref> (<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref>)</initializer>
+        <briefdescription>
+<para>Propagate any non-successful Status to the caller. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="446" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="446" bodyend="450"/>
+      </memberdef>
+      <memberdef kind="define" id="status_8h_1abe9d0a32866d170cbb5f80e54e747f86" prot="public" static="no">
+        <name>PAIMON_RETURN_NOT_OK_ELSE</name>
+        <param><defname>s</defname></param>
+        <param><defname>else_</defname></param>
+        <initializer>    <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">do</ref> {                                                              \
+        <ref refid="classpaimon_1_1_status" kindref="compound">::paimon::Status</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">_s</ref> = ::paimon::internal::GenericToStatus(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>); \
+        <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">if</ref> (!_s.ok()) {                                               \
+            <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">else_</ref>;                                                    \
+            <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">return</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">_s</ref>;                                                \
+        }                                                             \
+    } <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">while</ref> (<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="452" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="452" bodyend="459"/>
+      </memberdef>
+      <memberdef kind="define" id="status_8h_1a0a03bcf7fdbd9a96c67afa05fc0a545d" prot="public" static="no">
+        <name>RETURN_NOT_OK</name>
+        <param><defname>s</defname></param>
+        <initializer><ref refid="status_8h_1ac82b4785c68ea7f84ff829b8c7bc8ef9" kindref="member">PAIMON_RETURN_NOT_OK</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="463" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="463" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="2"><highlight class="comment"><sp/>*<sp/>Copyright<sp/>2024-present<sp/>Alibaba<sp/>Inc.</highlight></codeline>
+<codeline lineno="3"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="4"><highlight class="comment"><sp/>*<sp/>Licensed<sp/>under<sp/>the<sp/>Apache<sp/>License,<sp/>Version<sp/>2.0<sp/>(the<sp/>&quot;License&quot;);</highlight></codeline>
+<codeline lineno="5"><highlight class="comment"><sp/>*<sp/>you<sp/>may<sp/>not<sp/>use<sp/>this<sp/>file<sp/>except<sp/>in<sp/>compliance<sp/>with<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="6"><highlight class="comment"><sp/>*<sp/>You<sp/>may<sp/>obtain<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>License<sp/>at</highlight></codeline>
+<codeline lineno="7"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="8"><highlight class="comment"><sp/>*<sp/><sp/><sp/>http://www.apache.org/licenses/LICENSE-2.0</highlight></codeline>
+<codeline lineno="9"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="10"><highlight class="comment"><sp/>*<sp/>Unless<sp/>required<sp/>by<sp/>applicable<sp/>law<sp/>or<sp/>agreed<sp/>to<sp/>in<sp/>writing,<sp/>software</highlight></codeline>
+<codeline lineno="11"><highlight class="comment"><sp/>*<sp/>distributed<sp/>under<sp/>the<sp/>License<sp/>is<sp/>distributed<sp/>on<sp/>an<sp/>&quot;AS<sp/>IS&quot;<sp/>BASIS,</highlight></codeline>
+<codeline lineno="12"><highlight class="comment"><sp/>*<sp/>WITHOUT<sp/>WARRANTIES<sp/>OR<sp/>CONDITIONS<sp/>OF<sp/>ANY<sp/>KIND,<sp/>either<sp/>express<sp/>or<sp/>implied.</highlight></codeline>
+<codeline lineno="13"><highlight class="comment"><sp/>*<sp/>See<sp/>the<sp/>License<sp/>for<sp/>the<sp/>specific<sp/>language<sp/>governing<sp/>permissions<sp/>and</highlight></codeline>
+<codeline lineno="14"><highlight class="comment"><sp/>*<sp/>limitations<sp/>under<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Copyright<sp/>(c)<sp/>2011<sp/>The<sp/>LevelDB<sp/>Authors.<sp/>All<sp/>rights<sp/>reserved.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Use<sp/>of<sp/>this<sp/>source<sp/>code<sp/>is<sp/>governed<sp/>by<sp/>a<sp/>BSD-style<sp/>license<sp/>that<sp/>can<sp/>be</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="comment">//<sp/>found<sp/>in<sp/>the<sp/>LICENSE<sp/>file.<sp/>See<sp/>the<sp/>AUTHORS<sp/>file<sp/>for<sp/>names<sp/>of<sp/>contributors.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Adapted<sp/>from<sp/>Apache<sp/>Arrow</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="comment">//<sp/>https://github.com/apache/arrow/blob/main/cpp/src/arrow/status.h</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="comment">//<sp/>A<sp/>Status<sp/>encapsulates<sp/>the<sp/>result<sp/>of<sp/>an<sp/>operation.<sp/><sp/>It<sp/>may<sp/>indicate<sp/>success,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="comment">//<sp/>or<sp/>it<sp/>may<sp/>indicate<sp/>an<sp/>error<sp/>with<sp/>an<sp/>associated<sp/>error<sp/>message.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="comment">//</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Multiple<sp/>threads<sp/>can<sp/>invoke<sp/>const<sp/>methods<sp/>on<sp/>a<sp/>Status<sp/>without</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="comment">//<sp/>external<sp/>synchronization,<sp/>but<sp/>if<sp/>any<sp/>of<sp/>the<sp/>threads<sp/>may<sp/>call<sp/>a</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="comment">//<sp/>non-const<sp/>method,<sp/>all<sp/>threads<sp/>accessing<sp/>the<sp/>same<sp/>Status<sp/>must<sp/>use</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="comment">//<sp/>external<sp/>synchronization.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstring&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;iosfwd&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;memory&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;string&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;utility&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;paimon/compare.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;paimon/macros.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="string__builder_8h" kindref="compound">paimon/string_builder.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="visibility_8h" kindref="compound">paimon/visibility.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacepaimon" kindref="compound">paimon</ref><sp/>{</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight></codeline>
+<codeline lineno="47" refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/>:<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eae0aa021e21dddbd6d8cecec71e9cf564" kindref="member">OK</ref><sp/>=<sp/>0,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eab498327feeb51430af73e07deac268fd" kindref="member">OutOfMemory</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eac84999914a408f8c02b4122a49df6e00" kindref="member">KeyError</ref><sp/>=<sp/>2,</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea137bf8cff2d59f0883c600f9524b3eed" kindref="member">TypeError</ref><sp/>=<sp/>3,</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea4bbb8f967da6d1a610596d7257179c2b" kindref="member">Invalid</ref><sp/>=<sp/>4,</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea5206bd7472156351d2d9a99633ac9580" kindref="member">IOError</ref><sp/>=<sp/>5,</highlight></codeline>
+<codeline lineno="54"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea65f55acee27ef038c04505e05dbf6c35" kindref="member">CapacityError</ref><sp/>=<sp/>6,</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eaeb6ff05a2e9b0485ea84cbe3809e36ed" kindref="member">IndexError</ref><sp/>=<sp/>7,</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eabfaef30f1c8011c5cefa38ae470fb7aa" kindref="member">UnknownError</ref><sp/>=<sp/>9,</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea997ca4ce119685f40f03a9a8a6c5346e" kindref="member">NotImplemented</ref><sp/>=<sp/>10,</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea64353c9071b50ec2fe6b90ed122471a8" kindref="member">SerializationError</ref><sp/>=<sp/>11,</highlight></codeline>
+<codeline lineno="59"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eac30e98851cafc795dbe00917b7c4ccf8" kindref="member">NotExist</ref><sp/>=<sp/>12,</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eadd7f7c3323353f547eb98a8efba37ed0" kindref="member">Exist</ref><sp/>=<sp/>13,</highlight></codeline>
+<codeline lineno="61"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65" refid="classpaimon_1_1_status_detail" refkind="compound"><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_EXPORT</ref><sp/><ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref><sp/>{</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="67" refid="classpaimon_1_1_status_detail_1a45e18a38958a9c385f5dee1a859b99af" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_detail_1a45e18a38958a9c385f5dee1a859b99af" kindref="member">~StatusDetail</ref>()<sp/>=<sp/></highlight><highlight class="keywordflow">default</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="70" refid="classpaimon_1_1_status_detail_1ab01ad69a92827bf19cbb126063bd82b9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="classpaimon_1_1_status_detail_1ab01ad69a92827bf19cbb126063bd82b9" kindref="member">type_id</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="72" refid="classpaimon_1_1_status_detail_1a0ab060edabfc4528915885c7f584950b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">virtual</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="classpaimon_1_1_status_detail_1a0ab060edabfc4528915885c7f584950b" kindref="member">ToString</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>=<sp/>0;</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="74" refid="classpaimon_1_1_status_detail_1a3027eb33a5f35ebb1859c7ecaf93def9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_detail_1a3027eb33a5f35ebb1859c7ecaf93def9" kindref="member">operator==</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">other</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="75"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::string(type_id())<sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">other</ref>.type_id()<sp/>&amp;&amp;<sp/>ToString()<sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">other</ref>.ToString();</highlight></codeline>
+<codeline lineno="76"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="77"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87" refid="classpaimon_1_1_status" refkind="compound"><highlight class="keyword">class<sp/></highlight><highlight class="normal"><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_MUST_USE_TYPE</ref><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_EXPORT</ref><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/>:<sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/>util::EqualityComparable&lt;Status&gt;,</highlight></codeline>
+<codeline lineno="88"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1util_1_1_to_string_ostreamable" kindref="compound">util::ToStringOstreamable</ref>&lt;Status&gt;<sp/>{</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"><sp/></highlight><highlight class="keyword">public</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Create<sp/>a<sp/>success<sp/>status.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="91" refid="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" kindref="member">Status</ref>()<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">noexcept</ref><sp/>=<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">default</ref>;</highlight></codeline>
+<codeline lineno="92" refid="classpaimon_1_1_status_1a7e8cddbff58dab861c66df9cecd1b0bd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>~<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>()<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">noexcept</ref><sp/>{</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>PAIMON-2400:<sp/>On<sp/>certain<sp/>compilers,<sp/>splitting<sp/>off<sp/>the<sp/>slow<sp/>path<sp/>improves</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>performance<sp/>significantly.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="95"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_PREDICT_FALSE</ref>(state_<sp/>!=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">))<sp/>{</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>DeleteState();</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100" refid="classpaimon_1_1_status_1a17c8a01529c2cf096c0f05b7ce1817ad" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status_1a17c8a01529c2cf096c0f05b7ce1817ad" kindref="member">Status</ref>(<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/>code,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;<sp/>msg);</highlight></codeline>
+<codeline lineno="102" refid="classpaimon_1_1_status_1a016bdae5456f990e5c44a8a6552da20d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status_1a016bdae5456f990e5c44a8a6552da20d" kindref="member">Status</ref>(<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/>code,<sp/>std::string<sp/>msg,<sp/>std::shared_ptr&lt;StatusDetail&gt;<sp/>detail);</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Copy<sp/>the<sp/>specified<sp/>status.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="105"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/>operator=(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Move<sp/>the<sp/>specified<sp/>status.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/>operator=(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>Equals(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>AND<sp/>the<sp/>statuses.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="115" refid="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" kindref="member">operator&amp;</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="116" refid="classpaimon_1_1_status_1a4b5b3941b5e2c0d884c740109da26976" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a4b5b3941b5e2c0d884c740109da26976" kindref="member">operator&amp;</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="117" refid="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" kindref="member">operator&amp;=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="118" refid="classpaimon_1_1_status_1a6020aa800904ba21be357c75f327d841" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="classpaimon_1_1_status_1a6020aa800904ba21be357c75f327d841" kindref="member">operator&amp;=</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121" refid="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" kindref="member">OK</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>{};</highlight></codeline>
+<codeline lineno="123"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="126" refid="classpaimon_1_1_status_1a21794c7b23c1a50f8417085d228ff833" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a21794c7b23c1a50f8417085d228ff833" kindref="member">FromArgs</ref>(<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/>code,<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>(code,<sp/>util::StringBuilder(std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...));</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="129"><highlight class="normal"></highlight></codeline>
+<codeline lineno="130"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="131" refid="classpaimon_1_1_status_1adffec4a5cee813d7600b3cce7a7e9da0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1adffec4a5cee813d7600b3cce7a7e9da0" kindref="member">FromDetailAndArgs</ref>(<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/>code,<sp/>std::shared_ptr&lt;StatusDetail&gt;<sp/>detail,</highlight></codeline>
+<codeline lineno="132"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="133"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>(code,<sp/>util::StringBuilder(std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...),<sp/>std::move(detail));</highlight></codeline>
+<codeline lineno="134"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="138" refid="classpaimon_1_1_status_1a257f843c6b46ae3f71026ca68e693516" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a257f843c6b46ae3f71026ca68e693516" kindref="member">OutOfMemory</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="139"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::OutOfMemory,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="140"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="141"><highlight class="normal"></highlight></codeline>
+<codeline lineno="143"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="144" refid="classpaimon_1_1_status_1ae7ac6f987334404cab0bc3a31f9e7893" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1ae7ac6f987334404cab0bc3a31f9e7893" kindref="member">KeyError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="145"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::KeyError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="147"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="150" refid="classpaimon_1_1_status_1a786883a7b8a8c41f318e09bedcaa2a68" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a786883a7b8a8c41f318e09bedcaa2a68" kindref="member">TypeError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="151"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::TypeError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="152"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="153"><highlight class="normal"></highlight></codeline>
+<codeline lineno="155"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="156" refid="classpaimon_1_1_status_1aa98127f1cf488be656e4f1cd09943497" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1aa98127f1cf488be656e4f1cd09943497" kindref="member">UnknownError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="157"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::UnknownError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="159"><highlight class="normal"></highlight></codeline>
+<codeline lineno="162"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="163" refid="classpaimon_1_1_status_1ade3bf02ffe02144cdbe87a40cc935869" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1ade3bf02ffe02144cdbe87a40cc935869" kindref="member">NotImplemented</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="164"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::NotImplemented,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="165"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"></highlight></codeline>
+<codeline lineno="168"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="169" refid="classpaimon_1_1_status_1adf27576c2f0a515e153ca1af9bf93fc1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1adf27576c2f0a515e153ca1af9bf93fc1" kindref="member">Invalid</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::Invalid,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="171"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="172"><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="175" refid="classpaimon_1_1_status_1ab6d9895460f5cf36d618db4fca8d990a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1ab6d9895460f5cf36d618db4fca8d990a" kindref="member">IndexError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="176"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::IndexError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="177"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"></highlight></codeline>
+<codeline lineno="180"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="181" refid="classpaimon_1_1_status_1a40986cebd0d6385235916c977561fd80" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a40986cebd0d6385235916c977561fd80" kindref="member">CapacityError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::CapacityError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="183"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="184"><highlight class="normal"></highlight></codeline>
+<codeline lineno="186"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="187" refid="classpaimon_1_1_status_1a392f2c07e1beface3ca5d9aac87109c4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a392f2c07e1beface3ca5d9aac87109c4" kindref="member">IOError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="188"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::IOError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="189"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="193" refid="classpaimon_1_1_status_1a36891e6221061815c046016b6723a31d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a36891e6221061815c046016b6723a31d" kindref="member">SerializationError</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="194"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::SerializationError,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="196"><highlight class="normal"></highlight></codeline>
+<codeline lineno="198"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="199" refid="classpaimon_1_1_status_1a33c6225bf4989a1bbf8a85a085dbd42b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a33c6225bf4989a1bbf8a85a085dbd42b" kindref="member">NotExist</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="200"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::NotExist,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="202"><highlight class="normal"></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="205" refid="classpaimon_1_1_status_1a5845f5f34fed90a3c51b09988fc7049b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a5845f5f34fed90a3c51b09988fc7049b" kindref="member">Exist</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="206"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>Status::FromArgs(StatusCode::Exist,<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...);</highlight></codeline>
+<codeline lineno="207"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="208"><highlight class="normal"></highlight></codeline>
+<codeline lineno="210" refid="classpaimon_1_1_status_1a589cabbd6509603f3419000bae095c92" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a589cabbd6509603f3419000bae095c92" kindref="member">ok</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="211"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>(state_<sp/>==<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="212"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"></highlight></codeline>
+<codeline lineno="215" refid="classpaimon_1_1_status_1ab56b950a547b853b004be8a7b8f05be3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1ab56b950a547b853b004be8a7b8f05be3" kindref="member">IsOutOfMemory</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="216"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::OutOfMemory;</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="219" refid="classpaimon_1_1_status_1a86a6e8c03fd5755a6d3394a45080ab9b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a86a6e8c03fd5755a6d3394a45080ab9b" kindref="member">IsKeyError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::KeyError;</highlight></codeline>
+<codeline lineno="221"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="223" refid="classpaimon_1_1_status_1a0bd6699e2d6e08e3918f18b7497429d9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a0bd6699e2d6e08e3918f18b7497429d9" kindref="member">IsInvalid</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::Invalid;</highlight></codeline>
+<codeline lineno="225"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="227" refid="classpaimon_1_1_status_1a1670df9e548372ba699509287460b9ab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a1670df9e548372ba699509287460b9ab" kindref="member">IsIOError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="228"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::IOError;</highlight></codeline>
+<codeline lineno="229"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="231" refid="classpaimon_1_1_status_1a3d58ead9a3db0913c3983dfbaca82c3a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a3d58ead9a3db0913c3983dfbaca82c3a" kindref="member">IsCapacityError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="232"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::CapacityError;</highlight></codeline>
+<codeline lineno="233"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="235" refid="classpaimon_1_1_status_1acbf364dc927150b891d37639f3f4eed4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1acbf364dc927150b891d37639f3f4eed4" kindref="member">IsIndexError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="236"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::IndexError;</highlight></codeline>
+<codeline lineno="237"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="239" refid="classpaimon_1_1_status_1afb6de03e39d9031553333fbe21b11dbf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1afb6de03e39d9031553333fbe21b11dbf" kindref="member">IsTypeError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="240"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::TypeError;</highlight></codeline>
+<codeline lineno="241"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="243" refid="classpaimon_1_1_status_1a0b6318f0364ca8f5f8799552f1ac60ef" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a0b6318f0364ca8f5f8799552f1ac60ef" kindref="member">IsUnknownError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="244"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::UnknownError;</highlight></codeline>
+<codeline lineno="245"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="247" refid="classpaimon_1_1_status_1a33c4399af80719ab9d9f9e9c6c657405" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a33c4399af80719ab9d9f9e9c6c657405" kindref="member">IsNotImplemented</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="248"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::NotImplemented;</highlight></codeline>
+<codeline lineno="249"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="251" refid="classpaimon_1_1_status_1a4f4ed1b551382e97ed5b36350d2ef268" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a4f4ed1b551382e97ed5b36350d2ef268" kindref="member">IsSerializationError</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="252"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::SerializationError;</highlight></codeline>
+<codeline lineno="253"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="255" refid="classpaimon_1_1_status_1add4e34738a567d846aceaf89f699d880" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1add4e34738a567d846aceaf89f699d880" kindref="member">IsNotExist</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="256"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::NotExist;</highlight></codeline>
+<codeline lineno="257"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="259" refid="classpaimon_1_1_status_1a0c15ea6f24f81d4169117a51ff9d2cd2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a0c15ea6f24f81d4169117a51ff9d2cd2" kindref="member">IsExist</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="260"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>code()<sp/>==<sp/>StatusCode::Exist;</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="262"><highlight class="normal"></highlight></codeline>
+<codeline lineno="266" refid="classpaimon_1_1_status_1aa42f805701e838579d59e6629e02d4bf" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="classpaimon_1_1_status_1aa42f805701e838579d59e6629e02d4bf" kindref="member">ToString</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="267"><highlight class="normal"></highlight></codeline>
+<codeline lineno="270" refid="classpaimon_1_1_status_1ae910dbe8e294b8ec3fda2b6c81c6e961" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="classpaimon_1_1_status_1ae910dbe8e294b8ec3fda2b6c81c6e961" kindref="member">CodeAsString</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="271" refid="classpaimon_1_1_status_1a898ec4b25a625282f3c60ae1aa4a1799" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::string<sp/><ref refid="classpaimon_1_1_status_1a898ec4b25a625282f3c60ae1aa4a1799" kindref="member">CodeAsString</ref>(<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref>);</highlight></codeline>
+<codeline lineno="272"><highlight class="normal"></highlight></codeline>
+<codeline lineno="274" refid="classpaimon_1_1_status_1aaf8e97b117983ea87dfabad6558340a0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/><ref refid="classpaimon_1_1_status_1aaf8e97b117983ea87dfabad6558340a0" kindref="member">code</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="275"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>ok()<sp/>?<sp/>StatusCode::OK<sp/>:<sp/>state_-&gt;code;</highlight></codeline>
+<codeline lineno="276"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="277"><highlight class="normal"></highlight></codeline>
+<codeline lineno="279" refid="classpaimon_1_1_status_1ae8a300f94797e71210e5b62e05450b50" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="classpaimon_1_1_status_1ae8a300f94797e71210e5b62e05450b50" kindref="member">message</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="280"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>ok()<sp/>?<sp/></highlight><highlight class="stringliteral">&quot;&quot;</highlight><highlight class="normal"><sp/>:<sp/>state_-&gt;msg;</highlight></codeline>
+<codeline lineno="281"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"></highlight></codeline>
+<codeline lineno="284" refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;StatusDetail&gt;&amp;<sp/><ref refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" kindref="member">detail</ref>()</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="285"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/>std::shared_ptr&lt;StatusDetail&gt;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">no_detail</ref><sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="286"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>state_<sp/>?<sp/>state_-&gt;detail<sp/>:<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">no_detail</ref>;</highlight></codeline>
+<codeline lineno="287"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"></highlight></codeline>
+<codeline lineno="291" refid="classpaimon_1_1_status_1ac2b68b370563ec520c808fc7892e5a7b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1ac2b68b370563ec520c808fc7892e5a7b" kindref="member">WithDetail</ref>(std::shared_ptr&lt;StatusDetail&gt;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">new_detail</ref>)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="292"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>{code(),<sp/>message(),<sp/>std::move(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">new_detail</ref>)};</highlight></codeline>
+<codeline lineno="293"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="294"><highlight class="normal"></highlight></codeline>
+<codeline lineno="297"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">template</highlight><highlight class="normal"><sp/>&lt;</highlight><highlight class="keyword">typename</highlight><highlight class="normal">...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&gt;</highlight></codeline>
+<codeline lineno="298" refid="classpaimon_1_1_status_1a679677c422b40ff2eb31b814b34a7c04" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a679677c422b40ff2eb31b814b34a7c04" kindref="member">WithMessage</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref>&amp;&amp;...<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="299"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>FromArgs(code(),<sp/>std::forward&lt;Args&gt;(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">args</ref>)...).<ref refid="classpaimon_1_1_status_1ac2b68b370563ec520c808fc7892e5a7b" kindref="member">WithDetail</ref>(detail());</highlight></codeline>
+<codeline lineno="300"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="301"><highlight class="normal"></highlight></codeline>
+<codeline lineno="302" refid="classpaimon_1_1_status_1a5646dcc5f2881d168c7c61151d4d6059" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>[[<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">noreturn</ref>]]<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a5646dcc5f2881d168c7c61151d4d6059" kindref="member">Abort</ref>()<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="303" refid="classpaimon_1_1_status_1af853d291ee6604976ae5a4c78432c2e7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/>[[<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">noreturn</ref>]]<sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1af853d291ee6604976ae5a4c78432c2e7" kindref="member">Abort</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>std::string&amp;<sp/>message)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="304"><highlight class="normal"></highlight></codeline>
+<codeline lineno="305"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>PAIMON_EXTRA_ERROR_CONTEXT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="306"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">AddContextLine</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">filename</ref>,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">line</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">function_name</ref>,</highlight></codeline>
+<codeline lineno="307"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">expr</ref>);</highlight></codeline>
+<codeline lineno="308"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="309"><highlight class="normal"></highlight></codeline>
+<codeline lineno="310"><highlight class="normal"><sp/></highlight><highlight class="keyword">private</highlight><highlight class="normal">:</highlight></codeline>
+<codeline lineno="311" refid="structpaimon_1_1_status_1_1_state" refkind="compound"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structpaimon_1_1_status_1_1_state" kindref="compound">State</ref><sp/>{</highlight></codeline>
+<codeline lineno="312" refid="structpaimon_1_1_status_1_1_state_1ae67aee8b053231dfb964942bf820b072" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref><sp/><ref refid="structpaimon_1_1_status_1_1_state_1ae67aee8b053231dfb964942bf820b072" kindref="member">code</ref>;</highlight></codeline>
+<codeline lineno="313" refid="structpaimon_1_1_status_1_1_state_1ab4d24f20908fe8a024c9622e7112b064" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::string<sp/><ref refid="structpaimon_1_1_status_1_1_state_1ab4d24f20908fe8a024c9622e7112b064" kindref="member">msg</ref>;</highlight></codeline>
+<codeline lineno="314" refid="structpaimon_1_1_status_1_1_state_1ad67a33c735408d8166de438038746728" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>std::shared_ptr&lt;StatusDetail&gt;<sp/><ref refid="structpaimon_1_1_status_1_1_state_1ad67a33c735408d8166de438038746728" kindref="member">detail</ref>;</highlight></codeline>
+<codeline lineno="315"><highlight class="normal"><sp/><sp/><sp/><sp/>};</highlight></codeline>
+<codeline lineno="316"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>OK<sp/>status<sp/>has<sp/>a<sp/>`NULL`<sp/>state_.<sp/><sp/>Otherwise,<sp/>`state_`<sp/>points<sp/>to</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="317"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>a<sp/>`State`<sp/>structure<sp/>containing<sp/>the<sp/>error<sp/>code<sp/>and<sp/>message(s)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="318" refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="structpaimon_1_1_status_1_1_state" kindref="compound">State</ref>*<sp/>state_{</highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">};</highlight></codeline>
+<codeline lineno="319"><highlight class="normal"></highlight></codeline>
+<codeline lineno="320" refid="classpaimon_1_1_status_1a409b28611f3c7541299724c8fbf1eff9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a409b28611f3c7541299724c8fbf1eff9" kindref="member">DeleteState</ref>()<sp/>{</highlight></codeline>
+<codeline lineno="321"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal"><sp/>state_;</highlight></codeline>
+<codeline lineno="322"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>state_<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="323"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="324" refid="classpaimon_1_1_status_1aedfec1189f6d93d85230283e14103169" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1aedfec1189f6d93d85230283e14103169" kindref="member">CopyFrom</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="325"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>MoveFrom(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="326"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="327"><highlight class="normal"></highlight></codeline>
+<codeline lineno="328" refid="classpaimon_1_1_status_1a844d67f9b4d139d15f3f484071dc8dff" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a844d67f9b4d139d15f3f484071dc8dff" kindref="member">Status::MoveFrom</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">delete</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" kindref="member">state_</ref>;</highlight></codeline>
+<codeline lineno="330"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" kindref="member">state_</ref><sp/>=<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_;</highlight></codeline>
+<codeline lineno="331"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="332"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="333"><highlight class="normal"></highlight></codeline>
+<codeline lineno="334" refid="classpaimon_1_1_status_1a674d56de758befdb58df135ad0737b17" refkind="member"><highlight class="normal"><ref refid="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" kindref="member">Status::Status</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/>:<sp/>state_((<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_<sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref>)<sp/>?<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref><sp/>:<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">new</ref><sp/><ref refid="structpaimon_1_1_status_1_1_state" kindref="compound">State</ref>(*<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_))<sp/>{}</highlight></codeline>
+<codeline lineno="335"><highlight class="normal"></highlight></codeline>
+<codeline lineno="336" refid="classpaimon_1_1_status_1a17ed5a104ced8c6caf54231e1a0b0dc1" refkind="member"><highlight class="normal"><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="classpaimon_1_1_status_1a17ed5a104ced8c6caf54231e1a0b0dc1" kindref="member">Status::operator=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="337"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>The<sp/>following<sp/>condition<sp/>catches<sp/>both<sp/>aliasing<sp/>(when<sp/>this<sp/>==<sp/>&amp;s),</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="338"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>and<sp/>the<sp/>common<sp/>case<sp/>where<sp/>both<sp/>s<sp/>and<sp/>*this<sp/>are<sp/>ok.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="339"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" kindref="member">state_</ref><sp/>!=<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_)<sp/>{</highlight></codeline>
+<codeline lineno="340"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><ref refid="classpaimon_1_1_status_1aedfec1189f6d93d85230283e14103169" kindref="member">CopyFrom</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="342"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="343"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="344"><highlight class="normal"></highlight></codeline>
+<codeline lineno="345" refid="classpaimon_1_1_status_1a2ac90c76c02abd6a35b9ca88ad58428b" refkind="member"><highlight class="normal"><ref refid="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" kindref="member">Status::Status</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">noexcept</ref><sp/>:<sp/>state_(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_)<sp/>{</highlight></codeline>
+<codeline lineno="346"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_<sp/>=<sp/></highlight><highlight class="keyword">nullptr</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="347"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="348"><highlight class="normal"></highlight></codeline>
+<codeline lineno="349" refid="classpaimon_1_1_status_1a22282873c1e4a4b09e851bcb0baf101a" refkind="member"><highlight class="normal"><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="classpaimon_1_1_status_1a17ed5a104ced8c6caf54231e1a0b0dc1" kindref="member">Status::operator=</ref>(<ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="350"><highlight class="normal"><sp/><sp/><sp/><sp/>MoveFrom(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="351"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="352"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="353"><highlight class="normal"></highlight></codeline>
+<codeline lineno="354" refid="classpaimon_1_1_status_1a407f19a1de6f6504c767d15c6b807b93" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1a407f19a1de6f6504c767d15c6b807b93" kindref="member">Status::Equals</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)</highlight><highlight class="keyword"><sp/>const<sp/></highlight><highlight class="normal">{</highlight></codeline>
+<codeline lineno="355"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" kindref="member">state_</ref><sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.state_)<sp/>{</highlight></codeline>
+<codeline lineno="356"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">true</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="357"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="358"><highlight class="normal"></highlight></codeline>
+<codeline lineno="359"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="classpaimon_1_1_status_1a589cabbd6509603f3419000bae095c92" kindref="member">ok</ref>()<sp/>||<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.ok())<sp/>{</highlight></codeline>
+<codeline lineno="360"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="361"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="362"><highlight class="normal"></highlight></codeline>
+<codeline lineno="363"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(<ref refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" kindref="member">detail</ref>()<sp/>!=<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.detail())<sp/>{</highlight></codeline>
+<codeline lineno="364"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>((<ref refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" kindref="member">detail</ref>()<sp/>&amp;&amp;<sp/>!<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.detail())<sp/>||<sp/>(!<ref refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" kindref="member">detail</ref>()<sp/>&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.detail()))<sp/>{</highlight></codeline>
+<codeline lineno="365"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">false</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="366"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="367"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*<ref refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" kindref="member">detail</ref>()<sp/>==<sp/>*<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.detail();</highlight></codeline>
+<codeline lineno="368"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="369"><highlight class="normal"></highlight></codeline>
+<codeline lineno="370"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status_1aaf8e97b117983ea87dfabad6558340a0" kindref="member">code</ref>()<sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.code()<sp/>&amp;&amp;<sp/><ref refid="classpaimon_1_1_status_1ae8a300f94797e71210e5b62e05450b50" kindref="member">message</ref>()<sp/>==<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.message();</highlight></codeline>
+<codeline lineno="371"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="372"><highlight class="normal"></highlight></codeline>
+<codeline lineno="374"><highlight class="comment">//<sp/>(note:<sp/>emits<sp/>warnings<sp/>on<sp/>Doxygen<sp/>&lt;<sp/>1.8.15,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="375"><highlight class="normal"></highlight><highlight class="comment">//<sp/><sp/>see<sp/>https://github.com/doxygen/doxygen/issues/6295)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="376"><highlight class="normal"><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref><sp/><ref refid="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" kindref="member">Status::operator&amp;</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="377"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ok())<sp/>{</highlight></codeline>
+<codeline lineno="378"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>;</highlight></codeline>
+<codeline lineno="379"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="380"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="381"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="382"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="383"><highlight class="normal"></highlight></codeline>
+<codeline lineno="384"><highlight class="normal">Status<sp/><ref refid="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" kindref="member">Status::operator&amp;</ref>(Status&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="385"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ok())<sp/>{</highlight></codeline>
+<codeline lineno="386"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::move(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="387"><highlight class="normal"><sp/><sp/><sp/><sp/>}<sp/></highlight><highlight class="keywordflow">else</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="388"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="389"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="390"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="391"><highlight class="normal"></highlight></codeline>
+<codeline lineno="392"><highlight class="normal">Status&amp;<sp/><ref refid="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" kindref="member">Status::operator&amp;=</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Status&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="393"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ok()<sp/>&amp;&amp;<sp/>!<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.ok())<sp/>{</highlight></codeline>
+<codeline lineno="394"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>CopyFrom(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="395"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="396"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="397"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="398"><highlight class="normal"></highlight></codeline>
+<codeline lineno="399"><highlight class="normal">Status&amp;<sp/><ref refid="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" kindref="member">Status::operator&amp;=</ref>(Status&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>)<sp/></highlight><highlight class="keyword">noexcept</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="400"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">if</highlight><highlight class="normal"><sp/>(ok()<sp/>&amp;&amp;<sp/>!<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>.ok())<sp/>{</highlight></codeline>
+<codeline lineno="401"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>MoveFrom(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">s</ref>);</highlight></codeline>
+<codeline lineno="402"><highlight class="normal"><sp/><sp/><sp/><sp/>}</highlight></codeline>
+<codeline lineno="403"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>*</highlight><highlight class="keyword">this</highlight><highlight class="normal">;</highlight></codeline>
+<codeline lineno="404"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="406"><highlight class="normal"></highlight></codeline>
+<codeline lineno="407"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal">internal<sp/>{</highlight></codeline>
+<codeline lineno="408"><highlight class="normal"></highlight></codeline>
+<codeline lineno="409"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Extract<sp/>Status<sp/>from<sp/>Status<sp/>or<sp/>Result&lt;T&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="410"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Useful<sp/>for<sp/>the<sp/>status<sp/>check<sp/>macros<sp/>such<sp/>as<sp/>RETURN_NOT_OK.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="411"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>Status<sp/>GenericToStatus(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Status&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">st</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="412"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">st</ref>;</highlight></codeline>
+<codeline lineno="413"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="414"><highlight class="normal"></highlight><highlight class="keyword">inline</highlight><highlight class="normal"><sp/>Status<sp/>GenericToStatus(Status&amp;&amp;<sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">st</ref>)<sp/>{</highlight></codeline>
+<codeline lineno="415"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keywordflow">return</highlight><highlight class="normal"><sp/>std::move(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">st</ref>);</highlight></codeline>
+<codeline lineno="416"><highlight class="normal">}</highlight></codeline>
+<codeline lineno="417"><highlight class="normal"></highlight></codeline>
+<codeline lineno="418"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>internal</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="419"><highlight class="normal"></highlight></codeline>
+<codeline lineno="420"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>PAIMON_EXTRA_ERROR_CONTEXT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="421"><highlight class="normal"></highlight></codeline>
+<codeline lineno="423"><highlight class="preprocessor">#define<sp/>PAIMON_RETURN_IF_(condition,<sp/>status,<sp/>expr)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="424"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="425"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>(PAIMON_PREDICT_FALSE(condition))<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="426"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>::paimon::Status<sp/>_st<sp/>=<sp/>(status);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="427"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>_st.AddContextLine(__FILE__,<sp/>__LINE__,<sp/>__FUNCTION__,<sp/>expr);<sp/>\</highlight></codeline>
+<codeline lineno="428"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>_st;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="429"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="430"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="431"><highlight class="normal"></highlight><highlight class="preprocessor">#else</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="432"><highlight class="normal"></highlight></codeline>
+<codeline lineno="433" refid="status_8h_1ab771d7e526ad1be20f504600a933c9f0" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_RETURN_IF_(condition,<sp/>status,<sp/>_)<sp/>\</highlight></codeline>
+<codeline lineno="434"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="435"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>(PAIMON_PREDICT_FALSE(condition))<sp/>{<sp/><sp/>\</highlight></codeline>
+<codeline lineno="436"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>(status);<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="437"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="438"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/>while<sp/>(0)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="439"><highlight class="normal"></highlight></codeline>
+<codeline lineno="440"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>PAIMON_EXTRA_ERROR_CONTEXT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="441"><highlight class="normal"></highlight></codeline>
+<codeline lineno="442" refid="status_8h_1a4c0566b68bbf7abc0370123fa866e047" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_RETURN_IF(condition,<sp/>status)<sp/>\</highlight></codeline>
+<codeline lineno="443"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>PAIMON_RETURN_IF_(condition,<sp/>status,<sp/>PAIMON_STRINGIFY(status))</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="444"><highlight class="normal"></highlight></codeline>
+<codeline lineno="446" refid="status_8h_1ac82b4785c68ea7f84ff829b8c7bc8ef9" refkind="member"><highlight class="preprocessor">#define<sp/>PAIMON_RETURN_NOT_OK(status)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="447"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="448"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>::paimon::Status<sp/>__s<sp/>=<sp/>::paimon::internal::GenericToStatus(status);<sp/>\</highlight></codeline>
+<codeline lineno="449"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>PAIMON_RETURN_IF_(!__s.ok(),<sp/>__s,<sp/>PAIMON_STRINGIFY(status));<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="450"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/>while<sp/>(false)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="451"><highlight class="normal"></highlight></codeline>
+<codeline lineno="452" refid="status_8h_1abe9d0a32866d170cbb5f80e54e747f86" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>PAIMON_RETURN_NOT_OK_ELSE(s,<sp/>else_)<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="453"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>do<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="454"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>::paimon::Status<sp/>_s<sp/>=<sp/>::paimon::internal::GenericToStatus(s);<sp/>\</highlight></codeline>
+<codeline lineno="455"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>if<sp/>(!_s.ok())<sp/>{<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="456"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>else_;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="457"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>return<sp/>_s;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="458"><highlight class="preprocessor"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>}<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/>\</highlight></codeline>
+<codeline lineno="459"><highlight class="preprocessor"><sp/><sp/><sp/><sp/>}<sp/>while<sp/>(false)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="460"><highlight class="normal"></highlight></codeline>
+<codeline lineno="461"><highlight class="normal"></highlight><highlight class="comment">//<sp/>This<sp/>is<sp/>an<sp/>internal-use<sp/>macro<sp/>and<sp/>should<sp/>not<sp/>be<sp/>used<sp/>in<sp/>public<sp/>headers.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="462"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>RETURN_NOT_OK</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="463" refid="status_8h_1a0a03bcf7fdbd9a96c67afa05fc0a545d" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>RETURN_NOT_OK(s)<sp/>PAIMON_RETURN_NOT_OK(s)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="464"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="465"><highlight class="normal"></highlight></codeline>
+<codeline lineno="466"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>paimon</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h"/>
+  </compounddef>
+</doxygen>

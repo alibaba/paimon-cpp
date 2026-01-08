@@ -1,0 +1,1027 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Data Types &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/data_types';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="File Index" href="file_index.html" />
+    <link rel="prev" title="IO" href="io.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Data Types</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="data-types">
+<h1>Data Types<a class="headerlink" href="#data-types" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-data-types"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4BlobE">
+<span id="_CPPv3N6paimon4BlobE"></span><span id="_CPPv2N6paimon4BlobE"></span><span id="paimon::Blob"></span><span class="target" id="classpaimon_1_1_blob"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Blob</span></span></span><a class="headerlink" href="#_CPPv4N6paimon4BlobE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Represents a binary large object (BLOB) that can be read from various sources. </p>
+<p>The <a class="reference internal" href="#classpaimon_1_1_blob"><span class="std std-ref">Blob</span></a> class provides a unified interface for handling binary data from different sources including file path and blob descriptor. It supports reading data through input streams and provides descriptor-based serialization. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4BlobD0Ev">
+<span id="_CPPv3N6paimon4BlobD0Ev"></span><span id="_CPPv2N6paimon4BlobD0Ev"></span><span id="paimon::Blob::~Blob"></span><span class="target" id="classpaimon_1_1_blob_1a9c31da6e0cb334ac1df8b891e3bf614c"></span><span class="sig-name descname"><span class="n"><span class="pre">~Blob</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon4BlobD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::Blob::ToDescriptor__std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_blob_1abe4185f7ec7fd027d266c4239c2cd48b"></span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToDescriptor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Converts the blob to a blob descriptor. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>pool</strong> – The memory pool to use for allocation. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A blob descriptor bytes representing the blob. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Blob3UriEv">
+<span id="_CPPv3NK6paimon4Blob3UriEv"></span><span id="_CPPv2NK6paimon4Blob3UriEv"></span><span id="paimon::Blob::UriC"></span><span class="target" id="classpaimon_1_1_blob_1acc2be0419a0d534ae705181c590b7917"></span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">Uri</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Blob3UriEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Gets the URI of the blob. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE">
+<span id="_CPPv3NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE"></span><span id="_CPPv2NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE"></span><span id="paimon::Blob::NewInputStream__std::shared_ptr:FileSystem:CRC"></span><span class="target" id="classpaimon_1_1_blob_1a123d3ec7b9bf8c2451dde9cb48c5f559"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NewInputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">fs</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an input stream for reading the blob data. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fs</strong> – The file system to use for reading. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing the input stream or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::Blob::ToData__std::shared_ptr:FileSystem:CR.std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_blob_1acbd4bea9516ca38f8b4072509bda037a"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToData</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">fs</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Reads the blob data to bytes. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fs</strong> – The file system to use for reading. </p></li>
+<li><p><strong>pool</strong> – The memory pool to use for allocation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing the blob data bytes or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4Blob8FromPathERKNSt6stringE">
+<span id="_CPPv3N6paimon4Blob8FromPathERKNSt6stringE"></span><span id="_CPPv2N6paimon4Blob8FromPathERKNSt6stringE"></span><span id="paimon::Blob::FromPath__ssCR"></span><span class="target" id="classpaimon_1_1_blob_1a9c4f6660f057089d471ad0373c6f8caf"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon4BlobE" title="paimon::Blob"><span class="n"><span class="pre">Blob</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromPath</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <a class="reference internal" href="#classpaimon_1_1_blob"><span class="std std-ref">Blob</span></a> from a file path. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> – The file path to create the blob from. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing the created blob or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t">
+<span id="_CPPv3N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t"></span><span id="_CPPv2N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t"></span><span id="paimon::Blob::FromPath__ssCR.int64_t.int64_t"></span><span class="target" id="classpaimon_1_1_blob_1ac6417a36bd8515e8125baa40690349f3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon4BlobE" title="paimon::Blob"><span class="n"><span class="pre">Blob</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromPath</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <a class="reference internal" href="#classpaimon_1_1_blob"><span class="std std-ref">Blob</span></a> from a file path with specified offset and length. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> – The file path to create the blob from. </p></li>
+<li><p><strong>offset</strong> – The starting offset within the file. </p></li>
+<li><p><strong>length</strong> – The length of data to read from the file. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing the created blob or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4Blob14FromDescriptorEPKc8uint64_t">
+<span id="_CPPv3N6paimon4Blob14FromDescriptorEPKc8uint64_t"></span><span id="_CPPv2N6paimon4Blob14FromDescriptorEPKc8uint64_t"></span><span id="paimon::Blob::FromDescriptor__cCP.uint64_t"></span><span class="target" id="classpaimon_1_1_blob_1a6ae87942432d39c6fb8449318a7f75c0"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon4BlobE" title="paimon::Blob"><span class="n"><span class="pre">Blob</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromDescriptor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon4Blob14FromDescriptorEPKc8uint64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <a class="reference internal" href="#classpaimon_1_1_blob"><span class="std std-ref">Blob</span></a> from a blob descriptor. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – The buffer of the blob descriptor. </p></li>
+<li><p><strong>length</strong> – The length of the buffer. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing the created blob or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE"></span><span id="paimon::Blob::ArrowField__ssCR.b.std::unordered_map:ss.ss:"></span><span class="target" id="classpaimon_1_1_blob_1a2bd1c1f25fee5fa7aafc1b5faeea7d72"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ArrowField</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">field_name</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">nullable</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">false</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unordered_map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">metadata</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="p"><span class="pre">{</span></span><span class="p"><span class="pre">}</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an Arrow field definition for the <a class="reference internal" href="#classpaimon_1_1_blob"><span class="std std-ref">Blob</span></a> type. </p>
+<p>This function constructs an Arrow Field (internally using <code class="docutils literal notranslate"><span class="pre">arrow::large_binary()</span></code>) and exports it to the C data interface structure <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>. It automatically injects Paimon-specific metadata to identify the field as a BLOB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> – The name of the Arrow field. </p></li>
+<li><p><strong>nullable</strong> – Whether the field can contain null values (defaults to false). </p></li>
+<li><p><strong>metadata</strong> – A map of key-value metadata to be attached to the field. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A result containing a unique pointer to the generated <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code> or an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7DecimalE">
+<span id="_CPPv3N6paimon7DecimalE"></span><span id="_CPPv2N6paimon7DecimalE"></span><span id="paimon::Decimal"></span><span class="target" id="classpaimon_1_1_decimal"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Decimal</span></span></span><a class="headerlink" href="#_CPPv4N6paimon7DecimalE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A data structure representing data of <a class="reference internal" href="#classpaimon_1_1_decimal"><span class="std std-ref">Decimal</span></a>. </p>
+<p>It might be stored in a compact representation (as a long value) if values are small enough. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-types">Public Types</p>
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal8int128_tE">
+<span id="_CPPv3N6paimon7Decimal8int128_tE"></span><span id="_CPPv2N6paimon7Decimal8int128_tE"></span><span class="target" id="classpaimon_1_1_decimal_1aa8bf23ba0532b2ee0aca8bb9e2b7b29c"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">int128_t</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">__int128_t</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal8int128_tE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal9uint128_tE">
+<span id="_CPPv3N6paimon7Decimal9uint128_tE"></span><span id="_CPPv2N6paimon7Decimal9uint128_tE"></span><span class="target" id="classpaimon_1_1_decimal_1afe4d752006e027b294842b79cb3b3951"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">uint128_t</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">__uint128_t</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal9uint128_tE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t">
+<span id="_CPPv3N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t"></span><span id="_CPPv2N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t"></span><span id="paimon::Decimal::Decimal__int32_t.int32_t.int128_t"></span><span class="target" id="classpaimon_1_1_decimal_1a9d27a7728aefc0535ba415de4756075e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Decimal</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">precision</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">scale</span></span>, <a class="reference internal" href="#_CPPv4N6paimon7Decimal8int128_tE" title="paimon::Decimal::int128_t"><span class="n"><span class="pre">int128_t</span></span></a><span class="w"> </span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal9PrecisionEv">
+<span id="_CPPv3NK6paimon7Decimal9PrecisionEv"></span><span id="_CPPv2NK6paimon7Decimal9PrecisionEv"></span><span id="paimon::Decimal::PrecisionC"></span><span class="target" id="classpaimon_1_1_decimal_1a2b2bfe2c63dddcaeb9f69a89e21dacd4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Precision</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal9PrecisionEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the <strong>precision</strong> of this decimal. </p>
+<p>The precision is the number of digits in the unscaled value. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal5ScaleEv">
+<span id="_CPPv3NK6paimon7Decimal5ScaleEv"></span><span id="_CPPv2NK6paimon7Decimal5ScaleEv"></span><span id="paimon::Decimal::ScaleC"></span><span class="target" id="classpaimon_1_1_decimal_1a19d162ec9b8149a74fa767768c6665a1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Scale</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal5ScaleEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the <strong>scale</strong> of this decimal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal5ValueEv">
+<span id="_CPPv3NK6paimon7Decimal5ValueEv"></span><span id="_CPPv2NK6paimon7Decimal5ValueEv"></span><span id="paimon::Decimal::ValueC"></span><span class="target" id="classpaimon_1_1_decimal_1a3937d6342318c961dd175459c3bd5588"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7Decimal8int128_tE" title="paimon::Decimal::int128_t"><span class="n"><span class="pre">int128_t</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Value</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal5ValueEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the underlying int128_t value of this decimal. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal7LowBitsEv">
+<span id="_CPPv3NK6paimon7Decimal7LowBitsEv"></span><span id="_CPPv2NK6paimon7Decimal7LowBitsEv"></span><span id="paimon::Decimal::LowBitsC"></span><span class="target" id="classpaimon_1_1_decimal_1ab03a2e26a2a3bd33a76e17da8dd26d1a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">LowBits</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal7LowBitsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the low 64 bits of the decimal value. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal8HighBitsEv">
+<span id="_CPPv3NK6paimon7Decimal8HighBitsEv"></span><span id="_CPPv2NK6paimon7Decimal8HighBitsEv"></span><span id="paimon::Decimal::HighBitsC"></span><span class="target" id="classpaimon_1_1_decimal_1ace9a5fffa5fc3c389b1cc6654d3cfd69"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">HighBits</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal8HighBitsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the high 64 bits of the decimal value. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal9IsCompactEv">
+<span id="_CPPv3NK6paimon7Decimal9IsCompactEv"></span><span id="_CPPv2NK6paimon7Decimal9IsCompactEv"></span><span id="paimon::Decimal::IsCompactC"></span><span class="target" id="classpaimon_1_1_decimal_1a735bf689fca27c1478de25e18be3dbae"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsCompact</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal9IsCompactEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the decimal value is small enough to be stored in a long. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal8ToStringEv">
+<span id="_CPPv3NK6paimon7Decimal8ToStringEv"></span><span id="_CPPv2NK6paimon7Decimal8ToStringEv"></span><span id="paimon::Decimal::ToStringC"></span><span class="target" id="classpaimon_1_1_decimal_1a0ca00468d2e8b6ec8f5024a13ded41c2"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal14ToUnscaledLongEv">
+<span id="_CPPv3NK6paimon7Decimal14ToUnscaledLongEv"></span><span id="_CPPv2NK6paimon7Decimal14ToUnscaledLongEv"></span><span id="paimon::Decimal::ToUnscaledLongC"></span><span class="target" id="classpaimon_1_1_decimal_1a1c0ba4f7d0c8b5f24bad58673bebe23a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToUnscaledLong</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal14ToUnscaledLongEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A long describing the <strong>unscaled value</strong> of this decimal. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal15ToUnscaledBytesEv">
+<span id="_CPPv3NK6paimon7Decimal15ToUnscaledBytesEv"></span><span id="_CPPv2NK6paimon7Decimal15ToUnscaledBytesEv"></span><span id="paimon::Decimal::ToUnscaledBytesC"></span><span class="target" id="classpaimon_1_1_decimal_1a0c98e2c50ea8ac2268e2722590c3e7f1"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">char</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToUnscaledBytes</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal15ToUnscaledBytesEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A byte array describing the <strong>unscaled value</strong> of this decimal. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7DecimaleqERK7Decimal">
+<span id="_CPPv3NK6paimon7DecimaleqERK7Decimal"></span><span id="_CPPv2NK6paimon7DecimaleqERK7Decimal"></span><span id="paimon::Decimal::eq-operator__DecimalCRC"></span><span class="target" id="classpaimon_1_1_decimal_1ad77452ca074e755023dd53d1c6a6d11c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">==</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7DecimaleqERK7Decimal" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7DecimalltERK7Decimal">
+<span id="_CPPv3NK6paimon7DecimalltERK7Decimal"></span><span id="_CPPv2NK6paimon7DecimalltERK7Decimal"></span><span id="paimon::Decimal::lt-operator__DecimalCRC"></span><span class="target" id="classpaimon_1_1_decimal_1a901de6e33df1939f4fac709a1814f377"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">&lt;</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7DecimalltERK7Decimal" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7DecimalgtERK7Decimal">
+<span id="_CPPv3NK6paimon7DecimalgtERK7Decimal"></span><span id="_CPPv2NK6paimon7DecimalgtERK7Decimal"></span><span id="paimon::Decimal::gt-operator__DecimalCRC"></span><span class="target" id="classpaimon_1_1_decimal_1aff946da3759d4ef0963fd229ea438475"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">&gt;</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7DecimalgtERK7Decimal" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon7Decimal9CompareToERK7Decimal">
+<span id="_CPPv3NK6paimon7Decimal9CompareToERK7Decimal"></span><span id="_CPPv2NK6paimon7Decimal9CompareToERK7Decimal"></span><span id="paimon::Decimal::CompareTo__DecimalCRC"></span><span class="target" id="classpaimon_1_1_decimal_1a5988d86dbb09ea25098023d27cccdb49"></span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CompareTo</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon7Decimal9CompareToERK7Decimal" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal9IsCompactE7int32_t">
+<span id="_CPPv3N6paimon7Decimal9IsCompactE7int32_t"></span><span id="_CPPv2N6paimon7Decimal9IsCompactE7int32_t"></span><span id="paimon::Decimal::IsCompact__int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1ad2bbd6260a8010669e1deb89de608646"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsCompact</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">precision</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon7Decimal9IsCompactE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the decimal value is small enough to be stored in a long. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t">
+<span id="_CPPv3N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t"></span><span id="_CPPv2N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t"></span><span id="paimon::Decimal::FromUnscaledLong__int64_t.int32_t.int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1a77cca42c6f56f9917cf2e955c70cc69e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromUnscaledLong</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">unscaled_long</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">precision</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">scale</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_decimal"><span class="std std-ref"><span class="pre">Decimal</span></span></a></code> from an unscaled long value and the given precision and scale. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes">
+<span id="_CPPv3N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes"></span><span id="_CPPv2N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes"></span><span id="paimon::Decimal::FromUnscaledBytes__int32_t.int32_t.BytesP"></span><span class="target" id="classpaimon_1_1_decimal_1afc069958cba6d02fed8663f6f0df7ef6"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon7DecimalE" title="paimon::Decimal"><span class="n"><span class="pre">Decimal</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromUnscaledBytes</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">precision</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">scale</span></span>, <a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">bytes</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_decimal"><span class="std std-ref"><span class="pre">Decimal</span></span></a></code> from an unscaled byte array value and the given precision and scale. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal17DEFAULT_PRECISIONE">
+<span id="_CPPv3N6paimon7Decimal17DEFAULT_PRECISIONE"></span><span id="_CPPv2N6paimon7Decimal17DEFAULT_PRECISIONE"></span><span id="paimon::Decimal::DEFAULT_PRECISION__int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1a5bbcbbaffc001d48993cd8f2933f6ed5"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DEFAULT_PRECISION</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">10</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal17DEFAULT_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal13DEFAULT_SCALEE">
+<span id="_CPPv3N6paimon7Decimal13DEFAULT_SCALEE"></span><span id="_CPPv2N6paimon7Decimal13DEFAULT_SCALEE"></span><span id="paimon::Decimal::DEFAULT_SCALE__int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1adb5d987155d24b0bb38271df051c277c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DEFAULT_SCALE</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal13DEFAULT_SCALEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal13MIN_PRECISIONE">
+<span id="_CPPv3N6paimon7Decimal13MIN_PRECISIONE"></span><span id="_CPPv2N6paimon7Decimal13MIN_PRECISIONE"></span><span id="paimon::Decimal::MIN_PRECISION__int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1a955c0f16a950e6e4e11e0987eec58aa0"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MIN_PRECISION</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">1</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal13MIN_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon7Decimal13MAX_PRECISIONE">
+<span id="_CPPv3N6paimon7Decimal13MAX_PRECISIONE"></span><span id="_CPPv2N6paimon7Decimal13MAX_PRECISIONE"></span><span id="paimon::Decimal::MAX_PRECISION__int32_t"></span><span class="target" id="classpaimon_1_1_decimal_1a97ad51695862af8d1686a161b7760a42"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">constexpr</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MAX_PRECISION</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">38</span></span><a class="headerlink" href="#_CPPv4N6paimon7Decimal13MAX_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9TimestampE">
+<span id="_CPPv3N6paimon9TimestampE"></span><span id="_CPPv2N6paimon9TimestampE"></span><span id="paimon::Timestamp"></span><span class="target" id="classpaimon_1_1_timestamp"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Timestamp</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9TimestampE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A data structure representing data of <a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref">Timestamp</span></a> without timezone. </p>
+<p>This data structure is immutable and consists of a milliseconds and nanos-of-millisecond since <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>. It might be stored in a compact representation (as a long value) if values are small enough. <a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref">Timestamp</span></a> range from 0000-01-01 00:00:00.000000000 to 9999-12-31 23:59:59.999999999. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp9TimestampEv">
+<span id="_CPPv3N6paimon9Timestamp9TimestampEv"></span><span id="_CPPv2N6paimon9Timestamp9TimestampEv"></span><span id="paimon::Timestamp::Timestamp"></span><span class="target" id="classpaimon_1_1_timestamp_1a39f9242daba21b4cc32e1dd008cb16f2"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Timestamp</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp9TimestampEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp9TimestampE7int64_t7int32_t">
+<span id="_CPPv3N6paimon9Timestamp9TimestampE7int64_t7int32_t"></span><span id="_CPPv2N6paimon9Timestamp9TimestampE7int64_t7int32_t"></span><span id="paimon::Timestamp::Timestamp__int64_t.int32_t"></span><span class="target" id="classpaimon_1_1_timestamp_1a746349c7f687d1e938ed1f438d389dc1"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Timestamp</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">millisecond</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">nano_of_millisecond</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp9TimestampE7int64_t7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp14GetMillisecondEv">
+<span id="_CPPv3NK6paimon9Timestamp14GetMillisecondEv"></span><span id="_CPPv2NK6paimon9Timestamp14GetMillisecondEv"></span><span id="paimon::Timestamp::GetMillisecondC"></span><span class="target" id="classpaimon_1_1_timestamp_1a549dce6e8667e06b48c787a4b6f00c2e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMillisecond</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp14GetMillisecondEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the number of milliseconds since <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp20GetNanoOfMillisecondEv">
+<span id="_CPPv3NK6paimon9Timestamp20GetNanoOfMillisecondEv"></span><span id="_CPPv2NK6paimon9Timestamp20GetNanoOfMillisecondEv"></span><span id="paimon::Timestamp::GetNanoOfMillisecondC"></span><span class="target" id="classpaimon_1_1_timestamp_1a34724bf15b5c30f0cc635442d312bbd9"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetNanoOfMillisecond</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp20GetNanoOfMillisecondEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the number of nanoseconds (the nanoseconds within the milliseconds). </p>
+<p>The value range is from 0 to 999,999. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp17ToMillisTimestampEv">
+<span id="_CPPv3NK6paimon9Timestamp17ToMillisTimestampEv"></span><span id="_CPPv2NK6paimon9Timestamp17ToMillisTimestampEv"></span><span id="paimon::Timestamp::ToMillisTimestampC"></span><span class="target" id="classpaimon_1_1_timestamp_1ae04623eefa92cd7aa13438c4be541721"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToMillisTimestamp</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp17ToMillisTimestampEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Converts this <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> object to millis <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> object (ignore <code class="docutils literal notranslate"><span class="pre">nanos_of_millisecond</span></code>). </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp13ToMicrosecondEv">
+<span id="_CPPv3NK6paimon9Timestamp13ToMicrosecondEv"></span><span id="_CPPv2NK6paimon9Timestamp13ToMicrosecondEv"></span><span id="paimon::Timestamp::ToMicrosecondC"></span><span class="target" id="classpaimon_1_1_timestamp_1a15f7bc4696a61ef0d904f652bfa94595"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToMicrosecond</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp13ToMicrosecondEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Converts this <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> object to microsecond. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp12ToNanosecondEv">
+<span id="_CPPv3NK6paimon9Timestamp12ToNanosecondEv"></span><span id="_CPPv2NK6paimon9Timestamp12ToNanosecondEv"></span><span id="paimon::Timestamp::ToNanosecondC"></span><span class="target" id="classpaimon_1_1_timestamp_1a44c62367d8eb97de46e0ae9f47291c4f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToNanosecond</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp12ToNanosecondEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Converts this <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> object to nanoseconds. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9TimestampeqERK9Timestamp">
+<span id="_CPPv3NK6paimon9TimestampeqERK9Timestamp"></span><span id="_CPPv2NK6paimon9TimestampeqERK9Timestamp"></span><span id="paimon::Timestamp::eq-operator__TimestampCRC"></span><span class="target" id="classpaimon_1_1_timestamp_1a158c632cfda6f6c9110617670783c25e"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">==</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9TimestampeqERK9Timestamp" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9TimestampltERK9Timestamp">
+<span id="_CPPv3NK6paimon9TimestampltERK9Timestamp"></span><span id="_CPPv2NK6paimon9TimestampltERK9Timestamp"></span><span id="paimon::Timestamp::lt-operator__TimestampCRC"></span><span class="target" id="classpaimon_1_1_timestamp_1a753e62a4b85cd27f1a20e9895e71988f"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="k"><span class="pre">operator</span></span><span class="o"><span class="pre">&lt;</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9TimestampltERK9Timestamp" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon9Timestamp8ToStringEv">
+<span id="_CPPv3NK6paimon9Timestamp8ToStringEv"></span><span id="_CPPv2NK6paimon9Timestamp8ToStringEv"></span><span id="paimon::Timestamp::ToStringC"></span><span class="target" id="classpaimon_1_1_timestamp_1a8ab032f82e4824e6c8667c4b1fd7962b"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon9Timestamp8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Converts the <a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref">Timestamp</span></a> object to a string representation in UTC (GMT). </p>
+<p>The format of the returned string is “YYYY-MM-DD HH:MM:SS.nnnnnnnnn”, where the date and time are in UTC (GMT), and the nanoseconds are derived from the millisecond and nanosecond parts of the timestamp.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method uses UTC (GMT) time zone when formatting the time. This is different from the Java Paimon implementation, which may convert the timestamp to the local time zone of the machine running the Java process. </p>
+</div>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t">
+<span id="_CPPv3N6paimon9Timestamp15FromEpochMillisE7int64_t"></span><span id="_CPPv2N6paimon9Timestamp15FromEpochMillisE7int64_t"></span><span id="paimon::Timestamp::FromEpochMillis__int64_t"></span><span class="target" id="classpaimon_1_1_timestamp_1aa117afd213a415cb336179deeb172662"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromEpochMillis</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">milliseconds</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> from milliseconds. </p>
+<p>The nanos-of-millisecond field will be set to zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>milliseconds</strong> – The number of milliseconds since <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>; a negative number is the number of milliseconds before <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t">
+<span id="_CPPv3N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t"></span><span id="_CPPv2N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t"></span><span id="paimon::Timestamp::FromEpochMillis__int64_t.int32_t"></span><span class="target" id="classpaimon_1_1_timestamp_1a539163241829778218e5bb71ee6d7c2e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon9TimestampE" title="paimon::Timestamp"><span class="n"><span class="pre">Timestamp</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FromEpochMillis</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">milliseconds</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">nanos_of_millisecond</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_timestamp"><span class="std std-ref"><span class="pre">Timestamp</span></span></a></code> from milliseconds and a nanos-of-millisecond. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>milliseconds</strong> – The number of milliseconds since <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>; a negative number is the number of milliseconds before <code class="docutils literal notranslate"><span class="pre">1970-01-01</span> <span class="pre">00:00:00</span></code>. </p></li>
+<li><p><strong>nanos_of_millisecond</strong> – The nanoseconds within the millisecond, from 0 to 999,999. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp9IsCompactE7int32_t">
+<span id="_CPPv3N6paimon9Timestamp9IsCompactE7int32_t"></span><span id="_CPPv2N6paimon9Timestamp9IsCompactE7int32_t"></span><span id="paimon::Timestamp::IsCompact__int32_t"></span><span class="target" id="classpaimon_1_1_timestamp_1ae76e163453aea9065c69ab7930d56846"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsCompact</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">precision</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp9IsCompactE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Whether the timestamp data is small enough to be stored in a long of milliseconds. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp17DEFAULT_PRECISIONE">
+<span id="_CPPv3N6paimon9Timestamp17DEFAULT_PRECISIONE"></span><span id="_CPPv2N6paimon9Timestamp17DEFAULT_PRECISIONE"></span><span id="paimon::Timestamp::DEFAULT_PRECISION__int32_tC"></span><span class="target" id="classpaimon_1_1_timestamp_1a0dedb5ee71152d52dc6bd04eb4cff1c3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DEFAULT_PRECISION</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp17DEFAULT_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp16MILLIS_PRECISIONE">
+<span id="_CPPv3N6paimon9Timestamp16MILLIS_PRECISIONE"></span><span id="_CPPv2N6paimon9Timestamp16MILLIS_PRECISIONE"></span><span id="paimon::Timestamp::MILLIS_PRECISION__int32_tC"></span><span class="target" id="classpaimon_1_1_timestamp_1a41fe658b1f3f4ab41370479be561b2b3"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MILLIS_PRECISION</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp16MILLIS_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp13MIN_PRECISIONE">
+<span id="_CPPv3N6paimon9Timestamp13MIN_PRECISIONE"></span><span id="_CPPv2N6paimon9Timestamp13MIN_PRECISIONE"></span><span id="paimon::Timestamp::MIN_PRECISION__int32_tC"></span><span class="target" id="classpaimon_1_1_timestamp_1a6cac6f2b267b86bf4ce6fa360a8b9351"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MIN_PRECISION</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp13MIN_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp13MAX_PRECISIONE">
+<span id="_CPPv3N6paimon9Timestamp13MAX_PRECISIONE"></span><span id="_CPPv2N6paimon9Timestamp13MAX_PRECISIONE"></span><span id="paimon::Timestamp::MAX_PRECISION__int32_tC"></span><span class="target" id="classpaimon_1_1_timestamp_1a8223acec083c94952519d929b600dc6c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MAX_PRECISION</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp13MAX_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon9Timestamp21MAX_COMPACT_PRECISIONE">
+<span id="_CPPv3N6paimon9Timestamp21MAX_COMPACT_PRECISIONE"></span><span id="_CPPv2N6paimon9Timestamp21MAX_COMPACT_PRECISIONE"></span><span id="paimon::Timestamp::MAX_COMPACT_PRECISION__int32_tC"></span><span class="target" id="classpaimon_1_1_timestamp_1a8e5c1d0e2e715f7c6e79f8a3f163c874"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MAX_COMPACT_PRECISION</span></span></span><a class="headerlink" href="#_CPPv4N6paimon9Timestamp21MAX_COMPACT_PRECISIONE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="io.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">IO</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="file_index.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">File Index</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4BlobE"><code class="docutils literal notranslate"><span class="pre">paimon::Blob</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4BlobD0Ev"><code class="docutils literal notranslate"><span class="pre">~Blob()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">ToDescriptor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Blob3UriEv"><code class="docutils literal notranslate"><span class="pre">Uri()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE"><code class="docutils literal notranslate"><span class="pre">NewInputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">ToData()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">FromPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t"><code class="docutils literal notranslate"><span class="pre">FromPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4Blob14FromDescriptorEPKc8uint64_t"><code class="docutils literal notranslate"><span class="pre">FromDescriptor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">ArrowField()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7DecimalE"><code class="docutils literal notranslate"><span class="pre">paimon::Decimal</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal8int128_tE"><code class="docutils literal notranslate"><span class="pre">int128_t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal9uint128_tE"><code class="docutils literal notranslate"><span class="pre">uint128_t</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t"><code class="docutils literal notranslate"><span class="pre">Decimal()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal9PrecisionEv"><code class="docutils literal notranslate"><span class="pre">Precision()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal5ScaleEv"><code class="docutils literal notranslate"><span class="pre">Scale()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal5ValueEv"><code class="docutils literal notranslate"><span class="pre">Value()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal7LowBitsEv"><code class="docutils literal notranslate"><span class="pre">LowBits()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal8HighBitsEv"><code class="docutils literal notranslate"><span class="pre">HighBits()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal9IsCompactEv"><code class="docutils literal notranslate"><span class="pre">IsCompact()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal14ToUnscaledLongEv"><code class="docutils literal notranslate"><span class="pre">ToUnscaledLong()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal15ToUnscaledBytesEv"><code class="docutils literal notranslate"><span class="pre">ToUnscaledBytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7DecimaleqERK7Decimal"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7DecimalltERK7Decimal"><code class="docutils literal notranslate"><span class="pre">operator&lt;()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7DecimalgtERK7Decimal"><code class="docutils literal notranslate"><span class="pre">operator&gt;()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon7Decimal9CompareToERK7Decimal"><code class="docutils literal notranslate"><span class="pre">CompareTo()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal9IsCompactE7int32_t"><code class="docutils literal notranslate"><span class="pre">IsCompact()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t"><code class="docutils literal notranslate"><span class="pre">FromUnscaledLong()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes"><code class="docutils literal notranslate"><span class="pre">FromUnscaledBytes()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal17DEFAULT_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal13DEFAULT_SCALEE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_SCALE</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal13MIN_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MIN_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon7Decimal13MAX_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MAX_PRECISION</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9TimestampE"><code class="docutils literal notranslate"><span class="pre">paimon::Timestamp</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp9TimestampEv"><code class="docutils literal notranslate"><span class="pre">Timestamp()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp9TimestampE7int64_t7int32_t"><code class="docutils literal notranslate"><span class="pre">Timestamp()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp14GetMillisecondEv"><code class="docutils literal notranslate"><span class="pre">GetMillisecond()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp20GetNanoOfMillisecondEv"><code class="docutils literal notranslate"><span class="pre">GetNanoOfMillisecond()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp17ToMillisTimestampEv"><code class="docutils literal notranslate"><span class="pre">ToMillisTimestamp()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp13ToMicrosecondEv"><code class="docutils literal notranslate"><span class="pre">ToMicrosecond()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp12ToNanosecondEv"><code class="docutils literal notranslate"><span class="pre">ToNanosecond()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9TimestampeqERK9Timestamp"><code class="docutils literal notranslate"><span class="pre">operator==()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9TimestampltERK9Timestamp"><code class="docutils literal notranslate"><span class="pre">operator&lt;()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon9Timestamp8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t"><code class="docutils literal notranslate"><span class="pre">FromEpochMillis()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t"><code class="docutils literal notranslate"><span class="pre">FromEpochMillis()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp9IsCompactE7int32_t"><code class="docutils literal notranslate"><span class="pre">IsCompact()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp17DEFAULT_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">DEFAULT_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp16MILLIS_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MILLIS_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp13MIN_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MIN_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp13MAX_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MAX_PRECISION</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon9Timestamp21MAX_COMPACT_PRECISIONE"><code class="docutils literal notranslate"><span class="pre">MAX_COMPACT_PRECISION</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/data_types.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

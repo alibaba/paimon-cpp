@@ -1,0 +1,124 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_singleton" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Singleton</compoundname>
+    <basecompoundref refid="classpaimon_1_1_lazy_instantiation" prot="private" virt="non-virtual">paimon::LazyInstantiation</basecompoundref>
+    <includes refid="singleton_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h</includes>
+    <templateparamlist>
+      <param>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+      </param>
+      <param>
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">InstPolicy</ref></type>
+        <defval><ref refid="classpaimon_1_1_lazy_instantiation" kindref="compound">LazyInstantiation</ref></defval>
+      </param>
+    </templateparamlist>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpaimon_1_1_singleton_1ad82366e89efd3c290420b897572e8717" prot="protected" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Singleton&lt; T, InstPolicy &gt;::Singleton</definition>
+        <argsstring>(const Singleton &amp;)</argsstring>
+        <name>Singleton</name>
+        <qualifiedname>paimon::Singleton::Singleton</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_singleton" kindref="compound">Singleton</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="44" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" bodystart="44" bodyend="44"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_singleton_1aa7ad28036c78d314386151fbdc3bdf39" prot="protected" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Singleton&lt; T, InstPolicy &gt;::Singleton</definition>
+        <argsstring>()=default</argsstring>
+        <name>Singleton</name>
+        <qualifiedname>paimon::Singleton::Singleton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="45" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_singleton_1a37b34e5de25240c0290da878f713a344" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Singleton&lt; T, InstPolicy &gt;::~Singleton</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Singleton</name>
+        <qualifiedname>paimon::Singleton::~Singleton</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="48" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_singleton_1a4fad71c69624a114e6797f65f74f32e4" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> *</type>
+        <definition>static T * paimon::Singleton&lt; T, InstPolicy &gt;::GetInstance</definition>
+        <argsstring>()</argsstring>
+        <name>GetInstance</name>
+        <qualifiedname>paimon::Singleton::GetInstance</qualifiedname>
+        <briefdescription>
+<para>Provide access to the single instance through double-checked locking. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Lazy create a singleton instance when <computeroutput><ref refid="classpaimon_1_1_singleton_1a4fad71c69624a114e6797f65f74f32e4" kindref="member">GetInstance()</ref></computeroutput> is called.</para>
+<para><simplesect kind="return"><para>The single instance of object. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="56" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A singleton implementation with customizable instantiation policy. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::LazyInstantiation</label>
+        <link refid="classpaimon_1_1_lazy_instantiation"/>
+      </node>
+      <node id="1">
+        <label>paimon::Singleton&lt; T, InstPolicy &gt;</label>
+        <link refid="classpaimon_1_1_singleton"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::LazyInstantiation</label>
+        <link refid="classpaimon_1_1_lazy_instantiation"/>
+      </node>
+      <node id="1">
+        <label>paimon::Singleton&lt; T, InstPolicy &gt;</label>
+        <link refid="classpaimon_1_1_singleton"/>
+        <childnode refid="2" relation="private-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" line="42" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/factories/singleton.h" bodystart="42" bodyend="57"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_lazy_instantiation_1ab054c02c6c9c1914a276688943c7cb7e" prot="private" virt="non-virtual"><scope>paimon::Singleton</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_singleton_1a4fad71c69624a114e6797f65f74f32e4" prot="public" virt="non-virtual"><scope>paimon::Singleton</scope><name>GetInstance</name></member>
+      <member refid="classpaimon_1_1_singleton_1ad82366e89efd3c290420b897572e8717" prot="protected" virt="non-virtual"><scope>paimon::Singleton</scope><name>Singleton</name></member>
+      <member refid="classpaimon_1_1_singleton_1aa7ad28036c78d314386151fbdc3bdf39" prot="protected" virt="non-virtual"><scope>paimon::Singleton</scope><name>Singleton</name></member>
+      <member refid="classpaimon_1_1_singleton_1a37b34e5de25240c0290da878f713a344" prot="public" virt="non-virtual"><scope>paimon::Singleton</scope><name>~Singleton</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

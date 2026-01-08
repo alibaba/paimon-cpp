@@ -1,0 +1,368 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_scan_context_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ScanContextBuilder</compoundname>
+    <includes refid="scan__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_builder_1a778002010a8bff91731c31a3801096ba" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::ScanContextBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::ScanContextBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="185" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="185" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1ab83a83a8531fe2213a5e5dfa0c2f594d" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ScanContextBuilder::ScanContextBuilder</definition>
+        <argsstring>(const std::string &amp;path)</argsstring>
+        <name>ScanContextBuilder</name>
+        <qualifiedname>paimon::ScanContextBuilder::ScanContextBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref></computeroutput> with required parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The root path of the table. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="133" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a9246776fb168dedf96db566ee173866e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ScanContextBuilder::~ScanContextBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~ScanContextBuilder</name>
+        <qualifiedname>paimon::ScanContextBuilder::~ScanContextBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="134" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a97003890be40f5a79434ca4354d3ffa0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetLimit</definition>
+        <argsstring>(int32_t limit)</argsstring>
+        <name>SetLimit</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetLimit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>limit</declname>
+        </param>
+        <briefdescription>
+<para>If limit is not set, it defaults to unlimited. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="136" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a8e1aac2bb3b13b2dbf611eab2d9eb683" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetBucketFilter</definition>
+        <argsstring>(int32_t bucket_filter)</argsstring>
+        <name>SetBucketFilter</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetBucketFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>bucket_filter</declname>
+        </param>
+        <briefdescription>
+<para>Set a bucket filter to scan only specific bucket. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="138" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a0c4ecaa0b9cd65cce3cdb415bc9bc081" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetPartitionFilter</definition>
+        <argsstring>(const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partition_filters)</argsstring>
+        <name>SetPartitionFilter</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetPartitionFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partition_filters</declname>
+        </param>
+        <briefdescription>
+<para>partition_filters in vector is supposed to be OR, filter in map is supposed to be AND, e.g., partition_filters is {{k1=1,k2=10}, {k1=2,k2=20}} =&gt; OR(AND(k1=1,k2=10), AND(k1=2,k2=20)) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="141" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1aa819a7dc154d63fef2061f6dd7e5310d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetPredicate</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate)</argsstring>
+        <name>SetPredicate</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetPredicate</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <briefdescription>
+<para>Set a predicate for filtering data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="144" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a85b99415dcb3179120a380353425fe0e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetGlobalIndexResult</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;global_index_result)</argsstring>
+        <name>SetGlobalIndexResult</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetGlobalIndexResult</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>global_index_result</declname>
+        </param>
+        <briefdescription>
+<para>Sets the result of a global index search (e.g., row ids (may with scores) from a distributed index lookup). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This is used to push down index-filtered row ids into the scan for efficient data retrieval. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="149" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a8470060b610432ea36d43841ff245d50" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetVectorSearch</definition>
+        <argsstring>(const std::shared_ptr&lt; VectorSearch &gt; &amp;vector_search)</argsstring>
+        <name>SetVectorSearch</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetVectorSearch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt; &amp;</type>
+          <declname>vector_search</declname>
+        </param>
+        <briefdescription>
+<para>Set vector search for similarity search. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="153" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a8f7e61d36bdcb87234a039e6e596a2de" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::AddOption</definition>
+        <argsstring>(const std::string &amp;key, const std::string &amp;value)</argsstring>
+        <name>AddOption</name>
+        <qualifiedname>paimon::ScanContextBuilder::AddOption</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>The options added or set in <computeroutput><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref></computeroutput> have high priority and will be merged with the options in table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="156" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a5ac91a704fd08580863e65dee6a93f89" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::SetOptions</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>SetOptions</name>
+        <qualifiedname>paimon::ScanContextBuilder::SetOptions</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>The options map will clear the options added by <computeroutput><ref refid="classpaimon_1_1_scan_context_builder_1a8f7e61d36bdcb87234a039e6e596a2de" kindref="member">AddOption()</ref></computeroutput> before. </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The configuration options map. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="162" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1aa146a4237c8ae6ebbd454bc35c589bbe" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::WithStreamingMode</definition>
+        <argsstring>(bool is_streaming_mode)</argsstring>
+        <name>WithStreamingMode</name>
+        <qualifiedname>paimon::ScanContextBuilder::WithStreamingMode</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_streaming_mode</declname>
+        </param>
+        <briefdescription>
+<para>Set whether the scan is in streaming mode. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>if not set, is_streaming_mode = false </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="166" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1ab156aa90827d8bf89065ef0f6c0ddc0d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::ScanContextBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+<para>Set custom memory pool for memory management. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>memory_pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>if not set, memory_pool is default pool </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="171" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1a5d82e70e24017a68af4e3497bef85222" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> &amp;</type>
+        <definition>ScanContextBuilder &amp; paimon::ScanContextBuilder::WithExecutor</definition>
+        <argsstring>(const std::shared_ptr&lt; Executor &gt; &amp;executor)</argsstring>
+        <name>WithExecutor</name>
+        <qualifiedname>paimon::ScanContextBuilder::WithExecutor</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <briefdescription>
+<para>Set custom executor for task execution. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The executor to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>if not set, executor is default executor </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="176" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_builder_1aef304a0cf71b610b7a74ec97b47de168" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; ScanContext &gt; &gt; paimon::ScanContextBuilder::Finish</definition>
+        <argsstring>()</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::ScanContextBuilder::Finish</qualifiedname>
+        <briefdescription>
+<para>Build and return a <computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput> instance with input validation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the constructed <computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="180" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref></computeroutput> used to build a <computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput>, has input validation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="129" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="129" bodyend="186"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_scan_context_builder_1a8f7e61d36bdcb87234a039e6e596a2de" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>AddOption</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1aef304a0cf71b610b7a74ec97b47de168" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a778002010a8bff91731c31a3801096ba" prot="private" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1ab83a83a8531fe2213a5e5dfa0c2f594d" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>ScanContextBuilder</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a8e1aac2bb3b13b2dbf611eab2d9eb683" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetBucketFilter</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a85b99415dcb3179120a380353425fe0e" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetGlobalIndexResult</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a97003890be40f5a79434ca4354d3ffa0" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetLimit</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a5ac91a704fd08580863e65dee6a93f89" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetOptions</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a0c4ecaa0b9cd65cce3cdb415bc9bc081" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetPartitionFilter</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1aa819a7dc154d63fef2061f6dd7e5310d" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetPredicate</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a8470060b610432ea36d43841ff245d50" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>SetVectorSearch</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a5d82e70e24017a68af4e3497bef85222" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>WithExecutor</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1ab156aa90827d8bf89065ef0f6c0ddc0d" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1aa146a4237c8ae6ebbd454bc35c589bbe" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>WithStreamingMode</name></member>
+      <member refid="classpaimon_1_1_scan_context_builder_1a9246776fb168dedf96db566ee173866e" prot="public" virt="non-virtual"><scope>paimon::ScanContextBuilder</scope><name>~ScanContextBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

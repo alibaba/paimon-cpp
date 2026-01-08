@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_basic_file_status" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::BasicFileStatus</compoundname>
+    <includes refid="file__system_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_basic_file_status_1a025f1e86f33d5122302d1ad2953d6514" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BasicFileStatus::BasicFileStatus</definition>
+        <argsstring>()=default</argsstring>
+        <name>BasicFileStatus</name>
+        <qualifiedname>paimon::BasicFileStatus::BasicFileStatus</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="141" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_basic_file_status_1a62185ba087f185521214a058606f3d78" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::BasicFileStatus::~BasicFileStatus</definition>
+        <argsstring>()=default</argsstring>
+        <name>~BasicFileStatus</name>
+        <qualifiedname>paimon::BasicFileStatus::~BasicFileStatus</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="142" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_basic_file_status_1a14316a38dbf07ec6522f9cd6a28dc6e7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::BasicFileStatus::IsDir</definition>
+        <argsstring>() const =0</argsstring>
+        <name>IsDir</name>
+        <qualifiedname>paimon::BasicFileStatus::IsDir</qualifiedname>
+        <briefdescription>
+<para>Check if this entry represents a directory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="145" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_basic_file_status_1af029dbd64ffe2b4fb3f7314945309653" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::BasicFileStatus::GetPath</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetPath</name>
+        <qualifiedname>paimon::BasicFileStatus::GetPath</qualifiedname>
+        <briefdescription>
+<para>Get the path of this file or directory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="148" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Basic file status information interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class provides fundamental file system metadata for files and directories. It serves as a lightweight interface for basic file operations that only require path information and directory status. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="139" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="139" bodyend="149"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_basic_file_status_1a025f1e86f33d5122302d1ad2953d6514" prot="public" virt="non-virtual"><scope>paimon::BasicFileStatus</scope><name>BasicFileStatus</name></member>
+      <member refid="classpaimon_1_1_basic_file_status_1af029dbd64ffe2b4fb3f7314945309653" prot="public" virt="pure-virtual"><scope>paimon::BasicFileStatus</scope><name>GetPath</name></member>
+      <member refid="classpaimon_1_1_basic_file_status_1a14316a38dbf07ec6522f9cd6a28dc6e7" prot="public" virt="pure-virtual"><scope>paimon::BasicFileStatus</scope><name>IsDir</name></member>
+      <member refid="classpaimon_1_1_basic_file_status_1a62185ba087f185521214a058606f3d78" prot="public" virt="virtual"><scope>paimon::BasicFileStatus</scope><name>~BasicFileStatus</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

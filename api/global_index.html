@@ -1,0 +1,1164 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>GLobal Index &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/global_index';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Orphan Files Clean" href="clean.html" />
+    <link rel="prev" title="File Index" href="file_index.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">GLobal Index</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="global-index">
+<h1>GLobal Index<a class="headerlink" href="#global-index" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-global-index"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon21GlobalIndexFileReaderE">
+<span id="_CPPv3N6paimon21GlobalIndexFileReaderE"></span><span id="_CPPv2N6paimon21GlobalIndexFileReaderE"></span><span id="paimon::GlobalIndexFileReader"></span><span class="target" id="classpaimon_1_1_global_index_file_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexFileReader</span></span></span><a class="headerlink" href="#_CPPv4N6paimon21GlobalIndexFileReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract interface for reading global index files from storage. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon21GlobalIndexFileReaderD0Ev">
+<span id="_CPPv3N6paimon21GlobalIndexFileReaderD0Ev"></span><span id="_CPPv2N6paimon21GlobalIndexFileReaderD0Ev"></span><span id="paimon::GlobalIndexFileReader::~GlobalIndexFileReader"></span><span class="target" id="classpaimon_1_1_global_index_file_reader_1a5827c0f10c75e2ad85f428df056e3133"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexFileReader</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon21GlobalIndexFileReaderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE">
+<span id="_CPPv3NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE"></span><span id="_CPPv2NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE"></span><span id="paimon::GlobalIndexFileReader::GetInputStream__ssCRC"></span><span class="target" id="classpaimon_1_1_global_index_file_reader_1a9345b5378d03de555aeb8a5404430e0b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetInputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_name</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Opens an input stream for reading the specified global index file. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon21GlobalIndexFileWriterE">
+<span id="_CPPv3N6paimon21GlobalIndexFileWriterE"></span><span id="_CPPv2N6paimon21GlobalIndexFileWriterE"></span><span id="paimon::GlobalIndexFileWriter"></span><span class="target" id="classpaimon_1_1_global_index_file_writer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexFileWriter</span></span></span><a class="headerlink" href="#_CPPv4N6paimon21GlobalIndexFileWriterE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract interface for writing global index files to storage. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon21GlobalIndexFileWriterD0Ev">
+<span id="_CPPv3N6paimon21GlobalIndexFileWriterD0Ev"></span><span id="_CPPv2N6paimon21GlobalIndexFileWriterD0Ev"></span><span id="paimon::GlobalIndexFileWriter::~GlobalIndexFileWriter"></span><span class="target" id="classpaimon_1_1_global_index_file_writer_1ac565b06a2f56e34afaf59149002e45b1"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexFileWriter</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon21GlobalIndexFileWriterD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE">
+<span id="_CPPv3NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE"></span><span id="_CPPv2NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE"></span><span id="paimon::GlobalIndexFileWriter::NewFileName__ssCRC"></span><span class="target" id="classpaimon_1_1_global_index_file_writer_1a31d48a7c456af3324c547df8281d48df"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NewFileName</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">prefix</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Generates a unique file name for a new index file using the given prefix. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This function may be called multiple times if the index consists of multiple files. </p>
+</div>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE">
+<span id="_CPPv3NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE"></span><span id="_CPPv2NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE"></span><span id="paimon::GlobalIndexFileWriter::NewOutputStream__ssCRC"></span><span class="target" id="classpaimon_1_1_global_index_file_writer_1a60e6c169024b5f3b656c65c1dee77889"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon12OutputStreamE" title="paimon::OutputStream"><span class="n"><span class="pre">OutputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NewOutputStream</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_name</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Opens a new output stream for writing index data to the specified file. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE">
+<span id="_CPPv3NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE"></span><span id="_CPPv2NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE"></span><span id="paimon::GlobalIndexFileWriter::GetFileSize__ssCRC"></span><span class="target" id="classpaimon_1_1_global_index_file_writer_1a0b10c104b8a533060647ce8f288974eb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetFileSize</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_name</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the file size of input file name. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>doxygenclass: Cannot find class “paimon::GlobalIndexEvaluator” in doxygen xml output for project “paimon_cpp” from directory: ../../apidoc/xml</p>
+</div>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexReaderE">
+<span id="_CPPv3N6paimon17GlobalIndexReaderE"></span><span id="_CPPv2N6paimon17GlobalIndexReaderE"></span><span id="paimon::GlobalIndexReader"></span><span class="target" id="classpaimon_1_1_global_index_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexReader</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="predicate.html#_CPPv4I0EN6paimon15FunctionVisitorE" title="paimon::FunctionVisitor"><span class="n"><span class="pre">FunctionVisitor</span></span></a><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Reads and evaluates filter predicates against a global file index. </p>
+<p>Derived classes are expected to implement the visitor methods (e.g., <code class="docutils literal notranslate"><span class="pre">VisitEqual</span></code>, <code class="docutils literal notranslate"><span class="pre">VisitIsNull</span></code>, etc.) to return index-based results that indicate which row satisfy the given predicate.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref"><span class="pre">GlobalIndexResult</span></span></a></code> objects returned by implementations of this class use <strong>local row ids</strong> that start from 0 — not global row ids in the entire table. The <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref"><span class="pre">GlobalIndexResult</span></span></a></code> can be converted to global row ids by calling <code class="docutils literal notranslate"><span class="pre">AddOffset()</span></code>. </p>
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE">
+<span id="_CPPv3N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE"></span><span id="_CPPv2N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE"></span><span id="paimon::GlobalIndexReader::VisitVectorSearch__std::shared_ptr:VectorSearch:CR"></span><span class="target" id="classpaimon_1_1_global_index_reader_1a800779e19415b13369bff8690e86798c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">VectorSearchGlobalIndexResult</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">VisitVectorSearch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">VectorSearch</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">vector_search</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>VisitVectorSearch performs approximate vector similarity search. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisitVectorSearch</span></code> is thread-safe (not coroutine-safe) while other <code class="docutils literal notranslate"><span class="pre">VisitXXX</span></code> is not thread-safe. </p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p><code class="docutils literal notranslate"><span class="pre">VisitVectorSearch</span></code> may return error status when it is incorrectly invoked (e.g., BitmapGlobalIndexReader call <code class="docutils literal notranslate"><span class="pre">VisitVectorSearch</span></code>). </p>
+</div>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp struct">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMetaE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMetaE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMetaE"></span><span id="paimon::GlobalIndexIOMeta"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta"></span><span class="k"><span class="pre">struct</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexIOMeta</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMetaE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Metadata describing a single file entry in a global index. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE"></span><span id="paimon::GlobalIndexIOMeta::GlobalIndexIOMeta__ssCR.int64_t.int64_t.std::shared_ptr:Bytes:CR"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta_1a480329ddcf309ca154e0a2035db5f3b4"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexIOMeta</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_file_name</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_file_size</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">_range_end</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">_metadata</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-members">Public Members</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMeta9file_nameE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMeta9file_nameE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMeta9file_nameE"></span><span id="paimon::GlobalIndexIOMeta::file_name__ss"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta_1a08e3bddaa1f2bf24e5aaae45449bde43"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">file_name</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMeta9file_nameE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMeta9file_sizeE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMeta9file_sizeE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMeta9file_sizeE"></span><span id="paimon::GlobalIndexIOMeta::file_size__int64_t"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta_1af7a811477df217c2e74f6c30efaa0dd4"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">file_size</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMeta9file_sizeE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMeta9range_endE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMeta9range_endE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMeta9range_endE"></span><span id="paimon::GlobalIndexIOMeta::range_end__int64_t"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta_1ac6b8bc1a8a60e1c2192ba52a2db6b51e"></span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">range_end</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMeta9range_endE" title="Link to this definition">#</a><br /></dt>
+<dd><p>The inclusive range end covered by this file (i.e., the last local row id). </p>
+</dd></dl>
+
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexIOMeta8metadataE">
+<span id="_CPPv3N6paimon17GlobalIndexIOMeta8metadataE"></span><span id="_CPPv2N6paimon17GlobalIndexIOMeta8metadataE"></span><span id="paimon::GlobalIndexIOMeta::metadata__std::shared_ptr:Bytes:"></span><span class="target" id="structpaimon_1_1_global_index_i_o_meta_1af0433a4a657ce0c0b0a2f27cf7f66197"></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">metadata</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexIOMeta8metadataE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Optional binary metadata associated with the file, such as serialized secondary index structures or inline index bytes. </p>
+<p>May be null if no additional metadata is available. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResultE">
+<span id="_CPPv3N6paimon17GlobalIndexResultE"></span><span id="_CPPv2N6paimon17GlobalIndexResultE"></span><span id="paimon::GlobalIndexResult"></span><span class="target" id="classpaimon_1_1_global_index_result"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexResult</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">enable_shared_from_this</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResultE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Global index result to get selected global row ids. </p>
+<p>Subclassed by paimon::BitmapGlobalIndexResult, paimon::VectorSearchGlobalIndexResult</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResultD0Ev">
+<span id="_CPPv3N6paimon17GlobalIndexResultD0Ev"></span><span id="_CPPv2N6paimon17GlobalIndexResultD0Ev"></span><span id="paimon::GlobalIndexResult::~GlobalIndexResult"></span><span class="target" id="classpaimon_1_1_global_index_result_1a08518aaa907fab25595a3fac121e446a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexResult</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResultD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17GlobalIndexResult7IsEmptyEv">
+<span id="_CPPv3NK6paimon17GlobalIndexResult7IsEmptyEv"></span><span id="_CPPv2NK6paimon17GlobalIndexResult7IsEmptyEv"></span><span id="paimon::GlobalIndexResult::IsEmptyC"></span><span class="target" id="classpaimon_1_1_global_index_result_1a05a3bf2cf4de40d4111f5b5ea087c42c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsEmpty</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17GlobalIndexResult7IsEmptyEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Checks whether the global index result contains no matching row ids. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span><span class="pre">&lt;bool&gt;</span></code> where:<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">true</span></code> indicates the result is empty (no matching rows),</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">false</span></code> indicates at least one matching row exists,</p></li>
+<li><p>An error is returned only if internal state is corrupted or I/O fails (e.g., during lazy loading of index data). </p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17GlobalIndexResult14CreateIteratorEv">
+<span id="_CPPv3NK6paimon17GlobalIndexResult14CreateIteratorEv"></span><span id="_CPPv2NK6paimon17GlobalIndexResult14CreateIteratorEv"></span><span id="paimon::GlobalIndexResult::CreateIteratorC"></span><span class="target" id="classpaimon_1_1_global_index_result_1ace69c312887a2e4d2166cbeaab2dcdf9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResult8IteratorE" title="paimon::GlobalIndexResult::Iterator"><span class="n"><span class="pre">Iterator</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateIterator</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17GlobalIndexResult14CreateIteratorEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a new iterator over the selected global row ids. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17GlobalIndexResult8ToRangesEv">
+<span id="_CPPv3NK6paimon17GlobalIndexResult8ToRangesEv"></span><span id="_CPPv2NK6paimon17GlobalIndexResult8ToRangesEv"></span><span id="paimon::GlobalIndexResult::ToRangesC"></span><span class="target" id="classpaimon_1_1_global_index_result_1a9f44de9b4fd9cf03ab8ecb933daa0f76"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Range</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToRanges</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon17GlobalIndexResult8ToRangesEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Returns non-overlapping, sorted ranges covering all row ids in <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref"><span class="pre">GlobalIndexResult</span></span></a></code>. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE">
+<span id="_CPPv3N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="_CPPv2N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="paimon::GlobalIndexResult::And__std::shared_ptr:GlobalIndexResult:CR"></span><span class="target" id="classpaimon_1_1_global_index_result_1a607f1de75fd37e32b1d45a920ef03869"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">And</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Computes the logical AND (intersection) between current result and another. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE">
+<span id="_CPPv3N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="_CPPv2N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE"></span><span id="paimon::GlobalIndexResult::Or__std::shared_ptr:GlobalIndexResult:CR"></span><span class="target" id="classpaimon_1_1_global_index_result_1ae671eeb65cc8602695328a62e5d13283"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Or</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">other</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Computes the logical OR (union) between this result and another. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult9AddOffsetE7int64_t">
+<span id="_CPPv3N6paimon17GlobalIndexResult9AddOffsetE7int64_t"></span><span id="_CPPv2N6paimon17GlobalIndexResult9AddOffsetE7int64_t"></span><span id="paimon::GlobalIndexResult::AddOffset__int64_t"></span><span class="target" id="classpaimon_1_1_global_index_result_1afd16e7179e2bcfd49f5355a23c44cecd"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AddOffset</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">offset</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult9AddOffsetE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Adds the given offset to each row id in current result and returns the new global index result. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17GlobalIndexResult8ToStringEv">
+<span id="_CPPv3NK6paimon17GlobalIndexResult8ToStringEv"></span><span id="_CPPv2NK6paimon17GlobalIndexResult8ToStringEv"></span><span id="paimon::GlobalIndexResult::ToStringC"></span><span class="target" id="classpaimon_1_1_global_index_result_1a6c022a8685d9e5994ffe37a9efb630f2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ToString</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17GlobalIndexResult8ToStringEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexResult::Serialize__std::shared_ptr:GlobalIndexResult:CR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_global_index_result_1a9e672c533c723ee18391cca40e72da2e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">PAIMON_UNIQUE_PTR</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon5BytesE" title="paimon::Bytes"><span class="n"><span class="pre">Bytes</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Serialize</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">global_index_result</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Serializes a <a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref">GlobalIndexResult</span></a> object into a byte array. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method only supports the following concrete implementations:<ul class="simple">
+<li><p>BitmapVectorSearchGlobalIndexResult</p></li>
+<li><p>BitmapGlobalIndexResult</p></li>
+</ul>
+</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>global_index_result</strong> – The <a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref">GlobalIndexResult</span></a> instance to serialize (must not be null). </p></li>
+<li><p><strong>pool</strong> – Memory pool used to allocate the output byte buffer. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a unique pointer to the serialized <a class="reference internal" href="memory.html#classpaimon_1_1_bytes"><span class="std std-ref">Bytes</span></a> on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexResult::Deserialize__cCP.s.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_global_index_result_1a1ab7dbefdca130a6e8a500f46801be91"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexResultE" title="paimon::GlobalIndexResult"><span class="n"><span class="pre">GlobalIndexResult</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Deserialize</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">buffer</span></span>, <span class="n"><span class="pre">size_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">length</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Deserializes a <a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref">GlobalIndexResult</span></a> object from a raw byte buffer. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The concrete type of the deserialized object is determined by metadata embedded in the buffer. Currently, only the following types are supported:<ul class="simple">
+<li><p>BitmapVectorSearchGlobalIndexResult</p></li>
+<li><p>BitmapGlobalIndexResult</p></li>
+</ul>
+</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>buffer</strong> – Pointer to the serialized byte data (must not be null). </p></li>
+<li><p><strong>length</strong> – Size of the buffer in bytes. </p></li>
+<li><p><strong>pool</strong> – Memory pool used to allocate internal objects during deserialization. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a shared pointer to the reconstructed <a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref">GlobalIndexResult</span></a> on success, or an error status on failure. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult8IteratorE">
+<span id="_CPPv3N6paimon17GlobalIndexResult8IteratorE"></span><span id="_CPPv2N6paimon17GlobalIndexResult8IteratorE"></span><span id="paimon::GlobalIndexResult::Iterator"></span><span class="target" id="classpaimon_1_1_global_index_result_1_1_iterator"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Iterator</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult8IteratorE" title="Link to this definition">#</a><br /></dt>
+<dd><p><a class="reference internal" href="#classpaimon_1_1_global_index_result_1_1_iterator"><span class="std std-ref">Iterator</span></a> interface for traversing selected global row ids. </p>
+<p>Subclassed by paimon::BitmapGlobalIndexResult::Iterator</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult8IteratorD0Ev">
+<span id="_CPPv3N6paimon17GlobalIndexResult8IteratorD0Ev"></span><span id="_CPPv2N6paimon17GlobalIndexResult8IteratorD0Ev"></span><span id="paimon::GlobalIndexResult::Iterator::~Iterator"></span><span class="target" id="classpaimon_1_1_global_index_result_1_1_iterator_1aac4fb487be27001bafee04694a02d036"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~Iterator</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult8IteratorD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17GlobalIndexResult8Iterator7HasNextEv">
+<span id="_CPPv3NK6paimon17GlobalIndexResult8Iterator7HasNextEv"></span><span id="_CPPv2NK6paimon17GlobalIndexResult8Iterator7HasNextEv"></span><span id="paimon::GlobalIndexResult::Iterator::HasNextC"></span><span class="target" id="classpaimon_1_1_global_index_result_1_1_iterator_1a20a59325817772e958f9433b56e11ab9"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">HasNext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17GlobalIndexResult8Iterator7HasNextEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Checks whether more row ids are available. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexResult8Iterator4NextEv">
+<span id="_CPPv3N6paimon17GlobalIndexResult8Iterator4NextEv"></span><span id="_CPPv2N6paimon17GlobalIndexResult8Iterator4NextEv"></span><span id="paimon::GlobalIndexResult::Iterator::Next"></span><span class="target" id="classpaimon_1_1_global_index_result_1_1_iterator_1aec3a22bc75ba73c1e043b5b1db52ce07"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Next</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexResult8Iterator4NextEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The next global row id and advances the iterator. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScanE">
+<span id="_CPPv3N6paimon15GlobalIndexScanE"></span><span id="_CPPv2N6paimon15GlobalIndexScanE"></span><span id="paimon::GlobalIndexScan"></span><span class="target" id="classpaimon_1_1_global_index_scan"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexScan</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScanE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Represents a logical scan over a global index for a table. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScanD0Ev">
+<span id="_CPPv3N6paimon15GlobalIndexScanD0Ev"></span><span id="_CPPv2N6paimon15GlobalIndexScanD0Ev"></span><span id="paimon::GlobalIndexScan::~GlobalIndexScan"></span><span class="target" id="classpaimon_1_1_global_index_scan_1a1051cd7569a99f0686645e701f88b2b3"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexScan</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScanD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScan15CreateRangeScanERK5Range">
+<span id="_CPPv3N6paimon15GlobalIndexScan15CreateRangeScanERK5Range"></span><span id="_CPPv2N6paimon15GlobalIndexScan15CreateRangeScanERK5Range"></span><span id="paimon::GlobalIndexScan::CreateRangeScan__RangeCR"></span><span class="target" id="classpaimon_1_1_global_index_scan_1a6f3bbe4aa934105936753b3de16026b6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon26RowRangeGlobalIndexScannerE" title="paimon::RowRangeGlobalIndexScanner"><span class="n"><span class="pre">RowRangeGlobalIndexScanner</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateRangeScan</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">Range</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">range</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScan15CreateRangeScanERK5Range" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a scanner for the global index over the specified row id range. </p>
+<p>This method instantiates a low-level scanner that can evaluate predicates and retrieve matching row ids from the global index data corresponding to the given row id range.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>range</strong> – The inclusive row id range [start, end] for which to create the scanner. The range must be fully covered by existing global index data (from <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_scan_1ad12dd61bfe64c40cb0761b8c251e74d0"><span class="std std-ref"><span class="pre">GetRowRangeList()</span></span></a></code>). </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing a range-level scanner, or an error if parse index meta fails. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScan15GetRowRangeListEv">
+<span id="_CPPv3N6paimon15GlobalIndexScan15GetRowRangeListEv"></span><span id="_CPPv2N6paimon15GlobalIndexScan15GetRowRangeListEv"></span><span id="paimon::GlobalIndexScan::GetRowRangeList"></span><span class="target" id="classpaimon_1_1_global_index_scan_1ad12dd61bfe64c40cb0761b8c251e74d0"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Range</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetRowRangeList</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScan15GetRowRangeListEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Returns row id ranges covered by this global index (sorted and non-overlapping ranges). </p>
+<p>Each <code class="docutils literal notranslate"><span class="pre">Range</span></code> represents a contiguous segment of row ids for which global index data exists. This allows the query engine to parallelize scanning and be aware of ranges that are not covered by any global index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing sorted and non-overlapping <code class="docutils literal notranslate"><span class="pre">Range</span></code> objects. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexScan::Create__ssCR.std::optional:int64_t:CR.std::optional:std::vector:std::map:ss.ss:::CR.std::map:ss.ss:CR.std::shared_ptr:FileSystem:CR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_global_index_scan_1a5a11fbc57a6a35b0e972a0f5e91f888c"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15GlobalIndexScanE" title="paimon::GlobalIndexScan"><span class="n"><span class="pre">GlobalIndexScan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">table_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">snapshot_id</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partitions</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_system</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_scan"><span class="std std-ref"><span class="pre">GlobalIndexScan</span></span></a></code> instance for the specified table and context. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>table_path</strong> – Root directory of the table. </p></li>
+<li><p><strong>snapshot_id</strong> – Optional snapshot id to read from; if not provided, uses the latest. </p></li>
+<li><p><strong>partitions</strong> – Optional list of specific partitions to restrict the scan scope. Each map represents one partition (e.g., {“dt”: “2024-06-01”}). If omitted, scans all partitions. </p></li>
+<li><p><strong>options</strong> – Index-specific configuration. </p></li>
+<li><p><strong>file_system</strong> – File system for accessing index files. If not provided (nullptr), it is inferred from the <code class="docutils literal notranslate"><span class="pre">FILE_SYSTEM</span></code> key in the <code class="docutils literal notranslate"><span class="pre">options</span></code> parameter. </p></li>
+<li><p><strong>pool</strong> – Memory pool for temporary allocations; if nullptr, uses default. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing a unique pointer to the created scanner, or an error if initialization fails (e.g., I/O error). </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexScan::Create__ssCR.std::optional:int64_t:CR.std::shared_ptr:Predicate:CR.std::map:ss.ss:CR.std::shared_ptr:FileSystem:CR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_global_index_scan_1ad59816e8073ba6d95a0bca53907c5e56"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15GlobalIndexScanE" title="paimon::GlobalIndexScan"><span class="n"><span class="pre">GlobalIndexScan</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">snapshot_id</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon9PredicateE" title="paimon::Predicate"><span class="n"><span class="pre">Predicate</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partition_filters</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_system</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_scan"><span class="std std-ref"><span class="pre">GlobalIndexScan</span></span></a></code> instance for the specified table and context. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>partition_filters</strong> – Optional specific partition predicates. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexWriterE">
+<span id="_CPPv3N6paimon17GlobalIndexWriterE"></span><span id="_CPPv2N6paimon17GlobalIndexWriterE"></span><span id="paimon::GlobalIndexWriter"></span><span class="target" id="classpaimon_1_1_global_index_writer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexWriter</span></span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexWriterE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Abstract interface for building a global index from Arrow data batches. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexWriterD0Ev">
+<span id="_CPPv3N6paimon17GlobalIndexWriterD0Ev"></span><span id="_CPPv2N6paimon17GlobalIndexWriterD0Ev"></span><span id="paimon::GlobalIndexWriter::~GlobalIndexWriter"></span><span class="target" id="classpaimon_1_1_global_index_writer_1a78f234455ecc8a3c5af6eb369829bb8b"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexWriter</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexWriterD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray">
+<span id="_CPPv3N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray"></span><span id="_CPPv2N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray"></span><span id="paimon::GlobalIndexWriter::AddBatch__ArrowArrayP"></span><span class="target" id="classpaimon_1_1_global_index_writer_1a125a81f9df8fb118cdc63fea6a749f2f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AddBatch</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_array</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><p>Builds index structures from a batch of columnar data. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>arrow_array</strong> – A valid C ArrowArray pointer representing a struct array. Must not be nullptr, and must conform to the expected schema. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">Status::OK()</span></code> on success; otherwise, an error indicating malformed input, I/O failure, or unsupported type, etc. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17GlobalIndexWriter6FinishEv">
+<span id="_CPPv3N6paimon17GlobalIndexWriter6FinishEv"></span><span id="_CPPv2N6paimon17GlobalIndexWriter6FinishEv"></span><span id="paimon::GlobalIndexWriter::Finish"></span><span class="target" id="classpaimon_1_1_global_index_writer_1a1e1b50ac25ccdf20c897b63f4d058916"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexIOMetaE" title="paimon::GlobalIndexIOMeta"><span class="n"><span class="pre">GlobalIndexIOMeta</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon17GlobalIndexWriter6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Finalizes the index build process and returns metadata for persisted index. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20GlobalIndexerFactoryE">
+<span id="_CPPv3N6paimon20GlobalIndexerFactoryE"></span><span id="_CPPv2N6paimon20GlobalIndexerFactoryE"></span><span id="paimon::GlobalIndexerFactory"></span><span class="target" id="classpaimon_1_1_global_indexer_factory"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexerFactory</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Factory</span></span><a class="headerlink" href="#_CPPv4N6paimon20GlobalIndexerFactoryE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Factory for creating <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_indexer"><span class="std std-ref"><span class="pre">GlobalIndexer</span></span></a></code> instances based on index type identifiers. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20GlobalIndexerFactoryD0Ev">
+<span id="_CPPv3N6paimon20GlobalIndexerFactoryD0Ev"></span><span id="_CPPv2N6paimon20GlobalIndexerFactoryD0Ev"></span><span id="paimon::GlobalIndexerFactory::~GlobalIndexerFactory"></span><span class="target" id="classpaimon_1_1_global_indexer_factory_1a5fb7c39dd060a18e8bf89fff5c46abbb"></span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexerFactory</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon20GlobalIndexerFactoryD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::GlobalIndexerFactory::Create__std::map:ss.ss:CRC"></span><span class="target" id="classpaimon_1_1_global_indexer_factory_1a05b24b744dd0388a0ae4188cdb51acca"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13GlobalIndexerE" title="paimon::GlobalIndexer"><span class="n"><span class="pre">GlobalIndexer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_indexer"><span class="std std-ref"><span class="pre">GlobalIndexer</span></span></a></code> using the current factory’s implementation and the given options. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::GlobalIndexerFactory::Get__ssCR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_global_indexer_factory_1a09abf2b41638d845477bf2147c8929ac"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13GlobalIndexerE" title="paimon::GlobalIndexer"><span class="n"><span class="pre">GlobalIndexer</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">identifier</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_indexer"><span class="std std-ref"><span class="pre">GlobalIndexer</span></span></a></code> instance by looking up a registered factory using an identifier. </p>
+<p>The provided <code class="docutils literal notranslate"><span class="pre">identifier</span></code> is automatically appended with <code class="docutils literal notranslate"><span class="pre">GLOBAL_INDEX_IDENTIFIER_SUFFIX</span></code> (e.g., “-global”) to form the full key used for factory lookup. This ensures namespace separation between file and global index types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>identifier</strong> – The base name of the index type (e.g., “bitmap”). </p></li>
+<li><p><strong>options</strong> – Configuration parameters for the indexer. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing a unique pointer to the created <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_indexer"><span class="std std-ref"><span class="pre">GlobalIndexer</span></span></a></code>, or an error if creation fails. </p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>nullptr if no matching factory. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-attributes">Public Static Attributes</p>
+<dl class="cpp var">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE">
+<span id="_CPPv3N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE"></span><span id="_CPPv2N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE"></span><span id="paimon::GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX__cCA"></span><span class="target" id="classpaimon_1_1_global_indexer_factory_1a53bcb91e611b57be14cf983313ca7131"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="kt"><span class="pre">char</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GLOBAL_INDEX_IDENTIFIER_SUFFIX</span></span></span><span class="p"><span class="pre">[</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#_CPPv4N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Suffix used to distinguish global index identifiers (e.g., “bitmap-global”). </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13GlobalIndexerE">
+<span id="_CPPv3N6paimon13GlobalIndexerE"></span><span id="_CPPv2N6paimon13GlobalIndexerE"></span><span id="paimon::GlobalIndexer"></span><span class="target" id="classpaimon_1_1_global_indexer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GlobalIndexer</span></span></span><a class="headerlink" href="#_CPPv4N6paimon13GlobalIndexerE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Interface for creating global index readers and writers. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13GlobalIndexerD0Ev">
+<span id="_CPPv3N6paimon13GlobalIndexerD0Ev"></span><span id="_CPPv2N6paimon13GlobalIndexerD0Ev"></span><span id="paimon::GlobalIndexer::~GlobalIndexer"></span><span class="target" id="classpaimon_1_1_global_indexer_1a8350b04541d75e0ffb3a451b2067c90e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~GlobalIndexer</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon13GlobalIndexerD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexer::CreateWriter__ssCR.ArrowSchemaP.std::shared_ptr:GlobalIndexFileWriter:CR.std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_global_indexer_1a48c350f4c101dace9fe5d79ff629f622"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexWriterE" title="paimon::GlobalIndexWriter"><span class="n"><span class="pre">GlobalIndexWriter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateWriter</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">field_name</span></span>, <span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon21GlobalIndexFileWriterE" title="paimon::GlobalIndexFileWriter"><span class="n"><span class="pre">GlobalIndexFileWriter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_writer</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a writer for building a global index on a specific field. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> – Name of the field to be indexed. </p></li>
+<li><p><strong>arrow_schema</strong> – Schema of the input Arrow struct array. It must contain the field specified by field_name and may include additional associated fields used during index construction. </p></li>
+<li><p><strong>file_writer</strong> – I/O handler for persisting index data to storage. </p></li>
+<li><p><strong>pool</strong> – Memory pool for temporary allocations; if nullptr, uses default. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing a shared pointer to the created <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_writer"><span class="std std-ref"><span class="pre">GlobalIndexWriter</span></span></a></code>, or an error if the field is not found, unsupported, or initialization fails, etc. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::GlobalIndexer::CreateReader__ArrowSchemaP.std::shared_ptr:GlobalIndexFileReader:CR.std::vector:GlobalIndexIOMeta:CR.std::shared_ptr:MemoryPool:CRC"></span><span class="target" id="classpaimon_1_1_global_indexer_1aef056d9a8177dfcfa86bc60cf5ac86ef"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexReaderE" title="paimon::GlobalIndexReader"><span class="n"><span class="pre">GlobalIndexReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReader</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">arrow_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon21GlobalIndexFileReaderE" title="paimon::GlobalIndexFileReader"><span class="n"><span class="pre">GlobalIndexFileReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_reader</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexIOMetaE" title="paimon::GlobalIndexIOMeta"><span class="n"><span class="pre">GlobalIndexIOMeta</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">files</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a reader for querying a pre-built global index. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>arrow_schema</strong> – Schema of the indexed data; used to interpret predicate literals. </p></li>
+<li><p><strong>file_reader</strong> – I/O handler for reading index artifacts from storage. </p></li>
+<li><p><strong>files</strong> – List of index file metadata entries produced during writing. </p></li>
+<li><p><strong>pool</strong> – Memory pool for temporary allocations; if nullptr, uses default. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> containing a shared pointer to the created <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_reader"><span class="std std-ref"><span class="pre">GlobalIndexReader</span></span></a></code>, or an error if the index cannot be loaded or is incompatible, etc. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon26RowRangeGlobalIndexScannerE">
+<span id="_CPPv3N6paimon26RowRangeGlobalIndexScannerE"></span><span id="_CPPv2N6paimon26RowRangeGlobalIndexScannerE"></span><span id="paimon::RowRangeGlobalIndexScanner"></span><span class="target" id="classpaimon_1_1_row_range_global_index_scanner"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">RowRangeGlobalIndexScanner</span></span></span><a class="headerlink" href="#_CPPv4N6paimon26RowRangeGlobalIndexScannerE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Interface for scanning global index data at the range level. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon26RowRangeGlobalIndexScannerD0Ev">
+<span id="_CPPv3N6paimon26RowRangeGlobalIndexScannerD0Ev"></span><span id="_CPPv2N6paimon26RowRangeGlobalIndexScannerD0Ev"></span><span id="paimon::RowRangeGlobalIndexScanner::~RowRangeGlobalIndexScanner"></span><span class="target" id="classpaimon_1_1_row_range_global_index_scanner_1abdfdb6a0db739c8b82c654d119469eee"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~RowRangeGlobalIndexScanner</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon26RowRangeGlobalIndexScannerD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE"></span><span id="paimon::RowRangeGlobalIndexScanner::CreateReader__ssCR.ssCRC"></span><span class="target" id="classpaimon_1_1_row_range_global_index_scanner_1ac03bced85190e92ca2b7db34e676948c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexReaderE" title="paimon::GlobalIndexReader"><span class="n"><span class="pre">GlobalIndexReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReader</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">field_name</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">index_type</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_reader"><span class="std std-ref"><span class="pre">GlobalIndexReader</span></span></a></code> for a specific field and index type within this range. </p>
+<p>This reader provides low-level access to the serialized index data for the given column (<code class="docutils literal notranslate"><span class="pre">field_name</span></code>) and index kind (<code class="docutils literal notranslate"><span class="pre">index_type</span></code>, such as “bitmap”).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_result"><span class="std std-ref"><span class="pre">GlobalIndexResult</span></span></a></code> objects returned by <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_reader"><span class="std std-ref"><span class="pre">GlobalIndexReader</span></span></a></code> use <strong>local row ids</strong> that start from 0 — not global row ids in the entire table. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>field_name</strong> – Name of the indexed column. </p></li>
+<li><p><strong>index_type</strong> – Type of the global index (e.g., “bitmap”, “lumina”). </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> that is:<ul class="simple">
+<li><p>Successful with a non-null reader if the index exists and loads correctly;</p></li>
+<li><p>Successful with a null pointer if no index was built for the given field and type;</p></li>
+<li><p>An error only if loading fails (e.g., file corruption, I/O error, unsupported format). </p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE">
+<span id="_CPPv3NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE"></span><span id="_CPPv2NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE"></span><span id="paimon::RowRangeGlobalIndexScanner::CreateReaders__ssCRC"></span><span class="target" id="classpaimon_1_1_row_range_global_index_scanner_1a8d171e568878db1be161eb11ff33f9cf"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon17GlobalIndexReaderE" title="paimon::GlobalIndexReader"><span class="n"><span class="pre">GlobalIndexReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReaders</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">field_name</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Creates several <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_global_index_reader"><span class="std std-ref"><span class="pre">GlobalIndexReader</span></span></a></code>s for a specific field within this range. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>field_name</strong> – Name of the indexed column. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A <code class="docutils literal notranslate"><span class="pre">Result</span></code> that is:<ul class="simple">
+<li><p>Successful with several readers if the indexes exist and load correctly;</p></li>
+<li><p>Successful with an empty vector if no index was built for the given field;</p></li>
+<li><p>Error returns when loading fails (e.g., file corruption, I/O error, unsupported format). </p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>doxygenclass: Cannot find class “paimon::RowRangeGlobalIndexWriter” in doxygen xml output for project “paimon_cpp” from directory: ../../apidoc/xml</p>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="file_index.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">File Index</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="clean.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Orphan Files Clean</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon21GlobalIndexFileReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexFileReader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon21GlobalIndexFileReaderD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexFileReader()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">GetInputStream()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon21GlobalIndexFileWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexFileWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon21GlobalIndexFileWriterD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexFileWriter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">NewFileName()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">NewOutputStream()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">GetFileSize()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexReader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE"><code class="docutils literal notranslate"><span class="pre">VisitVectorSearch()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMetaE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexIOMeta</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE"><code class="docutils literal notranslate"><span class="pre">GlobalIndexIOMeta()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMeta9file_nameE"><code class="docutils literal notranslate"><span class="pre">file_name</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMeta9file_sizeE"><code class="docutils literal notranslate"><span class="pre">file_size</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMeta9range_endE"><code class="docutils literal notranslate"><span class="pre">range_end</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexIOMeta8metadataE"><code class="docutils literal notranslate"><span class="pre">metadata</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResultE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexResult</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResultD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexResult()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17GlobalIndexResult7IsEmptyEv"><code class="docutils literal notranslate"><span class="pre">IsEmpty()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17GlobalIndexResult14CreateIteratorEv"><code class="docutils literal notranslate"><span class="pre">CreateIterator()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17GlobalIndexResult8ToRangesEv"><code class="docutils literal notranslate"><span class="pre">ToRanges()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE"><code class="docutils literal notranslate"><span class="pre">And()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE"><code class="docutils literal notranslate"><span class="pre">Or()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult9AddOffsetE7int64_t"><code class="docutils literal notranslate"><span class="pre">AddOffset()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17GlobalIndexResult8ToStringEv"><code class="docutils literal notranslate"><span class="pre">ToString()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Serialize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Deserialize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult8IteratorE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexResult::Iterator</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult8IteratorD0Ev"><code class="docutils literal notranslate"><span class="pre">~Iterator()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17GlobalIndexResult8Iterator7HasNextEv"><code class="docutils literal notranslate"><span class="pre">HasNext()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexResult8Iterator4NextEv"><code class="docutils literal notranslate"><span class="pre">Next()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScanE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexScan</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScanD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexScan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScan15CreateRangeScanERK5Range"><code class="docutils literal notranslate"><span class="pre">CreateRangeScan()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScan15GetRowRangeListEv"><code class="docutils literal notranslate"><span class="pre">GetRowRangeList()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexWriterD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexWriter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">AddBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17GlobalIndexWriter6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20GlobalIndexerFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexerFactory</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20GlobalIndexerFactoryD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexerFactory()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Get()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE"><code class="docutils literal notranslate"><span class="pre">GLOBAL_INDEX_IDENTIFIER_SUFFIX</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13GlobalIndexerE"><code class="docutils literal notranslate"><span class="pre">paimon::GlobalIndexer</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13GlobalIndexerD0Ev"><code class="docutils literal notranslate"><span class="pre">~GlobalIndexer()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">CreateWriter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">CreateReader()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon26RowRangeGlobalIndexScannerE"><code class="docutils literal notranslate"><span class="pre">paimon::RowRangeGlobalIndexScanner</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon26RowRangeGlobalIndexScannerD0Ev"><code class="docutils literal notranslate"><span class="pre">~RowRangeGlobalIndexScanner()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">CreateReader()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">CreateReaders()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/global_index.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

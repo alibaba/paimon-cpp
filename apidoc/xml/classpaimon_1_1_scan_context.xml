@@ -1,0 +1,324 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_scan_context" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ScanContext</compoundname>
+    <includes refid="scan__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a70006df782b10dae3590cbf658159f20" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::ScanContext::path_</definition>
+        <argsstring></argsstring>
+        <name>path_</name>
+        <qualifiedname>paimon::ScanContext::path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="86" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a962248955eaacb58e5067ba99cb707fe" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ScanContext::is_streaming_mode_</definition>
+        <argsstring></argsstring>
+        <name>is_streaming_mode_</name>
+        <qualifiedname>paimon::ScanContext::is_streaming_mode_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="87" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="87" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a4e8d750542c518e645653fbe40cc3ffe" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt;int32_t&gt; paimon::ScanContext::limit_</definition>
+        <argsstring></argsstring>
+        <name>limit_</name>
+        <qualifiedname>paimon::ScanContext::limit_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="88" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a90ac1411132a3bf24a6f768bb9b42254" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_scan_filter" kindref="compound">ScanFilter</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;ScanFilter&gt; paimon::ScanContext::scan_filters_</definition>
+        <argsstring></argsstring>
+        <name>scan_filters_</name>
+        <qualifiedname>paimon::ScanContext::scan_filters_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="89" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1aa8929494711a4ba926702d50d89f5b18" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;GlobalIndexResult&gt; paimon::ScanContext::global_index_result_</definition>
+        <argsstring></argsstring>
+        <name>global_index_result_</name>
+        <qualifiedname>paimon::ScanContext::global_index_result_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="90" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="90" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a55d53718b9df6a92ad7ec60eb4f1b301" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::ScanContext::memory_pool_</definition>
+        <argsstring></argsstring>
+        <name>memory_pool_</name>
+        <qualifiedname>paimon::ScanContext::memory_pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="91" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="91" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a11454e6dc78a1f42343c7a01b0b04232" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Executor&gt; paimon::ScanContext::executor_</definition>
+        <argsstring></argsstring>
+        <name>executor_</name>
+        <qualifiedname>paimon::ScanContext::executor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="92" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="92" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_context_1a88d1bcb385cc0125e44df91026ac6ebe" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::ScanContext::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>paimon::ScanContext::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="93" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="93" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1a056d0c6e62a7984e9fd8e2d7b8691c0e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ScanContext::ScanContext</definition>
+        <argsstring>(const std::string &amp;path, bool is_streaming_mode, std::optional&lt; int32_t &gt; limit, const std::shared_ptr&lt; ScanFilter &gt; &amp;scan_filter, const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;global_index_result, const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>ScanContext</name>
+        <qualifiedname>paimon::ScanContext::ScanContext</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_streaming_mode</declname>
+        </param>
+        <param>
+          <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+          <declname>limit</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_scan_filter" kindref="compound">ScanFilter</ref> &gt; &amp;</type>
+          <declname>scan_filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>global_index_result</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="46" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1ac19c5958c6a1182107787be2ba673fab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ScanContext::~ScanContext</definition>
+        <argsstring>()</argsstring>
+        <name>~ScanContext</name>
+        <qualifiedname>paimon::ScanContext::~ScanContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="53" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1a497994eb483d08ac75f2fd8f2b0c4e92" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::ScanContext::GetPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPath</name>
+        <qualifiedname>paimon::ScanContext::GetPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="55" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1aff01e81bf71ebfb4390415bbf605044a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::ScanContext::IsStreamingMode</definition>
+        <argsstring>() const</argsstring>
+        <name>IsStreamingMode</name>
+        <qualifiedname>paimon::ScanContext::IsStreamingMode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="59" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="59" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1a04f9b46b2289c9d54193d9f21d64e166" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt; int32_t &gt; paimon::ScanContext::GetLimit</definition>
+        <argsstring>() const</argsstring>
+        <name>GetLimit</name>
+        <qualifiedname>paimon::ScanContext::GetLimit</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="63" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="63" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1a68fe5273d1070c6a650c55586055686e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_scan_filter" kindref="compound">ScanFilter</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; ScanFilter &gt; paimon::ScanContext::GetScanFilters</definition>
+        <argsstring>() const</argsstring>
+        <name>GetScanFilters</name>
+        <qualifiedname>paimon::ScanContext::GetScanFilters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="67" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="67" bodyend="69"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1aa9b0f79fd33b7c77a3b54386861591f7" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::ScanContext::GetOptions</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOptions</name>
+        <qualifiedname>paimon::ScanContext::GetOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="70" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="70" bodyend="72"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1ac565e9a1ea9c2b3e71a1fe8430ac7978" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::ScanContext::GetMemoryPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::ScanContext::GetMemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="74" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="74" bodyend="76"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1ae6afc5bbad95e97f1335c760a6f4e307" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::ScanContext::GetExecutor</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExecutor</name>
+        <qualifiedname>paimon::ScanContext::GetExecutor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="78" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="78" bodyend="80"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_context_1a7a59bdf0a3b02006bef2a9834b41581e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; GlobalIndexResult &gt; paimon::ScanContext::GetGlobalIndexResult</definition>
+        <argsstring>() const</argsstring>
+        <name>GetGlobalIndexResult</name>
+        <qualifiedname>paimon::ScanContext::GetGlobalIndexResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="81" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="81" bodyend="83"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput> is some configuration for table scan operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Please do not use this class directly, use <computeroutput><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref></computeroutput> to build a <computeroutput><ref refid="classpaimon_1_1_scan_context" kindref="compound">ScanContext</ref></computeroutput> which has input validation. <simplesect kind="see"><para><ref refid="classpaimon_1_1_scan_context_builder" kindref="compound">ScanContextBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="44" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="44" bodyend="94"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_scan_context_1a11454e6dc78a1f42343c7a01b0b04232" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>executor_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1ae6afc5bbad95e97f1335c760a6f4e307" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetExecutor</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a7a59bdf0a3b02006bef2a9834b41581e" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetGlobalIndexResult</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a04f9b46b2289c9d54193d9f21d64e166" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetLimit</name></member>
+      <member refid="classpaimon_1_1_scan_context_1ac565e9a1ea9c2b3e71a1fe8430ac7978" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetMemoryPool</name></member>
+      <member refid="classpaimon_1_1_scan_context_1aa9b0f79fd33b7c77a3b54386861591f7" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetOptions</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a497994eb483d08ac75f2fd8f2b0c4e92" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetPath</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a68fe5273d1070c6a650c55586055686e" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>GetScanFilters</name></member>
+      <member refid="classpaimon_1_1_scan_context_1aa8929494711a4ba926702d50d89f5b18" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>global_index_result_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a962248955eaacb58e5067ba99cb707fe" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>is_streaming_mode_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1aff01e81bf71ebfb4390415bbf605044a" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>IsStreamingMode</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a4e8d750542c518e645653fbe40cc3ffe" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>limit_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a55d53718b9df6a92ad7ec60eb4f1b301" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>memory_pool_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a88d1bcb385cc0125e44df91026ac6ebe" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>options_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a70006df782b10dae3590cbf658159f20" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>path_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a90ac1411132a3bf24a6f768bb9b42254" prot="private" virt="non-virtual"><scope>paimon::ScanContext</scope><name>scan_filters_</name></member>
+      <member refid="classpaimon_1_1_scan_context_1a056d0c6e62a7984e9fd8e2d7b8691c0e" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>ScanContext</name></member>
+      <member refid="classpaimon_1_1_scan_context_1ac19c5958c6a1182107787be2ba673fab" prot="public" virt="non-virtual"><scope>paimon::ScanContext</scope><name>~ScanContext</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

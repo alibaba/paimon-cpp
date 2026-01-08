@@ -1,0 +1,2186 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.0/dist/mermaid-layout-elk.esm.min.mjs"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";import elkLayouts from "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.0/dist/mermaid-layout-elk.esm.min.mjs";mermaid.registerLayoutLoaders(elkLayouts);mermaid.initialize({startOnLoad:false});</script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.12.1/dist/mermaid.esm.min.mjs";
+
+const defaultStyle = document.createElement('style');
+defaultStyle.textContent = `pre.mermaid {
+    /* Same as .mermaid-container > pre */
+    display: block;
+    width: 100%;
+}
+
+pre.mermaid > svg {
+    /* Same as .mermaid-container > pre > svg */
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+`;
+document.head.appendChild(defaultStyle);
+
+const fullscreenStyle = document.createElement('style');
+fullscreenStyle.textContent = `.mermaid-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.mermaid-container > pre {
+    display: block;
+    width: 100%;
+}
+
+.mermaid-container > pre > svg {
+    height: 500px;
+    width: 100%;
+    max-width: 100% !important;
+}
+
+.mermaid-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #333;
+}
+
+.mermaid-fullscreen-btn:hover {
+    opacity: 100% !important;
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-btn.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-btn.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 3px 10px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 95vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    z-index: 9999;
+    padding: 20px;
+    overflow: auto;
+}
+
+.mermaid-fullscreen-modal.dark-theme {
+    background: rgba(0, 0, 0, 0.98);
+}
+
+.mermaid-fullscreen-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen {
+    position: relative;
+    width: 95vw;
+    height: 90vh;
+    max-width: 95vw;
+    max-height: 90vh;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen.dark-theme {
+    background: #1a1a1a;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.mermaid-container-fullscreen pre.mermaid {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mermaid-container-fullscreen .mermaid svg {
+    height: 100% !important;
+    width: 100% !important;
+    cursor: grab;
+}
+
+.mermaid-fullscreen-close {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    font-size: 24px;
+    line-height: 1;
+    color: #333;
+}
+
+.mermaid-fullscreen-close:hover {
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    transform: scale(1.1);
+}
+
+.mermaid-fullscreen-close.dark-theme {
+    background: rgba(50, 50, 50, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #e0e0e0;
+}
+
+.mermaid-fullscreen-close.dark-theme:hover {
+    background: rgba(60, 60, 60, 1);
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.2);
+}
+
+.mermaid-fullscreen-modal .mermaid-fullscreen-btn {
+    display: none !important;
+}`;
+document.head.appendChild(fullscreenStyle);
+
+// Detect if page has dark background
+const isDarkTheme = () => {
+    const bgColor = window.getComputedStyle(document.body).backgroundColor;
+    const match = bgColor.match(/rgb\((\d+),\s*(\d+),\s*(\d+)/);
+    if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        return brightness < 128;
+    }
+    return false;
+};
+
+const load = async () => {
+    await mermaid.run();
+
+    const all_mermaids = document.querySelectorAll(".mermaid");
+    const mermaids_processed = document.querySelectorAll(".mermaid[data-processed='true']");
+
+    if ("False" === "True") {
+        const mermaids_to_add_zoom = -1 === -1 ? all_mermaids.length : -1;
+        if(mermaids_to_add_zoom > 0) {
+            var svgs = d3.selectAll("");
+            if(all_mermaids.length !== mermaids_processed.length) {
+                setTimeout(load, 200);
+                return;
+            } else if(svgs.size() !== mermaids_to_add_zoom) {
+                setTimeout(load, 200);
+                return;
+            } else {
+                svgs.each(function() {
+                    var svg = d3.select(this);
+                    svg.html("<g class='wrapper'>" + svg.html() + "</g>");
+                    var inner = svg.select("g");
+                    var zoom = d3.zoom().on("zoom", function(event) {
+                        inner.attr("transform", event.transform);
+                    });
+                    svg.call(zoom);
+                });
+            }
+        }
+    } else if(all_mermaids.length !== mermaids_processed.length) {
+        // Wait for mermaid to process all diagrams
+        setTimeout(load, 200);
+        return;
+    }
+
+    const darkTheme = isDarkTheme();
+
+    // Stop here if not adding fullscreen capability
+    if ("True" !== "True") return;
+
+    const modal = document.createElement('div');
+    modal.className = 'mermaid-fullscreen-modal' + (darkTheme ? ' dark-theme' : '');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Fullscreen diagram viewer');
+    modal.innerHTML = `
+        <button class="mermaid-fullscreen-close${darkTheme ? ' dark-theme' : ''}" aria-label="Close fullscreen">✕</button>
+        <div class="mermaid-container-fullscreen${darkTheme ? ' dark-theme' : ''}"></div>
+    `;
+    document.body.appendChild(modal);
+
+    const modalContent = modal.querySelector('.mermaid-container-fullscreen');
+    const closeBtn = modal.querySelector('.mermaid-fullscreen-close');
+
+    let previousScrollOffset = [window.scrollX, window.scrollY];
+
+    const closeModal = () => {
+        modal.classList.remove('active');
+        modalContent.innerHTML = '';
+        document.body.style.overflow = ''
+        window.scrollTo({left: previousScrollOffset[0], top: previousScrollOffset[1], behavior: 'instant'});
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    const allButtons = [];
+
+    document.querySelectorAll('.mermaid').forEach((mermaidDiv) => {
+        if (mermaidDiv.parentNode.classList.contains('mermaid-container') ||
+            mermaidDiv.closest('.mermaid-fullscreen-modal')) {
+            return;
+        }
+
+        const container = document.createElement('div');
+        container.className = 'mermaid-container';
+        mermaidDiv.parentNode.insertBefore(container, mermaidDiv);
+        container.appendChild(mermaidDiv);
+
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mermaid-fullscreen-btn' + (darkTheme ? ' dark-theme' : '');
+        fullscreenBtn.setAttribute('aria-label', 'View diagram in fullscreen');
+        fullscreenBtn.textContent = '⛶';
+        fullscreenBtn.style.opacity = '50%';
+
+        // Calculate dynamic position based on diagram's margin and padding
+        const diagramStyle = window.getComputedStyle(mermaidDiv);
+        const marginTop = parseFloat(diagramStyle.marginTop) || 0;
+        const marginRight = parseFloat(diagramStyle.marginRight) || 0;
+        const paddingTop = parseFloat(diagramStyle.paddingTop) || 0;
+        const paddingRight = parseFloat(diagramStyle.paddingRight) || 0;
+        fullscreenBtn.style.top = `${marginTop + paddingTop + 4}px`;
+        fullscreenBtn.style.right = `${marginRight + paddingRight + 4}px`;
+
+        fullscreenBtn.addEventListener('click', () => {
+            previousScrollOffset = [window.scroll, window.scrollY];
+            const clone = mermaidDiv.cloneNode(true);
+            modalContent.innerHTML = '';
+            modalContent.appendChild(clone);
+
+            const svg = clone.querySelector('svg');
+            if (svg) {
+                svg.removeAttribute('width');
+                svg.removeAttribute('height');
+                svg.style.width = '100%';
+                svg.style.height = 'auto';
+                svg.style.maxWidth = '100%';
+                svg.style.sdisplay = 'block';
+
+                if ("False" === "True") {
+                    setTimeout(() => {
+                        const g = svg.querySelector('g');
+                        if (g) {
+                            var svgD3 = d3.select(svg);
+                            svgD3.html("<g class='wrapper'>" + svgD3.html() + "</g>");
+                            var inner = svgD3.select("g");
+                            var zoom = d3.zoom().on("zoom", function(event) {
+                                inner.attr("transform", event.transform);
+                            });
+                            svgD3.call(zoom);
+                        }
+                    }, 100);
+                }
+            }
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        });
+
+        container.appendChild(fullscreenBtn);
+        allButtons.push(fullscreenBtn);
+    });
+
+    // Update theme classes when theme changes
+    const updateTheme = () => {
+        const dark = isDarkTheme();
+        allButtons.forEach(btn => {
+            if (dark) {
+                btn.classList.add('dark-theme');
+            } else {
+                btn.classList.remove('dark-theme');
+            }
+        });
+        if (dark) {
+            modal.classList.add('dark-theme');
+            modalContent.classList.add('dark-theme');
+            closeBtn.classList.add('dark-theme');
+        } else {
+            modal.classList.remove('dark-theme');
+            modalContent.classList.remove('dark-theme');
+            closeBtn.classList.remove('dark-theme');
+        }
+    };
+
+    // Watch for theme changes
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class', 'style', 'data-theme']
+    });
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+    });
+};
+
+window.addEventListener("load", load);
+</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#P"><strong>P</strong></a>
+ 
+</div>
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/file_system.html#_CPPv4N6paimon15BasicFileStatusE">paimon::BasicFileStatus (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon15BasicFileStatus15BasicFileStatusEv">paimon::BasicFileStatus::BasicFileStatus (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon15BasicFileStatus7GetPathEv">paimon::BasicFileStatus::GetPath (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon15BasicFileStatus5IsDirEv">paimon::BasicFileStatus::IsDir (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon15BasicFileStatusD0Ev">paimon::BasicFileStatus::~BasicFileStatus (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReaderE">paimon::BatchReader (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader5CloseEv">paimon::BatchReader::Close (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon11BatchReader16GetReaderMetricsEv">paimon::BatchReader::GetReaderMetrics (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap">paimon::BatchReader::IsEofBatch (C++ function)</a>, <a href="api/file_format.html#_CPPv4N6paimon11BatchReader10IsEofBatchERK9ReadBatch">[1]</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader12MakeEofBatchEv">paimon::BatchReader::MakeEofBatch (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader22MakeEofBatchWithBitmapEv">paimon::BatchReader::MakeEofBatchWithBitmap (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader9NextBatchEv">paimon::BatchReader::NextBatch (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader19NextBatchWithBitmapEv">paimon::BatchReader::NextBatchWithBitmap (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader9ReadBatchE">paimon::BatchReader::ReadBatch (C++ type)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE">paimon::BatchReader::ReadBatchWithBitmap (C++ type)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon11BatchReaderD0Ev">paimon::BatchReader::~BatchReader (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResultE">paimon::BitmapIndexResult (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE">paimon::BitmapIndexResult::And (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResult17BitmapIndexResultE14BitmapSupplier">paimon::BitmapIndexResult::BitmapIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResult14BitmapSupplierE">paimon::BitmapIndexResult::BitmapSupplier (C++ type)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon17BitmapIndexResult9GetBitmapEv">paimon::BitmapIndexResult::GetBitmap (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon17BitmapIndexResult8IsRemainEv">paimon::BitmapIndexResult::IsRemain (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE">paimon::BitmapIndexResult::Or (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon17BitmapIndexResult8ToStringEv">paimon::BitmapIndexResult::ToString (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon17BitmapIndexResultD0Ev">paimon::BitmapIndexResult::~BitmapIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon4BlobE">paimon::Blob (C++ class)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon4Blob10ArrowFieldERKNSt6stringEbNSt13unordered_mapINSt6stringENSt6stringEEE">paimon::Blob::ArrowField (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon4Blob14FromDescriptorEPKc8uint64_t">paimon::Blob::FromDescriptor (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE">paimon::Blob::FromPath (C++ function)</a>, <a href="api/data_types.html#_CPPv4N6paimon4Blob8FromPathERKNSt6stringE7int64_t7int64_t">[1]</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon4Blob14NewInputStreamERKNSt10shared_ptrI10FileSystemEE">paimon::Blob::NewInputStream (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon4Blob6ToDataERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">paimon::Blob::ToData (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon4Blob12ToDescriptorERKNSt10shared_ptrI10MemoryPoolEE">paimon::Blob::ToDescriptor (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon4Blob3UriEv">paimon::Blob::Uri (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon4BlobD0Ev">paimon::Blob::~Blob (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStreamE">paimon::BufferedInputStream (C++ class)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream19BufferedInputStreamERKNSt10shared_ptrI11InputStreamEE7int32_tP10MemoryPool">paimon::BufferedInputStream::BufferedInputStream (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream5CloseEv">paimon::BufferedInputStream::Close (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream19DEFAULT_BUFFER_SIZEE">paimon::BufferedInputStream::DEFAULT_BUFFER_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon19BufferedInputStream6GetPosEv">paimon::BufferedInputStream::GetPos (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon19BufferedInputStream6GetUriEv">paimon::BufferedInputStream::GetUri (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon19BufferedInputStream6LengthEv">paimon::BufferedInputStream::Length (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream4ReadEPc8uint32_t">paimon::BufferedInputStream::Read (C++ function)</a>, <a href="api/io.html#_CPPv4N6paimon19BufferedInputStream4ReadEPc8uint32_t8uint64_t">[1]</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE">paimon::BufferedInputStream::ReadAsync (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStream4SeekE7int64_t10SeekOrigin">paimon::BufferedInputStream::Seek (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon19BufferedInputStreamD0Ev">paimon::BufferedInputStream::~BufferedInputStream (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStreamE">paimon::ByteArrayInputStream (C++ class)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream20ByteArrayInputStreamEPKc8uint64_t">paimon::ByteArrayInputStream::ByteArrayInputStream (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream5CloseEv">paimon::ByteArrayInputStream::Close (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon20ByteArrayInputStream6GetPosEv">paimon::ByteArrayInputStream::GetPos (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon20ByteArrayInputStream10GetRawDataEv">paimon::ByteArrayInputStream::GetRawData (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon20ByteArrayInputStream6GetUriEv">paimon::ByteArrayInputStream::GetUri (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon20ByteArrayInputStream6LengthEv">paimon::ByteArrayInputStream::Length (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc8uint32_t">paimon::ByteArrayInputStream::Read (C++ function)</a>, <a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream4ReadEPc8uint32_t8uint64_t">[1]</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE">paimon::ByteArrayInputStream::ReadAsync (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStream4SeekE7int64_t10SeekOrigin">paimon::ByteArrayInputStream::Seek (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon20ByteArrayInputStreamD0Ev">paimon::ByteArrayInputStream::~ByteArrayInputStream (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon9ByteOrderE">paimon::ByteOrder (C++ enum)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon9ByteOrder17PAIMON_BIG_ENDIANE">paimon::ByteOrder::PAIMON_BIG_ENDIAN (C++ enumerator)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon9ByteOrder20PAIMON_LITTLE_ENDIANE">paimon::ByteOrder::PAIMON_LITTLE_ENDIAN (C++ enumerator)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5BytesE">paimon::Bytes (C++ class)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5Bytes13AllocateBytesE7int32_tP10MemoryPool">paimon::Bytes::AllocateBytes (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon5Bytes13AllocateBytesERKNSt6stringEP10MemoryPool">[1]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5Bytes5BytesE6size_tP10MemoryPool">paimon::Bytes::Bytes (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon5Bytes5BytesERK5Bytes">[1]</a>, <a href="api/memory.html#_CPPv4N6paimon5Bytes5BytesERKNSt6stringEP10MemoryPool">[2]</a>, <a href="api/memory.html#_CPPv4N6paimon5Bytes5BytesERR5Bytes">[3]</a>, <a href="api/memory.html#_CPPv4N6paimon5Bytes5BytesEv">[4]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5Bytes7compareERK5Bytes">paimon::Bytes::compare (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5Bytes6CopyOfERK5Bytes6size_tP10MemoryPool">paimon::Bytes::CopyOf (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5Bytes4dataEv">paimon::Bytes::data (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5BytesltERK5Bytes">paimon::Bytes::operator&lt; (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5BytesaSERK5Bytes">paimon::Bytes::operator= (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon5BytesaSERR5Bytes">[1]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5ByteseqERK5Bytes">paimon::Bytes::operator== (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5BytesixE6size_t">paimon::Bytes::operator[] (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon5Bytes4sizeEv">paimon::Bytes::size (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon5BytesD0Ev">paimon::Bytes::~Bytes (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon7CatalogE">paimon::Catalog (C++ class)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon7Catalog6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::Catalog::Create (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon7Catalog14CreateDatabaseERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEEb">paimon::Catalog::CreateDatabase (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon7Catalog11CreateTableERK10IdentifierP11ArrowSchemaRKNSt6vectorINSt6stringEEERKNSt6vectorINSt6stringEEERKNSt3mapINSt6stringENSt6stringEEEb">paimon::Catalog::CreateTable (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon7Catalog13ListDatabasesEv">paimon::Catalog::ListDatabases (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon7Catalog10ListTablesERKNSt6stringE">paimon::Catalog::ListTables (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon7Catalog15LoadTableSchemaERK10Identifier">paimon::Catalog::LoadTableSchema (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon12CleanContextE">paimon::CleanContext (C++ class)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon12CleanContext12CleanContextERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE7int64_tRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEENSt8functionIFbRKNSt6stringEEEE">paimon::CleanContext::CleanContext (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext11GetExecutorEv">paimon::CleanContext::GetExecutor (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext22GetFileRetainConditionEv">paimon::CleanContext::GetFileRetainCondition (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext13GetMemoryPoolEv">paimon::CleanContext::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext14GetOlderThanMsEv">paimon::CleanContext::GetOlderThanMs (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext10GetOptionsEv">paimon::CleanContext::GetOptions (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4NK6paimon12CleanContext11GetRootPathEv">paimon::CleanContext::GetRootPath (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon12CleanContextD0Ev">paimon::CleanContext::~CleanContext (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilderE">paimon::CleanContextBuilder (C++ class)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">paimon::CleanContextBuilder::AddOption (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder19CleanContextBuilderERKNSt6stringE">paimon::CleanContextBuilder::CleanContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder6FinishEv">paimon::CleanContextBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">paimon::CleanContextBuilder::SetOptions (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">paimon::CleanContextBuilder::WithExecutor (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder23WithFileRetainConditionENSt8functionIFbRKNSt6stringEEEE">paimon::CleanContextBuilder::WithFileRetainCondition (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::CleanContextBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilder15WithOlderThanMsE7int64_t">paimon::CleanContextBuilder::WithOlderThanMs (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon19CleanContextBuilderD0Ev">paimon::CleanContextBuilder::~CleanContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon13CommitContextE">paimon::CommitContext (C++ class)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE">paimon::CommitContext::CommitContext (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext13GetCommitUserEv">paimon::CommitContext::GetCommitUser (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext11GetExecutorEv">paimon::CommitContext::GetExecutor (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext13GetMemoryPoolEv">paimon::CommitContext::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext10GetOptionsEv">paimon::CommitContext::GetOptions (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext11GetRootPathEv">paimon::CommitContext::GetRootPath (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext17IgnoreEmptyCommitEv">paimon::CommitContext::IgnoreEmptyCommit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon13CommitContext20UseRESTCatalogCommitEv">paimon::CommitContext::UseRESTCatalogCommit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon13CommitContextD0Ev">paimon::CommitContext::~CommitContext (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilderE">paimon::CommitContextBuilder (C++ class)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">paimon::CommitContextBuilder::AddOption (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE">paimon::CommitContextBuilder::CommitContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder6FinishEv">paimon::CommitContextBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb">paimon::CommitContextBuilder::IgnoreEmptyCommit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">paimon::CommitContextBuilder::SetOptions (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb">paimon::CommitContextBuilder::UseRESTCatalogCommit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">paimon::CommitContextBuilder::WithExecutor (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::CommitContextBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon20CommitContextBuilderD0Ev">paimon::CommitContextBuilder::~CommitContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon17CompoundPredicateE">paimon::CompoundPredicate (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate8ChildrenEv">paimon::CompoundPredicate::Children (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate11GetFunctionEv">paimon::CompoundPredicate::GetFunction (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate6NegateEv">paimon::CompoundPredicate::Negate (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicateeqERK9Predicate">paimon::CompoundPredicate::operator== (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon17CompoundPredicate8ToStringEv">paimon::CompoundPredicate::ToString (C++ function)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon21CreateDefaultExecutorE8uint32_t">paimon::CreateDefaultExecutor (C++ function)</a>, <a href="api/executor.html#_CPPv4N6paimon21CreateDefaultExecutorEv">[1]</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon15DataInputStreamE">paimon::DataInputStream (C++ class)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon15DataInputStream15DataInputStreamERKNSt10shared_ptrI11InputStreamEE">paimon::DataInputStream::DataInputStream (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream6GetPosEv">paimon::DataInputStream::GetPos (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream6LengthEv">paimon::DataInputStream::Length (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream4ReadEPc8uint32_t">paimon::DataInputStream::Read (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream9ReadBytesEP5Bytes">paimon::DataInputStream::ReadBytes (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream10ReadStringEv">paimon::DataInputStream::ReadString (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4I0ENK6paimon15DataInputStream9ReadValueE6ResultI1TEv">paimon::DataInputStream::ReadValue (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4NK6paimon15DataInputStream4SeekE7int64_t">paimon::DataInputStream::Seek (C++ function)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon15DataInputStream8SetOrderE9ByteOrder">paimon::DataInputStream::SetOrder (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplitE">paimon::DataSplit (C++ class)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon9DataSplit11GetFileListEv">paimon::DataSplit::GetFileList (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMetaE">paimon::DataSplit::SimpleDataFileMeta (C++ struct)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta13creation_timeE">paimon::DataSplit::SimpleDataFileMeta::creation_time (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta16delete_row_countE">paimon::DataSplit::SimpleDataFileMeta::delete_row_count (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_pathE">paimon::DataSplit::SimpleDataFileMeta::file_path (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9file_sizeE">paimon::DataSplit::SimpleDataFileMeta::file_size (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta5levelE">paimon::DataSplit::SimpleDataFileMeta::level (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19max_sequence_numberE">paimon::DataSplit::SimpleDataFileMeta::max_sequence_number (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta19min_sequence_numberE">paimon::DataSplit::SimpleDataFileMeta::min_sequence_number (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon9DataSplit18SimpleDataFileMetaeqERK18SimpleDataFileMeta">paimon::DataSplit::SimpleDataFileMeta::operator== (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9row_countE">paimon::DataSplit::SimpleDataFileMeta::row_count (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta9schema_idE">paimon::DataSplit::SimpleDataFileMeta::schema_id (C++ member)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9DataSplit18SimpleDataFileMeta18SimpleDataFileMetaERKNSt6stringE7int64_t7int64_t7int64_t7int64_t7int64_t7int32_tRK9TimestampRKNSt8optionalI7int64_tEE">paimon::DataSplit::SimpleDataFileMeta::SimpleDataFileMeta (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon9DataSplit18SimpleDataFileMeta8ToStringEv">paimon::DataSplit::SimpleDataFileMeta::ToString (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7DecimalE">paimon::Decimal (C++ class)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal9CompareToERK7Decimal">paimon::Decimal::CompareTo (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal7DecimalE7int32_t7int32_t8int128_t">paimon::Decimal::Decimal (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal17DEFAULT_PRECISIONE">paimon::Decimal::DEFAULT_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal13DEFAULT_SCALEE">paimon::Decimal::DEFAULT_SCALE (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal17FromUnscaledBytesE7int32_t7int32_tP5Bytes">paimon::Decimal::FromUnscaledBytes (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal16FromUnscaledLongE7int64_t7int32_t7int32_t">paimon::Decimal::FromUnscaledLong (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal8HighBitsEv">paimon::Decimal::HighBits (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal8int128_tE">paimon::Decimal::int128_t (C++ type)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal9IsCompactE7int32_t">paimon::Decimal::IsCompact (C++ function)</a>, <a href="api/data_types.html#_CPPv4NK6paimon7Decimal9IsCompactEv">[1]</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal7LowBitsEv">paimon::Decimal::LowBits (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal13MAX_PRECISIONE">paimon::Decimal::MAX_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal13MIN_PRECISIONE">paimon::Decimal::MIN_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7DecimalltERK7Decimal">paimon::Decimal::operator&lt; (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7DecimaleqERK7Decimal">paimon::Decimal::operator== (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7DecimalgtERK7Decimal">paimon::Decimal::operator&gt; (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal9PrecisionEv">paimon::Decimal::Precision (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal5ScaleEv">paimon::Decimal::Scale (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal8ToStringEv">paimon::Decimal::ToString (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal15ToUnscaledBytesEv">paimon::Decimal::ToUnscaledBytes (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal14ToUnscaledLongEv">paimon::Decimal::ToUnscaledLong (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon7Decimal9uint128_tE">paimon::Decimal::uint128_t (C++ type)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon7Decimal5ValueEv">paimon::Decimal::Value (C++ function)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon29DEFAULT_EXECUTOR_THREAD_COUNTE">paimon::DEFAULT_EXECUTOR_THREAD_COUNT (C++ member)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon8ExecutorE">paimon::Executor (C++ class)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon8Executor3AddENSt8functionIFvvEEE">paimon::Executor::Add (C++ function)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon8ExecutorD0Ev">paimon::Executor::~Executor (C++ function)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldTypeE">paimon::FieldType (C++ enum)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType5ARRAYE">paimon::FieldType::ARRAY (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType6BIGINTE">paimon::FieldType::BIGINT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType6BINARYE">paimon::FieldType::BINARY (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType4BLOBE">paimon::FieldType::BLOB (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType7BOOLEANE">paimon::FieldType::BOOLEAN (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType4DATEE">paimon::FieldType::DATE (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType7DECIMALE">paimon::FieldType::DECIMAL (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType6DOUBLEE">paimon::FieldType::DOUBLE (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType5FLOATE">paimon::FieldType::FLOAT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType3INTE">paimon::FieldType::INT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType3MAPE">paimon::FieldType::MAP (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType8SMALLINTE">paimon::FieldType::SMALLINT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType6STRINGE">paimon::FieldType::STRING (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType6STRUCTE">paimon::FieldType::STRUCT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType9TIMESTAMPE">paimon::FieldType::TIMESTAMP (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType7TINYINTE">paimon::FieldType::TINYINT (C++ enumerator)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon9FieldType7UNKNOWNE">paimon::FieldType::UNKNOWN (C++ enumerator)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon15FileBatchReaderE">paimon::FileBatchReader (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon15FileBatchReader13GetFileSchemaEv">paimon::FileBatchReader::GetFileSchema (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon15FileBatchReader15GetNumberOfRowsEv">paimon::FileBatchReader::GetNumberOfRows (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv">paimon::FileBatchReader::GetPreviousBatchFirstRowNumber (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon15FileBatchReader9NextBatchEv">paimon::FileBatchReader::NextBatch (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon15FileBatchReader19NextBatchWithBitmapEv">paimon::FileBatchReader::NextBatchWithBitmap (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE">paimon::FileBatchReader::SetReadSchema (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv">paimon::FileBatchReader::SupportPreciseBitmapSelection (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon10FileFormatE">paimon::FileFormat (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon10FileFormat19CreateReaderBuilderE7int32_t">paimon::FileFormat::CreateReaderBuilder (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema">paimon::FileFormat::CreateStatsExtractor (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t">paimon::FileFormat::CreateWriterBuilder (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon10FileFormat10IdentifierEv">paimon::FileFormat::Identifier (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon10FileFormatD0Ev">paimon::FileFormat::~FileFormat (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon17FileFormatFactoryE">paimon::FileFormatFactory (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileFormatFactory::Create (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileFormatFactory::Get (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon17FileFormatFactoryD0Ev">paimon::FileFormatFactory::~FileFormatFactory (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon11FileIndexerE">paimon::FileIndexer (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon11FileIndexer12CreateReaderEP11ArrowSchema7int32_t7int32_tRKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE">paimon::FileIndexer::CreateReader (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon11FileIndexer12CreateWriterEP11ArrowSchemaRKNSt10shared_ptrI10MemoryPoolEE">paimon::FileIndexer::CreateWriter (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon11FileIndexerD0Ev">paimon::FileIndexer::~FileIndexer (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon18FileIndexerFactoryE">paimon::FileIndexerFactory (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon18FileIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileIndexerFactory::Create (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon18FileIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileIndexerFactory::Get (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon18FileIndexerFactoryD0Ev">paimon::FileIndexerFactory::~FileIndexerFactory (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormatE">paimon::FileIndexFormat (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat12CreateReaderERKNSt10shared_ptrI11InputStreamEERKNSt10shared_ptrI10MemoryPoolEE">paimon::FileIndexFormat::CreateReader (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat16EMPTY_INDEX_FLAGE">paimon::FileIndexFormat::EMPTY_INDEX_FLAG (C++ member)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat5MAGICE">paimon::FileIndexFormat::MAGIC (C++ member)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat6ReaderE">paimon::FileIndexFormat::Reader (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon15FileIndexFormat6Reader15ReadColumnIndexERKNSt6stringEP11ArrowSchema">paimon::FileIndexFormat::Reader::ReadColumnIndex (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat6ReaderD0Ev">paimon::FileIndexFormat::Reader::~Reader (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexFormat3V_1E">paimon::FileIndexFormat::V_1 (C++ member)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReaderE">paimon::FileIndexReader (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader13VisitContainsERK7Literal">paimon::FileIndexReader::VisitContains (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader13VisitEndsWithERK7Literal">paimon::FileIndexReader::VisitEndsWith (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader10VisitEqualERK7Literal">paimon::FileIndexReader::VisitEqual (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader19VisitGreaterOrEqualERK7Literal">paimon::FileIndexReader::VisitGreaterOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader16VisitGreaterThanERK7Literal">paimon::FileIndexReader::VisitGreaterThan (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader7VisitInERKNSt6vectorI7LiteralEE">paimon::FileIndexReader::VisitIn (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader14VisitIsNotNullEv">paimon::FileIndexReader::VisitIsNotNull (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader11VisitIsNullEv">paimon::FileIndexReader::VisitIsNull (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader16VisitLessOrEqualERK7Literal">paimon::FileIndexReader::VisitLessOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader13VisitLessThanERK7Literal">paimon::FileIndexReader::VisitLessThan (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader13VisitNotEqualERK7Literal">paimon::FileIndexReader::VisitNotEqual (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader10VisitNotInERKNSt6vectorI7LiteralEE">paimon::FileIndexReader::VisitNotIn (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexReader15VisitStartsWithERK7Literal">paimon::FileIndexReader::VisitStartsWith (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResultE">paimon::FileIndexResult (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResult3AndERKNSt10shared_ptrI15FileIndexResultEE">paimon::FileIndexResult::And (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon15FileIndexResult8IsRemainEv">paimon::FileIndexResult::IsRemain (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResult2OrERKNSt10shared_ptrI15FileIndexResultEE">paimon::FileIndexResult::Or (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResult6RemainEv">paimon::FileIndexResult::Remain (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResult4SkipEv">paimon::FileIndexResult::Skip (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon15FileIndexResult8ToStringEv">paimon::FileIndexResult::ToString (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexResultD0Ev">paimon::FileIndexResult::~FileIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexWriterE">paimon::FileIndexWriter (C++ class)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexWriter8AddBatchEP10ArrowArray">paimon::FileIndexWriter::AddBatch (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4NK6paimon15FileIndexWriter15SerializedBytesEv">paimon::FileIndexWriter::SerializedBytes (C++ function)</a>
+</li>
+      <li><a href="api/file_index.html#_CPPv4N6paimon15FileIndexWriterD0Ev">paimon::FileIndexWriter::~FileIndexWriter (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileStatusE">paimon::FileStatus (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileStatus10FileStatusEv">paimon::FileStatus::FileStatus (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileStatus6GetLenEv">paimon::FileStatus::GetLen (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileStatus19GetModificationTimeEv">paimon::FileStatus::GetModificationTime (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileStatus7GetPathEv">paimon::FileStatus::GetPath (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileStatus5IsDirEv">paimon::FileStatus::IsDir (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileStatusD0Ev">paimon::FileStatus::~FileStatus (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommitE">paimon::FileStoreCommit (C++ class)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">paimon::FileStoreCommit::Commit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE">paimon::FileStoreCommit::Create (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t">paimon::FileStoreCommit::DropPartition (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit6ExpireEv">paimon::FileStoreCommit::Expire (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE">paimon::FileStoreCommit::FilterAndCommit (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">paimon::FileStoreCommit::FilterAndOverwrite (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4NK6paimon15FileStoreCommit16GetCommitMetricsEv">paimon::FileStoreCommit::GetCommitMetrics (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit25GetLastCommitTableRequestEv">paimon::FileStoreCommit::GetLastCommitTableRequest (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">paimon::FileStoreCommit::Overwrite (C++ function)</a>
+</li>
+      <li><a href="api/commit.html#_CPPv4N6paimon15FileStoreCommitD0Ev">paimon::FileStoreCommit::~FileStoreCommit (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWriteE">paimon::FileStoreWrite (C++ class)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWrite5CloseEv">paimon::FileStoreWrite::Close (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWrite6CreateENSt10unique_ptrI12WriteContextEE">paimon::FileStoreWrite::Create (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon14FileStoreWrite10GetMetricsEv">paimon::FileStoreWrite::GetMetrics (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWrite13PrepareCommitEb7int64_t">paimon::FileStoreWrite::PrepareCommit (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWrite5WriteERRNSt10unique_ptrI11RecordBatchEE">paimon::FileStoreWrite::Write (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon14FileStoreWriteD0Ev">paimon::FileStoreWrite::~FileStoreWrite (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystemE">paimon::FileSystem (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystem11AtomicStoreERKNSt6stringERKNSt6stringE">paimon::FileSystem::AtomicStore (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem6CreateERKNSt6stringEb">paimon::FileSystem::Create (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem6DeleteERKNSt6stringEb">paimon::FileSystem::Delete (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem6ExistsERKNSt6stringE">paimon::FileSystem::Exists (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem13GetFileStatusERKNSt6stringE">paimon::FileSystem::GetFileStatus (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystem13IsObjectStoreERKNSt6stringE">paimon::FileSystem::IsObjectStore (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem7ListDirERKNSt6stringEPNSt6vectorINSt10unique_ptrI15BasicFileStatusEEEE">paimon::FileSystem::ListDir (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem14ListFileStatusERKNSt6stringEPNSt6vectorINSt10unique_ptrI10FileStatusEEEE">paimon::FileSystem::ListFileStatus (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem6MkdirsERKNSt6stringE">paimon::FileSystem::Mkdirs (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem4OpenERKNSt6stringE">paimon::FileSystem::Open (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystem8ReadFileERKNSt6stringEPNSt6stringE">paimon::FileSystem::ReadFile (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon10FileSystem6RenameERKNSt6stringERKNSt6stringE">paimon::FileSystem::Rename (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystem9WriteFileERKNSt6stringERKNSt6stringEb">paimon::FileSystem::WriteFile (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10FileSystemD0Ev">paimon::FileSystem::~FileSystem (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon17FileSystemFactoryE">paimon::FileSystemFactory (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon17FileSystemFactory6CreateERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileSystemFactory::Create (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon17FileSystemFactory3GetERKNSt6stringERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::FileSystemFactory::Get (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractorE">paimon::FormatStatsExtractor (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE">paimon::FormatStatsExtractor::Extract (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE">paimon::FormatStatsExtractor::ExtractWithFileInfo (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractor8FileInfoE">paimon::FormatStatsExtractor::FileInfo (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t">paimon::FormatStatsExtractor::FileInfo::FileInfo (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv">paimon::FormatStatsExtractor::FileInfo::GetRowCount (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon20FormatStatsExtractorD0Ev">paimon::FormatStatsExtractor::~FormatStatsExtractor (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon12FormatWriterE">paimon::FormatWriter (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon12FormatWriter8AddBatchEP10ArrowArray">paimon::FormatWriter::AddBatch (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon12FormatWriter6FinishEv">paimon::FormatWriter::Finish (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon12FormatWriter5FlushEv">paimon::FormatWriter::Flush (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon12FormatWriter16GetWriterMetricsEv">paimon::FormatWriter::GetWriterMetrics (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t">paimon::FormatWriter::ReachTargetSize (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon12FormatWriterD0Ev">paimon::FormatWriter::~FormatWriter (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8FunctionE">paimon::Function (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon8Function7GetTypeEv">paimon::Function::GetType (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon8Function8ToStringEv">paimon::Function::ToString (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4TypeE">paimon::Function::Type (C++ enum)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type3ANDE">paimon::Function::Type::AND (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type5EQUALE">paimon::Function::Type::EQUAL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type16GREATER_OR_EQUALE">paimon::Function::Type::GREATER_OR_EQUAL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type12GREATER_THANE">paimon::Function::Type::GREATER_THAN (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type2INE">paimon::Function::Type::IN (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type11IS_NOT_NULLE">paimon::Function::Type::IS_NOT_NULL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type7IS_NULLE">paimon::Function::Type::IS_NULL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type13LESS_OR_EQUALE">paimon::Function::Type::LESS_OR_EQUAL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type9LESS_THANE">paimon::Function::Type::LESS_THAN (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type9NOT_EQUALE">paimon::Function::Type::NOT_EQUAL (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type6NOT_INE">paimon::Function::Type::NOT_IN (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8Function4Type2ORE">paimon::Function::Type::OR (C++ enumerator)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon8FunctionD0Ev">paimon::Function::~Function (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4I0EN6paimon15FunctionVisitorE">paimon::FunctionVisitor (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitContainsERK7Literal">paimon::FunctionVisitor::VisitContains (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitEndsWithERK7Literal">paimon::FunctionVisitor::VisitEndsWith (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor10VisitEqualERK7Literal">paimon::FunctionVisitor::VisitEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor19VisitGreaterOrEqualERK7Literal">paimon::FunctionVisitor::VisitGreaterOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor16VisitGreaterThanERK7Literal">paimon::FunctionVisitor::VisitGreaterThan (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor7VisitInERKNSt6vectorI7LiteralEE">paimon::FunctionVisitor::VisitIn (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor14VisitIsNotNullEv">paimon::FunctionVisitor::VisitIsNotNull (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor11VisitIsNullEv">paimon::FunctionVisitor::VisitIsNull (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor16VisitLessOrEqualERK7Literal">paimon::FunctionVisitor::VisitLessOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitLessThanERK7Literal">paimon::FunctionVisitor::VisitLessThan (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor13VisitNotEqualERK7Literal">paimon::FunctionVisitor::VisitNotEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor10VisitNotInERKNSt6vectorI7LiteralEE">paimon::FunctionVisitor::VisitNotIn (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitor15VisitStartsWithERK7Literal">paimon::FunctionVisitor::VisitStartsWith (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon15FunctionVisitorD0Ev">paimon::FunctionVisitor::~FunctionVisitor (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon14GetDefaultPoolEv">paimon::GetDefaultPool (C++ function)</a>
+</li>
+      <li><a href="api/executor.html#_CPPv4N6paimon24GetGlobalDefaultExecutorEv">paimon::GetGlobalDefaultExecutor (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon13GetMemoryPoolEv">paimon::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon13GlobalIndexerE">paimon::GlobalIndexer (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon13GlobalIndexer12CreateReaderEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileReaderEERKNSt6vectorI17GlobalIndexIOMetaEERKNSt10shared_ptrI10MemoryPoolEE">paimon::GlobalIndexer::CreateReader (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon13GlobalIndexer12CreateWriterERKNSt6stringEP11ArrowSchemaRKNSt10shared_ptrI21GlobalIndexFileWriterEERKNSt10shared_ptrI10MemoryPoolEE">paimon::GlobalIndexer::CreateWriter (C++ function)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/global_index.html#_CPPv4N6paimon13GlobalIndexerD0Ev">paimon::GlobalIndexer::~GlobalIndexer (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon20GlobalIndexerFactoryE">paimon::GlobalIndexerFactory (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon20GlobalIndexerFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">paimon::GlobalIndexerFactory::Create (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon20GlobalIndexerFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">paimon::GlobalIndexerFactory::Get (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon20GlobalIndexerFactory30GLOBAL_INDEX_IDENTIFIER_SUFFIXE">paimon::GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX (C++ member)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon20GlobalIndexerFactoryD0Ev">paimon::GlobalIndexerFactory::~GlobalIndexerFactory (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileReaderE">paimon::GlobalIndexFileReader (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon21GlobalIndexFileReader14GetInputStreamERKNSt6stringE">paimon::GlobalIndexFileReader::GetInputStream (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileReaderD0Ev">paimon::GlobalIndexFileReader::~GlobalIndexFileReader (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileWriterE">paimon::GlobalIndexFileWriter (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon21GlobalIndexFileWriter11GetFileSizeERKNSt6stringE">paimon::GlobalIndexFileWriter::GetFileSize (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon21GlobalIndexFileWriter11NewFileNameERKNSt6stringE">paimon::GlobalIndexFileWriter::NewFileName (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon21GlobalIndexFileWriter15NewOutputStreamERKNSt6stringE">paimon::GlobalIndexFileWriter::NewOutputStream (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon21GlobalIndexFileWriterD0Ev">paimon::GlobalIndexFileWriter::~GlobalIndexFileWriter (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMetaE">paimon::GlobalIndexIOMeta (C++ struct)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMeta9file_nameE">paimon::GlobalIndexIOMeta::file_name (C++ member)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMeta9file_sizeE">paimon::GlobalIndexIOMeta::file_size (C++ member)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMeta17GlobalIndexIOMetaERKNSt6stringE7int64_t7int64_tRKNSt10shared_ptrI5BytesEE">paimon::GlobalIndexIOMeta::GlobalIndexIOMeta (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMeta8metadataE">paimon::GlobalIndexIOMeta::metadata (C++ member)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexIOMeta9range_endE">paimon::GlobalIndexIOMeta::range_end (C++ member)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexReaderE">paimon::GlobalIndexReader (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexReader17VisitVectorSearchERKNSt10shared_ptrI12VectorSearchEE">paimon::GlobalIndexReader::VisitVectorSearch (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResultE">paimon::GlobalIndexResult (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult9AddOffsetE7int64_t">paimon::GlobalIndexResult::AddOffset (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult3AndERKNSt10shared_ptrI17GlobalIndexResultEE">paimon::GlobalIndexResult::And (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon17GlobalIndexResult14CreateIteratorEv">paimon::GlobalIndexResult::CreateIterator (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult11DeserializeEPKc6size_tRKNSt10shared_ptrI10MemoryPoolEE">paimon::GlobalIndexResult::Deserialize (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon17GlobalIndexResult7IsEmptyEv">paimon::GlobalIndexResult::IsEmpty (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult8IteratorE">paimon::GlobalIndexResult::Iterator (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon17GlobalIndexResult8Iterator7HasNextEv">paimon::GlobalIndexResult::Iterator::HasNext (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult8Iterator4NextEv">paimon::GlobalIndexResult::Iterator::Next (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult8IteratorD0Ev">paimon::GlobalIndexResult::Iterator::~Iterator (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult2OrERKNSt10shared_ptrI17GlobalIndexResultEE">paimon::GlobalIndexResult::Or (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResult9SerializeERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEE">paimon::GlobalIndexResult::Serialize (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon17GlobalIndexResult8ToRangesEv">paimon::GlobalIndexResult::ToRanges (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon17GlobalIndexResult8ToStringEv">paimon::GlobalIndexResult::ToString (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexResultD0Ev">paimon::GlobalIndexResult::~GlobalIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScanE">paimon::GlobalIndexScan (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt10shared_ptrI9PredicateEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">paimon::GlobalIndexScan::Create (C++ function)</a>, <a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScan6CreateERKNSt6stringERKNSt8optionalI7int64_tEERKNSt8optionalINSt6vectorINSt3mapINSt6stringENSt6stringEEEEEEERKNSt3mapINSt6stringENSt6stringEEERKNSt10shared_ptrI10FileSystemEERKNSt10shared_ptrI10MemoryPoolEE">[1]</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScan15CreateRangeScanERK5Range">paimon::GlobalIndexScan::CreateRangeScan (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScan15GetRowRangeListEv">paimon::GlobalIndexScan::GetRowRangeList (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon15GlobalIndexScanD0Ev">paimon::GlobalIndexScan::~GlobalIndexScan (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexWriterE">paimon::GlobalIndexWriter (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexWriter8AddBatchEP10ArrowArray">paimon::GlobalIndexWriter::AddBatch (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexWriter6FinishEv">paimon::GlobalIndexWriter::Finish (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon17GlobalIndexWriterD0Ev">paimon::GlobalIndexWriter::~GlobalIndexWriter (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon10IdentifierE">paimon::Identifier (C++ class)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon10Identifier15GetDatabaseNameEv">paimon::Identifier::GetDatabaseName (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon10Identifier12GetTableNameEv">paimon::Identifier::GetTableName (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon10Identifier10IdentifierERKNSt6stringERKNSt6stringE">paimon::Identifier::Identifier (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4N6paimon10IdentifiereqERK10Identifier">paimon::Identifier::operator== (C++ function)</a>
+</li>
+      <li><a href="api/catalog.html#_CPPv4NK6paimon10Identifier8ToStringEv">paimon::Identifier::ToString (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStreamE">paimon::InputStream (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon11InputStream6GetPosEv">paimon::InputStream::GetPos (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon11InputStream6GetUriEv">paimon::InputStream::GetUri (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStream11InputStreamEv">paimon::InputStream::InputStream (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon11InputStream6LengthEv">paimon::InputStream::Length (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t">paimon::InputStream::Read (C++ function)</a>, <a href="api/file_system.html#_CPPv4N6paimon11InputStream4ReadEPc8uint32_t8uint64_t">[1]</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStream9ReadAsyncEPc8uint32_t8uint64_tRRNSt8functionIFv6StatusEEE">paimon::InputStream::ReadAsync (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStream4SeekE7int64_t10SeekOrigin">paimon::InputStream::Seek (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon11InputStreamD0Ev">paimon::InputStream::~InputStream (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon13LeafPredicateE">paimon::LeafPredicate (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate10FieldIndexEv">paimon::LeafPredicate::FieldIndex (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate9FieldNameEv">paimon::LeafPredicate::FieldName (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate12GetFieldTypeEv">paimon::LeafPredicate::GetFieldType (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate11GetFunctionEv">paimon::LeafPredicate::GetFunction (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate8LiteralsEv">paimon::LeafPredicate::Literals (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate6NegateEv">paimon::LeafPredicate::Negate (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicateeqERK9Predicate">paimon::LeafPredicate::operator== (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon13LeafPredicate8ToStringEv">paimon::LeafPredicate::ToString (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon7LiteralE">paimon::Literal (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7Literal9CompareToERK7Literal">paimon::Literal::CompareTo (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7Literal7GetTypeEv">paimon::Literal::GetType (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4I0ENK6paimon7Literal8GetValueE1Tv">paimon::Literal::GetValue (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7Literal8HashCodeEv">paimon::Literal::HashCode (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7Literal6IsNullEv">paimon::Literal::IsNull (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4I0EN6paimon7Literal7LiteralERK1T">paimon::Literal::Literal (C++ function)</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldType">[1]</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldType7int32_t">[2]</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldTypePKc6size_t">[3]</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralE9FieldTypePKc6size_tb">[4]</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralERK7Literal">[5]</a>, <a href="api/predicate.html#_CPPv4N6paimon7Literal7LiteralERR7Literal">[6]</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7LiteralneERK7Literal">paimon::Literal::operator!= (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon7LiteralaSERK7Literal">paimon::Literal::operator= (C++ function)</a>, <a href="api/predicate.html#_CPPv4N6paimon7LiteralaSERR7Literal">[1]</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7LiteraleqERK7Literal">paimon::Literal::operator== (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon7Literal8ToStringEv">paimon::Literal::ToString (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon7LiteralD0Ev">paimon::Literal::~Literal (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPoolE">paimon::MemoryPool (C++ class)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4I0DpEN6paimon10MemoryPool14AllocateUniqueENSt10unique_ptrI1T15AllocatorDeleteI1TEEEDpRR4Args">paimon::MemoryPool::AllocateUnique (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteE">paimon::MemoryPool::AllocatorDelete (C++ class)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4I0EN6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDeleteI1UE">paimon::MemoryPool::AllocatorDelete::AllocatorDelete (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteER10MemoryPool6size_t">[1]</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteERK15AllocatorDelete">[2]</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPool15AllocatorDelete15AllocatorDeleteEv">[3]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetPoolEv">paimon::MemoryPool::AllocatorDelete::GetPool (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon10MemoryPool15AllocatorDelete7GetSizeEv">paimon::MemoryPool::AllocatorDelete::GetSize (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon10MemoryPool15AllocatorDeleteclEP1T">paimon::MemoryPool::AllocatorDelete::operator() (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4I0EN6paimon10MemoryPool15AllocatorDeleteaSER15AllocatorDeleteRK15AllocatorDeleteI1UE">paimon::MemoryPool::AllocatorDelete::operator= (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERK15AllocatorDelete">[1]</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPool15AllocatorDeleteaSERR15AllocatorDelete">[2]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon10MemoryPool12CurrentUsageEv">paimon::MemoryPool::CurrentUsage (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPool4FreeEPv8uint64_t">paimon::MemoryPool::Free (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPool6MallocE8uint64_t8uint64_t">paimon::MemoryPool::Malloc (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4NK6paimon10MemoryPool14MaxMemoryUsageEv">paimon::MemoryPool::MaxMemoryUsage (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPoolaSER10MemoryPool">paimon::MemoryPool::operator= (C++ function)</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPoolaSERK10MemoryPool">[1]</a>, <a href="api/memory.html#_CPPv4N6paimon10MemoryPoolaSERR10MemoryPool">[2]</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPool7ReallocEPv6size_t6size_t8uint64_t">paimon::MemoryPool::Realloc (C++ function)</a>
+</li>
+      <li><a href="api/memory.html#_CPPv4N6paimon10MemoryPoolD0Ev">paimon::MemoryPool::~MemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7OptionsE">paimon::Options (C++ struct)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options12AGG_FUNCTIONE">paimon::Options::AGG_FUNCTION (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options18BLOB_AS_DESCRIPTORE">paimon::Options::BLOB_AS_DESCRIPTOR (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options21BLOB_TARGET_FILE_SIZEE">paimon::Options::BLOB_TARGET_FILE_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options6BRANCHE">paimon::Options::BRANCH (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options6BUCKETE">paimon::Options::BUCKET (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options10BUCKET_KEYE">paimon::Options::BUCKET_KEY (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options18CHANGELOG_PRODUCERE">paimon::Options::CHANGELOG_PRODUCER (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options18COMMIT_MAX_RETRIESE">paimon::Options::COMMIT_MAX_RETRIES (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options14COMMIT_TIMEOUTE">paimon::Options::COMMIT_TIMEOUT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options22DATA_EVOLUTION_ENABLEDE">paimon::Options::DATA_EVOLUTION_ENABLED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options24DATA_FILE_EXTERNAL_PATHSE">paimon::Options::DATA_FILE_EXTERNAL_PATHS (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options33DATA_FILE_EXTERNAL_PATHS_STRATEGYE">paimon::Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16DATA_FILE_PREFIXE">paimon::Options::DATA_FILE_PREFIX (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options20DEFAULT_AGG_FUNCTIONE">paimon::Options::DEFAULT_AGG_FUNCTION (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options24DELETION_VECTORS_ENABLEDE">paimon::Options::DELETION_VECTORS_ENABLED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options23FIELDS_DEFAULT_AGG_FUNCE">paimon::Options::FIELDS_DEFAULT_AGG_FUNC (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options13FIELDS_PREFIXE">paimon::Options::FIELDS_PREFIX (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16FIELDS_SEPARATORE">paimon::Options::FIELDS_SEPARATOR (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16FILE_COMPRESSIONE">paimon::Options::FILE_COMPRESSION (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options27FILE_COMPRESSION_ZSTD_LEVELE">paimon::Options::FILE_COMPRESSION_ZSTD_LEVEL (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options11FILE_FORMATE">paimon::Options::FILE_FORMAT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options23FILE_INDEX_READ_ENABLEDE">paimon::Options::FILE_INDEX_READ_ENABLED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options11FILE_SYSTEME">paimon::Options::FILE_SYSTEM (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options12FORCE_LOOKUPE">paimon::Options::FORCE_LOOKUP (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options20GLOBAL_INDEX_ENABLEDE">paimon::Options::GLOBAL_INDEX_ENABLED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options13IGNORE_DELETEE">paimon::Options::IGNORE_DELETE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options14IGNORE_RETRACTE">paimon::Options::IGNORE_RETRACT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options27INDEX_FILE_IN_DATA_FILE_DIRE">paimon::Options::INDEX_FILE_IN_DATA_FILE_DIR (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options20MANIFEST_COMPRESSIONE">paimon::Options::MANIFEST_COMPRESSION (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options15MANIFEST_FORMATE">paimon::Options::MANIFEST_FORMAT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options34MANIFEST_FULL_COMPACTION_FILE_SIZEE">paimon::Options::MANIFEST_FULL_COMPACTION_FILE_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options24MANIFEST_MERGE_MIN_COUNTE">paimon::Options::MANIFEST_MERGE_MIN_COUNT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options25MANIFEST_TARGET_FILE_SIZEE">paimon::Options::MANIFEST_TARGET_FILE_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options12MERGE_ENGINEE">paimon::Options::MERGE_ENGINE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options9PAGE_SIZEE">paimon::Options::PAGE_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options38PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETEE">paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options46PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUPE">paimon::Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options22PARTITION_DEFAULT_NAMEE">paimon::Options::PARTITION_DEFAULT_NAME (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options30PARTITION_GENERATE_LEGACY_NAMEE">paimon::Options::PARTITION_GENERATE_LEGACY_NAME (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options15READ_BATCH_SIZEE">paimon::Options::READ_BATCH_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options20ROW_TRACKING_ENABLEDE">paimon::Options::ROW_TRACKING_ENABLED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options20SCAN_FALLBACK_BRANCHE">paimon::Options::SCAN_FALLBACK_BRANCH (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options9SCAN_MODEE">paimon::Options::SCAN_MODE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16SCAN_SNAPSHOT_IDE">paimon::Options::SCAN_SNAPSHOT_ID (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options14SEQUENCE_FIELDE">paimon::Options::SEQUENCE_FIELD (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options25SEQUENCE_FIELD_SORT_ORDERE">paimon::Options::SEQUENCE_FIELD_SORT_ORDER (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options14SEQUENCE_GROUPE">paimon::Options::SEQUENCE_GROUP (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options32SNAPSHOT_CLEAN_EMPTY_DIRECTORIESE">paimon::Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options21SNAPSHOT_EXPIRE_LIMITE">paimon::Options::SNAPSHOT_EXPIRE_LIMIT (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MAXE">paimon::Options::SNAPSHOT_NUM_RETAINED_MAX (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options25SNAPSHOT_NUM_RETAINED_MINE">paimon::Options::SNAPSHOT_NUM_RETAINED_MIN (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options22SNAPSHOT_TIME_RETAINEDE">paimon::Options::SNAPSHOT_TIME_RETAINED (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options11SORT_ENGINEE">paimon::Options::SORT_ENGINE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options27SOURCE_SPLIT_OPEN_FILE_COSTE">paimon::Options::SOURCE_SPLIT_OPEN_FILE_COST (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options24SOURCE_SPLIT_TARGET_SIZEE">paimon::Options::SOURCE_SPLIT_TARGET_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16TARGET_FILE_SIZEE">paimon::Options::TARGET_FILE_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options16WRITE_BATCH_SIZEE">paimon::Options::WRITE_BATCH_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/defs.html#_CPPv4N6paimon7Options17WRITE_BUFFER_SIZEE">paimon::Options::WRITE_BUFFER_SIZE (C++ member)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon18OrphanFilesCleanerE">paimon::OrphanFilesCleaner (C++ class)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon18OrphanFilesCleaner5CleanEv">paimon::OrphanFilesCleaner::Clean (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon18OrphanFilesCleaner6CreateERRNSt10unique_ptrI12CleanContextEE">paimon::OrphanFilesCleaner::Create (C++ function)</a>
+</li>
+      <li><a href="api/clean.html#_CPPv4N6paimon18OrphanFilesCleanerD0Ev">paimon::OrphanFilesCleaner::~OrphanFilesCleaner (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon12OutputStreamE">paimon::OutputStream (C++ class)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon12OutputStream5FlushEv">paimon::OutputStream::Flush (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon12OutputStream6GetPosEv">paimon::OutputStream::GetPos (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4NK6paimon12OutputStream6GetUriEv">paimon::OutputStream::GetUri (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon12OutputStream12OutputStreamEv">paimon::OutputStream::OutputStream (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon12OutputStream5WriteEPKc8uint32_t">paimon::OutputStream::Write (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon4PlanE">paimon::Plan (C++ class)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon4Plan10SnapshotIdEv">paimon::Plan::SnapshotId (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon4Plan6SplitsEv">paimon::Plan::Splits (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon4PlanD0Ev">paimon::Plan::~Plan (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon9PredicateE">paimon::Predicate (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon9Predicate11GetFunctionEv">paimon::Predicate::GetFunction (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon9Predicate6NegateEv">paimon::Predicate::Negate (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon9PredicateeqERK9Predicate">paimon::Predicate::operator== (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4NK6paimon9Predicate8ToStringEv">paimon::Predicate::ToString (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon9PredicateD0Ev">paimon::Predicate::~Predicate (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilderE">paimon::PredicateBuilder (C++ class)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder3AndERKNSt6vectorINSt10shared_ptrI9PredicateEEEE">paimon::PredicateBuilder::And (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder7BetweenE7int32_tRKNSt6stringERK9FieldTypeRK7LiteralRK7Literal">paimon::PredicateBuilder::Between (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder5EqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::Equal (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder14GreaterOrEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::GreaterOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder11GreaterThanE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::GreaterThan (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder2InE7int32_tRKNSt6stringERK9FieldTypeRKNSt6vectorI7LiteralEE">paimon::PredicateBuilder::In (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder9IsNotNullE7int32_tRKNSt6stringERK9FieldType">paimon::PredicateBuilder::IsNotNull (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder6IsNullE7int32_tRKNSt6stringERK9FieldType">paimon::PredicateBuilder::IsNull (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder11LessOrEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::LessOrEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder8LessThanE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::LessThan (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder8NotEqualE7int32_tRKNSt6stringERK9FieldTypeRK7Literal">paimon::PredicateBuilder::NotEqual (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder5NotInE7int32_tRKNSt6stringERK9FieldTypeRKNSt6vectorI7LiteralEE">paimon::PredicateBuilder::NotIn (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder2OrERKNSt6vectorINSt10shared_ptrI9PredicateEEEE">paimon::PredicateBuilder::Or (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilder16PredicateBuilderEv">paimon::PredicateBuilder::PredicateBuilder (C++ function)</a>
+</li>
+      <li><a href="api/predicate.html#_CPPv4N6paimon16PredicateBuilderD0Ev">paimon::PredicateBuilder::~PredicateBuilder (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon11ReadContextE">paimon::ReadContext (C++ class)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext27EnableMultiThreadRowToBatchEv">paimon::ReadContext::EnableMultiThreadRowToBatch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext21EnablePredicateFilterEv">paimon::ReadContext::EnablePredicateFilter (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext14EnablePrefetchEv">paimon::ReadContext::EnablePrefetch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext9GetBranchEv">paimon::ReadContext::GetBranch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext11GetExecutorEv">paimon::ReadContext::GetExecutor (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext34GetFileSystemSchemeToIdentifierMapEv">paimon::ReadContext::GetFileSystemSchemeToIdentifierMap (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext13GetMemoryPoolEv">paimon::ReadContext::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext10GetOptionsEv">paimon::ReadContext::GetOptions (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext7GetPathEv">paimon::ReadContext::GetPath (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext12GetPredicateEv">paimon::ReadContext::GetPredicate (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext21GetPrefetchBatchCountEv">paimon::ReadContext::GetPrefetchBatchCount (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext25GetPrefetchMaxParallelNumEv">paimon::ReadContext::GetPrefetchMaxParallelNum (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext13GetReadSchemaEv">paimon::ReadContext::GetReadSchema (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4NK6paimon11ReadContext25GetRowToBatchThreadNumberEv">paimon::ReadContext::GetRowToBatchThreadNumber (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon11ReadContext22GetSpecificTableSchemaEv">paimon::ReadContext::GetSpecificTableSchema (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon11ReadContext11ReadContextERKNSt6stringERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI9PredicateEEbb8uint32_t8uint32_tb8uint32_tRKNSt8optionalINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE">paimon::ReadContext::ReadContext (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon11ReadContextD0Ev">paimon::ReadContext::~ReadContext (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilderE">paimon::ReadContextBuilder (C++ class)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">paimon::ReadContextBuilder::AddOption (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder27EnableMultiThreadRowToBatchEb">paimon::ReadContextBuilder::EnableMultiThreadRowToBatch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder21EnablePredicateFilterEb">paimon::ReadContextBuilder::EnablePredicateFilter (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder14EnablePrefetchEb">paimon::ReadContextBuilder::EnablePrefetch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder6FinishEv">paimon::ReadContextBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder18ReadContextBuilderERKNSt6stringE">paimon::ReadContextBuilder::ReadContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">paimon::ReadContextBuilder::SetOptions (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE">paimon::ReadContextBuilder::SetPredicate (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder21SetPrefetchBatchCountE8uint32_t">paimon::ReadContextBuilder::SetPrefetchBatchCount (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder25SetPrefetchMaxParallelNumE8uint32_t">paimon::ReadContextBuilder::SetPrefetchMaxParallelNum (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder13SetReadSchemaERKNSt6vectorINSt6stringEEE">paimon::ReadContextBuilder::SetReadSchema (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder25SetRowToBatchThreadNumberE8uint32_t">paimon::ReadContextBuilder::SetRowToBatchThreadNumber (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder14SetTableSchemaERKNSt6stringE">paimon::ReadContextBuilder::SetTableSchema (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder10WithBranchERKNSt6stringE">paimon::ReadContextBuilder::WithBranch (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">paimon::ReadContextBuilder::WithExecutor (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE">paimon::ReadContextBuilder::WithFileSystemSchemeToIdentifierMap (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::ReadContextBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon18ReadContextBuilderD0Ev">paimon::ReadContextBuilder::~ReadContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13ReaderBuilderE">paimon::ReaderBuilder (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE">paimon::ReaderBuilder::Build (C++ function)</a>, <a href="api/file_format.html#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt6stringE">[1]</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::ReaderBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13ReaderBuilderD0Ev">paimon::ReaderBuilder::~ReaderBuilder (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatchE">paimon::RecordBatch (C++ class)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon11RecordBatch9GetBucketEv">paimon::RecordBatch::GetBucket (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon11RecordBatch7GetDataEv">paimon::RecordBatch::GetData (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon11RecordBatch12GetPartitionEv">paimon::RecordBatch::GetPartition (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon11RecordBatch10GetRowKindEv">paimon::RecordBatch::GetRowKind (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon11RecordBatch18HasSpecifiedBucketEv">paimon::RecordBatch::HasSpecifiedBucket (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatchaSERK11RecordBatch">paimon::RecordBatch::operator= (C++ function)</a>, <a href="api/write.html#_CPPv4N6paimon11RecordBatchaSERR11RecordBatch">[1]</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch11RecordBatchERK11RecordBatch">paimon::RecordBatch::RecordBatch (C++ function)</a>, <a href="api/write.html#_CPPv4N6paimon11RecordBatch11RecordBatchERKNSt3mapINSt6stringENSt6stringEEE7int32_tRKNSt6vectorI7RowKindEEP10ArrowArray">[1]</a>, <a href="api/write.html#_CPPv4N6paimon11RecordBatch11RecordBatchERR11RecordBatch">[2]</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch7RowKindE">paimon::RecordBatch::RowKind (C++ enum)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch7RowKind6DELETEE">paimon::RecordBatch::RowKind::DELETE (C++ enumerator)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch7RowKind6INSERTE">paimon::RecordBatch::RowKind::INSERT (C++ enumerator)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch7RowKind12UPDATE_AFTERE">paimon::RecordBatch::RowKind::UPDATE_AFTER (C++ enumerator)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch7RowKind13UPDATE_BEFOREE">paimon::RecordBatch::RowKind::UPDATE_BEFORE (C++ enumerator)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatch9SetBucketE7int32_t">paimon::RecordBatch::SetBucket (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon11RecordBatchD0Ev">paimon::RecordBatch::~RecordBatch (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilderE">paimon::RecordBatchBuilder (C++ class)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder6FinishEv">paimon::RecordBatchBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder8MoveDataEP10ArrowArray">paimon::RecordBatchBuilder::MoveData (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder18RecordBatchBuilderEP10ArrowArray">paimon::RecordBatchBuilder::RecordBatchBuilder (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder9SetBucketE7int32_t">paimon::RecordBatchBuilder::SetBucket (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder12SetPartitionERKNSt3mapINSt6stringENSt6stringEEE">paimon::RecordBatchBuilder::SetPartition (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilder11SetRowKindsERKNSt6vectorIN11RecordBatch7RowKindEEE">paimon::RecordBatchBuilder::SetRowKinds (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon18RecordBatchBuilderD0Ev">paimon::RecordBatchBuilder::~RecordBatchBuilder (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon26RowRangeGlobalIndexScannerE">paimon::RowRangeGlobalIndexScanner (C++ class)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon26RowRangeGlobalIndexScanner12CreateReaderERKNSt6stringERKNSt6stringE">paimon::RowRangeGlobalIndexScanner::CreateReader (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4NK6paimon26RowRangeGlobalIndexScanner13CreateReadersERKNSt6stringE">paimon::RowRangeGlobalIndexScanner::CreateReaders (C++ function)</a>
+</li>
+      <li><a href="api/global_index.html#_CPPv4N6paimon26RowRangeGlobalIndexScannerD0Ev">paimon::RowRangeGlobalIndexScanner::~RowRangeGlobalIndexScanner (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon11ScanContextE">paimon::ScanContext (C++ class)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext11GetExecutorEv">paimon::ScanContext::GetExecutor (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext20GetGlobalIndexResultEv">paimon::ScanContext::GetGlobalIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext8GetLimitEv">paimon::ScanContext::GetLimit (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext13GetMemoryPoolEv">paimon::ScanContext::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext10GetOptionsEv">paimon::ScanContext::GetOptions (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext7GetPathEv">paimon::ScanContext::GetPath (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext14GetScanFiltersEv">paimon::ScanContext::GetScanFilters (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4NK6paimon11ScanContext15IsStreamingModeEv">paimon::ScanContext::IsStreamingMode (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon11ScanContext11ScanContextERKNSt6stringEbNSt8optionalI7int32_tEERKNSt10shared_ptrI10ScanFilterEERKNSt10shared_ptrI17GlobalIndexResultEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE">paimon::ScanContext::ScanContext (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon11ScanContextD0Ev">paimon::ScanContext::~ScanContext (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilderE">paimon::ScanContextBuilder (C++ class)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">paimon::ScanContextBuilder::AddOption (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder6FinishEv">paimon::ScanContextBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder18ScanContextBuilderERKNSt6stringE">paimon::ScanContextBuilder::ScanContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder15SetBucketFilterE7int32_t">paimon::ScanContextBuilder::SetBucketFilter (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder20SetGlobalIndexResultERKNSt10shared_ptrI17GlobalIndexResultEE">paimon::ScanContextBuilder::SetGlobalIndexResult (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder8SetLimitE7int32_t">paimon::ScanContextBuilder::SetLimit (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">paimon::ScanContextBuilder::SetOptions (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder18SetPartitionFilterERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE">paimon::ScanContextBuilder::SetPartitionFilter (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder12SetPredicateERKNSt10shared_ptrI9PredicateEE">paimon::ScanContextBuilder::SetPredicate (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder15SetVectorSearchERKNSt10shared_ptrI12VectorSearchEE">paimon::ScanContextBuilder::SetVectorSearch (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">paimon::ScanContextBuilder::WithExecutor (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::ScanContextBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilder17WithStreamingModeEb">paimon::ScanContextBuilder::WithStreamingMode (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon18ScanContextBuilderD0Ev">paimon::ScanContextBuilder::~ScanContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10SeekOriginE">paimon::SeekOrigin (C++ enum)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10SeekOrigin11FS_SEEK_CURE">paimon::SeekOrigin::FS_SEEK_CUR (C++ enumerator)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10SeekOrigin11FS_SEEK_ENDE">paimon::SeekOrigin::FS_SEEK_END (C++ enumerator)</a>
+</li>
+      <li><a href="api/file_system.html#_CPPv4N6paimon10SeekOrigin11FS_SEEK_SETE">paimon::SeekOrigin::FS_SEEK_SET (C++ enumerator)</a>
+</li>
+      <li><a href="api/io.html#_CPPv4N6paimon15SystemByteOrderEv">paimon::SystemByteOrder (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon9TableReadE">paimon::TableRead (C++ class)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon9TableRead6CreateENSt10unique_ptrI11ReadContextEE">paimon::TableRead::Create (C++ function)</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon9TableRead12CreateReaderERKNSt10shared_ptrI5SplitEE">paimon::TableRead::CreateReader (C++ function)</a>, <a href="api/read.html#_CPPv4N6paimon9TableRead12CreateReaderERKNSt6vectorINSt10shared_ptrI5SplitEEEE">[1]</a>
+</li>
+      <li><a href="api/read.html#_CPPv4N6paimon9TableReadD0Ev">paimon::TableRead::~TableRead (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9TableScanE">paimon::TableScan (C++ class)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9TableScan6CreateENSt10unique_ptrI11ScanContextEE">paimon::TableScan::Create (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9TableScan10CreatePlanEv">paimon::TableScan::CreatePlan (C++ function)</a>
+</li>
+      <li><a href="api/scan.html#_CPPv4N6paimon9TableScanD0Ev">paimon::TableScan::~TableScan (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9TimestampE">paimon::Timestamp (C++ class)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp17DEFAULT_PRECISIONE">paimon::Timestamp::DEFAULT_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t">paimon::Timestamp::FromEpochMillis (C++ function)</a>, <a href="api/data_types.html#_CPPv4N6paimon9Timestamp15FromEpochMillisE7int64_t7int32_t">[1]</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp14GetMillisecondEv">paimon::Timestamp::GetMillisecond (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp20GetNanoOfMillisecondEv">paimon::Timestamp::GetNanoOfMillisecond (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp9IsCompactE7int32_t">paimon::Timestamp::IsCompact (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp21MAX_COMPACT_PRECISIONE">paimon::Timestamp::MAX_COMPACT_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp13MAX_PRECISIONE">paimon::Timestamp::MAX_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp16MILLIS_PRECISIONE">paimon::Timestamp::MILLIS_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp13MIN_PRECISIONE">paimon::Timestamp::MIN_PRECISION (C++ member)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9TimestampltERK9Timestamp">paimon::Timestamp::operator&lt; (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9TimestampeqERK9Timestamp">paimon::Timestamp::operator== (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4N6paimon9Timestamp9TimestampE7int64_t7int32_t">paimon::Timestamp::Timestamp (C++ function)</a>, <a href="api/data_types.html#_CPPv4N6paimon9Timestamp9TimestampEv">[1]</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp13ToMicrosecondEv">paimon::Timestamp::ToMicrosecond (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp17ToMillisTimestampEv">paimon::Timestamp::ToMillisTimestamp (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp12ToNanosecondEv">paimon::Timestamp::ToNanosecond (C++ function)</a>
+</li>
+      <li><a href="api/data_types.html#_CPPv4NK6paimon9Timestamp8ToStringEv">paimon::Timestamp::ToString (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon12WriteContextE">paimon::WriteContext (C++ class)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext9GetBranchEv">paimon::WriteContext::GetBranch (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext13GetCommitUserEv">paimon::WriteContext::GetCommitUser (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext11GetExecutorEv">paimon::WriteContext::GetExecutor (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext34GetFileSystemSchemeToIdentifierMapEv">paimon::WriteContext::GetFileSystemSchemeToIdentifierMap (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext13GetMemoryPoolEv">paimon::WriteContext::GetMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext10GetOptionsEv">paimon::WriteContext::GetOptions (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext11GetRootPathEv">paimon::WriteContext::GetRootPath (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext10GetWriteIdEv">paimon::WriteContext::GetWriteId (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext14GetWriteSchemaEv">paimon::WriteContext::GetWriteSchema (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext20IgnoreNumBucketCheckEv">paimon::WriteContext::IgnoreNumBucketCheck (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext19IgnorePreviousFilesEv">paimon::WriteContext::IgnorePreviousFiles (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4NK6paimon12WriteContext15IsStreamingModeEv">paimon::WriteContext::IsStreamingMode (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon12WriteContext12WriteContextERKNSt6stringERKNSt6stringEbbbRKNSt8optionalI7int32_tEERKNSt6stringERKNSt6vectorINSt6stringEEERKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEERKNSt3mapINSt6stringENSt6stringEEE">paimon::WriteContext::WriteContext (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon12WriteContextD0Ev">paimon::WriteContext::~WriteContext (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilderE">paimon::WriteContextBuilder (C++ class)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">paimon::WriteContextBuilder::AddOption (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder6FinishEv">paimon::WriteContextBuilder::Finish (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">paimon::WriteContextBuilder::SetOptions (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder10WithBranchERKNSt6stringE">paimon::WriteContextBuilder::WithBranch (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">paimon::WriteContextBuilder::WithExecutor (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder35WithFileSystemSchemeToIdentifierMapERKNSt3mapINSt6stringENSt6stringEEE">paimon::WriteContextBuilder::WithFileSystemSchemeToIdentifierMap (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder23WithIgnorePreviousFilesEb">paimon::WriteContextBuilder::WithIgnorePreviousFiles (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::WriteContextBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder17WithStreamingModeEb">paimon::WriteContextBuilder::WithStreamingMode (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder11WithWriteIdE7int32_t">paimon::WriteContextBuilder::WithWriteId (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder15WithWriteSchemaERKNSt6vectorINSt6stringEEE">paimon::WriteContextBuilder::WithWriteSchema (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilder19WriteContextBuilderERKNSt6stringERKNSt6stringE">paimon::WriteContextBuilder::WriteContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/write.html#_CPPv4N6paimon19WriteContextBuilderD0Ev">paimon::WriteContextBuilder::~WriteContextBuilder (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13WriterBuilderE">paimon::WriterBuilder (C++ class)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE">paimon::WriterBuilder::Build (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">paimon::WriterBuilder::WithMemoryPool (C++ function)</a>
+</li>
+      <li><a href="api/file_format.html#_CPPv4N6paimon13WriterBuilderD0Ev">paimon::WriterBuilder::~WriterBuilder (C++ function)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

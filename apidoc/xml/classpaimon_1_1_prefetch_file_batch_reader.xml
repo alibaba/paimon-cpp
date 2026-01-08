@@ -1,0 +1,191 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_prefetch_file_batch_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::PrefetchFileBatchReader</compoundname>
+    <basecompoundref refid="classpaimon_1_1_file_batch_reader" prot="public" virt="non-virtual">paimon::FileBatchReader</basecompoundref>
+    <includes refid="prefetch__file__batch__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_prefetch_file_batch_reader_1a66a9334bd1dfe45e20040116ca4c53e2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::PrefetchFileBatchReader::SeekToRow</definition>
+        <argsstring>(uint64_t row_number)=0</argsstring>
+        <name>SeekToRow</name>
+        <qualifiedname>paimon::PrefetchFileBatchReader::SeekToRow</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+          <declname>row_number</declname>
+        </param>
+        <briefdescription>
+<para>Seeks to a specific row in the file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>row_number</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The row number to seek to. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The status of the operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" line="35" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_prefetch_file_batch_reader_1a8167dd4af27a9a4ae20581cf2dccfadd" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::PrefetchFileBatchReader::GetNextRowToRead</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetNextRowToRead</name>
+        <qualifiedname>paimon::PrefetchFileBatchReader::GetNextRowToRead</qualifiedname>
+        <briefdescription>
+<para>Retrieves the row number of the next row to be read. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method indicates the current read position within the file. <simplesect kind="return"><para>The row number of the next row to read. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" line="40" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_prefetch_file_batch_reader_1a69e71fd2021a1da2fe53c89a72e06596" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::pair&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::pair&lt; uint64_t, uint64_t &gt; &gt; &gt; paimon::PrefetchFileBatchReader::GenReadRanges</definition>
+        <argsstring>(bool *need_prefetch) const =0</argsstring>
+        <name>GenReadRanges</name>
+        <qualifiedname>paimon::PrefetchFileBatchReader::GenReadRanges</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> *</type>
+          <declname>need_prefetch</declname>
+        </param>
+        <briefdescription>
+<para>Generates a list of row ranges to be read in batches. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Each range specifies the start and end row numbers for a batch, allowing for efficient batch processing.</para>
+<para>The underlying format layer (e.g., parquet) is responsible for determining the most effective way to split the data. This could be by row groups, stripes, or other internal data structures. The key principle is to split the data into contiguous, seekable ranges to minimize read amplification.</para>
+<para>For example:<itemizedlist>
+<listitem><para>A parquet format could split by RowGroup directly, ensuring each range aligns with a single RowGroup.</para>
+</listitem></itemizedlist>
+</para>
+<para>The smallest splittable unit must be seekable to its start position, and the splitting strategy should aim to avoid read amplification.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>need_prefetch</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A pointer to a boolean. The format layer sets this to indicate whether prefetching is beneficial for the current scenario, to avoid performance regression in certain cases. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A vector of pairs, where each pair represents a range with a start and end row number. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" line="63" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_prefetch_file_batch_reader_1ac3352521fbeb92b417f685ee8230bca6" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::PrefetchFileBatchReader::SetReadRanges</definition>
+        <argsstring>(const std::vector&lt; std::pair&lt; uint64_t, uint64_t &gt; &gt; &amp;read_ranges)=0</argsstring>
+        <name>SetReadRanges</name>
+        <qualifiedname>paimon::PrefetchFileBatchReader::SetReadRanges</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::pair&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt; &gt; &amp;</type>
+          <declname>read_ranges</declname>
+        </param>
+        <briefdescription>
+<para>Sets the specific row ranges as a hint to be read from format file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If the specific file format does not support explicit range-based reads, implementations may gracefully ignore this hint and provide an empty (no-op) implementation.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>read_ranges</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of pairs, where each pair defines a half-open interval <computeroutput>[start_row, end_row)</computeroutput>. The <computeroutput>start_row</computeroutput> is inclusive, and the <computeroutput>end_row</computeroutput> is exclusive. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" line="73" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>The prefetch file batch reader extends the basic <ref refid="classpaimon_1_1_file_batch_reader" kindref="compound">FileBatchReader</ref> interface for prefetch read, if a format implementation inherits from this class, it will automatically support the C++ Paimon prefetch capability and integrate with the Paimon prefetch framework. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>paimon::BatchReader</label>
+        <link refid="classpaimon_1_1_batch_reader"/>
+      </node>
+      <node id="2">
+        <label>paimon::FileBatchReader</label>
+        <link refid="classpaimon_1_1_file_batch_reader"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::PrefetchFileBatchReader</label>
+        <link refid="classpaimon_1_1_prefetch_file_batch_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>paimon::BatchReader</label>
+        <link refid="classpaimon_1_1_batch_reader"/>
+      </node>
+      <node id="2">
+        <label>paimon::FileBatchReader</label>
+        <link refid="classpaimon_1_1_file_batch_reader"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::PrefetchFileBatchReader</label>
+        <link refid="classpaimon_1_1_prefetch_file_batch_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h" bodystart="30" bodyend="74"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_batch_reader_1a167febf97b0e2ef4f48f034fe3af16b6" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_prefetch_file_batch_reader_1a69e71fd2021a1da2fe53c89a72e06596" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GenReadRanges</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ac7266064352ed90581738242cf69500f" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GetFileSchema</name></member>
+      <member refid="classpaimon_1_1_prefetch_file_batch_reader_1a8167dd4af27a9a4ae20581cf2dccfadd" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GetNextRowToRead</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a7e5dea80b7b0238ed622f82681141245" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GetNumberOfRows</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a9b474c67986fb8623cc7e40ca8f9109a" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GetPreviousBatchFirstRowNumber</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a8af3a8346bbfc3de3da09840c70ac0ff" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>GetReaderMetrics</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1ac05becfb364d38b4a031f052bfc9cf14" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>IsEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a4d21246481d9779eff506eaf8f1410fd" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>IsEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a00dea15698a3203dd058daf2a184a74e" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>MakeEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a81dd9677ebaf7b97ef898a51179e42c6" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>MakeEofBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" prot="public" virt="virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>NextBatch</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ae4b5062701224aeae83472380d02f434" prot="public" virt="virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>NextBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>ReadBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a4ee7cac856f2b254e171b12db7146246" prot="public" virt="non-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>ReadBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_prefetch_file_batch_reader_1a66a9334bd1dfe45e20040116ca4c53e2" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>SeekToRow</name></member>
+      <member refid="classpaimon_1_1_prefetch_file_batch_reader_1ac3352521fbeb92b417f685ee8230bca6" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>SetReadRanges</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>SetReadSchema</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ac5afd12bba8e497dfc95cba25a343ba3" prot="public" virt="pure-virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>SupportPreciseBitmapSelection</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a9741d92af7160375a51e1a497afcfa1a" prot="public" virt="virtual"><scope>paimon::PrefetchFileBatchReader</scope><name>~BatchReader</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

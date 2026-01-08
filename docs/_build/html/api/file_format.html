@@ -1,0 +1,1072 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>File Format &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/file_format';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="File System" href="file_system.html" />
+    <link rel="prev" title="Predicate" href="predicate.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1"><a class="reference internal" href="commit.html">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">File Format</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="file-format">
+<h1>File Format<a class="headerlink" href="#file-format" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-file-format"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileFormatE">
+<span id="_CPPv3N6paimon10FileFormatE"></span><span id="_CPPv2N6paimon10FileFormatE"></span><span id="paimon::FileFormat"></span><span class="target" id="classpaimon_1_1_file_format"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileFormat</span></span></span><a class="headerlink" href="#_CPPv4N6paimon10FileFormatE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_format"><span class="std std-ref"><span class="pre">FileFormat</span></span></a></code> is used to create <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_reader_builder"><span class="std std-ref"><span class="pre">ReaderBuilder</span></span></a></code> and <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_writer_builder"><span class="std std-ref"><span class="pre">WriterBuilder</span></span></a></code>. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon10FileFormatD0Ev">
+<span id="_CPPv3N6paimon10FileFormatD0Ev"></span><span id="_CPPv2N6paimon10FileFormatD0Ev"></span><span id="paimon::FileFormat::~FileFormat"></span><span class="target" id="classpaimon_1_1_file_format_1a15252abcf86e644c9cc38eb1344ac55a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileFormat</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon10FileFormatD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileFormat10IdentifierEv">
+<span id="_CPPv3NK6paimon10FileFormat10IdentifierEv"></span><span id="_CPPv2NK6paimon10FileFormat10IdentifierEv"></span><span id="paimon::FileFormat::IdentifierC"></span><span class="target" id="classpaimon_1_1_file_format_1acfea05a4c90d05a136f3ec508347e93d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">Identifier</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileFormat10IdentifierEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The corresponding identifier of file format, e.g., orc. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileFormat19CreateReaderBuilderE7int32_t">
+<span id="_CPPv3NK6paimon10FileFormat19CreateReaderBuilderE7int32_t"></span><span id="_CPPv2NK6paimon10FileFormat19CreateReaderBuilderE7int32_t"></span><span id="paimon::FileFormat::CreateReaderBuilder__int32_tC"></span><span class="target" id="classpaimon_1_1_file_format_1ad0921d76ee8531144b016b6bb38760cc"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13ReaderBuilderE" title="paimon::ReaderBuilder"><span class="n"><span class="pre">ReaderBuilder</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateReaderBuilder</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">batch_size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileFormat19CreateReaderBuilderE7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A reader builder which will create reader with specific batch size. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t">
+<span id="_CPPv3NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t"></span><span id="_CPPv2NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t"></span><span id="paimon::FileFormat::CreateWriterBuilder__ArrowSchemaP.int32_tC"></span><span class="target" id="classpaimon_1_1_file_format_1abb275a73c000c0b240118d0fbc4cc5eb"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13WriterBuilderE" title="paimon::WriterBuilder"><span class="n"><span class="pre">WriterBuilder</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateWriterBuilder</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">schema</span></span>, <span class="n"><span class="pre">int32_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">batch_size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_writer_builder"><span class="std std-ref"><span class="pre">WriterBuilder</span></span></a></code> of the corresponding schema, or error status when schema is invalid. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema">
+<span id="_CPPv3NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema"></span><span id="_CPPv2NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema"></span><span id="paimon::FileFormat::CreateStatsExtractor__ArrowSchemaPC"></span><span class="target" id="classpaimon_1_1_file_format_1a62e4644cc68c7b981e6edf84d280fb24"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon20FormatStatsExtractorE" title="paimon::FormatStatsExtractor"><span class="n"><span class="pre">FormatStatsExtractor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CreateStatsExtractor</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">schema</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_format_stats_extractor"><span class="std std-ref"><span class="pre">FormatStatsExtractor</span></span></a></code> of current file format. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12FormatWriterE">
+<span id="_CPPv3N6paimon12FormatWriterE"></span><span id="_CPPv2N6paimon12FormatWriterE"></span><span id="paimon::FormatWriter"></span><span class="target" id="classpaimon_1_1_format_writer"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FormatWriter</span></span></span><a class="headerlink" href="#_CPPv4N6paimon12FormatWriterE" title="Link to this definition">#</a><br /></dt>
+<dd><p>File format writer, each writer corresponds to a data file. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12FormatWriterD0Ev">
+<span id="_CPPv3N6paimon12FormatWriterD0Ev"></span><span id="_CPPv2N6paimon12FormatWriterD0Ev"></span><span id="paimon::FormatWriter::~FormatWriter"></span><span class="target" id="classpaimon_1_1_format_writer_1ad93f4f889e5f6a84e443a56032c23e33"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FormatWriter</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon12FormatWriterD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12FormatWriter8AddBatchEP10ArrowArray">
+<span id="_CPPv3N6paimon12FormatWriter8AddBatchEP10ArrowArray"></span><span id="_CPPv2N6paimon12FormatWriter8AddBatchEP10ArrowArray"></span><span id="paimon::FormatWriter::AddBatch__ArrowArrayP"></span><span class="target" id="classpaimon_1_1_format_writer_1a2e7a64e6f91b3cfb5abddd4f3c15c05e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">AddBatch</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">batch</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon12FormatWriter8AddBatchEP10ArrowArray" title="Link to this definition">#</a><br /></dt>
+<dd><p>Add a batch of records to the format writer. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The batch must conform to the schema expected by the writer. </p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This method can be called multiple times to write data incrementally. </p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>After calling <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_format_writer_1a5baab67a1a5a3b42a6477dc0bf8eadc7"><span class="std std-ref"><span class="pre">Finish()</span></span></a></code>, this method should not be called again. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>batch</strong> – Pointer to an ArrowArray containing the batch data to write. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating success (OK) or failure with error information. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12FormatWriter5FlushEv">
+<span id="_CPPv3N6paimon12FormatWriter5FlushEv"></span><span id="_CPPv2N6paimon12FormatWriter5FlushEv"></span><span id="paimon::FormatWriter::Flush"></span><span class="target" id="classpaimon_1_1_format_writer_1ad542d387b7ff77e9a38c782c66a7b743"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Flush</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon12FormatWriter5FlushEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Flushes all intermediate buffered data to the format writer. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Error status returned if the encoder cannot be flushed, or if the output stream return an error. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon12FormatWriter6FinishEv">
+<span id="_CPPv3N6paimon12FormatWriter6FinishEv"></span><span id="_CPPv2N6paimon12FormatWriter6FinishEv"></span><span id="paimon::FormatWriter::Finish"></span><span class="target" id="classpaimon_1_1_format_writer_1a5baab67a1a5a3b42a6477dc0bf8eadc7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon12FormatWriter6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Finishes the writing. </p>
+<p>This must flush all internal buffer, finish encoding, and write footers.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The writer is not expected to handle any more records via <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_format_writer_1a2e7a64e6f91b3cfb5abddd4f3c15c05e"><span class="std std-ref"><span class="pre">AddBatch()</span></span></a></code> after this method is called.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This method <strong>MUST NOT</strong> close the stream that the writer writes to. Closing the stream is expected to happen through the invoker of this method afterwards.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Error status returned if the finalization fails. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t">
+<span id="_CPPv3NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t"></span><span id="_CPPv2NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t"></span><span id="paimon::FormatWriter::ReachTargetSize__b.int64_tC"></span><span class="target" id="classpaimon_1_1_format_writer_1a3a2e1e327fe9bf5e8f4a3aa8bdb76a43"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="kt"><span class="pre">bool</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReachTargetSize</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">suggested_check</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">target_size</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Check if the writer has reached the <code class="docutils literal notranslate"><span class="pre">target_size</span></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>suggested_check</strong> – Whether it needs to be checked, but subclasses can also decide whether to check it themselves. </p></li>
+<li><p><strong>target_size</strong> – The size of the target. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the target size was reached, otherwise false. </p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Error status returned if calculating the length fails. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon12FormatWriter16GetWriterMetricsEv">
+<span id="_CPPv3NK6paimon12FormatWriter16GetWriterMetricsEv"></span><span id="_CPPv2NK6paimon12FormatWriter16GetWriterMetricsEv"></span><span id="paimon::FormatWriter::GetWriterMetricsC"></span><span class="target" id="classpaimon_1_1_format_writer_1a87e5ca9131746f86812b1c7a45ec7536"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Metrics</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetWriterMetrics</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon12FormatWriter16GetWriterMetricsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get metrics of the writer. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The accumulated writer metrics to current state. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13WriterBuilderE">
+<span id="_CPPv3N6paimon13WriterBuilderE"></span><span id="_CPPv2N6paimon13WriterBuilderE"></span><span id="paimon::WriterBuilder"></span><span class="target" id="classpaimon_1_1_writer_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">WriterBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon13WriterBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a file format writer based on the file output stream. Allows you to specify memory pool. </p>
+<p>Subclassed by paimon::DirectWriterBuilder, paimon::SpecificFSWriterBuilder</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13WriterBuilderD0Ev">
+<span id="_CPPv3N6paimon13WriterBuilderD0Ev"></span><span id="_CPPv2N6paimon13WriterBuilderD0Ev"></span><span id="paimon::WriterBuilder::~WriterBuilder"></span><span class="target" id="classpaimon_1_1_writer_builder_1a1bfb13d013967ed6e07459992bfa826c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~WriterBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon13WriterBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::WriterBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_writer_builder_1aebeb244a2785f602ff9b500af9adef1c"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon13WriterBuilderE" title="paimon::WriterBuilder"><span class="n"><span class="pre">WriterBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set memory pool to use. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE">
+<span id="_CPPv3N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE"></span><span id="_CPPv2N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE"></span><span id="paimon::WriterBuilder::Build__std::shared_ptr:OutputStream:CR.ssCR"></span><span class="target" id="classpaimon_1_1_writer_builder_1a0dcede79a22f46a4bc35c2f3646116a4"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon12FormatWriterE" title="paimon::FormatWriter"><span class="n"><span class="pre">FormatWriter</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Build</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon12OutputStreamE" title="paimon::OutputStream"><span class="n"><span class="pre">OutputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">out</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">compression</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build a file format writer based on the file output stream and file compression. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReaderE">
+<span id="_CPPv3N6paimon11BatchReaderE"></span><span id="_CPPv2N6paimon11BatchReaderE"></span><span id="paimon::BatchReader"></span><span class="target" id="classpaimon_1_1_batch_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">BatchReader</span></span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A batch reader that supports reading batch data into an arrow array. </p>
+<p>Subclassed by <a class="reference internal" href="#classpaimon_1_1_file_batch_reader"><span class="std std-ref">paimon::FileBatchReader</span></a></p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-types">Public Types</p>
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader9ReadBatchE">
+<span id="_CPPv3N6paimon11BatchReader9ReadBatchE"></span><span id="_CPPv2N6paimon11BatchReader9ReadBatchE"></span><span class="target" id="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadBatch</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">pair</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ArrowArray</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader9ReadBatchE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp type">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE">
+<span id="_CPPv3N6paimon11BatchReader19ReadBatchWithBitmapE"></span><span id="_CPPv2N6paimon11BatchReader19ReadBatchWithBitmapE"></span><span class="target" id="classpaimon_1_1_batch_reader_1a4ee7cac856f2b254e171b12db7146246"></span><span class="k"><span class="pre">using</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReadBatchWithBitmap</span></span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">pair</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader9ReadBatchE" title="paimon::BatchReader::ReadBatch"><span class="n"><span class="pre">ReadBatch</span></span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">RoaringBitmap32</span></span><span class="p"><span class="pre">&gt;</span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReaderD0Ev">
+<span id="_CPPv3N6paimon11BatchReaderD0Ev"></span><span id="_CPPv2N6paimon11BatchReaderD0Ev"></span><span id="paimon::BatchReader::~BatchReader"></span><span class="target" id="classpaimon_1_1_batch_reader_1a9741d92af7160375a51e1a497afcfa1a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~BatchReader</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReaderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader9NextBatchEv">
+<span id="_CPPv3N6paimon11BatchReader9NextBatchEv"></span><span id="_CPPv2N6paimon11BatchReader9NextBatchEv"></span><span id="paimon::BatchReader::NextBatch"></span><span class="target" id="classpaimon_1_1_batch_reader_1a01358cb810bb14fcb26663d510c08fce"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader9ReadBatchE" title="paimon::BatchReader::ReadBatch"><span class="n"><span class="pre">ReadBatch</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NextBatch</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader9NextBatchEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieves the next batch of data. </p>
+<p>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A result containing a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code>, which consists of a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code> and a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>. Returned array contains a <code class="docutils literal notranslate"><span class="pre">_VALUE_KIND</span></code> field (the first field) to indicate the row kind of each row. Deleted or index-filtered rows are removed. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader19NextBatchWithBitmapEv">
+<span id="_CPPv3N6paimon11BatchReader19NextBatchWithBitmapEv"></span><span id="_CPPv2N6paimon11BatchReader19NextBatchWithBitmapEv"></span><span id="paimon::BatchReader::NextBatchWithBitmap"></span><span class="target" id="classpaimon_1_1_batch_reader_1ae4b5062701224aeae83472380d02f434"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE" title="paimon::BatchReader::ReadBatchWithBitmap"><span class="n"><span class="pre">ReadBatchWithBitmap</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NextBatchWithBitmap</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader19NextBatchWithBitmapEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieves the next batch of data. </p>
+<p>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A result containing a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code> and a valid bitmap. <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code> consists of a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code> and a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>. Returned array contains a _VALUE_KIND field (the first field) to indicate the row kind of each row. Deleted or index-filtered records maybe maintained in <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code>, while bitmap indicates valid row id. If deletion vector or index are enabled, this function is more efficient than <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code>. The default implementation calls <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code> and adds all rows to valid bitmap. Noted that the returned bitmap has at least one valid row id. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon11BatchReader16GetReaderMetricsEv">
+<span id="_CPPv3NK6paimon11BatchReader16GetReaderMetricsEv"></span><span id="_CPPv2NK6paimon11BatchReader16GetReaderMetricsEv"></span><span id="paimon::BatchReader::GetReaderMetricsC"></span><span class="target" id="classpaimon_1_1_batch_reader_1a8af3a8346bbfc3de3da09840c70ac0ff"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Metrics</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetReaderMetrics</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon11BatchReader16GetReaderMetricsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieves the reader’s metrics. </p>
+<p>Note that calling this method frequently may incur significant performance overhead. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A shared pointer to the <code class="docutils literal notranslate"><span class="pre">Metrics</span></code> object. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader5CloseEv">
+<span id="_CPPv3N6paimon11BatchReader5CloseEv"></span><span id="_CPPv2N6paimon11BatchReader5CloseEv"></span><span id="paimon::BatchReader::Close"></span><span class="target" id="classpaimon_1_1_batch_reader_1a167febf97b0e2ef4f48f034fe3af16b6"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">void</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Close</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader5CloseEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Closes the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader"><span class="std std-ref"><span class="pre">BatchReader</span></span></a></code>, releasing any associated resources. </p>
+<p>After calling this method, further calls to <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code> is undefined and should be avoided. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader10IsEofBatchERK9ReadBatch">
+<span id="_CPPv3N6paimon11BatchReader10IsEofBatchERK9ReadBatch"></span><span id="_CPPv2N6paimon11BatchReader10IsEofBatchERK9ReadBatch"></span><span id="paimon::BatchReader::IsEofBatch__ReadBatchCR"></span><span class="target" id="classpaimon_1_1_batch_reader_1ac05becfb364d38b4a031f052bfc9cf14"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsEofBatch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader9ReadBatchE" title="paimon::BatchReader::ReadBatch"><span class="n"><span class="pre">ReadBatch</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">batch</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader10IsEofBatchERK9ReadBatch" title="Link to this definition">#</a><br /></dt>
+<dd><p>Determine whether a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code> or <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a4ee7cac856f2b254e171b12db7146246"><span class="std std-ref"><span class="pre">ReadBatchWithBitmap</span></span></a></code> is eof batch, if return true, all the data has been returned. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap">
+<span id="_CPPv3N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap"></span><span id="_CPPv2N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap"></span><span id="paimon::BatchReader::IsEofBatch__ReadBatchWithBitmapCR"></span><span class="target" id="classpaimon_1_1_batch_reader_1a4d21246481d9779eff506eaf8f1410fd"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IsEofBatch</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE" title="paimon::BatchReader::ReadBatchWithBitmap"><span class="n"><span class="pre">ReadBatchWithBitmap</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">batch_with_bitmap</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader12MakeEofBatchEv">
+<span id="_CPPv3N6paimon11BatchReader12MakeEofBatchEv"></span><span id="_CPPv2N6paimon11BatchReader12MakeEofBatchEv"></span><span id="paimon::BatchReader::MakeEofBatch"></span><span class="target" id="classpaimon_1_1_batch_reader_1a00dea15698a3203dd058daf2a184a74e"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader9ReadBatchE" title="paimon::BatchReader::ReadBatch"><span class="n"><span class="pre">ReadBatch</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MakeEofBatch</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader12MakeEofBatchEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Make an eof batch or batch with bitmap. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon11BatchReader22MakeEofBatchWithBitmapEv">
+<span id="_CPPv3N6paimon11BatchReader22MakeEofBatchWithBitmapEv"></span><span id="_CPPv2N6paimon11BatchReader22MakeEofBatchWithBitmapEv"></span><span id="paimon::BatchReader::MakeEofBatchWithBitmap"></span><span class="target" id="classpaimon_1_1_batch_reader_1a81dd9677ebaf7b97ef898a51179e42c6"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE" title="paimon::BatchReader::ReadBatchWithBitmap"><span class="n"><span class="pre">ReadBatchWithBitmap</span></span></a><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">MakeEofBatchWithBitmap</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon11BatchReader22MakeEofBatchWithBitmapEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileBatchReaderE">
+<span id="_CPPv3N6paimon15FileBatchReaderE"></span><span id="_CPPv2N6paimon15FileBatchReaderE"></span><span id="paimon::FileBatchReader"></span><span class="target" id="classpaimon_1_1_file_batch_reader"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileBatchReader</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><a class="reference internal" href="#_CPPv4N6paimon11BatchReaderE" title="paimon::BatchReader"><span class="n"><span class="pre">BatchReader</span></span></a><a class="headerlink" href="#_CPPv4N6paimon15FileBatchReaderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>The batch reader for a single file supports returning the line number of the last batch read for deletion vector judgment. </p>
+<p>Subclassed by paimon::PrefetchFileBatchReader</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileBatchReader13GetFileSchemaEv">
+<span id="_CPPv3NK6paimon15FileBatchReader13GetFileSchemaEv"></span><span id="_CPPv2NK6paimon15FileBatchReader13GetFileSchemaEv"></span><span id="paimon::FileBatchReader::GetFileSchemaC"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1ac7266064352ed90581738242cf69500f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetFileSchema</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileBatchReader13GetFileSchemaEv" title="Link to this definition">#</a><br /></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The schema of the file. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE">
+<span id="_CPPv3N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE"></span><span id="_CPPv2N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE"></span><span id="paimon::FileBatchReader::SetReadSchema__ArrowSchemaP.std::shared_ptr:Predicate:CR.std::optional:RoaringBitmap32:CR"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SetReadSchema</span></span></span><span class="sig-paren">(</span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">ArrowSchema</span></span><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="n sig-param"><span class="pre">read_schema</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="predicate.html#_CPPv4N6paimon9PredicateE" title="paimon::Predicate"><span class="n"><span class="pre">Predicate</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">predicate</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">RoaringBitmap32</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">selection_bitmap</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Resets the read schema and predicate. </p>
+<p>If <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2"><span class="std std-ref"><span class="pre">SetReadSchema()</span></span></a></code> is not called, <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code> will return data with the file schema. After resetting the read schema, <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code> will read data starting from the first row.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>read_schema</strong> – The schema to set for reading. </p></li>
+<li><p><strong>predicate</strong> – The predicate to apply for filtering data. </p></li>
+<li><p><strong>selection_bitmap</strong> – The bitmap to apply for filtering data. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The status of the operation. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv">
+<span id="_CPPv3NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv"></span><span id="_CPPv2NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv"></span><span id="paimon::FileBatchReader::GetPreviousBatchFirstRowNumberC"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1a9b474c67986fb8623cc7e40ca8f9109a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetPreviousBatchFirstRowNumber</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the row number of the first row in the previously read batch. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileBatchReader15GetNumberOfRowsEv">
+<span id="_CPPv3NK6paimon15FileBatchReader15GetNumberOfRowsEv"></span><span id="_CPPv2NK6paimon15FileBatchReader15GetNumberOfRowsEv"></span><span id="paimon::FileBatchReader::GetNumberOfRowsC"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1a7e5dea80b7b0238ed622f82681141245"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">uint64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetNumberOfRows</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileBatchReader15GetNumberOfRowsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get the number of rows in the file. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv">
+<span id="_CPPv3NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv"></span><span id="_CPPv2NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv"></span><span id="paimon::FileBatchReader::SupportPreciseBitmapSelectionC"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1ac5afd12bba8e497dfc95cba25a343ba3"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">SupportPreciseBitmapSelection</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get whether or not support read precisely while bitmap pushed down. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileBatchReader9NextBatchEv">
+<span id="_CPPv3N6paimon15FileBatchReader9NextBatchEv"></span><span id="_CPPv2N6paimon15FileBatchReader9NextBatchEv"></span><span id="paimon::FileBatchReader::NextBatch"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ReadBatch</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NextBatch</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileBatchReader9NextBatchEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieves the next batch of data. </p>
+<p>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A result containing a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code>, which consists of a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code> and a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>. Returned array contains a <code class="docutils literal notranslate"><span class="pre">_VALUE_KIND</span></code> field (the first field) to indicate the row kind of each row. Deleted or index-filtered rows are removed. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileBatchReader19NextBatchWithBitmapEv">
+<span id="_CPPv3N6paimon15FileBatchReader19NextBatchWithBitmapEv"></span><span id="_CPPv2N6paimon15FileBatchReader19NextBatchWithBitmapEv"></span><span id="paimon::FileBatchReader::NextBatchWithBitmap"></span><span class="target" id="classpaimon_1_1_file_batch_reader_1ae4b5062701224aeae83472380d02f434"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ReadBatchWithBitmap</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">NextBatchWithBitmap</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileBatchReader19NextBatchWithBitmapEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieves the next batch of data. </p>
+<p>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A result containing a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code> and a valid bitmap. <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code> consists of a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowArray</span></code> and a unique pointer to <code class="docutils literal notranslate"><span class="pre">ArrowSchema</span></code>. Returned array contains a _VALUE_KIND field (the first field) to indicate the row kind of each row. Deleted or index-filtered records maybe maintained in <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2"><span class="std std-ref"><span class="pre">ReadBatch</span></span></a></code>, while bitmap indicates valid row id. If deletion vector or index are enabled, this function is more efficient than <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code>. The default implementation calls <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce"><span class="std std-ref"><span class="pre">NextBatch()</span></span></a></code> and adds all rows to valid bitmap. Noted that the returned bitmap has at least one valid row id. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13ReaderBuilderE">
+<span id="_CPPv3N6paimon13ReaderBuilderE"></span><span id="_CPPv2N6paimon13ReaderBuilderE"></span><span id="paimon::ReaderBuilder"></span><span class="target" id="classpaimon_1_1_reader_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ReaderBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon13ReaderBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a file batch reader based on the file path. Allows you to specify memory pool. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13ReaderBuilderD0Ev">
+<span id="_CPPv3N6paimon13ReaderBuilderD0Ev"></span><span id="_CPPv2N6paimon13ReaderBuilderD0Ev"></span><span id="paimon::ReaderBuilder::~ReaderBuilder"></span><span class="target" id="classpaimon_1_1_reader_builder_1aa4f6427f3e7265ac1ec43047027b2e91"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~ReaderBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon13ReaderBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::ReaderBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_reader_builder_1a3256a0e67c0174668a605a5a6513409d"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon13ReaderBuilderE" title="paimon::ReaderBuilder"><span class="n"><span class="pre">ReaderBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">*</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set memory pool to use. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE">
+<span id="_CPPv3NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE"></span><span id="_CPPv2NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE"></span><span id="paimon::ReaderBuilder::Build__std::shared_ptr:InputStream:CRC"></span><span class="target" id="classpaimon_1_1_reader_builder_1a0a025fdbb6bd1fbb5254a5ab8e01ed17"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileBatchReaderE" title="paimon::FileBatchReader"><span class="n"><span class="pre">FileBatchReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Build</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon11InputStreamE" title="paimon::InputStream"><span class="n"><span class="pre">InputStream</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build a file batch reader based on the created <code class="docutils literal notranslate"><a class="reference internal" href="file_system.html#classpaimon_1_1_input_stream"><span class="std std-ref"><span class="pre">InputStream</span></span></a></code>. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt6stringE">
+<span id="_CPPv3NK6paimon13ReaderBuilder5BuildERKNSt6stringE"></span><span id="_CPPv2NK6paimon13ReaderBuilder5BuildERKNSt6stringE"></span><span id="paimon::ReaderBuilder::Build__ssCRC"></span><span class="target" id="classpaimon_1_1_reader_builder_1a13ac3828edb381f51107344563360538"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileBatchReaderE" title="paimon::FileBatchReader"><span class="n"><span class="pre">FileBatchReader</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Build</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build a file batch reader based on the file path. </p>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17FileFormatFactoryE">
+<span id="_CPPv3N6paimon17FileFormatFactoryE"></span><span id="_CPPv2N6paimon17FileFormatFactoryE"></span><span id="paimon::FileFormatFactory"></span><span class="target" id="classpaimon_1_1_file_format_factory"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileFormatFactory</span></span></span><span class="w"> </span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="k"><span class="pre">public</span></span><span class="w"> </span><span class="n"><span class="pre">paimon</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">Factory</span></span><a class="headerlink" href="#_CPPv4N6paimon17FileFormatFactoryE" title="Link to this definition">#</a><br /></dt>
+<dd><p>A factory for creating <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_format"><span class="std std-ref"><span class="pre">FileFormat</span></span></a></code> instances. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17FileFormatFactoryD0Ev">
+<span id="_CPPv3N6paimon17FileFormatFactoryD0Ev"></span><span id="_CPPv2N6paimon17FileFormatFactoryD0Ev"></span><span id="paimon::FileFormatFactory::~FileFormatFactory"></span><span class="target" id="classpaimon_1_1_file_format_factory_1a8985f35b3ad8d1b0400d3cb0f9b7c3fa"></span><span class="sig-name descname"><span class="n"><span class="pre">~FileFormatFactory</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">override</span></span><a class="headerlink" href="#_CPPv4N6paimon17FileFormatFactoryD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileFormatFactory::Create__std::map:ss.ss:CRC"></span><span class="target" id="classpaimon_1_1_file_format_factory_1a4d5699589bb9bf6998be41af9cfe0eb2"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileFormatE" title="paimon::FileFormat"><span class="n"><span class="pre">FileFormat</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_format"><span class="std std-ref"><span class="pre">FileFormat</span></span></a></code> with the corresponding options. </p>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::FileFormatFactory::Get__ssCR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_file_format_factory_1a28fb855da5c5fa43575a3ede52caf911"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon10FileFormatE" title="paimon::FileFormat"><span class="n"><span class="pre">FileFormat</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Get</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">identifier</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Get <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_format"><span class="std std-ref"><span class="pre">FileFormat</span></span></a></code> corresponding to identifier. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Pre<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Factory is already registered. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractorE">
+<span id="_CPPv3N6paimon20FormatStatsExtractorE"></span><span id="_CPPv2N6paimon20FormatStatsExtractorE"></span><span id="paimon::FormatStatsExtractor"></span><span class="target" id="classpaimon_1_1_format_stats_extractor"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FormatStatsExtractor</span></span></span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractorE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Extracts statistics directly from file. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractorD0Ev">
+<span id="_CPPv3N6paimon20FormatStatsExtractorD0Ev"></span><span id="_CPPv2N6paimon20FormatStatsExtractorD0Ev"></span><span id="paimon::FormatStatsExtractor::~FormatStatsExtractor"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1a4732fe1bbe7bb127e63d8c926d8bbc5a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FormatStatsExtractor</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractorD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::FormatStatsExtractor::Extract__std::shared_ptr:FileSystem:CR.ssCR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1a286589bfa52690e64d144d95d0c8bc76"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ColumnStatsVector</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Extract</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_system</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Extracts statistics for each column of a data file based on the file path and file system. </p>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::FormatStatsExtractor::ExtractWithFileInfo__std::shared_ptr:FileSystem:CR.ssCR.std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1a3752abc455e667aee823f31f60eb2a2f"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">pair</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">ColumnStatsVector</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference internal" href="#_CPPv4N6paimon20FormatStatsExtractor8FileInfoE" title="paimon::FormatStatsExtractor::FileInfo"><span class="n"><span class="pre">FileInfo</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">ExtractWithFileInfo</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="file_system.html#_CPPv4N6paimon10FileSystemE" title="paimon::FileSystem"><span class="n"><span class="pre">FileSystem</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">file_system</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">pool</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Extracts statistics for each column and <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_format_stats_extractor_1_1_file_info"><span class="std std-ref"><span class="pre">FileInfo</span></span></a></code> of a data file based on the file path and file system. </p>
+</dd></dl>
+
+</div>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractor8FileInfoE">
+<span id="_CPPv3N6paimon20FormatStatsExtractor8FileInfoE"></span><span id="_CPPv2N6paimon20FormatStatsExtractor8FileInfoE"></span><span id="paimon::FormatStatsExtractor::FileInfo"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1_1_file_info"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileInfo</span></span></span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractor8FileInfoE" title="Link to this definition">#</a><br /></dt>
+<dd><p>File info fetched from physical file, currently only include row count. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t">
+<span id="_CPPv3N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t"></span><span id="_CPPv2N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t"></span><span id="paimon::FormatStatsExtractor::FileInfo::FileInfo__int64_t"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1_1_file_info_1adb8bb2c2bc3469c47ff28ae1353fa317"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">explicit</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileInfo</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">row_count</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv">
+<span id="_CPPv3NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv"></span><span id="_CPPv2NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv"></span><span id="paimon::FormatStatsExtractor::FileInfo::GetRowCountC"></span><span class="target" id="classpaimon_1_1_format_stats_extractor_1_1_file_info_1a235809074c255456264beb0296ba2326"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetRowCount</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="predicate.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Predicate</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="file_system.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">File System</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileFormatE"><code class="docutils literal notranslate"><span class="pre">paimon::FileFormat</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon10FileFormatD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileFormat()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileFormat10IdentifierEv"><code class="docutils literal notranslate"><span class="pre">Identifier()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileFormat19CreateReaderBuilderE7int32_t"><code class="docutils literal notranslate"><span class="pre">CreateReaderBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileFormat19CreateWriterBuilderEP11ArrowSchema7int32_t"><code class="docutils literal notranslate"><span class="pre">CreateWriterBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon10FileFormat20CreateStatsExtractorEP11ArrowSchema"><code class="docutils literal notranslate"><span class="pre">CreateStatsExtractor()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12FormatWriterE"><code class="docutils literal notranslate"><span class="pre">paimon::FormatWriter</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12FormatWriterD0Ev"><code class="docutils literal notranslate"><span class="pre">~FormatWriter()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12FormatWriter8AddBatchEP10ArrowArray"><code class="docutils literal notranslate"><span class="pre">AddBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12FormatWriter5FlushEv"><code class="docutils literal notranslate"><span class="pre">Flush()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon12FormatWriter6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12FormatWriter15ReachTargetSizeEb7int64_t"><code class="docutils literal notranslate"><span class="pre">ReachTargetSize()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon12FormatWriter16GetWriterMetricsEv"><code class="docutils literal notranslate"><span class="pre">GetWriterMetrics()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13WriterBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::WriterBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13WriterBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~WriterBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13WriterBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13WriterBuilder5BuildERKNSt10shared_ptrI12OutputStreamEERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Build()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::BatchReader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader9ReadBatchE"><code class="docutils literal notranslate"><span class="pre">ReadBatch</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader19ReadBatchWithBitmapE"><code class="docutils literal notranslate"><span class="pre">ReadBatchWithBitmap</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReaderD0Ev"><code class="docutils literal notranslate"><span class="pre">~BatchReader()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader9NextBatchEv"><code class="docutils literal notranslate"><span class="pre">NextBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader19NextBatchWithBitmapEv"><code class="docutils literal notranslate"><span class="pre">NextBatchWithBitmap()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon11BatchReader16GetReaderMetricsEv"><code class="docutils literal notranslate"><span class="pre">GetReaderMetrics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader5CloseEv"><code class="docutils literal notranslate"><span class="pre">Close()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader10IsEofBatchERK9ReadBatch"><code class="docutils literal notranslate"><span class="pre">IsEofBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader10IsEofBatchERK19ReadBatchWithBitmap"><code class="docutils literal notranslate"><span class="pre">IsEofBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader12MakeEofBatchEv"><code class="docutils literal notranslate"><span class="pre">MakeEofBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon11BatchReader22MakeEofBatchWithBitmapEv"><code class="docutils literal notranslate"><span class="pre">MakeEofBatchWithBitmap()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileBatchReaderE"><code class="docutils literal notranslate"><span class="pre">paimon::FileBatchReader</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileBatchReader13GetFileSchemaEv"><code class="docutils literal notranslate"><span class="pre">GetFileSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileBatchReader13SetReadSchemaEP11ArrowSchemaRKNSt10shared_ptrI9PredicateEERKNSt8optionalI15RoaringBitmap32EE"><code class="docutils literal notranslate"><span class="pre">SetReadSchema()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileBatchReader30GetPreviousBatchFirstRowNumberEv"><code class="docutils literal notranslate"><span class="pre">GetPreviousBatchFirstRowNumber()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileBatchReader15GetNumberOfRowsEv"><code class="docutils literal notranslate"><span class="pre">GetNumberOfRows()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileBatchReader29SupportPreciseBitmapSelectionEv"><code class="docutils literal notranslate"><span class="pre">SupportPreciseBitmapSelection()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileBatchReader9NextBatchEv"><code class="docutils literal notranslate"><span class="pre">NextBatch()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileBatchReader19NextBatchWithBitmapEv"><code class="docutils literal notranslate"><span class="pre">NextBatchWithBitmap()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13ReaderBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::ReaderBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13ReaderBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~ReaderBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13ReaderBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt10shared_ptrI11InputStreamEE"><code class="docutils literal notranslate"><span class="pre">Build()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13ReaderBuilder5BuildERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">Build()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17FileFormatFactoryE"><code class="docutils literal notranslate"><span class="pre">paimon::FileFormatFactory</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17FileFormatFactoryD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileFormatFactory()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon17FileFormatFactory6CreateERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon17FileFormatFactory3GetERKNSt6stringERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">Get()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractorE"><code class="docutils literal notranslate"><span class="pre">paimon::FormatStatsExtractor</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractorD0Ev"><code class="docutils literal notranslate"><span class="pre">~FormatStatsExtractor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractor7ExtractERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">Extract()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractor19ExtractWithFileInfoERKNSt10shared_ptrI10FileSystemEERKNSt6stringERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">ExtractWithFileInfo()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractor8FileInfoE"><code class="docutils literal notranslate"><span class="pre">paimon::FormatStatsExtractor::FileInfo</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20FormatStatsExtractor8FileInfo8FileInfoE7int64_t"><code class="docutils literal notranslate"><span class="pre">FileInfo()</span></code></a></li>
+<li class="toc-h5 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon20FormatStatsExtractor8FileInfo11GetRowCountEv"><code class="docutils literal notranslate"><span class="pre">GetRowCount()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/file_format.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

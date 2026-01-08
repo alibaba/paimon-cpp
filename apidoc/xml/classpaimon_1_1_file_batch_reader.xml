@@ -1,0 +1,223 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_batch_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileBatchReader</compoundname>
+    <basecompoundref refid="classpaimon_1_1_batch_reader" prot="public" virt="non-virtual">paimon::BatchReader</basecompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_prefetch_file_batch_reader" prot="public" virt="non-virtual">paimon::PrefetchFileBatchReader</derivedcompoundref>
+    <includes refid="file__batch__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1ac7266064352ed90581738242cf69500f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt;<ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt;::ArrowSchema &gt; &gt; paimon::FileBatchReader::GetFileSchema</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetFileSchema</name>
+        <qualifiedname>paimon::FileBatchReader::GetFileSchema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The schema of the file. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="32" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileBatchReader::SetReadSchema</definition>
+        <argsstring>(::ArrowSchema *read_schema, const std::shared_ptr&lt; Predicate &gt; &amp;predicate, const std::optional&lt; RoaringBitmap32 &gt; &amp;selection_bitmap)=0</argsstring>
+        <name>SetReadSchema</name>
+        <qualifiedname>paimon::FileBatchReader::SetReadSchema</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>read_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> &gt; &amp;</type>
+          <declname>selection_bitmap</declname>
+        </param>
+        <briefdescription>
+<para>Resets the read schema and predicate. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If <computeroutput><ref refid="classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2" kindref="member">SetReadSchema()</ref></computeroutput> is not called, <computeroutput><ref refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" kindref="member">NextBatch()</ref></computeroutput> will return data with the file schema. After resetting the read schema, <computeroutput><ref refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" kindref="member">NextBatch()</ref></computeroutput> will read data starting from the first row.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>read_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The schema to set for reading. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>predicate</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The predicate to apply for filtering data. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>selection_bitmap</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The bitmap to apply for filtering data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>The status of the operation. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="43" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1a9b474c67986fb8623cc7e40ca8f9109a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::FileBatchReader::GetPreviousBatchFirstRowNumber</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetPreviousBatchFirstRowNumber</name>
+        <qualifiedname>paimon::FileBatchReader::GetPreviousBatchFirstRowNumber</qualifiedname>
+        <briefdescription>
+<para>Get the row number of the first row in the previously read batch. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="50" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1a7e5dea80b7b0238ed622f82681141245" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::FileBatchReader::GetNumberOfRows</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetNumberOfRows</name>
+        <qualifiedname>paimon::FileBatchReader::GetNumberOfRows</qualifiedname>
+        <briefdescription>
+<para>Get the number of rows in the file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="53" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1ac5afd12bba8e497dfc95cba25a343ba3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::FileBatchReader::SupportPreciseBitmapSelection</definition>
+        <argsstring>() const =0</argsstring>
+        <name>SupportPreciseBitmapSelection</name>
+        <qualifiedname>paimon::FileBatchReader::SupportPreciseBitmapSelection</qualifiedname>
+        <briefdescription>
+<para>Get whether or not support read precisely while bitmap pushed down. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="56" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" kindref="member">ReadBatch</ref> &gt;</type>
+        <definition>virtual Result&lt; ReadBatch &gt; paimon::BatchReader::NextBatch</definition>
+        <argsstring>()=0</argsstring>
+        <name>NextBatch</name>
+        <qualifiedname>paimon::FileBatchReader::NextBatch</qualifiedname>
+        <reimplements refid="classpaimon_1_1_batch_reader_1a01358cb810bb14fcb26663d510c08fce">NextBatch</reimplements>
+        <briefdescription>
+<para>Retrieves the next batch of data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</para>
+<para><simplesect kind="return"><para>A result containing a <computeroutput><ref refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" kindref="member">ReadBatch</ref></computeroutput>, which consists of a unique pointer to <computeroutput><ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref></computeroutput> and a unique pointer to <computeroutput><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref></computeroutput>. Returned array contains a <computeroutput>_VALUE_KIND</computeroutput> field (the first field) to indicate the row kind of each row. Deleted or index-filtered rows are removed. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="46" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_batch_reader_1ae4b5062701224aeae83472380d02f434" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_batch_reader_1a4ee7cac856f2b254e171b12db7146246" kindref="member">ReadBatchWithBitmap</ref> &gt;</type>
+        <definition>virtual Result&lt; ReadBatchWithBitmap &gt; paimon::BatchReader::NextBatchWithBitmap</definition>
+        <argsstring>()</argsstring>
+        <name>NextBatchWithBitmap</name>
+        <qualifiedname>paimon::FileBatchReader::NextBatchWithBitmap</qualifiedname>
+        <reimplements refid="classpaimon_1_1_batch_reader_1ae4b5062701224aeae83472380d02f434">NextBatchWithBitmap</reimplements>
+        <briefdescription>
+<para>Retrieves the next batch of data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If EOF is reached, returns an OK status with a nullptr array. Returns an error status only for critical failures (e.g., IO errors). Once an error is returned, this method must not be retried, as it will repeatedly return the same error code.</para>
+<para><simplesect kind="return"><para>A result containing a <computeroutput><ref refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" kindref="member">ReadBatch</ref></computeroutput> and a valid bitmap. <computeroutput><ref refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" kindref="member">ReadBatch</ref></computeroutput> consists of a unique pointer to <computeroutput><ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref></computeroutput> and a unique pointer to <computeroutput><ref refid="struct_arrow_schema" kindref="compound">ArrowSchema</ref></computeroutput>. Returned array contains a _VALUE_KIND field (the first field) to indicate the row kind of each row. Deleted or index-filtered records maybe maintained in <computeroutput><ref refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" kindref="member">ReadBatch</ref></computeroutput>, while bitmap indicates valid row id. If deletion vector or index are enabled, this function is more efficient than <computeroutput><ref refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" kindref="member">NextBatch()</ref></computeroutput>. The default implementation calls <computeroutput><ref refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" kindref="member">NextBatch()</ref></computeroutput> and adds all rows to valid bitmap. Noted that the returned bitmap has at least one valid row id. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="47" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>The batch reader for a single file supports returning the line number of the last batch read for deletion vector judgment. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::BatchReader</label>
+        <link refid="classpaimon_1_1_batch_reader"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileBatchReader</label>
+        <link refid="classpaimon_1_1_file_batch_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::PrefetchFileBatchReader</label>
+        <link refid="classpaimon_1_1_prefetch_file_batch_reader"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::BatchReader</label>
+        <link refid="classpaimon_1_1_batch_reader"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileBatchReader</label>
+        <link refid="classpaimon_1_1_file_batch_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h" bodystart="29" bodyend="57"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_batch_reader_1a167febf97b0e2ef4f48f034fe3af16b6" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ac7266064352ed90581738242cf69500f" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>GetFileSchema</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a7e5dea80b7b0238ed622f82681141245" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>GetNumberOfRows</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a9b474c67986fb8623cc7e40ca8f9109a" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>GetPreviousBatchFirstRowNumber</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a8af3a8346bbfc3de3da09840c70ac0ff" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>GetReaderMetrics</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1ac05becfb364d38b4a031f052bfc9cf14" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>IsEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a4d21246481d9779eff506eaf8f1410fd" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>IsEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a00dea15698a3203dd058daf2a184a74e" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>MakeEofBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a81dd9677ebaf7b97ef898a51179e42c6" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>MakeEofBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1a01358cb810bb14fcb26663d510c08fce" prot="public" virt="virtual"><scope>paimon::FileBatchReader</scope><name>NextBatch</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ae4b5062701224aeae83472380d02f434" prot="public" virt="virtual"><scope>paimon::FileBatchReader</scope><name>NextBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a52a5b04ada9bf1da22f5d7e1784927b2" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>ReadBatch</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a4ee7cac856f2b254e171b12db7146246" prot="public" virt="non-virtual"><scope>paimon::FileBatchReader</scope><name>ReadBatchWithBitmap</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1af1b28c896a926c6496d03b9a5b55afb2" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>SetReadSchema</name></member>
+      <member refid="classpaimon_1_1_file_batch_reader_1ac5afd12bba8e497dfc95cba25a343ba3" prot="public" virt="pure-virtual"><scope>paimon::FileBatchReader</scope><name>SupportPreciseBitmapSelection</name></member>
+      <member refid="classpaimon_1_1_batch_reader_1a9741d92af7160375a51e1a497afcfa1a" prot="public" virt="virtual"><scope>paimon::FileBatchReader</scope><name>~BatchReader</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,307 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_commit_message" kind="class" language="C++" prot="public">
+    <compoundname>paimon::CommitMessage</compoundname>
+    <includes refid="commit__message_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a9159f8ad92ea44772c23c79520314604" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>static int32_t paimon::CommitMessage::CurrentVersion</definition>
+        <argsstring>()</argsstring>
+        <name>CurrentVersion</name>
+        <qualifiedname>paimon::CommitMessage::CurrentVersion</qualifiedname>
+        <briefdescription>
+<para>Gets the version with which this serializer serializes. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="38" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1aef2ceb513f93eb8ff64b67626bd8ce89" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>static Result&lt; std::string &gt; paimon::CommitMessage::Serialize</definition>
+        <argsstring>(const std::shared_ptr&lt; CommitMessage &gt; &amp;commit_message, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Serialize</name>
+        <qualifiedname>paimon::CommitMessage::Serialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &amp;</type>
+          <declname>commit_message</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Serializes a single commit message to a binary string format. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The serialized format is compatible with the Java version of Paimon. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>commit_message</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The commit message to serialize. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation during serialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the serialized string data, or an error if serialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="47" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a3658330e724ddae3ac54be4715907e8f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>static Result&lt; std::string &gt; paimon::CommitMessage::SerializeList</definition>
+        <argsstring>(const std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &amp;commit_messages, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>SerializeList</name>
+        <qualifiedname>paimon::CommitMessage::SerializeList</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &amp;</type>
+          <declname>commit_messages</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Serializes a list of commit messages to a binary string format. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>commit_messages</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Vector of commit messages to serialize. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation during serialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the serialized string data, or an error if serialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="54" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a13c70379bb2ce34af537b85a5f4b7270" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; paimon::CommitMessage::Deserialize</definition>
+        <argsstring>(int32_t version, const char *buffer, int32_t length, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Deserialize</name>
+        <qualifiedname>paimon::CommitMessage::Deserialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>version</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes a single commit message from binary data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>version</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The serialization format version used when the data was serialized. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the binary data buffer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of the binary data in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation during deserialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the deserialized <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref>, or an error if deserialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="65" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a452a4d820731446cd0040ae984dfd0e4" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &gt;</type>
+        <definition>static Result&lt; std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &gt; paimon::CommitMessage::DeserializeList</definition>
+        <argsstring>(int32_t version, const char *buffer, int32_t length, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>DeserializeList</name>
+        <qualifiedname>paimon::CommitMessage::DeserializeList</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>version</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes a list of commit messages from binary data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This is the counterpart to <ref refid="classpaimon_1_1_commit_message_1a3658330e724ddae3ac54be4715907e8f" kindref="member">SerializeList()</ref> for batch processing. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>version</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The serialization format version used when the data was serialized. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the binary data buffer. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Length of the binary data in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for memory allocation during deserialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a vector of deserialized CommitMessages, or an error if deserialization fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="77" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a03619d672e0ddc55d55b3da2b7e42d5a" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>static Result&lt; std::string &gt; paimon::CommitMessage::ToDebugString</definition>
+        <argsstring>(const std::shared_ptr&lt; CommitMessage &gt; &amp;commit_message)</argsstring>
+        <name>ToDebugString</name>
+        <qualifiedname>paimon::CommitMessage::ToDebugString</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &amp;</type>
+          <declname>commit_message</declname>
+        </param>
+        <briefdescription>
+<para>Converts a commit message to a human-readable debug string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This is useful for logging, debugging, and troubleshooting purposes. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>commit_message</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The commit message to convert to string. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the debug string representation, or an error if conversion fails. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="85" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_commit_message_1a632e176063fab576732c6241c6bd6856" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::CommitMessage::~CommitMessage</definition>
+        <argsstring>()</argsstring>
+        <name>~CommitMessage</name>
+        <qualifiedname>paimon::CommitMessage::~CommitMessage</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="40" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Commit message for partition and bucket. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Support Serialize and Deserialize, compatible with java version. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h" bodystart="35" bodyend="86"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_commit_message_1a9159f8ad92ea44772c23c79520314604" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>CurrentVersion</name></member>
+      <member refid="classpaimon_1_1_commit_message_1a13c70379bb2ce34af537b85a5f4b7270" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_commit_message_1a452a4d820731446cd0040ae984dfd0e4" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>DeserializeList</name></member>
+      <member refid="classpaimon_1_1_commit_message_1aef2ceb513f93eb8ff64b67626bd8ce89" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_commit_message_1a3658330e724ddae3ac54be4715907e8f" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>SerializeList</name></member>
+      <member refid="classpaimon_1_1_commit_message_1a03619d672e0ddc55d55b3da2b7e42d5a" prot="public" virt="non-virtual"><scope>paimon::CommitMessage</scope><name>ToDebugString</name></member>
+      <member refid="classpaimon_1_1_commit_message_1a632e176063fab576732c6241c6bd6856" prot="public" virt="virtual"><scope>paimon::CommitMessage</scope><name>~CommitMessage</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

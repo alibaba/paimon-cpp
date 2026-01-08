@@ -1,0 +1,259 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_bitmap_index_result" kind="class" language="C++" prot="public">
+    <compoundname>paimon::BitmapIndexResult</compoundname>
+    <basecompoundref refid="classpaimon_1_1_file_index_result" prot="public" virt="non-virtual">paimon::FileIndexResult</basecompoundref>
+    <includes refid="bitmap__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h</includes>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpaimon_1_1_bitmap_index_result_1a0dd789149efd006c74a0eb08023117db" prot="public" static="no">
+        <type>std::function&lt; <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> &gt;()&gt;</type>
+        <definition>using paimon::BitmapIndexResult::BitmapSupplier =  std::function&lt;Result&lt;RoaringBitmap32&gt;()&gt;</definition>
+        <argsstring></argsstring>
+        <name>BitmapSupplier</name>
+        <qualifiedname>paimon::BitmapIndexResult::BitmapSupplier</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="34" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" bodystart="34" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_index_result_1aae6d982c3fd3f716f406be1fc16aba1d" prot="private" static="no" mutable="yes">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::BitmapIndexResult::initialized_</definition>
+        <argsstring></argsstring>
+        <name>initialized_</name>
+        <qualifiedname>paimon::BitmapIndexResult::initialized_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="56" column="18" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" bodystart="56" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_index_result_1a0f046bed119ebf87dc0bea33fde151df" prot="private" static="no" mutable="no">
+        <type><ref refid="classpaimon_1_1_bitmap_index_result_1a0dd789149efd006c74a0eb08023117db" kindref="member">BitmapSupplier</ref></type>
+        <definition>BitmapSupplier paimon::BitmapIndexResult::bitmap_supplier_</definition>
+        <argsstring></argsstring>
+        <name>bitmap_supplier_</name>
+        <qualifiedname>paimon::BitmapIndexResult::bitmap_supplier_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="57" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" bodystart="57" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_index_result_1adf7bd0ba520e59325d8fcadb5adce4f2" prot="private" static="no" mutable="yes">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref></type>
+        <definition>RoaringBitmap32 paimon::BitmapIndexResult::bitmap_</definition>
+        <argsstring></argsstring>
+        <name>bitmap_</name>
+        <qualifiedname>paimon::BitmapIndexResult::bitmap_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="58" column="29" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" bodystart="58" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1ac5404e988458bb0136941ab3435f3d08" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BitmapIndexResult::BitmapIndexResult</definition>
+        <argsstring>(BitmapSupplier bitmap_supplier)</argsstring>
+        <name>BitmapIndexResult</name>
+        <qualifiedname>paimon::BitmapIndexResult::BitmapIndexResult</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_bitmap_index_result_1a0dd789149efd006c74a0eb08023117db" kindref="member">BitmapSupplier</ref></type>
+          <declname>bitmap_supplier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="36" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1a5e369625c353b873f30d1b29352c7248" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BitmapIndexResult::~BitmapIndexResult</definition>
+        <argsstring>() override</argsstring>
+        <name>~BitmapIndexResult</name>
+        <qualifiedname>paimon::BitmapIndexResult::~BitmapIndexResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="37" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1a376e69106cfc7b59339a2396bc9d7fe9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>Result&lt; bool &gt; paimon::BitmapIndexResult::IsRemain</definition>
+        <argsstring>() const override</argsstring>
+        <name>IsRemain</name>
+        <qualifiedname>paimon::BitmapIndexResult::IsRemain</qualifiedname>
+        <reimplements refid="classpaimon_1_1_file_index_result_1a09dd9fb3c6aaf92dca100bf62e6d684b">IsRemain</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Whether the file is remained. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="40" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1ac8a278b501a57fb71a43190bf2617e81" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::BitmapIndexResult::And</definition>
+        <argsstring>(const std::shared_ptr&lt; FileIndexResult &gt; &amp;other) override</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::BitmapIndexResult::And</qualifiedname>
+        <reimplements refid="classpaimon_1_1_file_index_result_1aad183054045c2000e120921278ec81de">And</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the intersection of the current result with the provided result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="43" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1ae42303c66939824af06d1ed6ba5b5d50" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::BitmapIndexResult::Or</definition>
+        <argsstring>(const std::shared_ptr&lt; FileIndexResult &gt; &amp;other) override</argsstring>
+        <name>Or</name>
+        <qualifiedname>paimon::BitmapIndexResult::Or</qualifiedname>
+        <reimplements refid="classpaimon_1_1_file_index_result_1a0c7e7d61e45bc4e4abe66f926d8561f1">Or</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the union of the current result with the provided result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="47" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1adfecd4895bf6042e61782e2d4fac88e7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref> * &gt;</type>
+        <definition>Result&lt; const RoaringBitmap32 * &gt; paimon::BitmapIndexResult::GetBitmap</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBitmap</name>
+        <qualifiedname>paimon::BitmapIndexResult::GetBitmap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Inner <computeroutput><ref refid="classpaimon_1_1_roaring_bitmap32" kindref="compound">RoaringBitmap32</ref></computeroutput>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="51" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_index_result_1aafeed8a56468750949e973d28adb0ac6" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::BitmapIndexResult::ToString</definition>
+        <argsstring>() const override</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::BitmapIndexResult::ToString</qualifiedname>
+        <reimplements refid="classpaimon_1_1_file_index_result_1a8141fe8daef18f552b0bd01a1b6ad6d5">ToString</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="53" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>The implementation of bitmap file index result, represents row granularity. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para>The inner bitmap in <ref refid="classpaimon_1_1_bitmap_index_result" kindref="compound">BitmapIndexResult</ref> is lazily initialized only when the result is about to be used. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::BitmapIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::FileIndexResult</label>
+        <link refid="classpaimon_1_1_file_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; FileIndexResult &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::BitmapIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>bitmap_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::FileIndexResult</label>
+        <link refid="classpaimon_1_1_file_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::RoaringBitmap32</label>
+        <link refid="classpaimon_1_1_roaring_bitmap32"/>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; FileIndexResult &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h" bodystart="32" bodyend="59"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_bitmap_index_result_1ac8a278b501a57fb71a43190bf2617e81" prot="public" virt="virtual"><scope>paimon::BitmapIndexResult</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1adf7bd0ba520e59325d8fcadb5adce4f2" prot="private" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>bitmap_</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1a0f046bed119ebf87dc0bea33fde151df" prot="private" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>bitmap_supplier_</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1ac5404e988458bb0136941ab3435f3d08" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>BitmapIndexResult</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1a0dd789149efd006c74a0eb08023117db" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>BitmapSupplier</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1adfecd4895bf6042e61782e2d4fac88e7" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>GetBitmap</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1aae6d982c3fd3f716f406be1fc16aba1d" prot="private" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>initialized_</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1a376e69106cfc7b59339a2396bc9d7fe9" prot="public" virt="virtual"><scope>paimon::BitmapIndexResult</scope><name>IsRemain</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1ae42303c66939824af06d1ed6ba5b5d50" prot="public" virt="virtual"><scope>paimon::BitmapIndexResult</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a6f56e0bf2501247a97f9d68456eb6e3e" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>Remain</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1aa3f2676efb24a9a9ef200fbed194c45a" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>Skip</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1aafeed8a56468750949e973d28adb0ac6" prot="public" virt="virtual"><scope>paimon::BitmapIndexResult</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_bitmap_index_result_1a5e369625c353b873f30d1b29352c7248" prot="public" virt="non-virtual"><scope>paimon::BitmapIndexResult</scope><name>~BitmapIndexResult</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a606652e02127a4ff25ceb16523b3a219" prot="public" virt="virtual"><scope>paimon::BitmapIndexResult</scope><name>~FileIndexResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

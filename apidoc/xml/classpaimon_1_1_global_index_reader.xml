@@ -1,0 +1,85 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_reader" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexReader</compoundname>
+    <basecompoundref refid="classpaimon_1_1_function_visitor" prot="public" virt="non-virtual">paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</basecompoundref>
+    <includes refid="global__index__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_reader_1a800779e19415b13369bff8690e86798c" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_vector_search_global_index_result" kindref="compound">VectorSearchGlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; VectorSearchGlobalIndexResult &gt; &gt; paimon::GlobalIndexReader::VisitVectorSearch</definition>
+        <argsstring>(const std::shared_ptr&lt; VectorSearch &gt; &amp;vector_search)=0</argsstring>
+        <name>VisitVectorSearch</name>
+        <qualifiedname>paimon::GlobalIndexReader::VisitVectorSearch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt; &amp;</type>
+          <declname>vector_search</declname>
+        </param>
+        <briefdescription>
+<para>VisitVectorSearch performs approximate vector similarity search. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para><computeroutput>VisitVectorSearch</computeroutput> is thread-safe (not coroutine-safe) while other <computeroutput>VisitXXX</computeroutput> is not thread-safe. </para>
+</simplesect>
+<simplesect kind="warning"><para><computeroutput>VisitVectorSearch</computeroutput> may return error status when it is incorrectly invoked (e.g., BitmapGlobalIndexReader call <computeroutput>VisitVectorSearch</computeroutput>). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" line="45" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Reads and evaluates filter predicates against a global file index. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Derived classes are expected to implement the visitor methods (e.g., <computeroutput>VisitEqual</computeroutput>, <computeroutput>VisitIsNull</computeroutput>, etc.) to return index-based results that indicate which row satisfy the given predicate.</para>
+<para><simplesect kind="note"><para>All <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput> objects returned by implementations of this class use <bold>local row ids</bold> that start from 0 — not global row ids in the entire table. The <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput> can be converted to global row ids by calling <computeroutput>AddOffset()</computeroutput>. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexReader</label>
+        <link refid="classpaimon_1_1_global_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexReader</label>
+        <link refid="classpaimon_1_1_global_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" line="38" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h" bodystart="38" bodyend="47"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_function_visitor_1a9bf050077573e5a8633b64dfe28c02cd" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitContains</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a0912a7c916bc37d64508e96447be76fe" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitEndsWith</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af745a4e85ca02dd9693ccf513bf01dae" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ab69382b764629572d66d879b8704ebf1" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitGreaterOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a476cbf57433a84b9e06b81f8a9967e86" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitGreaterThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af084765e656e7989a390c793ca48507a" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1b5cb370e21f4e498d921036ceead405" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIsNotNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a8afe8c5ada434c3134f0cad4e5af38bc" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitIsNull</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a31e6d052bd6aa26dc85fd375aefd402d" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitLessOrEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1ae9b18b37aa036bb5ae3ac7299cbf4a74" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitLessThan</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1a1af81d98d01c2e87a7814fe906fea0f7" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitNotEqual</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1aa39876a5c1f4d2a8f423403ba840cc90" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitNotIn</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1adce72b1f0226f7415d907c2f37275261" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitStartsWith</name></member>
+      <member refid="classpaimon_1_1_global_index_reader_1a800779e19415b13369bff8690e86798c" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexReader</scope><name>VisitVectorSearch</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af9314ce379e89077c46cd3fcfaca76ae" prot="public" virt="virtual"><scope>paimon::GlobalIndexReader</scope><name>~FunctionVisitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

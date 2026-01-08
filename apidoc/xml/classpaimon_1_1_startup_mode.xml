@@ -1,0 +1,195 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_startup_mode" kind="class" language="C++" prot="public">
+    <compoundname>paimon::StartupMode</compoundname>
+    <includes refid="startup__mode_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_startup_mode_1aa1e626eef002364dccc1dfa5ca208096" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::StartupMode::value_</definition>
+        <argsstring></argsstring>
+        <name>value_</name>
+        <qualifiedname>paimon::StartupMode::value_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="60" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" bodystart="60" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1a2b7ab3526332ac571a139b6216b4b98f" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref></type>
+        <definition>static const StartupMode paimon::StartupMode::Default</definition>
+        <argsstring>()</argsstring>
+        <name>Default</name>
+        <qualifiedname>paimon::StartupMode::Default</qualifiedname>
+        <briefdescription>
+<para>Determines actual startup mode according to other table properties. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If &quot;scan.snapshot-id&quot; is set the actual startup mode will be &quot;from-snapshot&quot;, otherwise the actual startup mode will be &quot;latest-full&quot;. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="30" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1a511bb0bd6a55fb0e5dca5c48d921f7dd" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref></type>
+        <definition>static const StartupMode paimon::StartupMode::LatestFull</definition>
+        <argsstring>()</argsstring>
+        <name>LatestFull</name>
+        <qualifiedname>paimon::StartupMode::LatestFull</qualifiedname>
+        <briefdescription>
+<para>For streaming sources, produces the latest snapshot on the table upon first startup, and continue to read the latest changes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For batch sources, just produce the latest snapshot but does not read new changes. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="35" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1a0dd96f72ec13db0352822f205d0a4606" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref></type>
+        <definition>static const StartupMode paimon::StartupMode::Latest</definition>
+        <argsstring>()</argsstring>
+        <name>Latest</name>
+        <qualifiedname>paimon::StartupMode::Latest</qualifiedname>
+        <briefdescription>
+<para>For streaming sources, continuously reads latest changes without producing a snapshot at the beginning. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For batch sources, behaves the same as the &quot;latest-full&quot; startup mode. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="39" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1adbacac2725fca858a32d658c3293007c" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref></type>
+        <definition>static const StartupMode paimon::StartupMode::FromSnapshot</definition>
+        <argsstring>()</argsstring>
+        <name>FromSnapshot</name>
+        <qualifiedname>paimon::StartupMode::FromSnapshot</qualifiedname>
+        <briefdescription>
+<para>For streaming sources, continuously reads changes starting from snapshot specified by &quot;scan.snapshot-id&quot;, without producing a snapshot at the beginning. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For batch sources, produces a snapshot specified by &quot;scan.snapshot-id&quot; but does not read new changes. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="44" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1aa5950b633ff154c8020f12b542c48838" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref></type>
+        <definition>static const StartupMode paimon::StartupMode::FromSnapshotFull</definition>
+        <argsstring>()</argsstring>
+        <name>FromSnapshotFull</name>
+        <qualifiedname>paimon::StartupMode::FromSnapshotFull</qualifiedname>
+        <briefdescription>
+<para>For streaming sources, produces from snapshot specified by &quot;scan.snapshot-id&quot; on the table upon first startup, and continuously reads changes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>For batch sources, produces a snapshot specified by &quot;scan.snapshot-id&quot; but does not read new changes </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="49" column="30"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1a10cfbdc4520436a9c886e0d4f60597af" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref> &gt;</type>
+        <definition>static Result&lt; StartupMode &gt; paimon::StartupMode::FromString</definition>
+        <argsstring>(const std::string &amp;str)</argsstring>
+        <name>FromString</name>
+        <qualifiedname>paimon::StartupMode::FromString</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>str</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="54" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1ad610a4e56d7d50a88045896cda54e5a1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::StartupMode::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::StartupMode::ToString</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="52" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1a79219e050f10488f2846c64477163be4" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::StartupMode::operator==</definition>
+        <argsstring>(const StartupMode &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::StartupMode::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_startup_mode" kindref="compound">StartupMode</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="53" column="10"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_startup_mode_1aaa0d62693f99f547d1a557633cdd3f10" prot="private" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::StartupMode::StartupMode</definition>
+        <argsstring>(const std::string &amp;value)</argsstring>
+        <name>StartupMode</name>
+        <qualifiedname>paimon::StartupMode::StartupMode</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="57" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" bodystart="57" bodyend="57"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Specifies the startup mode for log consumer. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" line="25" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/startup_mode.h" bodystart="25" bodyend="61"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_startup_mode_1a2b7ab3526332ac571a139b6216b4b98f" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>Default</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1adbacac2725fca858a32d658c3293007c" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>FromSnapshot</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1aa5950b633ff154c8020f12b542c48838" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>FromSnapshotFull</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1a10cfbdc4520436a9c886e0d4f60597af" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>FromString</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1a0dd96f72ec13db0352822f205d0a4606" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>Latest</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1a511bb0bd6a55fb0e5dca5c48d921f7dd" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>LatestFull</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1a79219e050f10488f2846c64477163be4" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1aaa0d62693f99f547d1a557633cdd3f10" prot="private" virt="non-virtual"><scope>paimon::StartupMode</scope><name>StartupMode</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1ad610a4e56d7d50a88045896cda54e5a1" prot="public" virt="non-virtual"><scope>paimon::StartupMode</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_startup_mode_1aa1e626eef002364dccc1dfa5ca208096" prot="private" virt="non-virtual"><scope>paimon::StartupMode</scope><name>value_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

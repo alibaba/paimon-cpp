@@ -1,0 +1,403 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_timestamp" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Timestamp</compoundname>
+    <includes refid="timestamp_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h</includes>
+    <sectiondef kind="public-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a0dedb5ee71152d52dc6bd04eb4cff1c3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::Timestamp::DEFAULT_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>DEFAULT_PRECISION</name>
+        <qualifiedname>paimon::Timestamp::DEFAULT_PRECISION</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="121" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="121" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a41fe658b1f3f4ab41370479be561b2b3" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::Timestamp::MILLIS_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MILLIS_PRECISION</name>
+        <qualifiedname>paimon::Timestamp::MILLIS_PRECISION</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="122" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a6cac6f2b267b86bf4ce6fa360a8b9351" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::Timestamp::MIN_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MIN_PRECISION</name>
+        <qualifiedname>paimon::Timestamp::MIN_PRECISION</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="123" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a8223acec083c94952519d929b600dc6c" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::Timestamp::MAX_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MAX_PRECISION</name>
+        <qualifiedname>paimon::Timestamp::MAX_PRECISION</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="124" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a8e5c1d0e2e715f7c6e79f8a3f163c874" prot="public" static="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>const int32_t paimon::Timestamp::MAX_COMPACT_PRECISION</definition>
+        <argsstring></argsstring>
+        <name>MAX_COMPACT_PRECISION</name>
+        <qualifiedname>paimon::Timestamp::MAX_COMPACT_PRECISION</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="125" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="125" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1af23415541eff41f146cb836f52983bb5" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Timestamp::millisecond_</definition>
+        <argsstring></argsstring>
+        <name>millisecond_</name>
+        <qualifiedname>paimon::Timestamp::millisecond_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="128" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="128" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_timestamp_1a90659f57355c167d8e08b7ee14c1d41d" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Timestamp::nano_of_millisecond_</definition>
+        <argsstring></argsstring>
+        <name>nano_of_millisecond_</name>
+        <qualifiedname>paimon::Timestamp::nano_of_millisecond_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="129" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="129" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a39f9242daba21b4cc32e1dd008cb16f2" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Timestamp::Timestamp</definition>
+        <argsstring>()</argsstring>
+        <name>Timestamp</name>
+        <qualifiedname>paimon::Timestamp::Timestamp</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="37" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="37" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a746349c7f687d1e938ed1f438d389dc1" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Timestamp::Timestamp</definition>
+        <argsstring>(int64_t millisecond, int32_t nano_of_millisecond)</argsstring>
+        <name>Timestamp</name>
+        <qualifiedname>paimon::Timestamp::Timestamp</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>millisecond</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>nano_of_millisecond</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="38" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="38" bodyend="41"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a549dce6e8667e06b48c787a4b6f00c2e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Timestamp::GetMillisecond</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMillisecond</name>
+        <qualifiedname>paimon::Timestamp::GetMillisecond</qualifiedname>
+        <briefdescription>
+<para>Get the number of milliseconds since <computeroutput>1970-01-01 00:00:00</computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="44" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="44" bodyend="46"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a34724bf15b5c30f0cc635442d312bbd9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>int32_t paimon::Timestamp::GetNanoOfMillisecond</definition>
+        <argsstring>() const</argsstring>
+        <name>GetNanoOfMillisecond</name>
+        <qualifiedname>paimon::Timestamp::GetNanoOfMillisecond</qualifiedname>
+        <briefdescription>
+<para>Get the number of nanoseconds (the nanoseconds within the milliseconds). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The value range is from 0 to 999,999. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="50" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="50" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1ae04623eefa92cd7aa13438c4be541721" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></type>
+        <definition>Timestamp paimon::Timestamp::ToMillisTimestamp</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMillisTimestamp</name>
+        <qualifiedname>paimon::Timestamp::ToMillisTimestamp</qualifiedname>
+        <briefdescription>
+<para>Converts this <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> object to millis <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> object (ignore <computeroutput>nanos_of_millisecond</computeroutput>). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="75" column="15" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="75" bodyend="77"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a15f7bc4696a61ef0d904f652bfa94595" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Timestamp::ToMicrosecond</definition>
+        <argsstring>() const</argsstring>
+        <name>ToMicrosecond</name>
+        <qualifiedname>paimon::Timestamp::ToMicrosecond</qualifiedname>
+        <briefdescription>
+<para>Converts this <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> object to microsecond. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="80" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a44c62367d8eb97de46e0ae9f47291c4f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::Timestamp::ToNanosecond</definition>
+        <argsstring>() const</argsstring>
+        <name>ToNanosecond</name>
+        <qualifiedname>paimon::Timestamp::ToNanosecond</qualifiedname>
+        <briefdescription>
+<para>Converts this <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> object to nanoseconds. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="83" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="83" bodyend="87"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a158c632cfda6f6c9110617670783c25e" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Timestamp::operator==</definition>
+        <argsstring>(const Timestamp &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::Timestamp::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="95" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="95" bodyend="101"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a753e62a4b85cd27f1a20e9895e71988f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Timestamp::operator&lt;</definition>
+        <argsstring>(const Timestamp &amp;other) const</argsstring>
+        <name>operator&lt;</name>
+        <qualifiedname>paimon::Timestamp::operator&lt;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="103" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="103" bodyend="108"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a8ab032f82e4824e6c8667c4b1fd7962b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Timestamp::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Timestamp::ToString</qualifiedname>
+        <briefdescription>
+<para>Converts the <ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref> object to a string representation in UTC (GMT). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The format of the returned string is &quot;YYYY-MM-DD HH:MM:SS.nnnnnnnnn&quot;, where the date and time are in UTC (GMT), and the nanoseconds are derived from the millisecond and nanosecond parts of the timestamp.</para>
+<para><simplesect kind="note"><para>This method uses UTC (GMT) time zone when formatting the time. This is different from the Java Paimon implementation, which may convert the timestamp to the local time zone of the machine running the Java process. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="119" column="17"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1aa117afd213a415cb336179deeb172662" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></type>
+        <definition>static Timestamp paimon::Timestamp::FromEpochMillis</definition>
+        <argsstring>(int64_t milliseconds)</argsstring>
+        <name>FromEpochMillis</name>
+        <qualifiedname>paimon::Timestamp::FromEpochMillis</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>milliseconds</declname>
+        </param>
+        <briefdescription>
+<para>Creates an instance of <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> from milliseconds. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The nanos-of-millisecond field will be set to zero.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>milliseconds</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of milliseconds since <computeroutput>1970-01-01 00:00:00</computeroutput>; a negative number is the number of milliseconds before <computeroutput>1970-01-01 00:00:00</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="60" column="22" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="60" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1a539163241829778218e5bb71ee6d7c2e" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></type>
+        <definition>static Timestamp paimon::Timestamp::FromEpochMillis</definition>
+        <argsstring>(int64_t milliseconds, int32_t nanos_of_millisecond)</argsstring>
+        <name>FromEpochMillis</name>
+        <qualifiedname>paimon::Timestamp::FromEpochMillis</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>milliseconds</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>nanos_of_millisecond</declname>
+        </param>
+        <briefdescription>
+<para>Creates an instance of <computeroutput><ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref></computeroutput> from milliseconds and a nanos-of-millisecond. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>milliseconds</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The number of milliseconds since <computeroutput>1970-01-01 00:00:00</computeroutput>; a negative number is the number of milliseconds before <computeroutput>1970-01-01 00:00:00</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>nanos_of_millisecond</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The nanoseconds within the millisecond, from 0 to 999,999. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="69" column="22" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="69" bodyend="71"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_timestamp_1ae76e163453aea9065c69ab7930d56846" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>static bool paimon::Timestamp::IsCompact</definition>
+        <argsstring>(int32_t precision)</argsstring>
+        <name>IsCompact</name>
+        <qualifiedname>paimon::Timestamp::IsCompact</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>precision</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Whether the timestamp data is small enough to be stored in a long of milliseconds. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="91" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="91" bodyend="93"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A data structure representing data of <ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref> without timezone. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This data structure is immutable and consists of a milliseconds and nanos-of-millisecond since <computeroutput>1970-01-01 00:00:00</computeroutput>. It might be stored in a compact representation (as a long value) if values are small enough. <ref refid="classpaimon_1_1_timestamp" kindref="compound">Timestamp</ref> range from 0000-01-01 00:00:00.000000000 to 9999-12-31 23:59:59.999999999. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/timestamp.h" bodystart="35" bodyend="130"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_timestamp_1a0dedb5ee71152d52dc6bd04eb4cff1c3" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>DEFAULT_PRECISION</name></member>
+      <member refid="classpaimon_1_1_timestamp_1aa117afd213a415cb336179deeb172662" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>FromEpochMillis</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a539163241829778218e5bb71ee6d7c2e" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>FromEpochMillis</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a549dce6e8667e06b48c787a4b6f00c2e" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>GetMillisecond</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a34724bf15b5c30f0cc635442d312bbd9" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>GetNanoOfMillisecond</name></member>
+      <member refid="classpaimon_1_1_timestamp_1ae76e163453aea9065c69ab7930d56846" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>IsCompact</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a8e5c1d0e2e715f7c6e79f8a3f163c874" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>MAX_COMPACT_PRECISION</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a8223acec083c94952519d929b600dc6c" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>MAX_PRECISION</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a41fe658b1f3f4ab41370479be561b2b3" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>MILLIS_PRECISION</name></member>
+      <member refid="classpaimon_1_1_timestamp_1af23415541eff41f146cb836f52983bb5" prot="private" virt="non-virtual"><scope>paimon::Timestamp</scope><name>millisecond_</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a6cac6f2b267b86bf4ce6fa360a8b9351" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>MIN_PRECISION</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a90659f57355c167d8e08b7ee14c1d41d" prot="private" virt="non-virtual"><scope>paimon::Timestamp</scope><name>nano_of_millisecond_</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a753e62a4b85cd27f1a20e9895e71988f" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>operator&lt;</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a158c632cfda6f6c9110617670783c25e" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a39f9242daba21b4cc32e1dd008cb16f2" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>Timestamp</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a746349c7f687d1e938ed1f438d389dc1" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>Timestamp</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a15f7bc4696a61ef0d904f652bfa94595" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>ToMicrosecond</name></member>
+      <member refid="classpaimon_1_1_timestamp_1ae04623eefa92cd7aa13438c4be541721" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>ToMillisTimestamp</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a44c62367d8eb97de46e0ae9f47291c4f" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>ToNanosecond</name></member>
+      <member refid="classpaimon_1_1_timestamp_1a8ab032f82e4824e6c8667c4b1fd7962b" prot="public" virt="non-virtual"><scope>paimon::Timestamp</scope><name>ToString</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

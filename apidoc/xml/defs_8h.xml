@@ -1,0 +1,481 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="defs_8h" kind="file" language="C++">
+    <compoundname>defs.h</compoundname>
+    <includes local="no">cstdint</includes>
+    <includes local="no">limits</includes>
+    <includes refid="visibility_8h" local="yes">paimon/visibility.h</includes>
+    <includedby refid="api_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/api.h</includedby>
+    <includedby refid="file__index__result_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h</includedby>
+    <includedby refid="file__store__commit_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h</includedby>
+    <includedby refid="file__store__write_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h</includedby>
+    <includedby refid="column__stats_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h</includedby>
+    <includedby refid="literal_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h</includedby>
+    <includedby refid="type__fwd_8h" local="yes">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/type_fwd.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h</label>
+        <link refid="defs_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon/visibility.h</label>
+        <link refid="visibility_8h"/>
+      </node>
+      <node id="2">
+        <label>cstdint</label>
+      </node>
+      <node id="3">
+        <label>limits</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/api.h</label>
+        <link refid="api_8h"/>
+      </node>
+      <node id="19">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/catalog.h</label>
+        <link refid="catalog_8h"/>
+      </node>
+      <node id="20">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/catalog/identifier.h</label>
+        <link refid="identifier_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+      </node>
+      <node id="21">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h</label>
+        <link refid="commit__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="22">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_message.h</label>
+        <link refid="commit__message_8h"/>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="23" relation="include">
+        </childnode>
+      </node>
+      <node id="24">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/data/blob.h</label>
+        <link refid="blob_8h"/>
+      </node>
+      <node id="1">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h</label>
+        <link refid="defs_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="18" relation="include">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/bitmap_index_result.h</label>
+        <link refid="bitmap__index__result_8h"/>
+      </node>
+      <node id="6">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_format.h</label>
+        <link refid="file__index__format_8h"/>
+      </node>
+      <node id="5">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h</label>
+        <link refid="file__index__reader_8h"/>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h</label>
+        <link refid="file__index__result_8h"/>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+      </node>
+      <node id="7">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_indexer.h</label>
+        <link refid="file__indexer_8h"/>
+      </node>
+      <node id="8">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_commit.h</label>
+        <link refid="file__store__commit_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="9">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h</label>
+        <link refid="file__store__write_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="10">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/column_stats.h</label>
+        <link refid="column__stats_8h"/>
+      </node>
+      <node id="26">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h</label>
+        <link refid="file__format_8h"/>
+      </node>
+      <node id="25">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h</label>
+        <link refid="format__stats__extractor_8h"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="27">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_writer.h</label>
+        <link refid="format__writer_8h"/>
+      </node>
+      <node id="28">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/reader_builder.h</label>
+        <link refid="reader__builder_8h"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="29">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/writer_builder.h</label>
+        <link refid="writer__builder_8h"/>
+        <childnode refid="26" relation="include">
+        </childnode>
+      </node>
+      <node id="13">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_reader.h</label>
+        <link refid="global__index__reader_8h"/>
+        <childnode refid="14" relation="include">
+        </childnode>
+        <childnode refid="15" relation="include">
+        </childnode>
+      </node>
+      <node id="16">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_scan.h</label>
+        <link refid="global__index__scan_8h"/>
+      </node>
+      <node id="14">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h</label>
+        <link refid="global__indexer_8h"/>
+      </node>
+      <node id="15">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h</label>
+        <link refid="row__range__global__index__scanner_8h"/>
+        <childnode refid="16" relation="include">
+        </childnode>
+      </node>
+      <node id="30">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/metrics.h</label>
+        <link refid="metrics_8h"/>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="31" relation="include">
+        </childnode>
+      </node>
+      <node id="23">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/migrate/file_meta_utils.h</label>
+        <link refid="file__meta__utils_8h"/>
+      </node>
+      <node id="35">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h</label>
+        <link refid="orphan__files__cleaner_8h"/>
+      </node>
+      <node id="12">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/function_visitor.h</label>
+        <link refid="function__visitor_8h"/>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="13" relation="include">
+        </childnode>
+      </node>
+      <node id="17">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/leaf_predicate.h</label>
+        <link refid="leaf__predicate_8h"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="11">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/predicate/literal.h</label>
+        <link refid="literal_8h"/>
+        <childnode refid="12" relation="include">
+        </childnode>
+        <childnode refid="17" relation="include">
+        </childnode>
+      </node>
+      <node id="36">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/read_context.h</label>
+        <link refid="read__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="31">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/batch_reader.h</label>
+        <link refid="batch__reader_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="32" relation="include">
+        </childnode>
+        <childnode refid="34" relation="include">
+        </childnode>
+      </node>
+      <node id="32">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/file_batch_reader.h</label>
+        <link refid="file__batch__reader_8h"/>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="33" relation="include">
+        </childnode>
+      </node>
+      <node id="33">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/prefetch_file_batch_reader.h</label>
+        <link refid="prefetch__file__batch__reader_8h"/>
+      </node>
+      <node id="37">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h</label>
+        <link refid="scan__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="34">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h</label>
+        <link refid="table__read_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="38">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_scan.h</label>
+        <link refid="table__scan_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="18">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/type_fwd.h</label>
+        <link refid="type__fwd_8h"/>
+        <childnode refid="19" relation="include">
+        </childnode>
+        <childnode refid="20" relation="include">
+        </childnode>
+        <childnode refid="21" relation="include">
+        </childnode>
+        <childnode refid="22" relation="include">
+        </childnode>
+        <childnode refid="24" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="25" relation="include">
+        </childnode>
+        <childnode refid="27" relation="include">
+        </childnode>
+        <childnode refid="28" relation="include">
+        </childnode>
+        <childnode refid="29" relation="include">
+        </childnode>
+        <childnode refid="30" relation="include">
+        </childnode>
+        <childnode refid="35" relation="include">
+        </childnode>
+        <childnode refid="36" relation="include">
+        </childnode>
+        <childnode refid="37" relation="include">
+        </childnode>
+        <childnode refid="38" relation="include">
+        </childnode>
+        <childnode refid="39" relation="include">
+        </childnode>
+      </node>
+      <node id="39">
+        <label>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h</label>
+        <link refid="write__context_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
+    <innerclass refid="structpaimon_1_1_options" prot="public">paimon::Options</innerclass>
+    <innernamespace refid="namespacepaimon">paimon</innernamespace>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="comment">/*</highlight></codeline>
+<codeline lineno="2"><highlight class="comment"><sp/>*<sp/>Copyright<sp/>2024-present<sp/>Alibaba<sp/>Inc.</highlight></codeline>
+<codeline lineno="3"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="4"><highlight class="comment"><sp/>*<sp/>Licensed<sp/>under<sp/>the<sp/>Apache<sp/>License,<sp/>Version<sp/>2.0<sp/>(the<sp/>&quot;License&quot;);</highlight></codeline>
+<codeline lineno="5"><highlight class="comment"><sp/>*<sp/>you<sp/>may<sp/>not<sp/>use<sp/>this<sp/>file<sp/>except<sp/>in<sp/>compliance<sp/>with<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="6"><highlight class="comment"><sp/>*<sp/>You<sp/>may<sp/>obtain<sp/>a<sp/>copy<sp/>of<sp/>the<sp/>License<sp/>at</highlight></codeline>
+<codeline lineno="7"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="8"><highlight class="comment"><sp/>*<sp/><sp/><sp/>http://www.apache.org/licenses/LICENSE-2.0</highlight></codeline>
+<codeline lineno="9"><highlight class="comment"><sp/>*</highlight></codeline>
+<codeline lineno="10"><highlight class="comment"><sp/>*<sp/>Unless<sp/>required<sp/>by<sp/>applicable<sp/>law<sp/>or<sp/>agreed<sp/>to<sp/>in<sp/>writing,<sp/>software</highlight></codeline>
+<codeline lineno="11"><highlight class="comment"><sp/>*<sp/>distributed<sp/>under<sp/>the<sp/>License<sp/>is<sp/>distributed<sp/>on<sp/>an<sp/>&quot;AS<sp/>IS&quot;<sp/>BASIS,</highlight></codeline>
+<codeline lineno="12"><highlight class="comment"><sp/>*<sp/>WITHOUT<sp/>WARRANTIES<sp/>OR<sp/>CONDITIONS<sp/>OF<sp/>ANY<sp/>KIND,<sp/>either<sp/>express<sp/>or<sp/>implied.</highlight></codeline>
+<codeline lineno="13"><highlight class="comment"><sp/>*<sp/>See<sp/>the<sp/>License<sp/>for<sp/>the<sp/>specific<sp/>language<sp/>governing<sp/>permissions<sp/>and</highlight></codeline>
+<codeline lineno="14"><highlight class="comment"><sp/>*<sp/>limitations<sp/>under<sp/>the<sp/>License.</highlight></codeline>
+<codeline lineno="15"><highlight class="comment"><sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#pragma<sp/>once</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;cstdint&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;limits&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;<ref refid="visibility_8h" kindref="compound">paimon/visibility.h</ref>&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="keyword">namespace<sp/></highlight><highlight class="normal"><ref refid="namespacepaimon" kindref="compound">paimon</ref><sp/>{</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27" refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" refkind="member"><highlight class="keyword">enum<sp/>class</highlight><highlight class="normal"><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" kindref="member">FieldType</ref><sp/>{</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ac48d5da12d702e73d6966069f2687376" kindref="member">BOOLEAN</ref><sp/>=<sp/>1,</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a0ad48930fd2845c5b42f6c5747cc87c0" kindref="member">TINYINT</ref><sp/>=<sp/>2,</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a42a2165cd790300c66917317b8bf7818" kindref="member">SMALLINT</ref><sp/>=<sp/>3,</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a53f93baa3057821107c750323892fa92" kindref="member">INT</ref><sp/>=<sp/>4,</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a7f4c937d16ac710f52c288124cc886ae" kindref="member">BIGINT</ref><sp/>=<sp/>5,</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ae738c26bf4ce1037fa81b039a915cbf6" kindref="member">FLOAT</ref><sp/>=<sp/>6,</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7afd3e4ece78a7d422280d5ed379482229" kindref="member">DOUBLE</ref><sp/>=<sp/>7,</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a63b588d5559f64f89a416e656880b949" kindref="member">STRING</ref><sp/>=<sp/>8,</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a98ad0e8750ae10ad556ed7a62affb452" kindref="member">BINARY</ref><sp/>=<sp/>9,</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a87fb568bfdc633ffd5dee0f22cb4606c" kindref="member">TIMESTAMP</ref><sp/>=<sp/>10,</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a13d992d671957e9a2b3e936ca0cf14a4" kindref="member">DECIMAL</ref><sp/>=<sp/>11,</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a633a6c7a6b9958f8174250094daf1e6a" kindref="member">DATE</ref><sp/>=<sp/>12,</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7acb4fb1757fb37c43cded35d3eb857c43" kindref="member">ARRAY</ref><sp/>=<sp/>13,</highlight></codeline>
+<codeline lineno="46"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a5af1a3a285c2bdee4192223e31e1f833" kindref="member">MAP</ref><sp/>=<sp/>14,</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ab8223be2455e0ea5a0e63e8f018d6fc3" kindref="member">STRUCT</ref><sp/>=<sp/>15,</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a1649cff06611a6025da3dd511a97fb43" kindref="member">BLOB</ref><sp/>=<sp/>16,</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"><sp/><sp/><sp/><sp/><ref refid="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a696b031073e74bf2cb98e5ef201d4aa3" kindref="member">UNKNOWN</ref><sp/>=<sp/>128,</highlight></codeline>
+<codeline lineno="50"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="structpaimon_1_1_options" refkind="compound"><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_EXPORT</ref><sp/><ref refid="structpaimon_1_1_options" kindref="compound">Options</ref><sp/>{</highlight></codeline>
+<codeline lineno="71"></codeline>
+<codeline lineno="73" refid="structpaimon_1_1_options_1ab8ce808006ca88bbf3dd4277e7199bc8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FIELDS_SEPARATOR[];</highlight></codeline>
+<codeline lineno="75" refid="structpaimon_1_1_options_1ad04919fa4835ff09ed568842e292d6ab" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FIELDS_PREFIX[];</highlight></codeline>
+<codeline lineno="77" refid="structpaimon_1_1_options_1ad6db9a62ddd32788b4ac9d094b0d75a7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>AGG_FUNCTION[];</highlight></codeline>
+<codeline lineno="79" refid="structpaimon_1_1_options_1a2efcd211258e28e590cedf2b69ac69a3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DEFAULT_AGG_FUNCTION[];</highlight></codeline>
+<codeline lineno="81" refid="structpaimon_1_1_options_1a4885922a6c0e228f6af911e33d6171e3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>IGNORE_RETRACT[];</highlight></codeline>
+<codeline lineno="83" refid="structpaimon_1_1_options_1a590f345233ef3c5d4e7f8e3b2d1a0714" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SEQUENCE_GROUP[];</highlight></codeline>
+<codeline lineno="85"></codeline>
+<codeline lineno="88" refid="structpaimon_1_1_options_1a51bffec724b24ffc438dddded120da40" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>BUCKET[];</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94" refid="structpaimon_1_1_options_1a1274b48114fb97b2881ac12839977b10" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>BUCKET_KEY[];</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(yonghao.fyh):<sp/>This<sp/>option<sp/>has<sp/>not<sp/>been<sp/>used<sp/>yet</highlight></codeline>
+<codeline lineno="98" refid="structpaimon_1_1_options_1a5b7cfde2732a102a84c9d0a140cbbec7" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>PAGE_SIZE[];</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102" refid="structpaimon_1_1_options_1ab6ab49b3757e09afa8a0ea93e102da6b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FILE_FORMAT[];</highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106" refid="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FILE_SYSTEM[];</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>TODO(yonghao.fyh):<sp/>xinyu,<sp/>change<sp/>the<sp/>default<sp/>value<sp/>to<sp/>128MB<sp/>for<sp/>primary<sp/>key<sp/>table.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="110" refid="structpaimon_1_1_options_1aea71adb55d0c0163de81ce345ab60a3c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>TARGET_FILE_SIZE[];</highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight></codeline>
+<codeline lineno="113" refid="structpaimon_1_1_options_1aa10918f1e1847610cc2369e0f6701419" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>BLOB_TARGET_FILE_SIZE[];</highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117" refid="structpaimon_1_1_options_1a3d2781743b85911a6245f621ab2b5a72" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>PARTITION_DEFAULT_NAME[];</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="121" refid="structpaimon_1_1_options_1a71a027400d3e66ad15312ddd0af73e9c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FILE_COMPRESSION[];</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="126" refid="structpaimon_1_1_options_1aa5b3a1fc8018b3cfa18036e9200f7a77" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FILE_COMPRESSION_ZSTD_LEVEL[];</highlight></codeline>
+<codeline lineno="127"><highlight class="normal"></highlight></codeline>
+<codeline lineno="130" refid="structpaimon_1_1_options_1a3c4da2efb535830009f96cf610abb48e" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MANIFEST_TARGET_FILE_SIZE[];</highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134" refid="structpaimon_1_1_options_1a0ac79f203f9b012175941c410e7b8aa2" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MANIFEST_FORMAT[];</highlight></codeline>
+<codeline lineno="135"><highlight class="normal"></highlight></codeline>
+<codeline lineno="137" refid="structpaimon_1_1_options_1a64199aab5e2949c8a6213fe2888c6c12" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MANIFEST_COMPRESSION[];</highlight></codeline>
+<codeline lineno="138"><highlight class="normal"></highlight></codeline>
+<codeline lineno="141" refid="structpaimon_1_1_options_1a2a5f00d1318d9b0a6ae142ab4048e6b6" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MANIFEST_MERGE_MIN_COUNT[];</highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="145" refid="structpaimon_1_1_options_1a180ad44e1fe9b14b08d0f11128c2036b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MANIFEST_FULL_COMPACTION_FILE_SIZE[];</highlight></codeline>
+<codeline lineno="146"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149" refid="structpaimon_1_1_options_1aa609b09a43e0194db031cadb22e7252b" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SOURCE_SPLIT_TARGET_SIZE[];</highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153" refid="structpaimon_1_1_options_1a8db37fd6e275d5d4db725a76f34bd8e9" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SOURCE_SPLIT_OPEN_FILE_COST[];</highlight></codeline>
+<codeline lineno="154"><highlight class="normal"></highlight></codeline>
+<codeline lineno="157" refid="structpaimon_1_1_options_1a78c2c1ab1c9c296a43813c9cacdfe835" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SCAN_SNAPSHOT_ID[];</highlight></codeline>
+<codeline lineno="158"><highlight class="normal"></highlight></codeline>
+<codeline lineno="161" refid="structpaimon_1_1_options_1a4943f66c2aa6662477edc4ff83f2aeac" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SCAN_MODE[];</highlight></codeline>
+<codeline lineno="162"><highlight class="normal"></highlight></codeline>
+<codeline lineno="165" refid="structpaimon_1_1_options_1a7f83ced15c93c7fd98c28ed4b8a80935" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>READ_BATCH_SIZE[];</highlight></codeline>
+<codeline lineno="166"><highlight class="normal"></highlight></codeline>
+<codeline lineno="169" refid="structpaimon_1_1_options_1a2287eaa3a9b49904e10b009a7f57e1cc" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>WRITE_BATCH_SIZE[];</highlight></codeline>
+<codeline lineno="170"><highlight class="normal"></highlight></codeline>
+<codeline lineno="173" refid="structpaimon_1_1_options_1a047552260c3ed90836e59b5c6a184a7a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>WRITE_BUFFER_SIZE[];</highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight></codeline>
+<codeline lineno="177" refid="structpaimon_1_1_options_1a2eae818025acd9da707952c56dc6eed1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SNAPSHOT_NUM_RETAINED_MIN[];</highlight></codeline>
+<codeline lineno="178"><highlight class="normal"></highlight></codeline>
+<codeline lineno="181" refid="structpaimon_1_1_options_1a2c753272f7afce85fd4f9c13c37b367d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SNAPSHOT_NUM_RETAINED_MAX[];</highlight></codeline>
+<codeline lineno="182"><highlight class="normal"></highlight></codeline>
+<codeline lineno="185" refid="structpaimon_1_1_options_1a878d288cd32767680a5f2c1b6540ac54" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SNAPSHOT_TIME_RETAINED[];</highlight></codeline>
+<codeline lineno="186"><highlight class="normal"></highlight></codeline>
+<codeline lineno="189" refid="structpaimon_1_1_options_1ac3ba4534124e27beb027dac13ed585ee" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SNAPSHOT_EXPIRE_LIMIT[];</highlight></codeline>
+<codeline lineno="190"><highlight class="normal"></highlight></codeline>
+<codeline lineno="194" refid="structpaimon_1_1_options_1a0323dc398212e2087a542ffe65ec6120" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SNAPSHOT_CLEAN_EMPTY_DIRECTORIES[];</highlight></codeline>
+<codeline lineno="195"><highlight class="normal"></highlight></codeline>
+<codeline lineno="197" refid="structpaimon_1_1_options_1a2448d09733a570a6c9f66b433b58bfc8" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>COMMIT_TIMEOUT[];</highlight></codeline>
+<codeline lineno="198"><highlight class="normal"></highlight></codeline>
+<codeline lineno="200" refid="structpaimon_1_1_options_1adb267e06a41749e8d4adbd1fa4da47e4" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>COMMIT_MAX_RETRIES[];</highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="204" refid="structpaimon_1_1_options_1a07322605bcff72ca8281dbccda0daab3" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SEQUENCE_FIELD[];</highlight></codeline>
+<codeline lineno="205"><highlight class="normal"></highlight></codeline>
+<codeline lineno="208" refid="structpaimon_1_1_options_1a70e6bcd22de046c55b5c756b1806528c" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SEQUENCE_FIELD_SORT_ORDER[];</highlight></codeline>
+<codeline lineno="209"><highlight class="normal"></highlight></codeline>
+<codeline lineno="212" refid="structpaimon_1_1_options_1a76a874c19324589247093ffc26d0acc1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>MERGE_ENGINE[];</highlight></codeline>
+<codeline lineno="213"><highlight class="normal"></highlight></codeline>
+<codeline lineno="216" refid="structpaimon_1_1_options_1a98c43b0233de7def0c32485028e72e8d" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SORT_ENGINE[];</highlight></codeline>
+<codeline lineno="217"><highlight class="normal"></highlight></codeline>
+<codeline lineno="219" refid="structpaimon_1_1_options_1a6933b0046d98486fc800cd38c222b773" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>IGNORE_DELETE[];</highlight></codeline>
+<codeline lineno="220"><highlight class="normal"></highlight></codeline>
+<codeline lineno="223" refid="structpaimon_1_1_options_1aa71f20c1cbcfbc05c5b7438c1ef90355" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FIELDS_DEFAULT_AGG_FUNC[];</highlight></codeline>
+<codeline lineno="224"><highlight class="normal"></highlight></codeline>
+<codeline lineno="229" refid="structpaimon_1_1_options_1a74820aa9cd3a53d9685ccbc469ee6367" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DELETION_VECTORS_ENABLED[];</highlight></codeline>
+<codeline lineno="230"><highlight class="normal"></highlight></codeline>
+<codeline lineno="237" refid="structpaimon_1_1_options_1a221864b071bf35238a2f0643ef707c91" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>CHANGELOG_PRODUCER[];</highlight></codeline>
+<codeline lineno="238"><highlight class="normal"></highlight></codeline>
+<codeline lineno="241" refid="structpaimon_1_1_options_1a4bb834532b220d8fa4bac2df74d26e05" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FORCE_LOOKUP[];</highlight></codeline>
+<codeline lineno="242"><highlight class="normal"></highlight></codeline>
+<codeline lineno="245" refid="structpaimon_1_1_options_1af173f870c67bfaa3fcf3800fa0cf9402" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE[];</highlight></codeline>
+<codeline lineno="246"><highlight class="normal"></highlight></codeline>
+<codeline lineno="249" refid="structpaimon_1_1_options_1a57cdd3e2e66df9a97ee51bcd60251c89" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP[];</highlight></codeline>
+<codeline lineno="250"><highlight class="normal"></highlight></codeline>
+<codeline lineno="254" refid="structpaimon_1_1_options_1a5ef2b53ac7ded65625545e75efef26ae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>SCAN_FALLBACK_BRANCH[];</highlight></codeline>
+<codeline lineno="255"><highlight class="normal"></highlight></codeline>
+<codeline lineno="257" refid="structpaimon_1_1_options_1a7759e2bf7eea6b4fa657f29e21a0d437" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>BRANCH[];</highlight></codeline>
+<codeline lineno="258"><highlight class="normal"></highlight></codeline>
+<codeline lineno="260" refid="structpaimon_1_1_options_1a8d1a70db1f9e9eb27618fac1f9f96a86" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>FILE_INDEX_READ_ENABLED[];</highlight></codeline>
+<codeline lineno="261"><highlight class="normal"></highlight></codeline>
+<codeline lineno="264" refid="structpaimon_1_1_options_1abdbc3a1b6f206104f7e6d3d8df5a6dae" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DATA_FILE_EXTERNAL_PATHS[];</highlight></codeline>
+<codeline lineno="267" refid="structpaimon_1_1_options_1afdfac4ab2795c18d579580443f0a3228" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DATA_FILE_EXTERNAL_PATHS_STRATEGY[];</highlight></codeline>
+<codeline lineno="269" refid="structpaimon_1_1_options_1a6793acd517b0759d14e18c89808a70c0" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DATA_FILE_PREFIX[];</highlight></codeline>
+<codeline lineno="272" refid="structpaimon_1_1_options_1a7d1e5032bb6fab186cca56dc2070369a" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>INDEX_FILE_IN_DATA_FILE_DIR[];</highlight></codeline>
+<codeline lineno="275" refid="structpaimon_1_1_options_1adae9d0eca977241094aad9d8f89281a1" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>ROW_TRACKING_ENABLED[];</highlight></codeline>
+<codeline lineno="278" refid="structpaimon_1_1_options_1ab1508a51de5769f8906183f5ecb3aedd" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>DATA_EVOLUTION_ENABLED[];</highlight></codeline>
+<codeline lineno="281" refid="structpaimon_1_1_options_1a05ba604edad1ca939f642e72414b9c08" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>PARTITION_GENERATE_LEGACY_NAME[];</highlight></codeline>
+<codeline lineno="284" refid="structpaimon_1_1_options_1a565d571a883532d4637b8fccdfc78920" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>BLOB_AS_DESCRIPTOR[];</highlight></codeline>
+<codeline lineno="286" refid="structpaimon_1_1_options_1aaf4ad3e62fef143409b14298762d5da5" refkind="member"><highlight class="normal"><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>GLOBAL_INDEX_ENABLED[];</highlight></codeline>
+<codeline lineno="287"><highlight class="normal">};</highlight></codeline>
+<codeline lineno="288"><highlight class="normal"></highlight></codeline>
+<codeline lineno="289" refid="namespacepaimon_1ae171754921080c9d7a51e4ff460663af" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">static</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">constexpr</highlight><highlight class="normal"><sp/><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref><sp/><ref refid="namespacepaimon_1ae171754921080c9d7a51e4ff460663af" kindref="member">BATCH_WRITE_COMMIT_IDENTIFIER</ref><sp/>=<sp/>std::numeric_limits&lt;int64_t&gt;::max();</highlight></codeline>
+<codeline lineno="290"><highlight class="normal"></highlight></codeline>
+<codeline lineno="291"><highlight class="normal">}<sp/><sp/></highlight><highlight class="comment">//<sp/>namespace<sp/>paimon</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h"/>
+  </compounddef>
+</doxygen>

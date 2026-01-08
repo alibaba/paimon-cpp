@@ -1,0 +1,68 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_format_stats_extractor_1_1_file_info" kind="class" language="C++" prot="public">
+    <compoundname>paimon::FormatStatsExtractor::FileInfo</compoundname>
+    <includes refid="format__stats__extractor_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_format_stats_extractor_1_1_file_info_1a4a22be3d889f368cd7ad86302b78694c" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::FormatStatsExtractor::FileInfo::row_count_</definition>
+        <argsstring></argsstring>
+        <name>row_count_</name>
+        <qualifiedname>paimon::FormatStatsExtractor::FileInfo::row_count_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="43" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" bodystart="43" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_format_stats_extractor_1_1_file_info_1adb8bb2c2bc3469c47ff28ae1353fa317" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FormatStatsExtractor::FileInfo::FileInfo</definition>
+        <argsstring>(int64_t row_count)</argsstring>
+        <name>FileInfo</name>
+        <qualifiedname>paimon::FormatStatsExtractor::FileInfo::FileInfo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>row_count</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="36" column="18" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" bodystart="36" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_stats_extractor_1_1_file_info_1a235809074c255456264beb0296ba2326" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::FormatStatsExtractor::FileInfo::GetRowCount</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRowCount</name>
+        <qualifiedname>paimon::FormatStatsExtractor::FileInfo::GetRowCount</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="38" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" bodystart="38" bodyend="40"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>File info fetched from physical file, currently only include row count. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="34" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" bodystart="34" bodyend="44"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_format_stats_extractor_1_1_file_info_1adb8bb2c2bc3469c47ff28ae1353fa317" prot="public" virt="non-virtual"><scope>paimon::FormatStatsExtractor::FileInfo</scope><name>FileInfo</name></member>
+      <member refid="classpaimon_1_1_format_stats_extractor_1_1_file_info_1a235809074c255456264beb0296ba2326" prot="public" virt="non-virtual"><scope>paimon::FormatStatsExtractor::FileInfo</scope><name>GetRowCount</name></member>
+      <member refid="classpaimon_1_1_format_stats_extractor_1_1_file_info_1a4a22be3d889f368cd7ad86302b78694c" prot="private" virt="non-virtual"><scope>paimon::FormatStatsExtractor::FileInfo</scope><name>row_count_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

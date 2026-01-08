@@ -1,0 +1,256 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_clean_context" kind="class" language="C++" prot="public">
+    <compoundname>paimon::CleanContext</compoundname>
+    <includes refid="orphan__files__cleaner_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1a0cc11e2daf7b9a5ed20f81d86e4c2a3a" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::CleanContext::root_path_</definition>
+        <argsstring></argsstring>
+        <name>root_path_</name>
+        <qualifiedname>paimon::CleanContext::root_path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="72" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1ab2355b6291bae68f053f51affa1d6379" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::CleanContext::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>paimon::CleanContext::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="73" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="73" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1a76f15583b83a3baa9020cbaec28b9b8e" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::CleanContext::older_than_ms_</definition>
+        <argsstring></argsstring>
+        <name>older_than_ms_</name>
+        <qualifiedname>paimon::CleanContext::older_than_ms_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="74" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="74" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1a2b848141057014ec041a9fe95bb70f3f" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::CleanContext::memory_pool_</definition>
+        <argsstring></argsstring>
+        <name>memory_pool_</name>
+        <qualifiedname>paimon::CleanContext::memory_pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="75" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="75" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1a8863d09eeb92f6d8ea8f8826b2b6138a" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Executor&gt; paimon::CleanContext::executor_</definition>
+        <argsstring></argsstring>
+        <name>executor_</name>
+        <qualifiedname>paimon::CleanContext::executor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="76" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="76" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_clean_context_1a7167267beeeb549ac6095c4c976eb962" prot="private" static="no" mutable="no">
+        <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;)&gt;</type>
+        <definition>std::function&lt;bool(const std::string&amp;)&gt; paimon::CleanContext::should_be_retained_</definition>
+        <argsstring></argsstring>
+        <name>should_be_retained_</name>
+        <qualifiedname>paimon::CleanContext::should_be_retained_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="77" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="77" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1aa7a3ce6c33a6bb6ecba1f3c006a3deab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CleanContext::CleanContext</definition>
+        <argsstring>(const std::string &amp;root_path, const std::map&lt; std::string, std::string &gt; &amp;options, int64_t older_than_ms, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool, const std::shared_ptr&lt; Executor &gt; &amp;executor, std::function&lt; bool(const std::string &amp;)&gt; should_be_retained)</argsstring>
+        <name>CleanContext</name>
+        <qualifiedname>paimon::CleanContext::CleanContext</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>older_than_ms</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;)&gt;</type>
+          <declname>should_be_retained</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="41" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1a6067425ddd67b916f29181a158f8f8a7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CleanContext::~CleanContext</definition>
+        <argsstring>()</argsstring>
+        <name>~CleanContext</name>
+        <qualifiedname>paimon::CleanContext::~CleanContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="45" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1ae6215a090a0db60d6a862dcd8fee9c8a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::CleanContext::GetRootPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRootPath</name>
+        <qualifiedname>paimon::CleanContext::GetRootPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="47" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="47" bodyend="49"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1a0e9c520d9bce5e089d735b5d6f156530" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::CleanContext::GetOptions</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOptions</name>
+        <qualifiedname>paimon::CleanContext::GetOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="51" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="51" bodyend="53"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1a6cd8e8cccb5ff4a2aa60b9cda16f926b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::CleanContext::GetOlderThanMs</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOlderThanMs</name>
+        <qualifiedname>paimon::CleanContext::GetOlderThanMs</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="55" column="13" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="55" bodyend="57"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1ab1a2fae0f430a6a326a8a31dc882c276" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::CleanContext::GetMemoryPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::CleanContext::GetMemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="59" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="59" bodyend="61"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1a6c710cc90924ab81bc876610e555fa7f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::CleanContext::GetExecutor</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExecutor</name>
+        <qualifiedname>paimon::CleanContext::GetExecutor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="63" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="63" bodyend="65"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_clean_context_1aeb9a6cba316473508cd0c0d450d02f80" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::function&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref>(<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;)&gt;</type>
+        <definition>std::function&lt; bool(const std::string &amp;)&gt; paimon::CleanContext::GetFileRetainCondition</definition>
+        <argsstring>() const</argsstring>
+        <name>GetFileRetainCondition</name>
+        <qualifiedname>paimon::CleanContext::GetFileRetainCondition</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="67" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="67" bodyend="69"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_clean_context" kindref="compound">CleanContext</ref></computeroutput> is some configuration for orphan files clean operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Please do not use this class directly, use <computeroutput><ref refid="classpaimon_1_1_clean_context_builder" kindref="compound">CleanContextBuilder</ref></computeroutput> to build a <computeroutput><ref refid="classpaimon_1_1_clean_context" kindref="compound">CleanContext</ref></computeroutput> which has input validation. <simplesect kind="see"><para><ref refid="classpaimon_1_1_clean_context_builder" kindref="compound">CleanContextBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" line="39" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/orphan_files_cleaner.h" bodystart="39" bodyend="78"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_clean_context_1aa7a3ce6c33a6bb6ecba1f3c006a3deab" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>CleanContext</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a8863d09eeb92f6d8ea8f8826b2b6138a" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>executor_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a6c710cc90924ab81bc876610e555fa7f" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetExecutor</name></member>
+      <member refid="classpaimon_1_1_clean_context_1aeb9a6cba316473508cd0c0d450d02f80" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetFileRetainCondition</name></member>
+      <member refid="classpaimon_1_1_clean_context_1ab1a2fae0f430a6a326a8a31dc882c276" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetMemoryPool</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a6cd8e8cccb5ff4a2aa60b9cda16f926b" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetOlderThanMs</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a0e9c520d9bce5e089d735b5d6f156530" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetOptions</name></member>
+      <member refid="classpaimon_1_1_clean_context_1ae6215a090a0db60d6a862dcd8fee9c8a" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>GetRootPath</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a2b848141057014ec041a9fe95bb70f3f" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>memory_pool_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a76f15583b83a3baa9020cbaec28b9b8e" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>older_than_ms_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1ab2355b6291bae68f053f51affa1d6379" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>options_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a0cc11e2daf7b9a5ed20f81d86e4c2a3a" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>root_path_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a7167267beeeb549ac6095c4c976eb962" prot="private" virt="non-virtual"><scope>paimon::CleanContext</scope><name>should_be_retained_</name></member>
+      <member refid="classpaimon_1_1_clean_context_1a6067425ddd67b916f29181a158f8f8a7" prot="public" virt="non-virtual"><scope>paimon::CleanContext</scope><name>~CleanContext</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

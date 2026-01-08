@@ -1,0 +1,170 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_scan_filter" kind="class" language="C++" prot="public">
+    <compoundname>paimon::ScanFilter</compoundname>
+    <includes refid="scan__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_scan_filter_1a7f6abe7eaaab9f321addc3f00167aef4" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Predicate&gt; paimon::ScanFilter::predicates_</definition>
+        <argsstring></argsstring>
+        <name>predicates_</name>
+        <qualifiedname>paimon::ScanFilter::predicates_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="122" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="122" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_filter_1afbe3d9e76780aeb023620e7ea29b728c" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;VectorSearch&gt; paimon::ScanFilter::vector_search_</definition>
+        <argsstring></argsstring>
+        <name>vector_search_</name>
+        <qualifiedname>paimon::ScanFilter::vector_search_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="123" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="123" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_filter_1adb7e92d5249b3dbab8adb83a8d8bcef2" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt;int32_t&gt; paimon::ScanFilter::bucket_filter_</definition>
+        <argsstring></argsstring>
+        <name>bucket_filter_</name>
+        <qualifiedname>paimon::ScanFilter::bucket_filter_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="124" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="124" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_scan_filter_1adc46a61e676430d0c15404fb7de2f270" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::map&lt; std::string, std::string &gt; &gt;</type>
+        <definition>std::vector&lt;std::map&lt;std::string, std::string&gt; &gt; paimon::ScanFilter::partition_filters_</definition>
+        <argsstring></argsstring>
+        <name>partition_filters_</name>
+        <qualifiedname>paimon::ScanFilter::partition_filters_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="125" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="125" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_scan_filter_1a4687404fca73cbef4fc1233a8dc3691b" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::ScanFilter::ScanFilter</definition>
+        <argsstring>(const std::shared_ptr&lt; Predicate &gt; &amp;predicate, const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;partition_filters, const std::optional&lt; int32_t &gt; &amp;bucket_filter, const std::shared_ptr&lt; VectorSearch &gt; &amp;vector_search)</argsstring>
+        <name>ScanFilter</name>
+        <qualifiedname>paimon::ScanFilter::ScanFilter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt; &amp;</type>
+          <declname>predicate</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+          <declname>partition_filters</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &amp;</type>
+          <declname>bucket_filter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt; &amp;</type>
+          <declname>vector_search</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="99" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="99" bodyend="106"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_filter_1a0be6516ca4418ed7f0d5864d7cce821f" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_predicate" kindref="compound">Predicate</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Predicate &gt; paimon::ScanFilter::GetPredicate</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPredicate</name>
+        <qualifiedname>paimon::ScanFilter::GetPredicate</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="108" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="108" bodyend="110"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_filter_1a3ab9e07e6e9d6c4b26274e1184898cdc" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="structpaimon_1_1_vector_search" kindref="compound">VectorSearch</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; VectorSearch &gt; paimon::ScanFilter::GetVectorSearch</definition>
+        <argsstring>() const</argsstring>
+        <name>GetVectorSearch</name>
+        <qualifiedname>paimon::ScanFilter::GetVectorSearch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="111" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="111" bodyend="113"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_filter_1a9693b6b36c29ffa044f3566a04afbec3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt; int32_t &gt; paimon::ScanFilter::GetBucketFilter</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBucketFilter</name>
+        <qualifiedname>paimon::ScanFilter::GetBucketFilter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="114" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="114" bodyend="116"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_scan_filter_1a0e9575a9c2e77d66f80a1850ba648e9a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp;</type>
+        <definition>const std::vector&lt; std::map&lt; std::string, std::string &gt; &gt; &amp; paimon::ScanFilter::GetPartitionFilters</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPartitionFilters</name>
+        <qualifiedname>paimon::ScanFilter::GetPartitionFilters</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="117" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="117" bodyend="119"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Filter configuration for table scan operations. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" line="97" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/scan_context.h" bodystart="97" bodyend="126"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_scan_filter_1adb7e92d5249b3dbab8adb83a8d8bcef2" prot="private" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>bucket_filter_</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a9693b6b36c29ffa044f3566a04afbec3" prot="public" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>GetBucketFilter</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a0e9575a9c2e77d66f80a1850ba648e9a" prot="public" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>GetPartitionFilters</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a0be6516ca4418ed7f0d5864d7cce821f" prot="public" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>GetPredicate</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a3ab9e07e6e9d6c4b26274e1184898cdc" prot="public" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>GetVectorSearch</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1adc46a61e676430d0c15404fb7de2f270" prot="private" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>partition_filters_</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a7f6abe7eaaab9f321addc3f00167aef4" prot="private" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>predicates_</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1a4687404fca73cbef4fc1233a8dc3691b" prot="public" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>ScanFilter</name></member>
+      <member refid="classpaimon_1_1_scan_filter_1afbe3d9e76780aeb023620e7ea29b728c" prot="private" virt="non-virtual"><scope>paimon::ScanFilter</scope><name>vector_search_</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

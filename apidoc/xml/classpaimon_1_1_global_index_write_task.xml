@@ -1,0 +1,141 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_write_task" kind="class" language="C++" prot="public">
+    <compoundname>paimon::GlobalIndexWriteTask</compoundname>
+    <includes refid="global__index__write__task_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_write_task_1ae32df03747bc4284565e678047fda25f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::GlobalIndexWriteTask::GlobalIndexWriteTask</definition>
+        <argsstring>()=delete</argsstring>
+        <name>GlobalIndexWriteTask</name>
+        <qualifiedname>paimon::GlobalIndexWriteTask::GlobalIndexWriteTask</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h" line="33" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_write_task_1a21f86e346af2dbdbdeec789f4fbed2a2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::GlobalIndexWriteTask::~GlobalIndexWriteTask</definition>
+        <argsstring>()=delete</argsstring>
+        <name>~GlobalIndexWriteTask</name>
+        <qualifiedname>paimon::GlobalIndexWriteTask::~GlobalIndexWriteTask</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h" line="34" column="5"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_write_task_1a27d7f427292616f9ad5bdd13c209821b" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; paimon::GlobalIndexWriteTask::WriteIndex</definition>
+        <argsstring>(const std::string &amp;table_path, const std::string &amp;field_name, const std::string &amp;index_type, const std::shared_ptr&lt; IndexedSplit &gt; &amp;indexed_split, const std::map&lt; std::string, std::string &gt; &amp;options, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>WriteIndex</name>
+        <qualifiedname>paimon::GlobalIndexWriteTask::WriteIndex</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>table_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>index_type</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_indexed_split" kindref="compound">IndexedSplit</ref> &gt; &amp;</type>
+          <declname>indexed_split</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Builds and writes a global index for the specified data range. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>table_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Path to the table root directory where index files are stored. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the indexed column (must be present in the table schema). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of global index to build (e.g., &quot;bitmap&quot;, &quot;lumina&quot;). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index_split</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The indexed split containing the actual data (e.g., Parquet file) and The range must be fully contained within the data covered by the given <computeroutput>split</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Index-specific configuration (e.g., false positive rate for bloom filters). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations during index construction. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a shared pointer to the <computeroutput><ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref></computeroutput> with index metadata, or an error if indexing fails (e.g., unsupported type, I/O error). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h" line="50" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Writes a range-level global index for a specific data split and field. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_write_task.h" bodystart="31" bodyend="54"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_write_task_1ae32df03747bc4284565e678047fda25f" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexWriteTask</scope><name>GlobalIndexWriteTask</name></member>
+      <member refid="classpaimon_1_1_global_index_write_task_1a27d7f427292616f9ad5bdd13c209821b" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexWriteTask</scope><name>WriteIndex</name></member>
+      <member refid="classpaimon_1_1_global_index_write_task_1a21f86e346af2dbdbdeec789f4fbed2a2" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexWriteTask</scope><name>~GlobalIndexWriteTask</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

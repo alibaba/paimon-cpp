@@ -1,0 +1,189 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator" kind="class" language="C++" prot="public">
+    <compoundname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</compoundname>
+    <basecompoundref refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator" prot="public" virt="non-virtual">paimon::VectorSearchGlobalIndexResult::VectorSearchIterator</basecompoundref>
+    <includes refid="bitmap__vector__search__global__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a992101daf9cd9a94a57006efbddb9b29" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+        <definition>size_t paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::cursor_</definition>
+        <argsstring></argsstring>
+        <name>cursor_</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::cursor_</qualifiedname>
+        <initializer>= 0</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="61" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="61" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a10d76c32b95f88f537378635284b260d" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> *</type>
+        <definition>const RoaringBitmap64* paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::bitmap_</definition>
+        <argsstring></argsstring>
+        <name>bitmap_</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::bitmap_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="62" column="31" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1aa1f50d472fef23c6f4e543a18de2ae58" prot="private" static="no" mutable="no">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">RoaringBitmap64::Iterator</ref></type>
+        <definition>RoaringBitmap64::Iterator paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::iter_</definition>
+        <argsstring></argsstring>
+        <name>iter_</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::iter_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="63" column="35" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="63" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a74b8a9b26706706d1c51d79ba07f73de" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> *</type>
+        <definition>const float* paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::scores_</definition>
+        <argsstring></argsstring>
+        <name>scores_</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::scores_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="64" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="64" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a87e2610a8c4cf15ff5b8215745ffb716" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::VectorSearchIterator</definition>
+        <argsstring>(const RoaringBitmap64 *bitmap, RoaringBitmap64::Iterator &amp;&amp;iter, const float *scores)</argsstring>
+        <name>VectorSearchIterator</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::VectorSearchIterator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> *</type>
+          <declname>bitmap</declname>
+        </param>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">RoaringBitmap64::Iterator</ref> &amp;&amp;</type>
+          <declname>iter</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> *</type>
+          <declname>scores</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="46" column="9" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="46" bodyend="48"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a1a540a0f0740a75afa58cedc3d796aed" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::HasNext</definition>
+        <argsstring>() const override</argsstring>
+        <name>HasNext</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::HasNext</qualifiedname>
+        <reimplements refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator_1a18b59535cf2466dbd81b6fe5743d4d8c">HasNext</reimplements>
+        <briefdescription>
+<para>Checks whether more row ids are available. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="50" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="50" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a5d53eb73967bcb204060c41c6ed9f52f" prot="public" static="no" const="no" explicit="no" inline="yes" virt="virtual">
+        <type>std::pair&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>, <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">float</ref> &gt;</type>
+        <definition>std::pair&lt; int64_t, float &gt; paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::NextWithScore</definition>
+        <argsstring>() override</argsstring>
+        <name>NextWithScore</name>
+        <qualifiedname>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::NextWithScore</qualifiedname>
+        <reimplements refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator_1adaf1f51223d422d8091c39c2c6658f26">NextWithScore</reimplements>
+        <briefdescription>
+<para>Retrieves the next (row_id, score) pair and advances the iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A pair where:<itemizedlist>
+<listitem><para>first: the global row id (returned in ascending order),</para>
+</listitem><listitem><para>second: the associated score computed by the index.</para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+<simplesect kind="note"><para>The sequence is ordered by <bold>row_id</bold>, not by score. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="54" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="54" bodyend="58"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</label>
+        <link refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::VectorSearchGlobalIndexResult::VectorSearchIterator</label>
+        <link refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</label>
+        <link refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="usage">
+          <edgelabel>bitmap_</edgelabel>
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>iter_</edgelabel>
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::RoaringBitmap64</label>
+        <link refid="classpaimon_1_1_roaring_bitmap64"/>
+      </node>
+      <node id="4">
+        <label>paimon::RoaringBitmap64::Iterator</label>
+        <link refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator"/>
+      </node>
+      <node id="2">
+        <label>paimon::VectorSearchGlobalIndexResult::VectorSearchIterator</label>
+        <link refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" line="44" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_vector_search_global_index_result.h" bodystart="44" bodyend="65"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a10d76c32b95f88f537378635284b260d" prot="private" virt="non-virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>bitmap_</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a992101daf9cd9a94a57006efbddb9b29" prot="private" virt="non-virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>cursor_</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a1a540a0f0740a75afa58cedc3d796aed" prot="public" virt="virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>HasNext</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1aa1f50d472fef23c6f4e543a18de2ae58" prot="private" virt="non-virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>iter_</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a5d53eb73967bcb204060c41c6ed9f52f" prot="public" virt="virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>NextWithScore</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a74b8a9b26706706d1c51d79ba07f73de" prot="private" virt="non-virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>scores_</name></member>
+      <member refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator_1a87e2610a8c4cf15ff5b8215745ffb716" prot="public" virt="non-virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>VectorSearchIterator</name></member>
+      <member refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator_1ada4333adef32bd94f59d5f63c5a4176c" prot="public" virt="virtual"><scope>paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator</scope><name>~VectorSearchIterator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

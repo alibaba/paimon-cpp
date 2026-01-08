@@ -1,0 +1,219 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_record_batch_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::RecordBatchBuilder</compoundname>
+    <includes refid="record__batch_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_record_batch_builder_1a3bd3598a6256fc4caf0be9d2064e2cae" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::RecordBatchBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::RecordBatchBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="129" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" bodystart="129" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a50a11c1390641da7422cca4d6a6bc91e" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RecordBatchBuilder::RecordBatchBuilder</definition>
+        <argsstring>(::ArrowArray *data)</argsstring>
+        <name>RecordBatchBuilder</name>
+        <qualifiedname>paimon::RecordBatchBuilder::RecordBatchBuilder</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">::ArrowArray</ref> *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_record_batch_builder" kindref="compound">RecordBatchBuilder</ref></computeroutput> with Arrow data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Arrow array containing the record data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="98" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a11dadf9531891f3c423bab2d369f3bb7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RecordBatchBuilder::~RecordBatchBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~RecordBatchBuilder</name>
+        <qualifiedname>paimon::RecordBatchBuilder::~RecordBatchBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="100" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a0ea882b567b227ff801d6fdfdebafa11" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_record_batch_builder" kindref="compound">RecordBatchBuilder</ref> &amp;</type>
+        <definition>RecordBatchBuilder &amp; paimon::RecordBatchBuilder::MoveData</definition>
+        <argsstring>(::ArrowArray *data)</argsstring>
+        <name>MoveData</name>
+        <qualifiedname>paimon::RecordBatchBuilder::MoveData</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">::ArrowArray</ref> *</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Move new Arrow data into the builder, replacing existing data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>New Arrow array data. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="104" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a3f8e5e6c3b64fd3c51ffa8814863a5d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_record_batch_builder" kindref="compound">RecordBatchBuilder</ref> &amp;</type>
+        <definition>RecordBatchBuilder &amp; paimon::RecordBatchBuilder::SetRowKinds</definition>
+        <argsstring>(const std::vector&lt; RecordBatch::RowKind &gt; &amp;row_kinds)</argsstring>
+        <name>SetRowKinds</name>
+        <qualifiedname>paimon::RecordBatchBuilder::SetRowKinds</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_record_batch_1a003df9b2a315136e78a844ac9b9c7d0a" kindref="member">RecordBatch::RowKind</ref> &gt; &amp;</type>
+          <declname>row_kinds</declname>
+        </param>
+        <briefdescription>
+<para>Set the row kinds for each record in the batch. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>row_kinds</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of row kinds, including INSERT, UPDATE_BEFORE, UPDATE_AFTER and DELETE. If not set, default value is <computeroutput>INSERT</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="note"><para><computeroutput>row_kinds</computeroutput> must have the same length as the number of records in the data. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="110" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a0be4dc9d6c1cdd796a3d7a17db2e000b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_record_batch_builder" kindref="compound">RecordBatchBuilder</ref> &amp;</type>
+        <definition>RecordBatchBuilder &amp; paimon::RecordBatchBuilder::SetPartition</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;data)</argsstring>
+        <name>SetPartition</name>
+        <qualifiedname>paimon::RecordBatchBuilder::SetPartition</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>data</declname>
+        </param>
+        <briefdescription>
+<para>Set the partition information for this record batch. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map of partition column names to their string values. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="114" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1a9ae069dc8bcf27178f13aa867c7da331" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_record_batch_builder" kindref="compound">RecordBatchBuilder</ref> &amp;</type>
+        <definition>RecordBatchBuilder &amp; paimon::RecordBatchBuilder::SetBucket</definition>
+        <argsstring>(int32_t bucket)</argsstring>
+        <name>SetBucket</name>
+        <qualifiedname>paimon::RecordBatchBuilder::SetBucket</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>bucket</declname>
+        </param>
+        <briefdescription>
+<para>Set the bucket id for this record batch. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If not set, default value is <computeroutput>-1</computeroutput>. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bucket</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The bucket id for data distribution. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="118" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_record_batch_builder_1abbc31d51d4892d4d76afda9b259d544c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; RecordBatch &gt; &gt; paimon::RecordBatchBuilder::Finish</definition>
+        <argsstring>()</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::RecordBatchBuilder::Finish</qualifiedname>
+        <briefdescription>
+<para>Build and return the final <computeroutput><ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref></computeroutput> instance. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method validates the configuration and creates <computeroutput><ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref></computeroutput> with all the specified properties. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="124" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Builder for constructing <computeroutput><ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref></computeroutput> instances. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class provides a convenient way to build <computeroutput><ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref></computeroutput> objects by setting various properties such as data, row kinds, partition information, and bucket id. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" line="94" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/record_batch.h" bodystart="94" bodyend="130"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_record_batch_builder_1abbc31d51d4892d4d76afda9b259d544c" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a3bd3598a6256fc4caf0be9d2064e2cae" prot="private" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a0ea882b567b227ff801d6fdfdebafa11" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>MoveData</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a50a11c1390641da7422cca4d6a6bc91e" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>RecordBatchBuilder</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a9ae069dc8bcf27178f13aa867c7da331" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>SetBucket</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a0be4dc9d6c1cdd796a3d7a17db2e000b" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>SetPartition</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a3f8e5e6c3b64fd3c51ffa8814863a5d2" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>SetRowKinds</name></member>
+      <member refid="classpaimon_1_1_record_batch_builder_1a11dadf9531891f3c423bab2d369f3bb7" prot="public" virt="non-virtual"><scope>paimon::RecordBatchBuilder</scope><name>~RecordBatchBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

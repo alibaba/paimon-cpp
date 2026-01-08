@@ -1,0 +1,86 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/* Adapted from Apache Arrow */
+/* https://github.com/apache/arrow/blob/main/docs/source/_static/theme_overrides.css */
+
+/* Customizing with theme CSS variables */
+
+:root {
+  /* Make headings more bold */
+  --pst-font-weight-heading: 600;
+}
+
+/* Contributing landing page overview cards */
+
+.contrib-card {
+  border-radius: 0;
+  padding: 30px 10px 20px 10px;
+  margin: 10px 0px;
+}
+
+.contrib-card p.card-text {
+  margin: 0px;
+}
+
+.contrib-card .sd-card-img-top {
+  margin: 2px;
+  height: 75px;
+  background: none !important;
+}
+
+.contrib-card .sd-card-title {
+  color: var(--pst-color-primary);
+  font-size: var(--pst-font-size-h3);
+  padding: 1rem 0rem 0.5rem 0rem;
+}
+
+.contrib-card .sd-card-footer {
+  border: none;
+}
+
+/* This is the bootstrap CSS style for "table-striped". Since the theme does
+not yet provide an easy way to configure this globally, it easier to simply
+include this snippet here than updating each table in all rst files to
+add ":class: table-striped" */
+
+.table tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Improve the vertical spacing in the C++ API docs
+(ideally this should be upstreamed to the pydata-sphinx-theme */
+
+dl.cpp dd p {
+  margin-bottom: .4rem;
+}
+
+dl.cpp.enumerator {
+  margin-bottom: 0.2rem;
+}
+
+p.breathe-sectiondef-title {
+  margin-top: 1rem;
+}
+
+/* Keep social icons arranged horizontally in sidebar */
+
+.sidebar-header-items__end {
+  flex-wrap: wrap;
+}

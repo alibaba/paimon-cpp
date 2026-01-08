@@ -1,0 +1,120 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_format" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileFormat</compoundname>
+    <includes refid="file__format_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_format_1a15252abcf86e644c9cc38eb1344ac55a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileFormat::~FileFormat</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileFormat</name>
+        <qualifiedname>paimon::FileFormat::~FileFormat</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="35" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_format_1acfea05a4c90d05a136f3ec508347e93d" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>virtual const std::string &amp; paimon::FileFormat::Identifier</definition>
+        <argsstring>() const =0</argsstring>
+        <name>Identifier</name>
+        <qualifiedname>paimon::FileFormat::Identifier</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The corresponding identifier of file format, e.g., orc. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="37" column="31"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_format_1ad0921d76ee8531144b016b6bb38760cc" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_reader_builder" kindref="compound">ReaderBuilder</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; ReaderBuilder &gt; &gt; paimon::FileFormat::CreateReaderBuilder</definition>
+        <argsstring>(int32_t batch_size) const =0</argsstring>
+        <name>CreateReaderBuilder</name>
+        <qualifiedname>paimon::FileFormat::CreateReaderBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>batch_size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A reader builder which will create reader with specific batch size. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="39" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_format_1abb275a73c000c0b240118d0fbc4cc5eb" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_writer_builder" kindref="compound">WriterBuilder</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; WriterBuilder &gt; &gt; paimon::FileFormat::CreateWriterBuilder</definition>
+        <argsstring>(::ArrowSchema *schema, int32_t batch_size) const =0</argsstring>
+        <name>CreateWriterBuilder</name>
+        <qualifiedname>paimon::FileFormat::CreateWriterBuilder</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>batch_size</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_writer_builder" kindref="compound">WriterBuilder</ref></computeroutput> of the corresponding schema, or error status when schema is invalid. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="44" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_format_1a62e4644cc68c7b981e6edf84d280fb24" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_format_stats_extractor" kindref="compound">FormatStatsExtractor</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FormatStatsExtractor &gt; &gt; paimon::FileFormat::CreateStatsExtractor</definition>
+        <argsstring>(::ArrowSchema *schema) const =0</argsstring>
+        <name>CreateStatsExtractor</name>
+        <qualifiedname>paimon::FileFormat::CreateStatsExtractor</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>schema</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_format_stats_extractor" kindref="compound">FormatStatsExtractor</ref></computeroutput> of current file format. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="47" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref></computeroutput> is used to create <computeroutput><ref refid="classpaimon_1_1_reader_builder" kindref="compound">ReaderBuilder</ref></computeroutput> and <computeroutput><ref refid="classpaimon_1_1_writer_builder" kindref="compound">WriterBuilder</ref></computeroutput>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" line="33" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format.h" bodystart="33" bodyend="49"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_format_1ad0921d76ee8531144b016b6bb38760cc" prot="public" virt="pure-virtual"><scope>paimon::FileFormat</scope><name>CreateReaderBuilder</name></member>
+      <member refid="classpaimon_1_1_file_format_1a62e4644cc68c7b981e6edf84d280fb24" prot="public" virt="pure-virtual"><scope>paimon::FileFormat</scope><name>CreateStatsExtractor</name></member>
+      <member refid="classpaimon_1_1_file_format_1abb275a73c000c0b240118d0fbc4cc5eb" prot="public" virt="pure-virtual"><scope>paimon::FileFormat</scope><name>CreateWriterBuilder</name></member>
+      <member refid="classpaimon_1_1_file_format_1acfea05a4c90d05a136f3ec508347e93d" prot="public" virt="pure-virtual"><scope>paimon::FileFormat</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_file_format_1a15252abcf86e644c9cc38eb1344ac55a" prot="public" virt="virtual"><scope>paimon::FileFormat</scope><name>~FileFormat</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

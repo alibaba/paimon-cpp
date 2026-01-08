@@ -1,0 +1,153 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_output_stream" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::OutputStream</compoundname>
+    <basecompoundref refid="classpaimon_1_1_stream" prot="public" virt="non-virtual">paimon::Stream</basecompoundref>
+    <includes refid="file__system_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_output_stream_1a550aead391c3dff769bbeeea330bb4c2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::OutputStream::OutputStream</definition>
+        <argsstring>()=default</argsstring>
+        <name>OutputStream</name>
+        <qualifiedname>paimon::OutputStream::OutputStream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="116" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_output_stream_1a123e26e1906f3f31f24d5b2af5792ed2" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int32_t &gt; paimon::OutputStream::Write</definition>
+        <argsstring>(const char *buffer, uint32_t size)=0</argsstring>
+        <name>Write</name>
+        <qualifiedname>paimon::OutputStream::Write</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Write data to the output stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the data buffer to write. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to write from the buffer. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the actual number of bytes written on success, or an error status on failure. </para>
+</simplesect>
+<simplesect kind="note"><para>The stream position advances by the number of bytes actually written. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="124" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_output_stream_1abe7934a91049e5026eae1a8288c2e42f" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::OutputStream::Flush</definition>
+        <argsstring>()=0</argsstring>
+        <name>Flush</name>
+        <qualifiedname>paimon::OutputStream::Flush</qualifiedname>
+        <briefdescription>
+<para>Flush pending data to the disk. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="127" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_output_stream_1acf3de015741596ae7d44bade71df9b89" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>virtual Result&lt; int64_t &gt; paimon::OutputStream::GetPos</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetPos</name>
+        <qualifiedname>paimon::OutputStream::GetPos</qualifiedname>
+        <briefdescription>
+<para>Get the write position. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="129" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_output_stream_1af8d3717c83bb3b7c3a664167c3f43261" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>virtual Result&lt; std::string &gt; paimon::OutputStream::GetUri</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetUri</name>
+        <qualifiedname>paimon::OutputStream::GetUri</qualifiedname>
+        <briefdescription>
+<para>Get the uri of the output stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="131" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract class for output stream operations. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::OutputStream</label>
+        <link refid="classpaimon_1_1_output_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Stream</label>
+        <link refid="classpaimon_1_1_stream"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::OutputStream</label>
+        <link refid="classpaimon_1_1_output_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Stream</label>
+        <link refid="classpaimon_1_1_stream"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="114" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="114" bodyend="132"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_stream_1a1c12b3f1e8618ad95e980aa6ea79912a" prot="public" virt="pure-virtual"><scope>paimon::OutputStream</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_output_stream_1abe7934a91049e5026eae1a8288c2e42f" prot="public" virt="pure-virtual"><scope>paimon::OutputStream</scope><name>Flush</name></member>
+      <member refid="classpaimon_1_1_output_stream_1acf3de015741596ae7d44bade71df9b89" prot="public" virt="pure-virtual"><scope>paimon::OutputStream</scope><name>GetPos</name></member>
+      <member refid="classpaimon_1_1_output_stream_1af8d3717c83bb3b7c3a664167c3f43261" prot="public" virt="pure-virtual"><scope>paimon::OutputStream</scope><name>GetUri</name></member>
+      <member refid="classpaimon_1_1_output_stream_1a550aead391c3dff769bbeeea330bb4c2" prot="public" virt="non-virtual"><scope>paimon::OutputStream</scope><name>OutputStream</name></member>
+      <member refid="classpaimon_1_1_output_stream_1a123e26e1906f3f31f24d5b2af5792ed2" prot="public" virt="pure-virtual"><scope>paimon::OutputStream</scope><name>Write</name></member>
+      <member refid="classpaimon_1_1_stream_1aff0ae0a9c78f8fb31da85ef1607748d9" prot="public" virt="virtual"><scope>paimon::OutputStream</scope><name>~Stream</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

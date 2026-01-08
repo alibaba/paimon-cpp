@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_e6a1c9ffd133f63dd611899f4f180300" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index</compoundname>
+    <innerdir refid="dir_0f736ee9f7b875cfa3ccf35bccf64319">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/io</innerdir>
+    <innerfile refid="bitmap__global__index__result_8h">bitmap_global_index_result.h</innerfile>
+    <innerfile refid="bitmap__vector__search__global__index__result_8h">bitmap_vector_search_global_index_result.h</innerfile>
+    <innerfile refid="global__index__io__meta_8h">global_index_io_meta.h</innerfile>
+    <innerfile refid="global__index__reader_8h">global_index_reader.h</innerfile>
+    <innerfile refid="global__index__result_8h">global_index_result.h</innerfile>
+    <innerfile refid="global__index__scan_8h">global_index_scan.h</innerfile>
+    <innerfile refid="global__index__write__task_8h">global_index_write_task.h</innerfile>
+    <innerfile refid="global__index__writer_8h">global_index_writer.h</innerfile>
+    <innerfile refid="global__indexer_8h">global_indexer.h</innerfile>
+    <innerfile refid="global__indexer__factory_8h">global_indexer_factory.h</innerfile>
+    <innerfile refid="indexed__split_8h">indexed_split.h</innerfile>
+    <innerfile refid="row__range__global__index__scanner_8h">row_range_global_index_scanner.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_vector_search_global_index_result" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::VectorSearchGlobalIndexResult</compoundname>
+    <basecompoundref refid="classpaimon_1_1_global_index_result" prot="public" virt="non-virtual">paimon::GlobalIndexResult</basecompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_bitmap_vector_search_global_index_result" prot="public" virt="non-virtual">paimon::BitmapVectorSearchGlobalIndexResult</derivedcompoundref>
+    <includes refid="global__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h</includes>
+    <innerclass refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator" prot="public">paimon::VectorSearchGlobalIndexResult::VectorSearchIterator</innerclass>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_vector_search_global_index_result_1a280a585502cc19b6e83ed1e026e5559f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator" kindref="compound">VectorSearchIterator</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; VectorSearchIterator &gt; &gt; paimon::VectorSearchGlobalIndexResult::CreateVectorSearchIterator</definition>
+        <argsstring>() const =0</argsstring>
+        <name>CreateVectorSearchIterator</name>
+        <qualifiedname>paimon::VectorSearchGlobalIndexResult::CreateVectorSearchIterator</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1a4c3098d7ddd14cb3b263d54942d9f5a2">CreateVectorSearchIterator</reimplementedby>
+        <briefdescription>
+<para>Creates a new iterator for traversing the vector search results. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="136" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents the result of a vector search query against a global index. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class encapsulates a set of search candidates (row id + score pairs) and provides an iterator interface to traverse them. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="4">
+        <label>paimon::BitmapVectorSearchGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_vector_search_global_index_result"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::VectorSearchGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_vector_search_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::VectorSearchGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_vector_search_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="112" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" bodystart="112" bodyend="137"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_result_1afd16e7179e2bcfd49f5355a23c44cecd" prot="public" virt="pure-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>AddOffset</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a607f1de75fd37e32b1d45a920ef03869" prot="public" virt="virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ace69c312887a2e4d2166cbeaab2dcdf9" prot="public" virt="pure-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>CreateIterator</name></member>
+      <member refid="classpaimon_1_1_vector_search_global_index_result_1a280a585502cc19b6e83ed1e026e5559f" prot="public" virt="pure-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>CreateVectorSearchIterator</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a1ab7dbefdca130a6e8a500f46801be91" prot="public" virt="non-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a05a3bf2cf4de40d4111f5b5ea087c42c" prot="public" virt="pure-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>IsEmpty</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ae671eeb65cc8602695328a62e5d13283" prot="public" virt="virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9e672c533c723ee18391cca40e72da2e" prot="public" virt="non-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9f44de9b4fd9cf03ab8ecb933daa0f76" prot="public" virt="non-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>ToRanges</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a6c022a8685d9e5994ffe37a9efb630f2" prot="public" virt="pure-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ad8b0a3ed4692da566a904154d54f35dc" prot="private" virt="non-virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>VERSION</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a08518aaa907fab25595a3fac121e446a" prot="public" virt="virtual"><scope>paimon::VectorSearchGlobalIndexResult</scope><name>~GlobalIndexResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

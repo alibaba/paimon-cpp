@@ -1,0 +1,403 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_write_context_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::WriteContextBuilder</compoundname>
+    <includes refid="write__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_builder_1ae3a74e72a038ca11ecbbd0ae032f5bf8" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::WriteContextBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::WriteContextBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="194" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="194" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a6ad9a69a9e46607f1e94d19deda365af" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::WriteContextBuilder::WriteContextBuilder</definition>
+        <argsstring>(const std::string &amp;root_path, const std::string &amp;commit_user)</argsstring>
+        <name>WriteContextBuilder</name>
+        <qualifiedname>paimon::WriteContextBuilder::WriteContextBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>commit_user</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref></computeroutput> with required parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>root_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The root path of the table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_user</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The user identifier for commit operations. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="121" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1aff1f3c2273a608227aa43889237c4e78" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::WriteContextBuilder::~WriteContextBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~WriteContextBuilder</name>
+        <qualifiedname>paimon::WriteContextBuilder::~WriteContextBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="123" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a1adf3f18f8780a7da951272ae795abe5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::SetOptions</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>SetOptions</name>
+        <qualifiedname>paimon::WriteContextBuilder::SetOptions</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>The options map will clear the options added by <computeroutput><ref refid="classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73" kindref="member">AddOption()</ref></computeroutput> before. </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The configuration options map. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="130" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::AddOption</definition>
+        <argsstring>(const std::string &amp;key, const std::string &amp;value)</argsstring>
+        <name>AddOption</name>
+        <qualifiedname>paimon::WriteContextBuilder::AddOption</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If you want to add multiple options, call <computeroutput><ref refid="classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73" kindref="member">AddOption()</ref></computeroutput> multiple times or use <computeroutput><ref refid="classpaimon_1_1_write_context_builder_1a1adf3f18f8780a7da951272ae795abe5" kindref="member">SetOptions()</ref></computeroutput> instead. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option key. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="140" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a44f08b858246970933fa263b8428983f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithStreamingMode</definition>
+        <argsstring>(bool is_streaming_mode)</argsstring>
+        <name>WithStreamingMode</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithStreamingMode</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_streaming_mode</declname>
+        </param>
+        <briefdescription>
+<para>Set whether to enable streaming mode (default is false) </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="144" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a8e834e02efd5eb174d08e200d89908be" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithIgnorePreviousFiles</definition>
+        <argsstring>(bool ignore_previous_files)</argsstring>
+        <name>WithIgnorePreviousFiles</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithIgnorePreviousFiles</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_previous_files</declname>
+        </param>
+        <briefdescription>
+<para>Set whether the write operation should ignore previously stored files. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>(default is false) <simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="148" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a27e4da341f9e6c6e3a71e97a1cb4be39" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+<para>Set custom memory pool for memory management. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>memory_pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The memory pool to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="153" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a2eee68bec2e79f0f0dbddff6a52711ae" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithExecutor</definition>
+        <argsstring>(const std::shared_ptr&lt; Executor &gt; &amp;executor)</argsstring>
+        <name>WithExecutor</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithExecutor</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <briefdescription>
+<para>Set custom executor for task execution. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The executor to use. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="158" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1ad8028f23e6eaba79e40318ee94c2dcc5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithWriteId</definition>
+        <argsstring>(int32_t write_id)</argsstring>
+        <name>WithWriteId</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithWriteId</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>write_id</declname>
+        </param>
+        <briefdescription>
+<para>For postpone bucket mode in pk table, <computeroutput><ref refid="classpaimon_1_1_write_context_builder_1ad8028f23e6eaba79e40318ee94c2dcc5" kindref="member">WithWriteId()</ref></computeroutput> supposed to be used. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Each worker must have its own unique <computeroutput>write_id</computeroutput> within a task, which is used as the prefix for its data files. This ensures that files from the same worker share the same prefix and can be consumed by the same compaction reader to preserve input order.</para>
+<para><simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="167" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a82d651fbd10b459afa53bfab69579253" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithBranch</definition>
+        <argsstring>(const std::string &amp;branch)</argsstring>
+        <name>WithBranch</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithBranch</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>branch</declname>
+        </param>
+        <briefdescription>
+<para>Write to specific branch, default is main. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="171" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a30d7e66dfe2f42f2b832f530f3922acb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithWriteSchema</definition>
+        <argsstring>(const std::vector&lt; std::string &gt; &amp;write_schema)</argsstring>
+        <name>WithWriteSchema</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithWriteSchema</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>write_schema</declname>
+        </param>
+        <briefdescription>
+<para>For data evolution, user can write partial specific fields from table schema. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If not set, write all fields in table. <simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="176" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1ab2553c687ce23775477e9d861cd3fd70" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> &amp;</type>
+        <definition>WriteContextBuilder &amp; paimon::WriteContextBuilder::WithFileSystemSchemeToIdentifierMap</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;fs_scheme_to_identifier_map)</argsstring>
+        <name>WithFileSystemSchemeToIdentifierMap</name>
+        <qualifiedname>paimon::WriteContextBuilder::WithFileSystemSchemeToIdentifierMap</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>fs_scheme_to_identifier_map</declname>
+        </param>
+        <briefdescription>
+<para>Set the file system scheme to identifier mapping for custom file system configurations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This allows using different file system implementations for different URI schemes.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>fs_scheme_to_identifier_map</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Map from URI scheme to file system identifier. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+<simplesect kind="note"><para>If not set, use default file system (configured in <computeroutput><ref refid="structpaimon_1_1_options_1a91cdf2a3a8110ea53a0d9197d38cfae3" kindref="member">Options::FILE_SYSTEM</ref></computeroutput>). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="184" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_builder_1a6b4ea339ae0baf164b5664323f27051b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; WriteContext &gt; &gt; paimon::WriteContextBuilder::Finish</definition>
+        <argsstring>()</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::WriteContextBuilder::Finish</qualifiedname>
+        <briefdescription>
+<para>Build and return a <computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput> instance with input validation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the constructed <computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="189" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref></computeroutput> used to build a <computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput>, has input validation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="116" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="116" bodyend="195"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_write_context_builder_1a27cdcf8737e307ec36d2590c8561ae73" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>AddOption</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a6b4ea339ae0baf164b5664323f27051b" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1ae3a74e72a038ca11ecbbd0ae032f5bf8" prot="private" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a1adf3f18f8780a7da951272ae795abe5" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>SetOptions</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a82d651fbd10b459afa53bfab69579253" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithBranch</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a2eee68bec2e79f0f0dbddff6a52711ae" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithExecutor</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1ab2553c687ce23775477e9d861cd3fd70" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithFileSystemSchemeToIdentifierMap</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a8e834e02efd5eb174d08e200d89908be" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithIgnorePreviousFiles</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a27e4da341f9e6c6e3a71e97a1cb4be39" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a44f08b858246970933fa263b8428983f" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithStreamingMode</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1ad8028f23e6eaba79e40318ee94c2dcc5" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithWriteId</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a30d7e66dfe2f42f2b832f530f3922acb" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WithWriteSchema</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1a6ad9a69a9e46607f1e94d19deda365af" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>WriteContextBuilder</name></member>
+      <member refid="classpaimon_1_1_write_context_builder_1aff1f3c2273a608227aa43889237c4e78" prot="public" virt="non-virtual"><scope>paimon::WriteContextBuilder</scope><name>~WriteContextBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

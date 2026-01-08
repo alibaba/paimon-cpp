@@ -1,0 +1,118 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_status" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileStatus</compoundname>
+    <includes refid="file__system_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1a6278b7b7d8c7327ba7d7af3674836381" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FileStatus::FileStatus</definition>
+        <argsstring>()=default</argsstring>
+        <name>FileStatus</name>
+        <qualifiedname>paimon::FileStatus::FileStatus</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="158" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1a21e73effa4f499388d75f93047ee73c2" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileStatus::~FileStatus</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileStatus</name>
+        <qualifiedname>paimon::FileStatus::~FileStatus</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="159" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1a25848ccde7f13f443535273372684bc5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref></type>
+        <definition>virtual uint64_t paimon::FileStatus::GetLen</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetLen</name>
+        <qualifiedname>paimon::FileStatus::GetLen</qualifiedname>
+        <briefdescription>
+<para>Get the size of the file in bytes. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>For directories, this method is undefined behavior. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="163" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1abd9922464a1ca7a1da01f7914c845a20" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::FileStatus::IsDir</definition>
+        <argsstring>() const =0</argsstring>
+        <name>IsDir</name>
+        <qualifiedname>paimon::FileStatus::IsDir</qualifiedname>
+        <briefdescription>
+<para>Check if this entry represents a directory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="166" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1a471c2161d9e75ce5a031a642ac33dcf2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::FileStatus::GetPath</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetPath</name>
+        <qualifiedname>paimon::FileStatus::GetPath</qualifiedname>
+        <briefdescription>
+<para>Get the path of this file or directory. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="169" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_status_1a7448ae0890fff2992a1acc2e877bfb3f" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>virtual int64_t paimon::FileStatus::GetModificationTime</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetModificationTime</name>
+        <qualifiedname>paimon::FileStatus::GetModificationTime</qualifiedname>
+        <briefdescription>
+<para>Get the last modification time of the file. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A long value representing the time the file was last modified, measured in milliseconds since the epoch (UTC January 1, 1970). </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="175" column="21"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Extended file status information interface. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>This class extends <ref refid="classpaimon_1_1_basic_file_status" kindref="compound">BasicFileStatus</ref> to provide comprehensive file system metadata including file size, modification time, and other attributes. It&apos;s used for operations that require detailed file information. </para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="156" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="156" bodyend="176"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_status_1a6278b7b7d8c7327ba7d7af3674836381" prot="public" virt="non-virtual"><scope>paimon::FileStatus</scope><name>FileStatus</name></member>
+      <member refid="classpaimon_1_1_file_status_1a25848ccde7f13f443535273372684bc5" prot="public" virt="pure-virtual"><scope>paimon::FileStatus</scope><name>GetLen</name></member>
+      <member refid="classpaimon_1_1_file_status_1a7448ae0890fff2992a1acc2e877bfb3f" prot="public" virt="pure-virtual"><scope>paimon::FileStatus</scope><name>GetModificationTime</name></member>
+      <member refid="classpaimon_1_1_file_status_1a471c2161d9e75ce5a031a642ac33dcf2" prot="public" virt="pure-virtual"><scope>paimon::FileStatus</scope><name>GetPath</name></member>
+      <member refid="classpaimon_1_1_file_status_1abd9922464a1ca7a1da01f7914c845a20" prot="public" virt="pure-virtual"><scope>paimon::FileStatus</scope><name>IsDir</name></member>
+      <member refid="classpaimon_1_1_file_status_1a21e73effa4f499388d75f93047ee73c2" prot="public" virt="virtual"><scope>paimon::FileStatus</scope><name>~FileStatus</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

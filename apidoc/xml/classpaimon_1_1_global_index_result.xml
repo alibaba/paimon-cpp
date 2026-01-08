@@ -1,0 +1,351 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_result" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexResult</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; GlobalIndexResult &gt;</basecompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_bitmap_global_index_result" prot="public" virt="non-virtual">paimon::BitmapGlobalIndexResult</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_vector_search_global_index_result" prot="public" virt="non-virtual">paimon::VectorSearchGlobalIndexResult</derivedcompoundref>
+    <includes refid="global__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h</includes>
+    <innerclass refid="classpaimon_1_1_global_index_result_1_1_iterator" prot="public">paimon::GlobalIndexResult::Iterator</innerclass>
+    <sectiondef kind="private-static-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_global_index_result_1ad8b0a3ed4692da566a904154d54f35dc" prot="private" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+        <definition>constexpr int32_t paimon::GlobalIndexResult::VERSION</definition>
+        <argsstring></argsstring>
+        <name>VERSION</name>
+        <qualifiedname>paimon::GlobalIndexResult::VERSION</qualifiedname>
+        <initializer>= 1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="106" column="30" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" bodystart="106" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a08518aaa907fab25595a3fac121e446a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexResult::~GlobalIndexResult</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GlobalIndexResult</name>
+        <qualifiedname>paimon::GlobalIndexResult::~GlobalIndexResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="33" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a05a3bf2cf4de40d4111f5b5ea087c42c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>virtual Result&lt; bool &gt; paimon::GlobalIndexResult::IsEmpty</definition>
+        <argsstring>() const =0</argsstring>
+        <name>IsEmpty</name>
+        <qualifiedname>paimon::GlobalIndexResult::IsEmpty</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1ae4ec122ed6a0e13f2aa42cf28e39fc29">IsEmpty</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1ae3532f9c1acce524dc6038b2e87650af">IsEmpty</reimplementedby>
+        <briefdescription>
+<para>Checks whether the global index result contains no matching row ids. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt;bool&gt;</computeroutput> where:<itemizedlist>
+<listitem><para><computeroutput>true</computeroutput> indicates the result is empty (no matching rows),</para>
+</listitem><listitem><para><computeroutput>false</computeroutput> indicates at least one matching row exists,</para>
+</listitem><listitem><para>An error is returned only if internal state is corrupted or I/O fails (e.g., during lazy loading of index data). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="54" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1ace69c312887a2e4d2166cbeaab2dcdf9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_index_result_1_1_iterator" kindref="compound">Iterator</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; Iterator &gt; &gt; paimon::GlobalIndexResult::CreateIterator</definition>
+        <argsstring>() const =0</argsstring>
+        <name>CreateIterator</name>
+        <qualifiedname>paimon::GlobalIndexResult::CreateIterator</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1ad3b8473b722436071b4940f6ec6b3f8a">CreateIterator</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1ad97d63dbef4bd4caa021181863eafcfd">CreateIterator</reimplementedby>
+        <briefdescription>
+<para>Creates a new iterator over the selected global row ids. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="57" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a9f44de9b4fd9cf03ab8ecb933daa0f76" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::vector&lt; Range &gt; &gt; paimon::GlobalIndexResult::ToRanges</definition>
+        <argsstring>() const</argsstring>
+        <name>ToRanges</name>
+        <qualifiedname>paimon::GlobalIndexResult::ToRanges</qualifiedname>
+        <briefdescription>
+<para>Returns non-overlapping, sorted ranges covering all row ids in <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="60" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a607f1de75fd37e32b1d45a920ef03869" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::GlobalIndexResult::And</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;other)</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::GlobalIndexResult::And</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1abe5b158b0b72b11193671df7ff8faa84">And</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1a4555fbfadba192808d135cf99e242916">And</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Computes the logical AND (intersection) between current result and another. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="63" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1ae671eeb65cc8602695328a62e5d13283" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::GlobalIndexResult::Or</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;other)</argsstring>
+        <name>Or</name>
+        <qualifiedname>paimon::GlobalIndexResult::Or</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1a8c154d866ae1147734c8b1f1f3ba8367">Or</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1a38e30ff63875b508050759d5fea931d3">Or</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Computes the logical OR (union) between this result and another. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="67" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1afd16e7179e2bcfd49f5355a23c44cecd" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::GlobalIndexResult::AddOffset</definition>
+        <argsstring>(int64_t offset)=0</argsstring>
+        <name>AddOffset</name>
+        <qualifiedname>paimon::GlobalIndexResult::AddOffset</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1a409d2f875a261fddfa84936c2e9e1390">AddOffset</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1a62f13098a3be75f79a7eba8f34cef58b">AddOffset</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <briefdescription>
+<para>Adds the given offset to each row id in current result and returns the new global index result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="72" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a6c022a8685d9e5994ffe37a9efb630f2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::GlobalIndexResult::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::GlobalIndexResult::ToString</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1a0ca5deec02bf047112fdb947d8f680d3">ToString</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_bitmap_vector_search_global_index_result_1af5931c3c41f3f6eb3b3ea6325f914f8f">ToString</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="74" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a9e672c533c723ee18391cca40e72da2e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">PAIMON_UNIQUE_PTR</ref>&lt; <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> &gt; &gt;</type>
+        <definition>static Result&lt; PAIMON_UNIQUE_PTR&lt; Bytes &gt; &gt; paimon::GlobalIndexResult::Serialize</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;global_index_result, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Serialize</name>
+        <qualifiedname>paimon::GlobalIndexResult::Serialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>global_index_result</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Serializes a <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> object into a byte array. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>This method only supports the following concrete implementations:<itemizedlist>
+<listitem><para><ref refid="classpaimon_1_1_bitmap_vector_search_global_index_result" kindref="compound">BitmapVectorSearchGlobalIndexResult</ref></para>
+</listitem><listitem><para><ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref></para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>global_index_result</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> instance to serialize (must not be null). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool used to allocate the output byte buffer. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the serialized <ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> on success, or an error status on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="86" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1a1ab7dbefdca130a6e8a500f46801be91" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::GlobalIndexResult::Deserialize</definition>
+        <argsstring>(const char *buffer, size_t length, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Deserialize</name>
+        <qualifiedname>paimon::GlobalIndexResult::Deserialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Deserializes a <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> object from a raw byte buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>The concrete type of the deserialized object is determined by metadata embedded in the buffer. Currently, only the following types are supported:<itemizedlist>
+<listitem><para><ref refid="classpaimon_1_1_bitmap_vector_search_global_index_result" kindref="compound">BitmapVectorSearchGlobalIndexResult</ref></para>
+</listitem><listitem><para><ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref></para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Pointer to the serialized byte data (must not be null). </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the buffer in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool used to allocate internal objects during deserialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a shared pointer to the reconstructed <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> on success, or an error status on failure. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="102" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Global index result to get selected global row ids. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>paimon::BitmapGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_global_index_result"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon::BitmapVectorSearchGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_vector_search_global_index_result"/>
+        <childnode refid="4" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::VectorSearchGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_vector_search_global_index_result"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="31" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" bodystart="31" bodyend="107"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_result_1afd16e7179e2bcfd49f5355a23c44cecd" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult</scope><name>AddOffset</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a607f1de75fd37e32b1d45a920ef03869" prot="public" virt="virtual"><scope>paimon::GlobalIndexResult</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ace69c312887a2e4d2166cbeaab2dcdf9" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult</scope><name>CreateIterator</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a1ab7dbefdca130a6e8a500f46801be91" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexResult</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a05a3bf2cf4de40d4111f5b5ea087c42c" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult</scope><name>IsEmpty</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ae671eeb65cc8602695328a62e5d13283" prot="public" virt="virtual"><scope>paimon::GlobalIndexResult</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9e672c533c723ee18391cca40e72da2e" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexResult</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9f44de9b4fd9cf03ab8ecb933daa0f76" prot="public" virt="non-virtual"><scope>paimon::GlobalIndexResult</scope><name>ToRanges</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a6c022a8685d9e5994ffe37a9efb630f2" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ad8b0a3ed4692da566a904154d54f35dc" prot="private" virt="non-virtual"><scope>paimon::GlobalIndexResult</scope><name>VERSION</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a08518aaa907fab25595a3fac121e446a" prot="public" virt="virtual"><scope>paimon::GlobalIndexResult</scope><name>~GlobalIndexResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

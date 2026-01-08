@@ -1,0 +1,383 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_data_input_stream" kind="class" language="C++" prot="public">
+    <compoundname>paimon::DataInputStream</compoundname>
+    <includes refid="data__input__stream_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_data_input_stream_1a385d07acfaae5dd188195a3c1864e41e" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;InputStream&gt; paimon::DataInputStream::input_stream_</definition>
+        <argsstring></argsstring>
+        <name>input_stream_</name>
+        <qualifiedname>paimon::DataInputStream::input_stream_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="91" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" bodystart="91" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_data_input_stream_1a4281b3b15730084352d831579eb3a0d9" prot="private" static="no" mutable="no">
+        <type><ref refid="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8" kindref="member">ByteOrder</ref></type>
+        <definition>ByteOrder paimon::DataInputStream::byte_order_</definition>
+        <argsstring></argsstring>
+        <name>byte_order_</name>
+        <qualifiedname>paimon::DataInputStream::byte_order_</qualifiedname>
+        <initializer>= <ref refid="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8a566dd912653af0e0e1f6a49ee6a0e791" kindref="member">ByteOrder::PAIMON_BIG_ENDIAN</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="92" column="15" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" bodystart="92" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a2707cf4439bb0d8d14da34a7be98e508" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::DataInputStream::DataInputStream</definition>
+        <argsstring>(const std::shared_ptr&lt; InputStream &gt; &amp;input_stream)</argsstring>
+        <name>DataInputStream</name>
+        <qualifiedname>paimon::DataInputStream::DataInputStream</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref> &gt; &amp;</type>
+          <declname>input_stream</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_data_input_stream" kindref="compound">DataInputStream</ref></computeroutput> wrapping the given <computeroutput><ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>input_stream</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The underlying input stream to read from. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="39" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1af8880ec11e07b93a631d503e2eba5d97" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::DataInputStream::Seek</definition>
+        <argsstring>(int64_t offset) const</argsstring>
+        <name>Seek</name>
+        <qualifiedname>paimon::DataInputStream::Seek</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <briefdescription>
+<para>Seek to a specific position in the underlying input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>offset</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The absolute byte offset to seek to. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="43" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a382fb1c4d6d93add5fbe1a7b339188c0" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">typename</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt;</type>
+        <definition>Result&lt; T &gt; paimon::DataInputStream::ReadValue</definition>
+        <argsstring>() const</argsstring>
+        <name>ReadValue</name>
+        <qualifiedname>paimon::DataInputStream::ReadValue</qualifiedname>
+        <briefdescription>
+<para>Read a typed value from the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the read value or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="48" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a7e706f144cfd57fba8779f8b39b15778" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::DataInputStream::ReadBytes</definition>
+        <argsstring>(Bytes *bytes) const</argsstring>
+        <name>ReadBytes</name>
+        <qualifiedname>paimon::DataInputStream::ReadBytes</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref> *</type>
+          <declname>bytes</declname>
+        </param>
+        <briefdescription>
+<para>Read some bytes to a <computeroutput><ref refid="classpaimon_1_1_bytes" kindref="compound">Bytes</ref></computeroutput> object from the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The length of bytes is the number of bytes read from the stream. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>bytes</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Buffer to store the read bytes. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="53" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1acc3f894f0347171568a16db33937d74e" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::DataInputStream::Read</definition>
+        <argsstring>(char *data, uint32_t size) const</argsstring>
+        <name>Read</name>
+        <qualifiedname>paimon::DataInputStream::Read</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>data</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>size</declname>
+        </param>
+        <briefdescription>
+<para>Read raw data of specified size from the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>data</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Buffer to store the read data. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>size</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes to read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="58" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a7ded3fd2556526c3850eb44b69fcaebe" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>Result&lt; std::string &gt; paimon::DataInputStream::ReadString</definition>
+        <argsstring>() const</argsstring>
+        <name>ReadString</name>
+        <qualifiedname>paimon::DataInputStream::ReadString</qualifiedname>
+        <briefdescription>
+<para>Read string from the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>First read length (int16), then read string bytes. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="62" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a9053538fb581beae3578505bd96a407b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref> &gt;</type>
+        <definition>Result&lt; int64_t &gt; paimon::DataInputStream::GetPos</definition>
+        <argsstring>() const</argsstring>
+        <name>GetPos</name>
+        <qualifiedname>paimon::DataInputStream::GetPos</qualifiedname>
+        <briefdescription>
+<para>Get the current position in the underlying input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="65" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1ae60d58539219a175067ea60742eb216c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint64_t</ref> &gt;</type>
+        <definition>Result&lt; uint64_t &gt; paimon::DataInputStream::Length</definition>
+        <argsstring>() const</argsstring>
+        <name>Length</name>
+        <qualifiedname>paimon::DataInputStream::Length</qualifiedname>
+        <briefdescription>
+<para>Get the total length of the underlying input stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="68" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1ac3e6996300630f8853420fad310d8604" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::DataInputStream::SetOrder</definition>
+        <argsstring>(ByteOrder order)</argsstring>
+        <name>SetOrder</name>
+        <qualifiedname>paimon::DataInputStream::SetOrder</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8" kindref="member">ByteOrder</ref></type>
+          <declname>order</declname>
+        </param>
+        <briefdescription>
+<para>Set the byte order for endianness conversion. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>order</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The byte order to use <computeroutput>PAIMON_BIG_ENDIAN</computeroutput> or <computeroutput>PAIMON_LITTLE_ENDIAN</computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="72" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" bodystart="72" bodyend="74"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a3e8ecef0f8153d4cda3381f7abcfae30" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::DataInputStream::AssertReadLength</definition>
+        <argsstring>(int32_t read_length, int32_t actual_read_length) const</argsstring>
+        <name>AssertReadLength</name>
+        <qualifiedname>paimon::DataInputStream::AssertReadLength</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>read_length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>actual_read_length</declname>
+        </param>
+        <briefdescription>
+<para>Validate that the expected number of bytes were read. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>read_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Expected number of bytes to read. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>actual_read_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Actual number of bytes read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="80" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a38bee69a116c8900eb646500ceda4135" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::DataInputStream::AssertBoundary</definition>
+        <argsstring>(int32_t need_length) const</argsstring>
+        <name>AssertBoundary</name>
+        <qualifiedname>paimon::DataInputStream::AssertBoundary</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref></type>
+          <declname>need_length</declname>
+        </param>
+        <briefdescription>
+<para>Check if there are enough bytes available to read. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>need_length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Number of bytes needed. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="84" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_data_input_stream_1a43d6ba0316bd2a34db9777c412780125" prot="private" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::DataInputStream::NeedSwap</definition>
+        <argsstring>() const</argsstring>
+        <name>NeedSwap</name>
+        <qualifiedname>paimon::DataInputStream::NeedSwap</qualifiedname>
+        <briefdescription>
+<para>Determine if byte swapping is needed based on current byte order and system endianness. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><computeroutput>true</computeroutput> if byte swapping is required, <computeroutput>false</computeroutput> otherwise. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="88" column="10"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_data_input_stream" kindref="compound">DataInputStream</ref></computeroutput> provides a convenient wrapper around <computeroutput><ref refid="classpaimon_1_1_input_stream" kindref="compound">InputStream</ref></computeroutput> for reading typed data. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><simplesect kind="note"><para>The default byte order is big-endian to maintain compatibility with the Java implementation. </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/data_input_stream.h" bodystart="35" bodyend="93"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_data_input_stream_1a38bee69a116c8900eb646500ceda4135" prot="private" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>AssertBoundary</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a3e8ecef0f8153d4cda3381f7abcfae30" prot="private" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>AssertReadLength</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a4281b3b15730084352d831579eb3a0d9" prot="private" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>byte_order_</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a2707cf4439bb0d8d14da34a7be98e508" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>DataInputStream</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a9053538fb581beae3578505bd96a407b" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>GetPos</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a385d07acfaae5dd188195a3c1864e41e" prot="private" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>input_stream_</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1ae60d58539219a175067ea60742eb216c" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>Length</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a43d6ba0316bd2a34db9777c412780125" prot="private" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>NeedSwap</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1acc3f894f0347171568a16db33937d74e" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>Read</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a7e706f144cfd57fba8779f8b39b15778" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>ReadBytes</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a7ded3fd2556526c3850eb44b69fcaebe" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>ReadString</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1a382fb1c4d6d93add5fbe1a7b339188c0" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>ReadValue</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1af8880ec11e07b93a631d503e2eba5d97" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>Seek</name></member>
+      <member refid="classpaimon_1_1_data_input_stream_1ac3e6996300630f8853420fad310d8604" prot="public" virt="non-virtual"><scope>paimon::DataInputStream</scope><name>SetOrder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

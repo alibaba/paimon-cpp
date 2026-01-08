@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_0d1b380af7e32596045120d77ba9b953" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io</compoundname>
+    <innerfile refid="buffered__input__stream_8h">buffered_input_stream.h</innerfile>
+    <innerfile refid="byte__array__input__stream_8h">byte_array_input_stream.h</innerfile>
+    <innerfile refid="byte__order_8h">byte_order.h</innerfile>
+    <innerfile refid="data__input__stream_8h">data_input_stream.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/"/>
+  </compounddef>
+</doxygen>

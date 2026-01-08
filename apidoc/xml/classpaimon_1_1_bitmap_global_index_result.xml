@@ -1,0 +1,316 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_bitmap_global_index_result" kind="class" language="C++" prot="public">
+    <compoundname>paimon::BitmapGlobalIndexResult</compoundname>
+    <basecompoundref refid="classpaimon_1_1_global_index_result" prot="public" virt="non-virtual">paimon::GlobalIndexResult</basecompoundref>
+    <includes refid="bitmap__global__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h</includes>
+    <innerclass refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator" prot="public">paimon::BitmapGlobalIndexResult::Iterator</innerclass>
+    <sectiondef kind="public-type">
+      <memberdef kind="typedef" id="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" prot="public" static="no">
+        <type>std::function&lt; <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &gt;()&gt;</type>
+        <definition>using paimon::BitmapGlobalIndexResult::BitmapSupplier =  std::function&lt;Result&lt;RoaringBitmap64&gt;()&gt;</definition>
+        <argsstring></argsstring>
+        <name>BitmapSupplier</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::BitmapSupplier</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="36" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="36" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_global_index_result_1a618758fdbaa50d9c1896608b89cd34f1" prot="private" static="no" mutable="yes">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::BitmapGlobalIndexResult::initialized_</definition>
+        <argsstring></argsstring>
+        <name>initialized_</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::initialized_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">false</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="88" column="18" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="88" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_global_index_result_1ab90781b3f55f502be87e631d40b3c478" prot="private" static="no" mutable="no">
+        <type><ref refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" kindref="member">BitmapSupplier</ref></type>
+        <definition>BitmapSupplier paimon::BitmapGlobalIndexResult::bitmap_supplier_</definition>
+        <argsstring></argsstring>
+        <name>bitmap_supplier_</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::bitmap_supplier_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="89" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_bitmap_global_index_result_1a780d6c0e7d97d975ca125ed55dcba213" prot="private" static="no" mutable="yes">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        <definition>RoaringBitmap64 paimon::BitmapGlobalIndexResult::bitmap_</definition>
+        <argsstring></argsstring>
+        <name>bitmap_</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::bitmap_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="90" column="29" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="90" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1accacdab3aa8b80967e25ac0437fedb7c" prot="public" static="no" const="no" explicit="yes" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::BitmapGlobalIndexResult::BitmapGlobalIndexResult</definition>
+        <argsstring>(BitmapSupplier bitmap_supplier)</argsstring>
+        <name>BitmapGlobalIndexResult</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::BitmapGlobalIndexResult</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" kindref="member">BitmapSupplier</ref></type>
+          <declname>bitmap_supplier</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="37" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="37" bodyend="38"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1ad3b8473b722436071b4940f6ec6b3f8a" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_global_index_result_1_1_iterator" kindref="compound">GlobalIndexResult::Iterator</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; GlobalIndexResult::Iterator &gt; &gt; paimon::BitmapGlobalIndexResult::CreateIterator</definition>
+        <argsstring>() const override</argsstring>
+        <name>CreateIterator</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::CreateIterator</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1ace69c312887a2e4d2166cbeaab2dcdf9">CreateIterator</reimplements>
+        <briefdescription>
+<para>Creates a new iterator over the selected global row ids. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="60" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1abe5b158b0b72b11193671df7ff8faa84" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::BitmapGlobalIndexResult::And</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;other) override</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::And</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1a607f1de75fd37e32b1d45a920ef03869">And</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Computes the logical AND (intersection) between current result and another. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="62" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1a8c154d866ae1147734c8b1f1f3ba8367" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::BitmapGlobalIndexResult::Or</definition>
+        <argsstring>(const std::shared_ptr&lt; GlobalIndexResult &gt; &amp;other) override</argsstring>
+        <name>Or</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::Or</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1ae671eeb65cc8602695328a62e5d13283">Or</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Computes the logical OR (union) between this result and another. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="65" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1ae4ec122ed6a0e13f2aa42cf28e39fc29" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>Result&lt; bool &gt; paimon::BitmapGlobalIndexResult::IsEmpty</definition>
+        <argsstring>() const override</argsstring>
+        <name>IsEmpty</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::IsEmpty</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1a05a3bf2cf4de40d4111f5b5ea087c42c">IsEmpty</reimplements>
+        <briefdescription>
+<para>Checks whether the global index result contains no matching row ids. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt;bool&gt;</computeroutput> where:<itemizedlist>
+<listitem><para><computeroutput>true</computeroutput> indicates the result is empty (no matching rows),</para>
+</listitem><listitem><para><computeroutput>false</computeroutput> indicates at least one matching row exists,</para>
+</listitem><listitem><para>An error is returned only if internal state is corrupted or I/O fails (e.g., during lazy loading of index data). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="68" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1a409d2f875a261fddfa84936c2e9e1390" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; GlobalIndexResult &gt; &gt; paimon::BitmapGlobalIndexResult::AddOffset</definition>
+        <argsstring>(int64_t offset) override</argsstring>
+        <name>AddOffset</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::AddOffset</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1afd16e7179e2bcfd49f5355a23c44cecd">AddOffset</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>offset</declname>
+        </param>
+        <briefdescription>
+<para>Adds the given offset to each row id in current result and returns the new global index result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="70" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1a0ca5deec02bf047112fdb947d8f680d3" prot="public" static="no" const="yes" explicit="no" inline="no" virt="virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::BitmapGlobalIndexResult::ToString</definition>
+        <argsstring>() const override</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::ToString</qualifiedname>
+        <reimplements refid="classpaimon_1_1_global_index_result_1a6c022a8685d9e5994ffe37a9efb630f2">ToString</reimplements>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="72" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1a46943e0387c15fa969d3191be225c432" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> * &gt;</type>
+        <definition>Result&lt; const RoaringBitmap64 * &gt; paimon::BitmapGlobalIndexResult::GetBitmap</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBitmap</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::GetBitmap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A non-owning, const pointer to the bitmap. The returned pointer is valid as long as this <ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref> object is alive. The caller must not modify the bitmap. </para>
+</simplesect>
+<simplesect kind="note"><para><bold>Lazy initialization</bold>: The bitmap is constructed only on the first call to this method. Subsequent calls return the cached instance. Construction may involve non-trivial CPU/IO cost (e.g., read indexes or merging bitmap), so avoid calling this if the bitmap is not actually required. <bold>Not thread-safe</bold>. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="81" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_bitmap_global_index_result_1ad8da62f2613c50200141a8c932a12dbb" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref> &gt;</type>
+        <definition>static std::shared_ptr&lt; BitmapGlobalIndexResult &gt; paimon::BitmapGlobalIndexResult::FromRanges</definition>
+        <argsstring>(const std::vector&lt; Range &gt; &amp;ranges)</argsstring>
+        <name>FromRanges</name>
+        <qualifiedname>paimon::BitmapGlobalIndexResult::FromRanges</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_range" kindref="compound">Range</ref> &gt; &amp;</type>
+          <declname>ranges</declname>
+        </param>
+        <briefdescription>
+<para>Creates <computeroutput><ref refid="classpaimon_1_1_bitmap_global_index_result" kindref="compound">BitmapGlobalIndexResult</ref></computeroutput> for all row ids in the given ranges. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>Overlapping or unsorted ranges are accepted. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="85" column="28"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Represents a global index query result that <bold>lazily materializes</bold> its matching row ids as a Roaring bitmap. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The underlying 64-bit Roaring bitmap is <bold>not constructed during object creation</bold>; instead, it is built on-demand the first time <ref refid="classpaimon_1_1_bitmap_global_index_result_1a46943e0387c15fa969d3191be225c432" kindref="member">GetBitmap()</ref> is called. This design avoids unnecessary computation and memory allocation when the bitmap is not needed (e.g., during early stopping). </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::BitmapGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::BitmapGlobalIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_global_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>bitmap_</edgelabel>
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::GlobalIndexResult</label>
+        <link refid="classpaimon_1_1_global_index_result"/>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::RoaringBitmap64</label>
+        <link refid="classpaimon_1_1_roaring_bitmap64"/>
+      </node>
+      <node id="3">
+        <label>std::enable_shared_from_this&lt; GlobalIndexResult &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" line="34" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/bitmap_global_index_result.h" bodystart="34" bodyend="91"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a409d2f875a261fddfa84936c2e9e1390" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>AddOffset</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1abe5b158b0b72b11193671df7ff8faa84" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a780d6c0e7d97d975ca125ed55dcba213" prot="private" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>bitmap_</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1ab90781b3f55f502be87e631d40b3c478" prot="private" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>bitmap_supplier_</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1accacdab3aa8b80967e25ac0437fedb7c" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>BitmapGlobalIndexResult</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a7e28c39acb886b92fd1323a40601a79f" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>BitmapSupplier</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1ad3b8473b722436071b4940f6ec6b3f8a" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>CreateIterator</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a1ab7dbefdca130a6e8a500f46801be91" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1ad8da62f2613c50200141a8c932a12dbb" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>FromRanges</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a46943e0387c15fa969d3191be225c432" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>GetBitmap</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a618758fdbaa50d9c1896608b89cd34f1" prot="private" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>initialized_</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1ae4ec122ed6a0e13f2aa42cf28e39fc29" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>IsEmpty</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a8c154d866ae1147734c8b1f1f3ba8367" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9e672c533c723ee18391cca40e72da2e" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a9f44de9b4fd9cf03ab8ecb933daa0f76" prot="public" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>ToRanges</name></member>
+      <member refid="classpaimon_1_1_bitmap_global_index_result_1a0ca5deec02bf047112fdb947d8f680d3" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1ad8b0a3ed4692da566a904154d54f35dc" prot="private" virt="non-virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>VERSION</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1a08518aaa907fab25595a3fac121e446a" prot="public" virt="virtual"><scope>paimon::BitmapGlobalIndexResult</scope><name>~GlobalIndexResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

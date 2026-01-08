@@ -1,0 +1,229 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kind="class" language="C++" prot="public">
+    <compoundname>paimon::RoaringBitmap64::Iterator</compoundname>
+    <includes refid="roaring__bitmap64_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h</includes>
+    <sectiondef kind="friend">
+      <memberdef kind="friend" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1aa914469e6c92531a88396cbb3ea51c14" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">class</ref></type>
+        <definition>friend class RoaringBitmap64</definition>
+        <argsstring></argsstring>
+        <name>RoaringBitmap64</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::RoaringBitmap64</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="51" column="22" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="51" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a2061ebda1b9f14e7c506162db955d7bd" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref> *</type>
+        <definition>void* paimon::RoaringBitmap64::Iterator::iterator_</definition>
+        <argsstring></argsstring>
+        <name>iterator_</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::iterator_</qualifiedname>
+        <initializer>= <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref></initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="67" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ab235bdb6c5f6b74fb28c6c0d9525e514" prot="public" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::Iterator::Iterator</definition>
+        <argsstring>(const RoaringBitmap64 &amp;bitmap)</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64" kindref="compound">RoaringBitmap64</ref> &amp;</type>
+          <declname>bitmap</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="52" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a96f00521d58dd42ead7e04394c59ae1f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::Iterator::~Iterator</definition>
+        <argsstring>()</argsstring>
+        <name>~Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::~Iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="53" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a9e9c3cd91bc2d6493dd355b4d26be9c8" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::Iterator::Iterator</definition>
+        <argsstring>(const Iterator &amp;) noexcept</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="54" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1abe1905a681574e34fbbe6723b86f2cc9" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::RoaringBitmap64::Iterator::Iterator</definition>
+        <argsstring>(Iterator &amp;&amp;) noexcept</argsstring>
+        <name>Iterator</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::Iterator</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="55" column="9"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a675040377459e6ad405ed90aa0094e49" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap64::Iterator::operator=</definition>
+        <argsstring>(const Iterator &amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="56" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ad6f4b759fc9cdf2313126b90c5e1e101" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap64::Iterator::operator=</definition>
+        <argsstring>(Iterator &amp;&amp;) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;&amp;</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="57" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1af35cbb185570c8f6d8115e464bf71fe1" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>int64_t paimon::RoaringBitmap64::Iterator::operator*</definition>
+        <argsstring>() const</argsstring>
+        <name>operator*</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator*</qualifiedname>
+        <briefdescription>
+<para>Return the current value of iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="60" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1afef5c8009279f54ac776c1e7dd569816" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+        <definition>Iterator &amp; paimon::RoaringBitmap64::Iterator::operator++</definition>
+        <argsstring>()</argsstring>
+        <name>operator++</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator++</qualifiedname>
+        <briefdescription>
+<para>Move the iterator to next value. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="62" column="18"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a9c3df33174efab850fe4bb8138fdca39" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::Iterator::operator==</definition>
+        <argsstring>(const Iterator &amp;other) const</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="63" column="14"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ae9815867a291d97044bcab59dd5b8ab2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::RoaringBitmap64::Iterator::operator!=</definition>
+        <argsstring>(const Iterator &amp;other) const</argsstring>
+        <name>operator!=</name>
+        <qualifiedname>paimon::RoaringBitmap64::Iterator::operator!=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator" kindref="compound">Iterator</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="64" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" line="49" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/utils/roaring_bitmap64.h" bodystart="49" bodyend="68"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ab235bdb6c5f6b74fb28c6c0d9525e514" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a9e9c3cd91bc2d6493dd355b4d26be9c8" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1abe1905a681574e34fbbe6723b86f2cc9" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>Iterator</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a2061ebda1b9f14e7c506162db955d7bd" prot="private" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>iterator_</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ae9815867a291d97044bcab59dd5b8ab2" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator!=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1af35cbb185570c8f6d8115e464bf71fe1" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator*</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1afef5c8009279f54ac776c1e7dd569816" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator++</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a675040377459e6ad405ed90aa0094e49" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1ad6f4b759fc9cdf2313126b90c5e1e101" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a9c3df33174efab850fe4bb8138fdca39" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_roaring_bitmap64_1_1_iterator_1a96f00521d58dd42ead7e04394c59ae1f" prot="public" virt="non-virtual"><scope>paimon::RoaringBitmap64::Iterator</scope><name>~Iterator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

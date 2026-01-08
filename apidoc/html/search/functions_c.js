@@ -1,0 +1,19 @@
+var searchData=
+[
+  ['needswap_0',['NeedSwap',['../classpaimon_1_1_data_input_stream.html#a43d6ba0316bd2a34db9777c412780125',1,'paimon::DataInputStream']]],
+  ['negate_1',['negate',['../classpaimon_1_1_compound_predicate.html#a1eb2a8e29101ea1a34429d8a6be7a2e1',1,'paimon::CompoundPredicate::Negate()'],['../classpaimon_1_1_leaf_predicate.html#aafe45884b63f0093a26908fd00b6667c',1,'paimon::LeafPredicate::Negate()'],['../classpaimon_1_1_predicate.html#ab8d80cebcd4a1427ecb967a37a774b68',1,'paimon::Predicate::Negate()']]],
+  ['nestedcolumnstats_2',['NestedColumnStats',['../classpaimon_1_1_nested_column_stats.html#a666c40837f2f6d93aa15ed24abe60597',1,'paimon::NestedColumnStats']]],
+  ['newfilename_3',['NewFileName',['../classpaimon_1_1_global_index_file_writer.html#a31d48a7c456af3324c547df8281d48df',1,'paimon::GlobalIndexFileWriter']]],
+  ['newinputstream_4',['NewInputStream',['../classpaimon_1_1_blob.html#a123d3ec7b9bf8c2451dde9cb48c5f559',1,'paimon::Blob']]],
+  ['newoutputstream_5',['NewOutputStream',['../classpaimon_1_1_global_index_file_writer.html#a60e6c169024b5f3b656c65c1dee77889',1,'paimon::GlobalIndexFileWriter']]],
+  ['next_6',['next',['../classpaimon_1_1_bitmap_global_index_result_1_1_iterator.html#a30fc7c3c5e779784b9ff8398668f7623',1,'paimon::BitmapGlobalIndexResult::Iterator::Next()'],['../classpaimon_1_1_global_index_result_1_1_iterator.html#aec3a22bc75ba73c1e043b5b1db52ce07',1,'paimon::GlobalIndexResult::Iterator::Next()']]],
+  ['nextbatch_7',['nextbatch',['../classpaimon_1_1_file_batch_reader.html#a01358cb810bb14fcb26663d510c08fce',1,'paimon::FileBatchReader::NextBatch()'],['../classpaimon_1_1_batch_reader.html#a01358cb810bb14fcb26663d510c08fce',1,'paimon::BatchReader::NextBatch()=0']]],
+  ['nextbatchwithbitmap_8',['nextbatchwithbitmap',['../classpaimon_1_1_batch_reader.html#ae4b5062701224aeae83472380d02f434',1,'paimon::BatchReader::NextBatchWithBitmap()'],['../classpaimon_1_1_file_batch_reader.html#ae4b5062701224aeae83472380d02f434',1,'paimon::FileBatchReader::NextBatchWithBitmap()']]],
+  ['nextwithscore_9',['nextwithscore',['../classpaimon_1_1_bitmap_vector_search_global_index_result_1_1_vector_search_iterator.html#a5d53eb73967bcb204060c41c6ed9f52f',1,'paimon::BitmapVectorSearchGlobalIndexResult::VectorSearchIterator::NextWithScore()'],['../classpaimon_1_1_vector_search_global_index_result_1_1_vector_search_iterator.html#adaf1f51223d422d8091c39c2c6658f26',1,'paimon::VectorSearchGlobalIndexResult::VectorSearchIterator::NextWithScore()']]],
+  ['notequal_10',['NotEqual',['../classpaimon_1_1_predicate_builder.html#aa11272547168a86576a88c948a16b64f',1,'paimon::PredicateBuilder']]],
+  ['notexist_11',['NotExist',['../classpaimon_1_1_status.html#a33c6225bf4989a1bbf8a85a085dbd42b',1,'paimon::Status']]],
+  ['notimplemented_12',['NotImplemented',['../classpaimon_1_1_status.html#ade3bf02ffe02144cdbe87a40cc935869',1,'paimon::Status']]],
+  ['notin_13',['NotIn',['../classpaimon_1_1_predicate_builder.html#afcc45597a0e47537347b1d95ec060bac',1,'paimon::PredicateBuilder']]],
+  ['nullcount_14',['nullcount',['../classpaimon_1_1_column_stats.html#a092dca4f4e462bba61551fb9b3581696',1,'paimon::ColumnStats::NullCount()'],['../classpaimon_1_1_nested_column_stats.html#a099d2325a59079e3268f411d958d7d42',1,'paimon::NestedColumnStats::NullCount()']]],
+  ['numbuckets_15',['NumBuckets',['../classpaimon_1_1_schema.html#a5bd83f6d9c0ed0a0f20de8527ab2d22b',1,'paimon::Schema']]]
+];

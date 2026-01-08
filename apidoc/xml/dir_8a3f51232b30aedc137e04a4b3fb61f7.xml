@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_8a3f51232b30aedc137e04a4b3fb61f7" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index</compoundname>
+    <innerfile refid="bitmap__index__result_8h">bitmap_index_result.h</innerfile>
+    <innerfile refid="file__index__format_8h">file_index_format.h</innerfile>
+    <innerfile refid="file__index__reader_8h">file_index_reader.h</innerfile>
+    <innerfile refid="file__index__result_8h">file_index_result.h</innerfile>
+    <innerfile refid="file__index__writer_8h">file_index_writer.h</innerfile>
+    <innerfile refid="file__indexer_8h">file_indexer.h</innerfile>
+    <innerfile refid="file__indexer__factory_8h">file_indexer_factory.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/"/>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_table_read" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::TableRead</compoundname>
+    <includes refid="table__read_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_table_read_1a09f604e1c5c9d8d9568f75843bb16c6a" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::TableRead::pool_</definition>
+        <argsstring></argsstring>
+        <name>pool_</name>
+        <qualifiedname>paimon::TableRead::pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="70" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" bodystart="70" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_read_1a489cf1b366949b163c0db353988c3503" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::TableRead::~TableRead</definition>
+        <argsstring>()=default</argsstring>
+        <name>~TableRead</name>
+        <qualifiedname>paimon::TableRead::~TableRead</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="37" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_read_1a81796bc3daa8d21e21f8ba2e32b539ec" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; BatchReader &gt; &gt; paimon::TableRead::CreateReader</definition>
+        <argsstring>(const std::vector&lt; std::shared_ptr&lt; Split &gt; &gt; &amp;splits)</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::TableRead::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_split" kindref="compound">Split</ref> &gt; &gt; &amp;</type>
+          <declname>splits</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref></computeroutput> instance for reading data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This method creates a <ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref> that will be responsible for reading data from the provided splits.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>splits</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A vector of shared pointers to <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> instances representing the data to be read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref></computeroutput> instance. </para>
+</simplesect>
+<simplesect kind="note"><para><computeroutput><ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref></computeroutput>s created by the same <computeroutput><ref refid="classpaimon_1_1_table_read" kindref="compound">TableRead</ref></computeroutput> are not thread-safe for concurrent reading. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="55" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_table_read_1a45d5949ae071cd273bf18d87908a9522" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; BatchReader &gt; &gt; paimon::TableRead::CreateReader</definition>
+        <argsstring>(const std::shared_ptr&lt; Split &gt; &amp;split)=0</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::TableRead::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_split" kindref="compound">Split</ref> &gt; &amp;</type>
+          <declname>split</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref></computeroutput> instance for a single split. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>split</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A shared pointer to the <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> instance that defines the data to be read. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_batch_reader" kindref="compound">BatchReader</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="63" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_read_1a61ce8ddb69965e9166ba34c337ca8841" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_table_read" kindref="compound">TableRead</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; TableRead &gt; &gt; paimon::TableRead::Create</definition>
+        <argsstring>(std::unique_ptr&lt; ReadContext &gt; context)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::TableRead::Create</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+<para>Create an instance of <computeroutput><ref refid="classpaimon_1_1_table_read" kindref="compound">TableRead</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique pointer to the <computeroutput><ref refid="classpaimon_1_1_read_context" kindref="compound">ReadContext</ref></computeroutput> used for read operations. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_table_read" kindref="compound">TableRead</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="43" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="protected-func">
+      <memberdef kind="function" id="classpaimon_1_1_table_read_1a5bc35cec6cb24f46e9fee2546b29fb40" prot="protected" static="no" const="no" explicit="yes" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::TableRead::TableRead</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>TableRead</name>
+        <qualifiedname>paimon::TableRead::TableRead</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="67" column="14"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Given a <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> or a list of <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput>, generate a reader for batch reading. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/table_read.h" bodystart="35" bodyend="71"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_table_read_1a61ce8ddb69965e9166ba34c337ca8841" prot="public" virt="non-virtual"><scope>paimon::TableRead</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_table_read_1a81796bc3daa8d21e21f8ba2e32b539ec" prot="public" virt="virtual"><scope>paimon::TableRead</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_table_read_1a45d5949ae071cd273bf18d87908a9522" prot="public" virt="pure-virtual"><scope>paimon::TableRead</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_table_read_1a09f604e1c5c9d8d9568f75843bb16c6a" prot="private" virt="non-virtual"><scope>paimon::TableRead</scope><name>pool_</name></member>
+      <member refid="classpaimon_1_1_table_read_1a5bc35cec6cb24f46e9fee2546b29fb40" prot="protected" virt="non-virtual"><scope>paimon::TableRead</scope><name>TableRead</name></member>
+      <member refid="classpaimon_1_1_table_read_1a489cf1b366949b163c0db353988c3503" prot="public" virt="virtual"><scope>paimon::TableRead</scope><name>~TableRead</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

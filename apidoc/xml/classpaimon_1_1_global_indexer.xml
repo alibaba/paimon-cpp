@@ -1,0 +1,168 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_indexer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexer</compoundname>
+    <includes refid="global__indexer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_1a8350b04541d75e0ffb3a451b2067c90e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexer::~GlobalIndexer</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GlobalIndexer</name>
+        <qualifiedname>paimon::GlobalIndexer::~GlobalIndexer</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h" line="37" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_1a48c350f4c101dace9fe5d79ff629f622" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_writer" kindref="compound">GlobalIndexWriter</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexWriter &gt; &gt; paimon::GlobalIndexer::CreateWriter</definition>
+        <argsstring>(const std::string &amp;field_name, ::ArrowSchema *arrow_schema, const std::shared_ptr&lt; GlobalIndexFileWriter &gt; &amp;file_writer, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool) const =0</argsstring>
+        <name>CreateWriter</name>
+        <qualifiedname>paimon::GlobalIndexer::CreateWriter</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>arrow_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_file_writer" kindref="compound">GlobalIndexFileWriter</ref> &gt; &amp;</type>
+          <declname>file_writer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a writer for building a global index on a specific field. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the field to be indexed. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>arrow_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> of the input Arrow struct array. It must contain the field specified by field_name and may include additional associated fields used during index construction. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>file_writer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>I/O handler for persisting index data to storage. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations; if nullptr, uses default. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a shared pointer to the created <computeroutput><ref refid="classpaimon_1_1_global_index_writer" kindref="compound">GlobalIndexWriter</ref></computeroutput>, or an error if the field is not found, unsupported, or initialization fails, etc. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h" line="49" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_indexer_1aef056d9a8177dfcfa86bc60cf5ac86ef" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; paimon::GlobalIndexer::CreateReader</definition>
+        <argsstring>(::ArrowSchema *arrow_schema, const std::shared_ptr&lt; GlobalIndexFileReader &gt; &amp;file_reader, const std::vector&lt; GlobalIndexIOMeta &gt; &amp;files, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool) const =0</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::GlobalIndexer::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_schema" kindref="compound">::ArrowSchema</ref> *</type>
+          <declname>arrow_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_file_reader" kindref="compound">GlobalIndexFileReader</ref> &gt; &amp;</type>
+          <declname>file_reader</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="structpaimon_1_1_global_index_i_o_meta" kindref="compound">GlobalIndexIOMeta</ref> &gt; &amp;</type>
+          <declname>files</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Creates a reader for querying a pre-built global index. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>arrow_schema</parametername>
+</parameternamelist>
+<parameterdescription>
+<para><ref refid="classpaimon_1_1_schema" kindref="compound">Schema</ref> of the indexed data; used to interpret predicate literals. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>file_reader</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>I/O handler for reading index artifacts from storage. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>files</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>List of index file metadata entries produced during writing. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for temporary allocations; if nullptr, uses default. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> containing a shared pointer to the created <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput>, or an error if the index cannot be loaded or is incompatible, etc. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h" line="62" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for creating global index readers and writers. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_indexer.h" bodystart="35" bodyend="66"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_indexer_1aef056d9a8177dfcfa86bc60cf5ac86ef" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexer</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_global_indexer_1a48c350f4c101dace9fe5d79ff629f622" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexer</scope><name>CreateWriter</name></member>
+      <member refid="classpaimon_1_1_global_indexer_1a8350b04541d75e0ffb3a451b2067c90e" prot="public" virt="virtual"><scope>paimon::GlobalIndexer</scope><name>~GlobalIndexer</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

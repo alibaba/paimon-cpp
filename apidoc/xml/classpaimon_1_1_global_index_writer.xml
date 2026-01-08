@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_writer" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexWriter</compoundname>
+    <includes refid="global__index__writer_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_writer_1a78f234455ecc8a3c5af6eb369829bb8b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexWriter::~GlobalIndexWriter</definition>
+        <argsstring>()=default</argsstring>
+        <name>~GlobalIndexWriter</name>
+        <qualifiedname>paimon::GlobalIndexWriter::~GlobalIndexWriter</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h" line="31" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_writer_1a125a81f9df8fb118cdc63fea6a749f2f" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::GlobalIndexWriter::AddBatch</definition>
+        <argsstring>(::ArrowArray *arrow_array)=0</argsstring>
+        <name>AddBatch</name>
+        <qualifiedname>paimon::GlobalIndexWriter::AddBatch</qualifiedname>
+        <param>
+          <type><ref refid="struct_arrow_array" kindref="compound">::ArrowArray</ref> *</type>
+          <declname>arrow_array</declname>
+        </param>
+        <briefdescription>
+<para>Builds index structures from a batch of columnar data. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>arrow_array</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A valid C <ref refid="struct_arrow_array" kindref="compound">ArrowArray</ref> pointer representing a struct array. Must not be nullptr, and must conform to the expected schema. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><computeroutput><ref refid="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" kindref="member">Status::OK()</ref></computeroutput> on success; otherwise, an error indicating malformed input, I/O failure, or unsupported type, etc. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h" line="39" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_writer_1a1e1b50ac25ccdf20c897b63f4d058916" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; <ref refid="structpaimon_1_1_global_index_i_o_meta" kindref="compound">GlobalIndexIOMeta</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; GlobalIndexIOMeta &gt; &gt; paimon::GlobalIndexWriter::Finish</definition>
+        <argsstring>()=0</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::GlobalIndexWriter::Finish</qualifiedname>
+        <briefdescription>
+<para>Finalizes the index build process and returns metadata for persisted index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h" line="42" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract interface for building a global index from Arrow data batches. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_writer.h" bodystart="29" bodyend="43"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_writer_1a125a81f9df8fb118cdc63fea6a749f2f" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexWriter</scope><name>AddBatch</name></member>
+      <member refid="classpaimon_1_1_global_index_writer_1a1e1b50ac25ccdf20c897b63f4d058916" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexWriter</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_global_index_writer_1a78f234455ecc8a3c5af6eb369829bb8b" prot="public" virt="virtual"><scope>paimon::GlobalIndexWriter</scope><name>~GlobalIndexWriter</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

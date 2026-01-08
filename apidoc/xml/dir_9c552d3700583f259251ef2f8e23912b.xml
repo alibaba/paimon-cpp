@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="dir_9c552d3700583f259251ef2f8e23912b" kind="dir">
+    <compoundname>/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader</compoundname>
+    <innerfile refid="batch__reader_8h">batch_reader.h</innerfile>
+    <innerfile refid="file__batch__reader_8h">file_batch_reader.h</innerfile>
+    <innerfile refid="prefetch__file__batch__reader_8h">prefetch_file_batch_reader.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/reader/"/>
+  </compounddef>
+</doxygen>

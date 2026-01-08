@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_store_write" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileStoreWrite</compoundname>
+    <includes refid="file__store__write_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h</includes>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1a8045c3defdd61ac75f1108834daddd46" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_store_write" kindref="compound">FileStoreWrite</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; FileStoreWrite &gt; &gt; paimon::FileStoreWrite::Create</definition>
+        <argsstring>(std::unique_ptr&lt; WriteContext &gt; context)</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::FileStoreWrite::Create</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref> &gt;</type>
+          <declname>context</declname>
+        </param>
+        <briefdescription>
+<para>Create an instance of <computeroutput><ref refid="classpaimon_1_1_file_store_write" kindref="compound">FileStoreWrite</ref></computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>context</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique pointer to the <computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput> used for write operations.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing a unique pointer to the <computeroutput><ref refid="classpaimon_1_1_file_store_write" kindref="compound">FileStoreWrite</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="45" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1a3e27d7e6658286dcfea264f616d7e40e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileStoreWrite::~FileStoreWrite</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileStoreWrite</name>
+        <qualifiedname>paimon::FileStoreWrite::~FileStoreWrite</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="47" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1ae1bf5795b039951efb0bcda6ac07ad01" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileStoreWrite::Write</definition>
+        <argsstring>(std::unique_ptr&lt; RecordBatch &gt; &amp;&amp;batch)=0</argsstring>
+        <name>Write</name>
+        <qualifiedname>paimon::FileStoreWrite::Write</qualifiedname>
+        <param>
+          <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref> &gt; &amp;&amp;</type>
+          <declname>batch</declname>
+        </param>
+        <briefdescription>
+<para>Support write an input <computeroutput><ref refid="classpaimon_1_1_record_batch" kindref="compound">RecordBatch</ref></computeroutput> to internal buffer or file. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="50" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::shared_ptr&lt; CommitMessage &gt; &gt; &gt; paimon::FileStoreWrite::PrepareCommit</definition>
+        <argsstring>(bool wait_compaction=true, int64_t commit_identifier=BATCH_WRITE_COMMIT_IDENTIFIER)=0</argsstring>
+        <name>PrepareCommit</name>
+        <qualifiedname>paimon::FileStoreWrite::PrepareCommit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>wait_compaction</declname>
+          <defval><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">true</ref></defval>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+          <declname>commit_identifier</declname>
+          <defval><ref refid="namespacepaimon_1ae171754921080c9d7a51e4ff460663af" kindref="member">BATCH_WRITE_COMMIT_IDENTIFIER</ref></defval>
+        </param>
+        <briefdescription>
+<para>Generate a list of commit messages with the latest generated data file meta information of the current snapshot. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>When we need commit, call PrepareCommit to get the current <computeroutput><ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref></computeroutput>s with the latest generated data file meta information of the current snapshot.</para>
+<para>This function is designed to be called when a commit is required. Depending on the writing scenario, the behavior will differ:</para>
+<para><itemizedlist>
+<listitem><para>For batch write, simply call <computeroutput><ref refid="classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672" kindref="member">PrepareCommit()</ref></computeroutput> without any parameters.</para>
+</listitem><listitem><para>For streaming write, you need to provide both parameters: <computeroutput><ref refid="classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672" kindref="member">PrepareCommit(bool wait_compaction, int64_t commit_identifier)</ref></computeroutput>.</para>
+</listitem></itemizedlist>
+</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>wait_compaction</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Indicates whether to wait for any ongoing compaction process to complete. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_identifier</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>A unique identifier for the commit operation. This parameter is only relevant in streaming write scenarios.</para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing <computeroutput>std::vector&lt;std::shared_ptr&lt;<ref refid="classpaimon_1_1_commit_message" kindref="compound">CommitMessage</ref>&gt;&gt;</computeroutput> objects, representing the generated commit messages. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="72" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1a4d1000108e73778e282da532c4e30b6c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_metrics" kindref="compound">Metrics</ref> &gt;</type>
+        <definition>virtual std::shared_ptr&lt; Metrics &gt; paimon::FileStoreWrite::GetMetrics</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetMetrics</name>
+        <qualifiedname>paimon::FileStoreWrite::GetMetrics</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="74" column="29"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_store_write_1abd0cf68d64b0243b826b12dcd4716ac9" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::FileStoreWrite::Close</definition>
+        <argsstring>()=0</argsstring>
+        <name>Close</name>
+        <qualifiedname>paimon::FileStoreWrite::Close</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="75" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for write operations in a file store. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" line="38" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_store_write.h" bodystart="38" bodyend="76"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_store_write_1abd0cf68d64b0243b826b12dcd4716ac9" prot="public" virt="pure-virtual"><scope>paimon::FileStoreWrite</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_file_store_write_1a8045c3defdd61ac75f1108834daddd46" prot="public" virt="non-virtual"><scope>paimon::FileStoreWrite</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_file_store_write_1a4d1000108e73778e282da532c4e30b6c" prot="public" virt="pure-virtual"><scope>paimon::FileStoreWrite</scope><name>GetMetrics</name></member>
+      <member refid="classpaimon_1_1_file_store_write_1ab62e7a52018402c7b99d0e75a03e1672" prot="public" virt="pure-virtual"><scope>paimon::FileStoreWrite</scope><name>PrepareCommit</name></member>
+      <member refid="classpaimon_1_1_file_store_write_1ae1bf5795b039951efb0bcda6ac07ad01" prot="public" virt="pure-virtual"><scope>paimon::FileStoreWrite</scope><name>Write</name></member>
+      <member refid="classpaimon_1_1_file_store_write_1a3e27d7e6658286dcfea264f616d7e40e" prot="public" virt="virtual"><scope>paimon::FileStoreWrite</scope><name>~FileStoreWrite</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

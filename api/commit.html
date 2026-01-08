@@ -1,0 +1,923 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Commit &#8212; C++ Paimon</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/theme_overrides.css?v=986af390" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="../_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=3bb21c8c"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'api/commit';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Scan" href="scan.html" />
+    <link rel="prev" title="Write" href="write.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="0.9.0" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class=" navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">Paimon C++</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class=" navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../getting_started.html">
+    Getting Started
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../user_guide.html">
+    User Guide
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="../examples/index.html">
+    Examples
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="../api.html">
+    API Reference
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/alibaba/paimon-cpp" title="GitHub" class="nav-link pst-navbar-icon" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"><ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="catalog.html">Catalog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="write.html">Write</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Commit</a></li>
+<li class="toctree-l1"><a class="reference internal" href="scan.html">Scan</a></li>
+<li class="toctree-l1"><a class="reference internal" href="read.html">Read</a></li>
+<li class="toctree-l1"><a class="reference internal" href="predicate.html">Predicate</a></li>
+
+<li class="toctree-l1"><a class="reference internal" href="file_format.html">File Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_system.html">File System</a></li>
+<li class="toctree-l1"><a class="reference internal" href="io.html">IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_types.html">Data Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="file_index.html">File Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="global_index.html">GLobal Index</a></li>
+<li class="toctree-l1"><a class="reference internal" href="clean.html">Orphan Files Clean</a></li>
+<li class="toctree-l1"><a class="reference internal" href="defs.html">Options</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executor.html">Executor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="memory.html">Memory</a></li>
+</ul>
+</div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="../index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    
+    <li class="breadcrumb-item"><a href="../api.html" class="nav-link">API Reference</a></li>
+    
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Commit</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="commit">
+<h1>Commit<a class="headerlink" href="#commit" title="Link to this heading">#</a></h1>
+<section id="interface">
+<span id="cpp-api-commit"></span><h2>Interface<a class="headerlink" href="#interface" title="Link to this heading">#</a></h2>
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommitE">
+<span id="_CPPv3N6paimon15FileStoreCommitE"></span><span id="_CPPv2N6paimon15FileStoreCommitE"></span><span id="paimon::FileStoreCommit"></span><span class="target" id="classpaimon_1_1_file_store_commit"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FileStoreCommit</span></span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommitE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Interface for commit operations in a file store. </p>
+<p>The <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_commit"><span class="std std-ref"><span class="pre">FileStoreCommit</span></span></a></code> class provides interfaces for committing changes, expiring old snapshots, dropping partitions, and retrieving commit metrics. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommitD0Ev">
+<span id="_CPPv3N6paimon15FileStoreCommitD0Ev"></span><span id="_CPPv2N6paimon15FileStoreCommitD0Ev"></span><span id="paimon::FileStoreCommit::~FileStoreCommit"></span><span class="target" id="classpaimon_1_1_file_store_commit_1aceefaf841105024566a33d7ba9537d03"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">~FileStoreCommit</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="k"><span class="pre">default</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommitD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">
+<span id="_CPPv3N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="_CPPv2N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="paimon::FileStoreCommit::Commit__std::vector:std::shared_ptr:CommitMessage::CR.int64_t.std::optional:int64_t:"></span><span class="target" id="classpaimon_1_1_file_store_commit_1af7d78ade944ce09c77fc5c5fa4668881"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Commit</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">CommitMessage</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_messages</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">commit_identifier</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">BATCH_WRITE_COMMIT_IDENTIFIER</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">watermark</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Commit changes to the file store. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>commit_messages</strong> – A vector of commit messages to be committed. </p></li>
+<li><p><strong>commit_identifier</strong> – An optional identifier for the commit operation. Default is <code class="docutils literal notranslate"><span class="pre">BATCH_WRITE_COMMIT_IDENTIFIER</span></code>. </p></li>
+<li><p><strong>watermark</strong> – An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating the success or failure of the commit operation. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE">
+<span id="_CPPv3N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE"></span><span id="_CPPv2N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE"></span><span id="paimon::FileStoreCommit::FilterAndCommit__std::map:int64_t.std::vector:std::shared_ptr:CommitMessage:::CR.std::optional:int64_t:"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a7588411adfc60796e3ef42d976caab93"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FilterAndCommit</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">CommitMessage</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_identifier_and_messages</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">watermark</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Filter out all <code class="docutils literal notranslate"><span class="pre">std::vector&lt;</span><span class="pre">CommitMessage</span><span class="pre">&gt;</span></code> which have been committed and commit the remaining ones. </p>
+<p>Compared to commit, this method will first check if a commit_identifier has been committed, so this method might be slower. A common usage of this method is to retry the commit process after a failure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>commit_identifier_and_messages</strong> – A map containing all <code class="docutils literal notranslate"><span class="pre">CommitMessage</span></code>s in question. The key is the commit_identifier.</p></li>
+<li><p><strong>watermark</strong> – An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Number of <code class="docutils literal notranslate"><span class="pre">std::vector&lt;</span><span class="pre">CommitMessage</span><span class="pre">&gt;</span></code> committed. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">
+<span id="_CPPv3N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="_CPPv2N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="paimon::FileStoreCommit::Overwrite__std::vector:std::map:ss.ss::CR.std::vector:std::shared_ptr:CommitMessage::CR.int64_t.std::optional:int64_t:"></span><span class="target" id="classpaimon_1_1_file_store_commit_1ad07c0a3b2ce357812bc9884e212983aa"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Overwrite</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partitions</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">CommitMessage</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_messages</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">commit_identifier</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">watermark</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Overwrite from manifest committable and partition. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partitions</strong> – A single partition maps each partition key to a partition value. Depending on the user-defined statement, the partition might not include all partition keys. Also note that this partition does not necessarily equal to the partitions of the newly added key-values. This is just the partition to be cleaned up. </p></li>
+<li><p><strong>commit_messages</strong> – Description of the commit messages. </p></li>
+<li><p><strong>commit_identifier</strong> – Unique identifier. </p></li>
+<li><p><strong>watermark</strong> – An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result of the operation. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE">
+<span id="_CPPv3N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="_CPPv2N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"></span><span id="paimon::FileStoreCommit::FilterAndOverwrite__std::vector:std::map:ss.ss::CR.std::vector:std::shared_ptr:CommitMessage::CR.int64_t.std::optional:int64_t:"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a7b85f1010dae3cc5e568604a34e035ef"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">FilterAndOverwrite</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partitions</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">CommitMessage</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_messages</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">commit_identifier</span></span>, <span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">optional</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int64_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">watermark</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">nullopt</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>This is a temporary interface for internal use. </p>
+<p>It will be removed in a future version. Please do not rely on it for long-term use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partitions</strong> – Description of the partitions. </p></li>
+<li><p><strong>commit_messages</strong> – Description of the commit messages. </p></li>
+<li><p><strong>commit_identifier</strong> – Unique identifier. </p></li>
+<li><p><strong>watermark</strong> – An optional event-time watermark used to indicate the progress of data processing. Default is std::nullopt. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Result of the operation. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit25GetLastCommitTableRequestEv">
+<span id="_CPPv3N6paimon15FileStoreCommit25GetLastCommitTableRequestEv"></span><span id="_CPPv2N6paimon15FileStoreCommit25GetLastCommitTableRequestEv"></span><span id="paimon::FileStoreCommit::GetLastCommitTableRequest"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a5ae2fb04ea79c56cfdd2aee86737bd5a"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetLastCommitTableRequest</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit25GetLastCommitTableRequestEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>If user want to use REST catalog commit, please set <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder_1ae9b915cd4fd9a12757ca11239ec2fbc6"><span class="std std-ref"><span class="pre">CommitContextBuilder::UseRESTCatalogCommit()</span></span></a></code>, then call <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_commit_1af7d78ade944ce09c77fc5c5fa4668881"><span class="std std-ref"><span class="pre">Commit()</span></span></a></code> (or <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_commit_1a7588411adfc60796e3ef42d976caab93"><span class="std std-ref"><span class="pre">FilterAndCommit()</span></span></a></code>) normally, then call this method to get the last commit table request, which is a JSON string that can be used to send to REST catalog server. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Temporary interface for internal use, will be removed in the future.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A Result containing a JSON string which including <code class="docutils literal notranslate"><span class="pre">snapshot</span></code> and <code class="docutils literal notranslate"><span class="pre">statistics</span></code>, but excluding <code class="docutils literal notranslate"><span class="pre">tableId</span></code>. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit6ExpireEv">
+<span id="_CPPv3N6paimon15FileStoreCommit6ExpireEv"></span><span id="_CPPv2N6paimon15FileStoreCommit6ExpireEv"></span><span id="paimon::FileStoreCommit::Expire"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a41b7fa9e190f5ded41c32e2b37094145"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">int32_t</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Expire</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit6ExpireEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Expire old snapshot in the file store. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result&lt;int32_t&gt; indicating the number of expired items or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t">
+<span id="_CPPv3N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t"></span><span id="_CPPv2N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t"></span><span id="paimon::FileStoreCommit::DropPartition__std::vector:std::map:ss.ss::CR.int64_t"></span><span class="target" id="classpaimon_1_1_file_store_commit_1acd5f5351efa184f161b4d04e1684ed3e"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">Status</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">DropPartition</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">vector</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">partitions</span></span>, <span class="n"><span class="pre">int64_t</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">commit_identifier</span></span><span class="sig-paren">)</span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t" title="Link to this definition">#</a><br /></dt>
+<dd><p>Drop specified partitions from the file store. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>partitions</strong> – A vector of partitions to be dropped. </p></li>
+<li><p><strong>commit_identifier</strong> – An identifier for the commit operation. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Status indicating the success or failure of the drop partition operation. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon15FileStoreCommit16GetCommitMetricsEv">
+<span id="_CPPv3NK6paimon15FileStoreCommit16GetCommitMetricsEv"></span><span id="_CPPv2NK6paimon15FileStoreCommit16GetCommitMetricsEv"></span><span id="paimon::FileStoreCommit::GetCommitMetricsC"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a3f46b0e1c02f199ae73dbfb204f4dfe7"></span><span class="k"><span class="pre">virtual</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">Metrics</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetCommitMetrics</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="m"><span class="pre">0</span></span><a class="headerlink" href="#_CPPv4NK6paimon15FileStoreCommit16GetCommitMetricsEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Retrieve metrics related to commit operations. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A shared pointer to a <code class="docutils literal notranslate"><span class="pre">Metrics</span></code> object containing commit metrics. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-static-functions">Public Static Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE">
+<span id="_CPPv3N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE"></span><span id="_CPPv2N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE"></span><span id="paimon::FileStoreCommit::Create__std::unique_ptr:CommitContext:"></span><span class="target" id="classpaimon_1_1_file_store_commit_1a60831ecec970a1006afb374b8a3efa56"></span><span class="k"><span class="pre">static</span></span><span class="w"> </span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon15FileStoreCommitE" title="paimon::FileStoreCommit"><span class="n"><span class="pre">FileStoreCommit</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Create</span></span></span><span class="sig-paren">(</span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13CommitContextE" title="paimon::CommitContext"><span class="n"><span class="pre">CommitContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">context</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Create an instance of <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_commit"><span class="std std-ref"><span class="pre">FileStoreCommit</span></span></a></code>. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>context</strong> – A unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code> used for commit operations.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A Result containing a unique pointer to the <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_file_store_commit"><span class="std std-ref"><span class="pre">FileStoreCommit</span></span></a></code> instance. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilderE">
+<span id="_CPPv3N6paimon20CommitContextBuilderE"></span><span id="_CPPv2N6paimon20CommitContextBuilderE"></span><span id="paimon::CommitContextBuilder"></span><span class="target" id="classpaimon_1_1_commit_context_builder"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CommitContextBuilder</span></span></span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilderE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder"><span class="std std-ref"><span class="pre">CommitContextBuilder</span></span></a></code> used to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code>, has input validation. </p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE"></span><span id="paimon::CommitContextBuilder::CommitContextBuilder__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1ad11f5f4ebcc18251e3090c08d4f24261"></span><span class="sig-name descname"><span class="n"><span class="pre">CommitContextBuilder</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_user</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Constructs a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder"><span class="std std-ref"><span class="pre">CommitContextBuilder</span></span></a></code> with required parameters. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root_path</strong> – The root path of the Paimon table. </p></li>
+<li><p><strong>commit_user</strong> – The user identifier for the commit operation. </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilderD0Ev">
+<span id="_CPPv3N6paimon20CommitContextBuilderD0Ev"></span><span id="_CPPv2N6paimon20CommitContextBuilderD0Ev"></span><span id="paimon::CommitContextBuilder::~CommitContextBuilder"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1abab143e3062bc63aafada827545df899"></span><span class="sig-name descname"><span class="n"><span class="pre">~CommitContextBuilder</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilderD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::CommitContextBuilder::SetOptions__std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1a62f56fb4e3c4362ba54c2a7ce3f74547"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">SetOptions</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The options map will clear the options added by <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> before. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>options</strong> – The configuration options map. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE">
+<span id="_CPPv3N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="_CPPv2N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"></span><span id="paimon::CommitContextBuilder::AddOption__ssCR.ssCR"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">AddOption</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">key</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">value</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </p>
+<p>If you want to add multiple options, call <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce"><span class="std std-ref"><span class="pre">AddOption()</span></span></a></code> multiple times or use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder_1a62f56fb4e3c4362ba54c2a7ce3f74547"><span class="std std-ref"><span class="pre">SetOptions()</span></span></a></code> instead. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> – The option key. </p></li>
+<li><p><strong>value</strong> – The option value. </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb">
+<span id="_CPPv3N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb"></span><span id="_CPPv2N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb"></span><span id="paimon::CommitContextBuilder::IgnoreEmptyCommit__b"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1a3af910fbc87d8990d7175951d4c91a1b"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">IgnoreEmptyCommit</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">ignore_empty_commit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets whether to ignore empty commits (default is true). </p>
+<p>When set to true, commits that don’t contain any actual data changes will be ignored. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ignore_empty_commit</strong> – True to ignore empty commits, false otherwise. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb">
+<span id="_CPPv3N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb"></span><span id="_CPPv2N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb"></span><span id="paimon::CommitContextBuilder::UseRESTCatalogCommit__b"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1ae9b915cd4fd9a12757ca11239ec2fbc6"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">UseRESTCatalogCommit</span></span></span><span class="sig-paren">(</span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">use_rest_catalog_commit</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets whether to use REST catalog commit (default is false). </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Temporary interface, will be removed in the future. </p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>use_rest_catalog_commit</strong> – True to use REST catalog commit, false otherwise. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE">
+<span id="_CPPv3N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="_CPPv2N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"></span><span id="paimon::CommitContextBuilder::WithMemoryPool__std::shared_ptr:MemoryPool:CR"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1afb03e59547889d68a13390d74ba08a36"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithMemoryPool</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets the memory pool to be used for memory allocation during commit operations. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>memory_pool</strong> – Shared pointer to the memory pool instance. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE">
+<span id="_CPPv3N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="_CPPv2N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"></span><span id="paimon::CommitContextBuilder::WithExecutor__std::shared_ptr:Executor:CR"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1a771dcadc571d4c4bfd8808850f324480"></span><a class="reference internal" href="#_CPPv4N6paimon20CommitContextBuilderE" title="paimon::CommitContextBuilder"><span class="n"><span class="pre">CommitContextBuilder</span></span></a><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">WithExecutor</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE" title="Link to this definition">#</a><br /></dt>
+<dd><p>Sets the executor to be used for asynchronous operations during commit. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>executor</strong> – Shared pointer to the executor instance. </p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reference to this builder for method chaining. </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon20CommitContextBuilder6FinishEv">
+<span id="_CPPv3N6paimon20CommitContextBuilder6FinishEv"></span><span id="_CPPv2N6paimon20CommitContextBuilder6FinishEv"></span><span id="paimon::CommitContextBuilder::Finish"></span><span class="target" id="classpaimon_1_1_commit_context_builder_1a9dbc721d50c637585fc12e9dc141b72f"></span><span class="n"><span class="pre">Result</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">unique_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="#_CPPv4N6paimon13CommitContextE" title="paimon::CommitContext"><span class="n"><span class="pre">CommitContext</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">Finish</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon20CommitContextBuilder6FinishEv" title="Link to this definition">#</a><br /></dt>
+<dd><p>Build and return a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code> instance with input validation. </p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Result containing the constructed <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code> or an error status. </p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</dd></dl>
+
+<dl class="cpp class">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13CommitContextE">
+<span id="_CPPv3N6paimon13CommitContextE"></span><span id="_CPPv2N6paimon13CommitContextE"></span><span id="paimon::CommitContext"></span><span class="target" id="classpaimon_1_1_commit_context"></span><span class="k"><span class="pre">class</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">CommitContext</span></span></span><a class="headerlink" href="#_CPPv4N6paimon13CommitContextE" title="Link to this definition">#</a><br /></dt>
+<dd><p><code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code> is some configuration for commit operations. </p>
+<p>Please do not use this class directly, use <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context_builder"><span class="std std-ref"><span class="pre">CommitContextBuilder</span></span></a></code> to build a <code class="docutils literal notranslate"><a class="reference internal" href="#classpaimon_1_1_commit_context"><span class="std std-ref"><span class="pre">CommitContext</span></span></a></code> which has input validation. <div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="#classpaimon_1_1_commit_context_builder"><span class="std std-ref">CommitContextBuilder</span></a></p>
+</div>
+</p>
+<div class="breathe-sectiondef docutils container">
+<p class="breathe-sectiondef-title rubric" id="breathe-section-title-public-functions">Public Functions</p>
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE">
+<span id="_CPPv3N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="_CPPv2N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE"></span><span id="paimon::CommitContext::CommitContext__ssCR.ssCR.b.b.std::shared_ptr:MemoryPool:CR.std::shared_ptr:Executor:CR.std::map:ss.ss:CR"></span><span class="target" id="classpaimon_1_1_commit_context_1add751bfaec44b19ac9b03093b87b74a4"></span><span class="sig-name descname"><span class="n"><span class="pre">CommitContext</span></span></span><span class="sig-paren">(</span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">root_path</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">commit_user</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">ignore_empty_commit</span></span>, <span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="n sig-param"><span class="pre">use_rest_catalog_commit</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">memory_pool</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">executor</span></span>, <span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="n sig-param"><span class="pre">options</span></span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4N6paimon13CommitContextD0Ev">
+<span id="_CPPv3N6paimon13CommitContextD0Ev"></span><span id="_CPPv2N6paimon13CommitContextD0Ev"></span><span id="paimon::CommitContext::~CommitContext"></span><span class="target" id="classpaimon_1_1_commit_context_1ac78a125531f977d739d513608365ac74"></span><span class="sig-name descname"><span class="n"><span class="pre">~CommitContext</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#_CPPv4N6paimon13CommitContextD0Ev" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext11GetRootPathEv">
+<span id="_CPPv3NK6paimon13CommitContext11GetRootPathEv"></span><span id="_CPPv2NK6paimon13CommitContext11GetRootPathEv"></span><span id="paimon::CommitContext::GetRootPathC"></span><span class="target" id="classpaimon_1_1_commit_context_1abc60e14796df885d1fc77094bae75a24"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetRootPath</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext11GetRootPathEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext13GetCommitUserEv">
+<span id="_CPPv3NK6paimon13CommitContext13GetCommitUserEv"></span><span id="_CPPv2NK6paimon13CommitContext13GetCommitUserEv"></span><span id="paimon::CommitContext::GetCommitUserC"></span><span class="target" id="classpaimon_1_1_commit_context_1a2f3d101509cf979986d9f27e1c2d970a"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetCommitUser</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext13GetCommitUserEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext17IgnoreEmptyCommitEv">
+<span id="_CPPv3NK6paimon13CommitContext17IgnoreEmptyCommitEv"></span><span id="_CPPv2NK6paimon13CommitContext17IgnoreEmptyCommitEv"></span><span id="paimon::CommitContext::IgnoreEmptyCommitC"></span><span class="target" id="classpaimon_1_1_commit_context_1aa548afad705d6eddee8870297e386c65"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">IgnoreEmptyCommit</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext17IgnoreEmptyCommitEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext20UseRESTCatalogCommitEv">
+<span id="_CPPv3NK6paimon13CommitContext20UseRESTCatalogCommitEv"></span><span id="_CPPv2NK6paimon13CommitContext20UseRESTCatalogCommitEv"></span><span id="paimon::CommitContext::UseRESTCatalogCommitC"></span><span class="target" id="classpaimon_1_1_commit_context_1a080cc3e95b4640b956a4ffed9921a4ce"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="kt"><span class="pre">bool</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">UseRESTCatalogCommit</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext20UseRESTCatalogCommitEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext13GetMemoryPoolEv">
+<span id="_CPPv3NK6paimon13CommitContext13GetMemoryPoolEv"></span><span id="_CPPv2NK6paimon13CommitContext13GetMemoryPoolEv"></span><span id="paimon::CommitContext::GetMemoryPoolC"></span><span class="target" id="classpaimon_1_1_commit_context_1aca7bfe9f1b26b2581144a29391eed79c"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="memory.html#_CPPv4N6paimon10MemoryPoolE" title="paimon::MemoryPool"><span class="n"><span class="pre">MemoryPool</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetMemoryPool</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext13GetMemoryPoolEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext11GetExecutorEv">
+<span id="_CPPv3NK6paimon13CommitContext11GetExecutorEv"></span><span id="_CPPv2NK6paimon13CommitContext11GetExecutorEv"></span><span id="paimon::CommitContext::GetExecutorC"></span><span class="target" id="classpaimon_1_1_commit_context_1a0d824d071312adf4cfca321fd0eede90"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">shared_ptr</span></span><span class="p"><span class="pre">&lt;</span></span><a class="reference internal" href="executor.html#_CPPv4N6paimon8ExecutorE" title="paimon::Executor"><span class="n"><span class="pre">Executor</span></span></a><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="sig-name descname"><span class="n"><span class="pre">GetExecutor</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext11GetExecutorEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+<dl class="cpp function">
+<dt class="sig sig-object cpp" id="_CPPv4NK6paimon13CommitContext10GetOptionsEv">
+<span id="_CPPv3NK6paimon13CommitContext10GetOptionsEv"></span><span id="_CPPv2NK6paimon13CommitContext10GetOptionsEv"></span><span id="paimon::CommitContext::GetOptionsC"></span><span class="target" id="classpaimon_1_1_commit_context_1aab1947d5b188b7a38edd3599054a0696"></span><span class="k"><span class="pre">inline</span></span><span class="w"> </span><span class="k"><span class="pre">const</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">map</span></span><span class="p"><span class="pre">&lt;</span></span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="n"><span class="pre">std</span></span><span class="p"><span class="pre">::</span></span><span class="n"><span class="pre">string</span></span><span class="p"><span class="pre">&gt;</span></span><span class="w"> </span><span class="p"><span class="pre">&amp;</span></span><span class="sig-name descname"><span class="n"><span class="pre">GetOptions</span></span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><span class="w"> </span><span class="k"><span class="pre">const</span></span><a class="headerlink" href="#_CPPv4NK6paimon13CommitContext10GetOptionsEv" title="Link to this definition">#</a><br /></dt>
+<dd></dd></dl>
+
+</div>
+</dd></dl>
+
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="write.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Write</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="scan.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Scan</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#interface">Interface</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommitE"><code class="docutils literal notranslate"><span class="pre">paimon::FileStoreCommit</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommitD0Ev"><code class="docutils literal notranslate"><span class="pre">~FileStoreCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit6CommitERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"><code class="docutils literal notranslate"><span class="pre">Commit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit15FilterAndCommitERKNSt3mapI7int64_tNSt6vectorINSt10shared_ptrI13CommitMessageEEEEEENSt8optionalI7int64_tEE"><code class="docutils literal notranslate"><span class="pre">FilterAndCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit9OverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"><code class="docutils literal notranslate"><span class="pre">Overwrite()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit18FilterAndOverwriteERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEERKNSt6vectorINSt10shared_ptrI13CommitMessageEEEE7int64_tNSt8optionalI7int64_tEE"><code class="docutils literal notranslate"><span class="pre">FilterAndOverwrite()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit25GetLastCommitTableRequestEv"><code class="docutils literal notranslate"><span class="pre">GetLastCommitTableRequest()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit6ExpireEv"><code class="docutils literal notranslate"><span class="pre">Expire()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit13DropPartitionERKNSt6vectorINSt3mapINSt6stringENSt6stringEEEEE7int64_t"><code class="docutils literal notranslate"><span class="pre">DropPartition()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon15FileStoreCommit16GetCommitMetricsEv"><code class="docutils literal notranslate"><span class="pre">GetCommitMetrics()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon15FileStoreCommit6CreateENSt10unique_ptrI13CommitContextEE"><code class="docutils literal notranslate"><span class="pre">Create()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilderE"><code class="docutils literal notranslate"><span class="pre">paimon::CommitContextBuilder</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder20CommitContextBuilderERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">CommitContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilderD0Ev"><code class="docutils literal notranslate"><span class="pre">~CommitContextBuilder()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder10SetOptionsERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">SetOptions()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder9AddOptionERKNSt6stringERKNSt6stringE"><code class="docutils literal notranslate"><span class="pre">AddOption()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder17IgnoreEmptyCommitEb"><code class="docutils literal notranslate"><span class="pre">IgnoreEmptyCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder20UseRESTCatalogCommitEb"><code class="docutils literal notranslate"><span class="pre">UseRESTCatalogCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder14WithMemoryPoolERKNSt10shared_ptrI10MemoryPoolEE"><code class="docutils literal notranslate"><span class="pre">WithMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder12WithExecutorERKNSt10shared_ptrI8ExecutorEE"><code class="docutils literal notranslate"><span class="pre">WithExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon20CommitContextBuilder6FinishEv"><code class="docutils literal notranslate"><span class="pre">Finish()</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13CommitContextE"><code class="docutils literal notranslate"><span class="pre">paimon::CommitContext</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13CommitContext13CommitContextERKNSt6stringERKNSt6stringEbbRKNSt10shared_ptrI10MemoryPoolEERKNSt10shared_ptrI8ExecutorEERKNSt3mapINSt6stringENSt6stringEEE"><code class="docutils literal notranslate"><span class="pre">CommitContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4N6paimon13CommitContextD0Ev"><code class="docutils literal notranslate"><span class="pre">~CommitContext()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext11GetRootPathEv"><code class="docutils literal notranslate"><span class="pre">GetRootPath()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext13GetCommitUserEv"><code class="docutils literal notranslate"><span class="pre">GetCommitUser()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext17IgnoreEmptyCommitEv"><code class="docutils literal notranslate"><span class="pre">IgnoreEmptyCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext20UseRESTCatalogCommitEv"><code class="docutils literal notranslate"><span class="pre">UseRESTCatalogCommit()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext13GetMemoryPoolEv"><code class="docutils literal notranslate"><span class="pre">GetMemoryPool()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext11GetExecutorEv"><code class="docutils literal notranslate"><span class="pre">GetExecutor()</span></code></a></li>
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#_CPPv4NK6paimon13CommitContext10GetOptionsEv"><code class="docutils literal notranslate"><span class="pre">GetOptions()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+  </nav></div>
+
+  <div class="sidebar-secondary-item">
+
+  
+  <div class="tocsection editthispage">
+    <a href="https://github.com/alibaba/paimon-cpp/edit/main/docs/source/api/commit.rst">
+      <i class="fa-solid fa-pencil"></i>
+      
+      
+        
+          Edit on GitHub
+        
+      
+    </a>
+  </div>
+</div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="../_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="../_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2024-present Alibaba Inc..
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

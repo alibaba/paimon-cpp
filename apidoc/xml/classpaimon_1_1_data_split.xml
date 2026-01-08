@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_data_split" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::DataSplit</compoundname>
+    <basecompoundref refid="classpaimon_1_1_split" prot="public" virt="non-virtual">paimon::Split</basecompoundref>
+    <includes refid="data__split_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/data_split.h</includes>
+    <innerclass refid="structpaimon_1_1_data_split_1_1_simple_data_file_meta" prot="public">paimon::DataSplit::SimpleDataFileMeta</innerclass>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_data_split_1ac8a847a0c9374134bd8df653a10f8a24" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::vector&lt; <ref refid="structpaimon_1_1_data_split_1_1_simple_data_file_meta" kindref="compound">SimpleDataFileMeta</ref> &gt;</type>
+        <definition>virtual std::vector&lt; SimpleDataFileMeta &gt; paimon::DataSplit::GetFileList</definition>
+        <argsstring>() const =0</argsstring>
+        <name>GetFileList</name>
+        <qualifiedname>paimon::DataSplit::GetFileList</qualifiedname>
+        <briefdescription>
+<para>Get the list of metadata for all data files in this split. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>This method will be removed in future versions and is only used for append tables. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/data_split.h" line="79" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Input data split for reading operation. Needed by most batch computation engines. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="1">
+        <label>paimon::DataSplit</label>
+        <link refid="classpaimon_1_1_data_split"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Split</label>
+        <link refid="classpaimon_1_1_split"/>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::DataSplit</label>
+        <link refid="classpaimon_1_1_data_split"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::Split</label>
+        <link refid="classpaimon_1_1_split"/>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/data_split.h" line="36" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/data_split.h" bodystart="36" bodyend="80"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_split_1aad238266c89e85852982405e60cdd9b2" prot="public" virt="non-virtual"><scope>paimon::DataSplit</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_data_split_1ac8a847a0c9374134bd8df653a10f8a24" prot="public" virt="pure-virtual"><scope>paimon::DataSplit</scope><name>GetFileList</name></member>
+      <member refid="classpaimon_1_1_split_1a21cf471702ca3bb471eacc4bce9cf050" prot="public" virt="non-virtual"><scope>paimon::DataSplit</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_split_1ad1bc1ca6627a627b1396991113b178b7" prot="public" virt="virtual"><scope>paimon::DataSplit</scope><name>~Split</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

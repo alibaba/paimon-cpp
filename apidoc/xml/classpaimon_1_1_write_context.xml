@@ -1,0 +1,460 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_write_context" kind="class" language="C++" prot="public">
+    <compoundname>paimon::WriteContext</compoundname>
+    <includes refid="write__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1ac7b49da7ebccde07e061a3b4cdad6d46" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::WriteContext::root_path_</definition>
+        <argsstring></argsstring>
+        <name>root_path_</name>
+        <qualifiedname>paimon::WriteContext::root_path_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="101" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="101" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1affd45e268334a92876744af294a1f3c0" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::WriteContext::commit_user_</definition>
+        <argsstring></argsstring>
+        <name>commit_user_</name>
+        <qualifiedname>paimon::WriteContext::commit_user_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="102" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="102" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1aa784d20eba155e1a9088e6449658f6a6" prot="private" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::WriteContext::branch_</definition>
+        <argsstring></argsstring>
+        <name>branch_</name>
+        <qualifiedname>paimon::WriteContext::branch_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="103" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="103" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1a6262c6dddd7c73cb1d4ab2e435368758" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::is_streaming_mode_</definition>
+        <argsstring></argsstring>
+        <name>is_streaming_mode_</name>
+        <qualifiedname>paimon::WriteContext::is_streaming_mode_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="104" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="104" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1af6d8171e46750db5b6848193d788e589" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::ignore_num_bucket_check_</definition>
+        <argsstring></argsstring>
+        <name>ignore_num_bucket_check_</name>
+        <qualifiedname>paimon::WriteContext::ignore_num_bucket_check_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="105" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="105" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1a88b0c4a72633198e4b838c448da3bf8f" prot="private" static="no" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::ignore_previous_files_</definition>
+        <argsstring></argsstring>
+        <name>ignore_previous_files_</name>
+        <qualifiedname>paimon::WriteContext::ignore_previous_files_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="106" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="106" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1a156c617b9a21fd85aed110776d97d952" prot="private" static="no" mutable="no">
+        <type>std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>std::optional&lt;int32_t&gt; paimon::WriteContext::write_id_</definition>
+        <argsstring></argsstring>
+        <name>write_id_</name>
+        <qualifiedname>paimon::WriteContext::write_id_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="107" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="107" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1af9bf8f2cf44e094ffc47a425fc17113e" prot="private" static="no" mutable="no">
+        <type>std::vector&lt; std::string &gt;</type>
+        <definition>std::vector&lt;std::string&gt; paimon::WriteContext::write_schema_</definition>
+        <argsstring></argsstring>
+        <name>write_schema_</name>
+        <qualifiedname>paimon::WriteContext::write_schema_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="108" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1aa3122b96ef0b7a706944a22177002d58" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;MemoryPool&gt; paimon::WriteContext::memory_pool_</definition>
+        <argsstring></argsstring>
+        <name>memory_pool_</name>
+        <qualifiedname>paimon::WriteContext::memory_pool_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="109" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="109" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1aeb309be4a43a0a7976334a659ec8e5c5" prot="private" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;Executor&gt; paimon::WriteContext::executor_</definition>
+        <argsstring></argsstring>
+        <name>executor_</name>
+        <qualifiedname>paimon::WriteContext::executor_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="110" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="110" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1a7b28a301975ba0b865a6ddac12a7b686" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::WriteContext::fs_scheme_to_identifier_map_</definition>
+        <argsstring></argsstring>
+        <name>fs_scheme_to_identifier_map_</name>
+        <qualifiedname>paimon::WriteContext::fs_scheme_to_identifier_map_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="111" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="111" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="classpaimon_1_1_write_context_1a0d33b542c241dc00c1a44f66c4c947f2" prot="private" static="no" mutable="no">
+        <type>std::map&lt; std::string, std::string &gt;</type>
+        <definition>std::map&lt;std::string, std::string&gt; paimon::WriteContext::options_</definition>
+        <argsstring></argsstring>
+        <name>options_</name>
+        <qualifiedname>paimon::WriteContext::options_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="112" column="14" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="112" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1af009b92bf243b4959254c017ba643aab" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::WriteContext::WriteContext</definition>
+        <argsstring>(const std::string &amp;root_path, const std::string &amp;commit_user, bool is_streaming_mode, bool ignore_num_bucket_check, bool ignore_previous_files, const std::optional&lt; int32_t &gt; &amp;write_id, const std::string &amp;branch, const std::vector&lt; std::string &gt; &amp;write_schema, const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool, const std::shared_ptr&lt; Executor &gt; &amp;executor, const std::map&lt; std::string, std::string &gt; &amp;fs_scheme_to_identifier_map, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>WriteContext</name>
+        <qualifiedname>paimon::WriteContext::WriteContext</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>commit_user</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>is_streaming_mode</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_num_bucket_check</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_previous_files</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt; &amp;</type>
+          <declname>write_id</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>branch</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+          <declname>write_schema</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>fs_scheme_to_identifier_map</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="41" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a94375365d1fe2193ddab679a66b4bc51" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::WriteContext::~WriteContext</definition>
+        <argsstring>()</argsstring>
+        <name>~WriteContext</name>
+        <qualifiedname>paimon::WriteContext::~WriteContext</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="50" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a6c0da302853f5f3fe06ecd21f61c795d" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::WriteContext::GetRootPath</definition>
+        <argsstring>() const</argsstring>
+        <name>GetRootPath</name>
+        <qualifiedname>paimon::WriteContext::GetRootPath</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="52" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="52" bodyend="54"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a46355d924bb90e10d8b2b8ff10d8af84" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::WriteContext::GetCommitUser</definition>
+        <argsstring>() const</argsstring>
+        <name>GetCommitUser</name>
+        <qualifiedname>paimon::WriteContext::GetCommitUser</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="56" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="56" bodyend="58"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a725006f0e7047bc41188752709ffc8d0" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::WriteContext::GetFileSystemSchemeToIdentifierMap</definition>
+        <argsstring>() const</argsstring>
+        <name>GetFileSystemSchemeToIdentifierMap</name>
+        <qualifiedname>paimon::WriteContext::GetFileSystemSchemeToIdentifierMap</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="60" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="60" bodyend="62"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a222134b39787d3b00b43f44f73ebef01" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+        <definition>const std::map&lt; std::string, std::string &gt; &amp; paimon::WriteContext::GetOptions</definition>
+        <argsstring>() const</argsstring>
+        <name>GetOptions</name>
+        <qualifiedname>paimon::WriteContext::GetOptions</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="64" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="64" bodyend="66"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a3a04d08ac7c091d3bcec5a72f7033a4a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::IsStreamingMode</definition>
+        <argsstring>() const</argsstring>
+        <name>IsStreamingMode</name>
+        <qualifiedname>paimon::WriteContext::IsStreamingMode</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="68" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="68" bodyend="70"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a5ee5cb57d2d6b66f7f5dc8f6f2554657" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::IgnoreNumBucketCheck</definition>
+        <argsstring>() const</argsstring>
+        <name>IgnoreNumBucketCheck</name>
+        <qualifiedname>paimon::WriteContext::IgnoreNumBucketCheck</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="72" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="72" bodyend="74"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a56134cbb082b0f9dc93b454aba654d85" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::WriteContext::IgnorePreviousFiles</definition>
+        <argsstring>() const</argsstring>
+        <name>IgnorePreviousFiles</name>
+        <qualifiedname>paimon::WriteContext::IgnorePreviousFiles</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="76" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="76" bodyend="78"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a306872d254a0eea1fa7a1dca69f449e1" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::optional&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int32_t</ref> &gt;</type>
+        <definition>const std::optional&lt; int32_t &gt; paimon::WriteContext::GetWriteId</definition>
+        <argsstring>() const</argsstring>
+        <name>GetWriteId</name>
+        <qualifiedname>paimon::WriteContext::GetWriteId</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="80" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="80" bodyend="82"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1ac65f3c22060d4bc32948c6253025e464" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+        <definition>const std::string &amp; paimon::WriteContext::GetBranch</definition>
+        <argsstring>() const</argsstring>
+        <name>GetBranch</name>
+        <qualifiedname>paimon::WriteContext::GetBranch</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="84" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="84" bodyend="86"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1abe6b1d911dc999349729de9d81264bfd" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; std::string &gt; &amp;</type>
+        <definition>const std::vector&lt; std::string &gt; &amp; paimon::WriteContext::GetWriteSchema</definition>
+        <argsstring>() const</argsstring>
+        <name>GetWriteSchema</name>
+        <qualifiedname>paimon::WriteContext::GetWriteSchema</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="88" column="23" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="88" bodyend="90"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1a08746e29dabc0b6049cdf80c635516b3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::WriteContext::GetMemoryPool</definition>
+        <argsstring>() const</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::WriteContext::GetMemoryPool</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="92" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="92" bodyend="94"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_write_context_1ad0f5adcff5b157f79675ee3de5b69483" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::WriteContext::GetExecutor</definition>
+        <argsstring>() const</argsstring>
+        <name>GetExecutor</name>
+        <qualifiedname>paimon::WriteContext::GetExecutor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="96" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="96" bodyend="98"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput> is some configuration for write operations. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Please do not use this class directly, use <computeroutput><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref></computeroutput> to build a <computeroutput><ref refid="classpaimon_1_1_write_context" kindref="compound">WriteContext</ref></computeroutput> which has input validation. <simplesect kind="see"><para><ref refid="classpaimon_1_1_write_context_builder" kindref="compound">WriteContextBuilder</ref> </para>
+</simplesect>
+</para>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" line="39" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/write_context.h" bodystart="39" bodyend="113"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_write_context_1aa784d20eba155e1a9088e6449658f6a6" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>branch_</name></member>
+      <member refid="classpaimon_1_1_write_context_1affd45e268334a92876744af294a1f3c0" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>commit_user_</name></member>
+      <member refid="classpaimon_1_1_write_context_1aeb309be4a43a0a7976334a659ec8e5c5" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>executor_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a7b28a301975ba0b865a6ddac12a7b686" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>fs_scheme_to_identifier_map_</name></member>
+      <member refid="classpaimon_1_1_write_context_1ac65f3c22060d4bc32948c6253025e464" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetBranch</name></member>
+      <member refid="classpaimon_1_1_write_context_1a46355d924bb90e10d8b2b8ff10d8af84" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetCommitUser</name></member>
+      <member refid="classpaimon_1_1_write_context_1ad0f5adcff5b157f79675ee3de5b69483" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetExecutor</name></member>
+      <member refid="classpaimon_1_1_write_context_1a725006f0e7047bc41188752709ffc8d0" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetFileSystemSchemeToIdentifierMap</name></member>
+      <member refid="classpaimon_1_1_write_context_1a08746e29dabc0b6049cdf80c635516b3" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetMemoryPool</name></member>
+      <member refid="classpaimon_1_1_write_context_1a222134b39787d3b00b43f44f73ebef01" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetOptions</name></member>
+      <member refid="classpaimon_1_1_write_context_1a6c0da302853f5f3fe06ecd21f61c795d" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetRootPath</name></member>
+      <member refid="classpaimon_1_1_write_context_1a306872d254a0eea1fa7a1dca69f449e1" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetWriteId</name></member>
+      <member refid="classpaimon_1_1_write_context_1abe6b1d911dc999349729de9d81264bfd" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>GetWriteSchema</name></member>
+      <member refid="classpaimon_1_1_write_context_1af6d8171e46750db5b6848193d788e589" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>ignore_num_bucket_check_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a88b0c4a72633198e4b838c448da3bf8f" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>ignore_previous_files_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a5ee5cb57d2d6b66f7f5dc8f6f2554657" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>IgnoreNumBucketCheck</name></member>
+      <member refid="classpaimon_1_1_write_context_1a56134cbb082b0f9dc93b454aba654d85" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>IgnorePreviousFiles</name></member>
+      <member refid="classpaimon_1_1_write_context_1a6262c6dddd7c73cb1d4ab2e435368758" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>is_streaming_mode_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a3a04d08ac7c091d3bcec5a72f7033a4a" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>IsStreamingMode</name></member>
+      <member refid="classpaimon_1_1_write_context_1aa3122b96ef0b7a706944a22177002d58" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>memory_pool_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a0d33b542c241dc00c1a44f66c4c947f2" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>options_</name></member>
+      <member refid="classpaimon_1_1_write_context_1ac7b49da7ebccde07e061a3b4cdad6d46" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>root_path_</name></member>
+      <member refid="classpaimon_1_1_write_context_1a156c617b9a21fd85aed110776d97d952" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>write_id_</name></member>
+      <member refid="classpaimon_1_1_write_context_1af9bf8f2cf44e094ffc47a425fc17113e" prot="private" virt="non-virtual"><scope>paimon::WriteContext</scope><name>write_schema_</name></member>
+      <member refid="classpaimon_1_1_write_context_1af009b92bf243b4959254c017ba643aab" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>WriteContext</name></member>
+      <member refid="classpaimon_1_1_write_context_1a94375365d1fe2193ddab679a66b4bc51" prot="public" virt="non-virtual"><scope>paimon::WriteContext</scope><name>~WriteContext</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

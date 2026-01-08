@@ -1,0 +1,695 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="namespacepaimon" kind="namespace" language="C++">
+    <compoundname>paimon</compoundname>
+    <innerclass refid="classpaimon_1_1_basic_file_status" prot="public">paimon::BasicFileStatus</innerclass>
+    <innerclass refid="classpaimon_1_1_batch_reader" prot="public">paimon::BatchReader</innerclass>
+    <innerclass refid="classpaimon_1_1_big_int_column_stats" prot="public">paimon::BigIntColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_bitmap_global_index_result" prot="public">paimon::BitmapGlobalIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_bitmap_index_result" prot="public">paimon::BitmapIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_bitmap_vector_search_global_index_result" prot="public">paimon::BitmapVectorSearchGlobalIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_blob" prot="public">paimon::Blob</innerclass>
+    <innerclass refid="classpaimon_1_1_boolean_column_stats" prot="public">paimon::BooleanColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_bucket_id_calculator" prot="public">paimon::BucketIdCalculator</innerclass>
+    <innerclass refid="classpaimon_1_1_buffered_input_stream" prot="public">paimon::BufferedInputStream</innerclass>
+    <innerclass refid="classpaimon_1_1_byte_array_input_stream" prot="public">paimon::ByteArrayInputStream</innerclass>
+    <innerclass refid="classpaimon_1_1_bytes" prot="public">paimon::Bytes</innerclass>
+    <innerclass refid="classpaimon_1_1_catalog" prot="public">paimon::Catalog</innerclass>
+    <innerclass refid="classpaimon_1_1_clean_context" prot="public">paimon::CleanContext</innerclass>
+    <innerclass refid="classpaimon_1_1_clean_context_builder" prot="public">paimon::CleanContextBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_column_stats" prot="public">paimon::ColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_commit_context" prot="public">paimon::CommitContext</innerclass>
+    <innerclass refid="classpaimon_1_1_commit_context_builder" prot="public">paimon::CommitContextBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_commit_message" prot="public">paimon::CommitMessage</innerclass>
+    <innerclass refid="classpaimon_1_1_compound_predicate" prot="public">paimon::CompoundPredicate</innerclass>
+    <innerclass refid="classpaimon_1_1_data_input_stream" prot="public">paimon::DataInputStream</innerclass>
+    <innerclass refid="classpaimon_1_1_data_split" prot="public">paimon::DataSplit</innerclass>
+    <innerclass refid="classpaimon_1_1_date_column_stats" prot="public">paimon::DateColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_decimal" prot="public">paimon::Decimal</innerclass>
+    <innerclass refid="classpaimon_1_1_decimal_column_stats" prot="public">paimon::DecimalColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_direct_writer_builder" prot="public">paimon::DirectWriterBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_double_column_stats" prot="public">paimon::DoubleColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_executor" prot="public">paimon::Executor</innerclass>
+    <innerclass refid="classpaimon_1_1_factory" prot="public">paimon::Factory</innerclass>
+    <innerclass refid="classpaimon_1_1_factory_creator" prot="public">paimon::FactoryCreator</innerclass>
+    <innerclass refid="classpaimon_1_1_file_batch_reader" prot="public">paimon::FileBatchReader</innerclass>
+    <innerclass refid="classpaimon_1_1_file_format" prot="public">paimon::FileFormat</innerclass>
+    <innerclass refid="classpaimon_1_1_file_format_factory" prot="public">paimon::FileFormatFactory</innerclass>
+    <innerclass refid="classpaimon_1_1_file_indexer" prot="public">paimon::FileIndexer</innerclass>
+    <innerclass refid="classpaimon_1_1_file_indexer_factory" prot="public">paimon::FileIndexerFactory</innerclass>
+    <innerclass refid="classpaimon_1_1_file_index_format" prot="public">paimon::FileIndexFormat</innerclass>
+    <innerclass refid="classpaimon_1_1_file_index_reader" prot="public">paimon::FileIndexReader</innerclass>
+    <innerclass refid="classpaimon_1_1_file_index_result" prot="public">paimon::FileIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_file_index_writer" prot="public">paimon::FileIndexWriter</innerclass>
+    <innerclass refid="classpaimon_1_1_file_meta_utils" prot="public">paimon::FileMetaUtils</innerclass>
+    <innerclass refid="classpaimon_1_1_file_status" prot="public">paimon::FileStatus</innerclass>
+    <innerclass refid="classpaimon_1_1_file_store_commit" prot="public">paimon::FileStoreCommit</innerclass>
+    <innerclass refid="classpaimon_1_1_file_store_write" prot="public">paimon::FileStoreWrite</innerclass>
+    <innerclass refid="classpaimon_1_1_file_system" prot="public">paimon::FileSystem</innerclass>
+    <innerclass refid="classpaimon_1_1_file_system_factory" prot="public">paimon::FileSystemFactory</innerclass>
+    <innerclass refid="classpaimon_1_1_float_column_stats" prot="public">paimon::FloatColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_format_stats_extractor" prot="public">paimon::FormatStatsExtractor</innerclass>
+    <innerclass refid="classpaimon_1_1_format_writer" prot="public">paimon::FormatWriter</innerclass>
+    <innerclass refid="classpaimon_1_1_function" prot="public">paimon::Function</innerclass>
+    <innerclass refid="classpaimon_1_1_function_visitor" prot="public">paimon::FunctionVisitor</innerclass>
+    <innerclass refid="classpaimon_1_1_global_indexer" prot="public">paimon::GlobalIndexer</innerclass>
+    <innerclass refid="classpaimon_1_1_global_indexer_factory" prot="public">paimon::GlobalIndexerFactory</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_file_reader" prot="public">paimon::GlobalIndexFileReader</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_file_writer" prot="public">paimon::GlobalIndexFileWriter</innerclass>
+    <innerclass refid="structpaimon_1_1_global_index_i_o_meta" prot="public">paimon::GlobalIndexIOMeta</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_reader" prot="public">paimon::GlobalIndexReader</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_result" prot="public">paimon::GlobalIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_scan" prot="public">paimon::GlobalIndexScan</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_writer" prot="public">paimon::GlobalIndexWriter</innerclass>
+    <innerclass refid="classpaimon_1_1_global_index_write_task" prot="public">paimon::GlobalIndexWriteTask</innerclass>
+    <innerclass refid="classpaimon_1_1_identifier" prot="public">paimon::Identifier</innerclass>
+    <innerclass refid="classpaimon_1_1_indexed_split" prot="public">paimon::IndexedSplit</innerclass>
+    <innerclass refid="classpaimon_1_1_input_stream" prot="public">paimon::InputStream</innerclass>
+    <innerclass refid="classpaimon_1_1_int_column_stats" prot="public">paimon::IntColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_lazy_instantiation" prot="public">paimon::LazyInstantiation</innerclass>
+    <innerclass refid="classpaimon_1_1_leaf_predicate" prot="public">paimon::LeafPredicate</innerclass>
+    <innerclass refid="classpaimon_1_1_literal" prot="public">paimon::Literal</innerclass>
+    <innerclass refid="classpaimon_1_1_logger" prot="public">paimon::Logger</innerclass>
+    <innerclass refid="classpaimon_1_1_memory_pool" prot="public">paimon::MemoryPool</innerclass>
+    <innerclass refid="classpaimon_1_1_metrics" prot="public">paimon::Metrics</innerclass>
+    <innerclass refid="classpaimon_1_1_nested_column_stats" prot="public">paimon::NestedColumnStats</innerclass>
+    <innerclass refid="structpaimon_1_1_options" prot="public">paimon::Options</innerclass>
+    <innerclass refid="classpaimon_1_1_orphan_files_cleaner" prot="public">paimon::OrphanFilesCleaner</innerclass>
+    <innerclass refid="classpaimon_1_1_output_stream" prot="public">paimon::OutputStream</innerclass>
+    <innerclass refid="classpaimon_1_1_plan" prot="public">paimon::Plan</innerclass>
+    <innerclass refid="classpaimon_1_1_predicate" prot="public">paimon::Predicate</innerclass>
+    <innerclass refid="classpaimon_1_1_predicate_builder" prot="public">paimon::PredicateBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_prefetch_file_batch_reader" prot="public">paimon::PrefetchFileBatchReader</innerclass>
+    <innerclass refid="structpaimon_1_1_range" prot="public">paimon::Range</innerclass>
+    <innerclass refid="classpaimon_1_1_read_context" prot="public">paimon::ReadContext</innerclass>
+    <innerclass refid="classpaimon_1_1_read_context_builder" prot="public">paimon::ReadContextBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_reader_builder" prot="public">paimon::ReaderBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_record_batch" prot="public">paimon::RecordBatch</innerclass>
+    <innerclass refid="classpaimon_1_1_record_batch_builder" prot="public">paimon::RecordBatchBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_remain" prot="public">paimon::Remain</innerclass>
+    <innerclass refid="classpaimon_1_1_result" prot="public">paimon::Result</innerclass>
+    <innerclass refid="classpaimon_1_1_roaring_bitmap32" prot="public">paimon::RoaringBitmap32</innerclass>
+    <innerclass refid="classpaimon_1_1_roaring_bitmap64" prot="public">paimon::RoaringBitmap64</innerclass>
+    <innerclass refid="classpaimon_1_1_row_range_global_index_scanner" prot="public">paimon::RowRangeGlobalIndexScanner</innerclass>
+    <innerclass refid="classpaimon_1_1_scan_context" prot="public">paimon::ScanContext</innerclass>
+    <innerclass refid="classpaimon_1_1_scan_context_builder" prot="public">paimon::ScanContextBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_scan_filter" prot="public">paimon::ScanFilter</innerclass>
+    <innerclass refid="classpaimon_1_1_schema" prot="public">paimon::Schema</innerclass>
+    <innerclass refid="classpaimon_1_1_singleton" prot="public">paimon::Singleton</innerclass>
+    <innerclass refid="classpaimon_1_1_skip" prot="public">paimon::Skip</innerclass>
+    <innerclass refid="classpaimon_1_1_small_int_column_stats" prot="public">paimon::SmallIntColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_specific_f_s_writer_builder" prot="public">paimon::SpecificFSWriterBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_split" prot="public">paimon::Split</innerclass>
+    <innerclass refid="classpaimon_1_1_startup_mode" prot="public">paimon::StartupMode</innerclass>
+    <innerclass refid="classpaimon_1_1_status" prot="public">paimon::Status</innerclass>
+    <innerclass refid="classpaimon_1_1_status_detail" prot="public">paimon::StatusDetail</innerclass>
+    <innerclass refid="classpaimon_1_1_stream" prot="public">paimon::Stream</innerclass>
+    <innerclass refid="classpaimon_1_1_string_column_stats" prot="public">paimon::StringColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_table_read" prot="public">paimon::TableRead</innerclass>
+    <innerclass refid="classpaimon_1_1_table_scan" prot="public">paimon::TableScan</innerclass>
+    <innerclass refid="classpaimon_1_1_timestamp" prot="public">paimon::Timestamp</innerclass>
+    <innerclass refid="classpaimon_1_1_timestamp_column_stats" prot="public">paimon::TimestampColumnStats</innerclass>
+    <innerclass refid="classpaimon_1_1_tiny_int_column_stats" prot="public">paimon::TinyIntColumnStats</innerclass>
+    <innerclass refid="structpaimon_1_1_vector_search" prot="public">paimon::VectorSearch</innerclass>
+    <innerclass refid="classpaimon_1_1_vector_search_global_index_result" prot="public">paimon::VectorSearchGlobalIndexResult</innerclass>
+    <innerclass refid="classpaimon_1_1_write_context" prot="public">paimon::WriteContext</innerclass>
+    <innerclass refid="classpaimon_1_1_write_context_builder" prot="public">paimon::WriteContextBuilder</innerclass>
+    <innerclass refid="classpaimon_1_1_writer_builder" prot="public">paimon::WriterBuilder</innerclass>
+    <innernamespace refid="namespacepaimon_1_1util">paimon::util</innernamespace>
+    <sectiondef kind="enum">
+      <memberdef kind="enum" id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7" prot="public" static="no" strong="yes">
+        <type></type>
+        <name>FieldType</name>
+        <qualifiedname>paimon::FieldType</qualifiedname>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ac48d5da12d702e73d6966069f2687376" prot="public">
+          <name>BOOLEAN</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a0ad48930fd2845c5b42f6c5747cc87c0" prot="public">
+          <name>TINYINT</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a42a2165cd790300c66917317b8bf7818" prot="public">
+          <name>SMALLINT</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a53f93baa3057821107c750323892fa92" prot="public">
+          <name>INT</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a7f4c937d16ac710f52c288124cc886ae" prot="public">
+          <name>BIGINT</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ae738c26bf4ce1037fa81b039a915cbf6" prot="public">
+          <name>FLOAT</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7afd3e4ece78a7d422280d5ed379482229" prot="public">
+          <name>DOUBLE</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a63b588d5559f64f89a416e656880b949" prot="public">
+          <name>STRING</name>
+          <initializer>= 8</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a98ad0e8750ae10ad556ed7a62affb452" prot="public">
+          <name>BINARY</name>
+          <initializer>= 9</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a87fb568bfdc633ffd5dee0f22cb4606c" prot="public">
+          <name>TIMESTAMP</name>
+          <initializer>= 10</initializer>
+          <briefdescription>
+<para>timestamp type only supports precision values of 0, 3, 6, 9: </para>
+          </briefdescription>
+          <detaileddescription>
+<para><itemizedlist>
+<listitem><para>0: second precision</para>
+</listitem><listitem><para>3: millisecond precision</para>
+</listitem><listitem><para>6: microsecond precision</para>
+</listitem><listitem><para>9: nanosecond precision </para>
+</listitem></itemizedlist>
+</para>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a13d992d671957e9a2b3e936ca0cf14a4" prot="public">
+          <name>DECIMAL</name>
+          <initializer>= 11</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a633a6c7a6b9958f8174250094daf1e6a" prot="public">
+          <name>DATE</name>
+          <initializer>= 12</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7acb4fb1757fb37c43cded35d3eb857c43" prot="public">
+          <name>ARRAY</name>
+          <initializer>= 13</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a5af1a3a285c2bdee4192223e31e1f833" prot="public">
+          <name>MAP</name>
+          <initializer>= 14</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7ab8223be2455e0ea5a0e63e8f018d6fc3" prot="public">
+          <name>STRUCT</name>
+          <initializer>= 15</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a1649cff06611a6025da3dd511a97fb43" prot="public">
+          <name>BLOB</name>
+          <initializer>= 16</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1aa6dc6701f497b96add0b6d7a5d6497f7a696b031073e74bf2cb98e5ef201d4aa3" prot="public">
+          <name>UNKNOWN</name>
+          <initializer>= 128</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration of supported data types in Paimon tables. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="27" bodyend="50"/>
+      </memberdef>
+      <memberdef kind="enum" id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9" prot="public" static="no" strong="no">
+        <type></type>
+        <name>SeekOrigin</name>
+        <qualifiedname>paimon::SeekOrigin</qualifiedname>
+        <enumvalue id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a770c25711516829cd50bfbca5f15867e" prot="public">
+          <name>FS_SEEK_SET</name>
+          <briefdescription>
+<para>Seek from the beginning of the stream. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9a5199153f908442fa3fcc3e97d03358b7" prot="public">
+          <name>FS_SEEK_CUR</name>
+          <briefdescription>
+<para>Seek from the current position in the stream. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac1eb532d87b4e6a9ea64431b61e115f9ac74982539e1b5314febf367c19aa7a27" prot="public">
+          <name>FS_SEEK_END</name>
+          <briefdescription>
+<para>Seek from the end of the stream. </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumeration for stream seek origin positions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="32" bodyend="39"/>
+      </memberdef>
+      <memberdef kind="enum" id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8" prot="public" static="no" strong="yes">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int8_t</ref></type>
+        <name>ByteOrder</name>
+        <qualifiedname>paimon::ByteOrder</qualifiedname>
+        <enumvalue id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8a566dd912653af0e0e1f6a49ee6a0e791" prot="public">
+          <name>PAIMON_BIG_ENDIAN</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8aea84ea0af87f00f9497e9a9a366f0b69" prot="public">
+          <name>PAIMON_LITTLE_ENDIAN</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_order.h" line="43" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_order.h" bodystart="43" bodyend="43"/>
+      </memberdef>
+      <memberdef kind="enum" id="namespacepaimon_1a461f27123748af5c760ceec2290e7985" prot="public" static="no" strong="no">
+        <type></type>
+        <name>PaimonLogLevel</name>
+        <qualifiedname>paimon::PaimonLogLevel</qualifiedname>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985aade21ab98dbcd0bb048304397b95bec3" prot="public">
+          <name>PAIMON_LOG_LEVEL_DEBUG</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985a54f86a665c728d1bbd114d815529fb7d" prot="public">
+          <name>PAIMON_LOG_LEVEL_INFO</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985ac7b16e3233b48bc10ce18b3242b29668" prot="public">
+          <name>PAIMON_LOG_LEVEL_WARN</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985a4f37fad5a76c20e57e4b1da012685a33" prot="public">
+          <name>PAIMON_LOG_LEVEL_ERROR</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985abfd27253c64491422a528a3dfffefcdd" prot="public">
+          <name>PAIMON_LOG_LEVEL_NONE</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1a461f27123748af5c760ceec2290e7985a0da306ca0eedeaedb41eac18672f7d77" prot="public">
+          <name>PAIMON_LOG_LEVEL_MAX</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/logging.h" bodystart="29" bodyend="36"/>
+      </memberdef>
+      <memberdef kind="enum" id="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" prot="public" static="no" strong="yes">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref></type>
+        <name>StatusCode</name>
+        <qualifiedname>paimon::StatusCode</qualifiedname>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eae0aa021e21dddbd6d8cecec71e9cf564" prot="public">
+          <name>OK</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eab498327feeb51430af73e07deac268fd" prot="public">
+          <name>OutOfMemory</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eac84999914a408f8c02b4122a49df6e00" prot="public">
+          <name>KeyError</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea137bf8cff2d59f0883c600f9524b3eed" prot="public">
+          <name>TypeError</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea4bbb8f967da6d1a610596d7257179c2b" prot="public">
+          <name>Invalid</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea5206bd7472156351d2d9a99633ac9580" prot="public">
+          <name>IOError</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea65f55acee27ef038c04505e05dbf6c35" prot="public">
+          <name>CapacityError</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eaeb6ff05a2e9b0485ea84cbe3809e36ed" prot="public">
+          <name>IndexError</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eabfaef30f1c8011c5cefa38ae470fb7aa" prot="public">
+          <name>UnknownError</name>
+          <initializer>= 9</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea997ca4ce119685f40f03a9a8a6c5346e" prot="public">
+          <name>NotImplemented</name>
+          <initializer>= 10</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411ea64353c9071b50ec2fe6b90ed122471a8" prot="public">
+          <name>SerializationError</name>
+          <initializer>= 11</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eac30e98851cafc795dbe00917b7c4ccf8" prot="public">
+          <name>NotExist</name>
+          <initializer>= 12</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="namespacepaimon_1ac977bebe75f574f353e1869a800c411eadd7f7c3323353f547eb98a8efba37ed0" prot="public">
+          <name>Exist</name>
+          <initializer>= 13</initializer>
+          <briefdescription>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="47" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="47" bodyend="61"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="namespacepaimon_1ad9357bd42a7936e920dfd1e9faf8da97" prot="public" static="no">
+        <templateparamlist>
+          <param>
+            <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">class</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref></type>
+          </param>
+        </templateparamlist>
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref>, <ref refid="classpaimon_1_1_memory_pool_1_1_allocator_delete" kindref="compound">MemoryPool::AllocatorDelete</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">T</ref> &gt; &gt;</type>
+        <definition>using paimon::pooled_unique_ptr = typedef std::unique_ptr&lt;T, MemoryPool::AllocatorDelete&lt;T&gt; &gt;</definition>
+        <argsstring></argsstring>
+        <name>pooled_unique_ptr</name>
+        <qualifiedname>paimon::pooled_unique_ptr</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="199" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="namespacepaimon_1acc645dad64b7eea72db8fe50386b97cb" prot="public" static="no">
+        <type>std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_column_stats" kindref="compound">ColumnStats</ref> &gt; &gt;</type>
+        <definition>using paimon::ColumnStatsVector = typedef std::vector&lt;std::shared_ptr&lt;ColumnStats&gt; &gt;</definition>
+        <argsstring></argsstring>
+        <name>ColumnStatsVector</name>
+        <qualifiedname>paimon::ColumnStatsVector</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/type_fwd.h" line="47" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/type_fwd.h" bodystart="47" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="namespacepaimon_1ae171754921080c9d7a51e4ff460663af" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>constexpr int64_t paimon::BATCH_WRITE_COMMIT_IDENTIFIER</definition>
+        <argsstring></argsstring>
+        <name>BATCH_WRITE_COMMIT_IDENTIFIER</name>
+        <qualifiedname>paimon::BATCH_WRITE_COMMIT_IDENTIFIER</qualifiedname>
+        <initializer>= std::numeric_limits&lt;<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref>&gt;<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">::max</ref>()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" line="289" column="26" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/defs.h" bodystart="289" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="namespacepaimon_1ade283b3f19d9c89a871ec1d028a0aee8" prot="public" static="yes" constexpr="yes" mutable="no">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+        <definition>constexpr uint32_t paimon::DEFAULT_EXECUTOR_THREAD_COUNT</definition>
+        <argsstring></argsstring>
+        <name>DEFAULT_EXECUTOR_THREAD_COUNT</name>
+        <qualifiedname>paimon::DEFAULT_EXECUTOR_THREAD_COUNT</qualifiedname>
+        <initializer>= 4</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="28" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" bodystart="28" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="namespacepaimon_1a059ebfcc91c299d74dd6c063ecac001f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; Executor &gt; paimon::GetGlobalDefaultExecutor</definition>
+        <argsstring>()</argsstring>
+        <name>GetGlobalDefaultExecutor</name>
+        <qualifiedname>paimon::GetGlobalDefaultExecutor</qualifiedname>
+        <briefdescription>
+<para>Get a system wide singleton executor. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="31" column="18" declfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" declline="31" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1a6e4ce1cb37d25437459c5e4a52ad1976" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; Executor &gt; paimon::CreateDefaultExecutor</definition>
+        <argsstring>()</argsstring>
+        <name>CreateDefaultExecutor</name>
+        <qualifiedname>paimon::CreateDefaultExecutor</qualifiedname>
+        <briefdescription>
+<para>Create a default implementation of executor with <computeroutput>DEFAULT_EXECUTOR_THREAD_COUNT</computeroutput>. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="34" column="18" declfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" declline="34" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1a9caa792bed6fc761c2a6637dfe888a9f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; Executor &gt; paimon::CreateDefaultExecutor</definition>
+        <argsstring>(uint32_t thread_count)</argsstring>
+        <name>CreateDefaultExecutor</name>
+        <qualifiedname>paimon::CreateDefaultExecutor</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">uint32_t</ref></type>
+          <declname>thread_count</declname>
+        </param>
+        <briefdescription>
+<para>Create a default implementation of executor with specified thread_count. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" line="37" column="18" declfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/executor.h" declline="37" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1a6499ced4286349d08015d00e1cc5462f" prot="public" static="no" constexpr="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">constexpr</ref> <ref refid="namespacepaimon_1ad9aa7d30bb0d191711934a49db8fece8" kindref="member">ByteOrder</ref></type>
+        <definition>constexpr ByteOrder paimon::SystemByteOrder</definition>
+        <argsstring>()</argsstring>
+        <name>SystemByteOrder</name>
+        <qualifiedname>paimon::SystemByteOrder</qualifiedname>
+        <briefdescription>
+<para>Get the byte order of the system. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_order.h" line="46" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/io/byte_order.h" bodystart="46" bodyend="52"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1ae2688243d30a03f67aae1b058af30b56" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::unique_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::unique_ptr&lt; MemoryPool &gt; paimon::GetMemoryPool</definition>
+        <argsstring>()</argsstring>
+        <name>GetMemoryPool</name>
+        <qualifiedname>paimon::GetMemoryPool</qualifiedname>
+        <briefdescription>
+<para>Create a default implementation of memory pool. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Unique pointer to a newly created <computeroutput><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="36" column="18" declfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" declline="36" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="namespacepaimon_1af2363ca49fc078c7f28ce9e712000776" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt;</type>
+        <definition>std::shared_ptr&lt; MemoryPool &gt; paimon::GetDefaultPool</definition>
+        <argsstring>()</argsstring>
+        <name>GetDefaultPool</name>
+        <qualifiedname>paimon::GetDefaultPool</qualifiedname>
+        <briefdescription>
+<para>Get a system-wide singleton memory pool. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Shared pointer to the singleton <computeroutput><ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref></computeroutput> instance. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" line="40" column="18" declfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/memory/memory_pool.h" declline="40" declcolumn="18"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Top-level namespace for Paimon C++ API. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/api.h" line="40" column="1"/>
+  </compounddef>
+</doxygen>

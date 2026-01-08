@@ -1,0 +1,82 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_stream" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::Stream</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_input_stream" prot="public" virt="non-virtual">paimon::InputStream</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_output_stream" prot="public" virt="non-virtual">paimon::OutputStream</derivedcompoundref>
+    <includes refid="file__system_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_stream_1aff0ae0a9c78f8fb31da85ef1607748d9" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Stream::~Stream</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Stream</name>
+        <qualifiedname>paimon::Stream::~Stream</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="44" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_stream_1a1c12b3f1e8618ad95e980aa6ea79912a" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>virtual Status paimon::Stream::Close</definition>
+        <argsstring>()=0</argsstring>
+        <name>Close</name>
+        <qualifiedname>paimon::Stream::Close</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_buffered_input_stream_1a595869ad75eb02c8b24bb6a224e3f4fb">Close</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_byte_array_input_stream_1af8f33c3d0216d1cef8e332be2e94852f">Close</reimplementedby>
+        <briefdescription>
+<para>Close the stream. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="46" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Abstract base class for all stream operations. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>paimon::BufferedInputStream</label>
+        <link refid="classpaimon_1_1_buffered_input_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::ByteArrayInputStream</label>
+        <link refid="classpaimon_1_1_byte_array_input_stream"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>paimon::InputStream</label>
+        <link refid="classpaimon_1_1_input_stream"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon::OutputStream</label>
+        <link refid="classpaimon_1_1_output_stream"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::Stream</label>
+        <link refid="classpaimon_1_1_stream"/>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" line="42" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/fs/file_system.h" bodystart="42" bodyend="47"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_stream_1a1c12b3f1e8618ad95e980aa6ea79912a" prot="public" virt="pure-virtual"><scope>paimon::Stream</scope><name>Close</name></member>
+      <member refid="classpaimon_1_1_stream_1aff0ae0a9c78f8fb31da85ef1607748d9" prot="public" virt="virtual"><scope>paimon::Stream</scope><name>~Stream</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

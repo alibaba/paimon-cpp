@@ -1,0 +1,309 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_index_reader" kind="class" language="C++" prot="public">
+    <compoundname>paimon::FileIndexReader</compoundname>
+    <basecompoundref refid="classpaimon_1_1_function_visitor" prot="public" virt="non-virtual">paimon::FunctionVisitor&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt;</basecompoundref>
+    <includes refid="file__index__reader_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a9daf300c2c8f065ae12c515b14ae2387" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitIsNotNull</definition>
+        <argsstring>() override</argsstring>
+        <name>VisitIsNotNull</name>
+        <qualifiedname>paimon::FileIndexReader::VisitIsNotNull</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a1b5cb370e21f4e498d921036ceead405">VisitIsNotNull</reimplements>
+        <briefdescription>
+<para>Evaluates the IS NOT NULL predicate on the indexed column. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="37" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1aab36bf149e33b71f963b89b1270a881d" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitIsNull</definition>
+        <argsstring>() override</argsstring>
+        <name>VisitIsNull</name>
+        <qualifiedname>paimon::FileIndexReader::VisitIsNull</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a8afe8c5ada434c3134f0cad4e5af38bc">VisitIsNull</reimplements>
+        <briefdescription>
+<para>Evaluates the IS NULL predicate on the indexed column. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="39" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a558e538048d59cb5413da1ccd09a9675" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitEqual</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitEqual</name>
+        <qualifiedname>paimon::FileIndexReader::VisitEqual</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1af745a4e85ca02dd9693ccf513bf01dae">VisitEqual</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the equality (==) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="41" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1aecf551234e70423934f380d1356b7343" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitNotEqual</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitNotEqual</name>
+        <qualifiedname>paimon::FileIndexReader::VisitNotEqual</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a1af81d98d01c2e87a7814fe906fea0f7">VisitNotEqual</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the inequality (!=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="43" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1adf7c4ce733768247291c5328138818f6" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitLessThan</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitLessThan</name>
+        <qualifiedname>paimon::FileIndexReader::VisitLessThan</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1ae9b18b37aa036bb5ae3ac7299cbf4a74">VisitLessThan</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the less-than (&lt;) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="45" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a39afec2fae4175c59acf0cf3a5719a97" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitLessOrEqual</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitLessOrEqual</name>
+        <qualifiedname>paimon::FileIndexReader::VisitLessOrEqual</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a31e6d052bd6aa26dc85fd375aefd402d">VisitLessOrEqual</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the less-than-or-equal (&lt;=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="47" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a4b02900deeff72acc61b2502a3dc3758" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitGreaterThan</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitGreaterThan</name>
+        <qualifiedname>paimon::FileIndexReader::VisitGreaterThan</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a476cbf57433a84b9e06b81f8a9967e86">VisitGreaterThan</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the greater-than (&gt;) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="49" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a3f9f42b10b1012a12dbe7085f9d1f8cb" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitGreaterOrEqual</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitGreaterOrEqual</name>
+        <qualifiedname>paimon::FileIndexReader::VisitGreaterOrEqual</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1ab69382b764629572d66d879b8704ebf1">VisitGreaterOrEqual</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the greater-than-or-equal (&gt;=) predicate against the given literal. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="51" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1ac431ea1d2f3355daeb1bca1c1b67715e" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitIn</definition>
+        <argsstring>(const std::vector&lt; Literal &gt; &amp;literals) override</argsstring>
+        <name>VisitIn</name>
+        <qualifiedname>paimon::FileIndexReader::VisitIn</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1af084765e656e7989a390c793ca48507a">VisitIn</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &gt; &amp;</type>
+          <declname>literals</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the IN predicate against a list of literals. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="53" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1ad0710577b26687597c5c28ea72dd9564" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitNotIn</definition>
+        <argsstring>(const std::vector&lt; Literal &gt; &amp;literals) override</argsstring>
+        <name>VisitNotIn</name>
+        <qualifiedname>paimon::FileIndexReader::VisitNotIn</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1aa39876a5c1f4d2a8f423403ba840cc90">VisitNotIn</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::vector&lt; <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &gt; &amp;</type>
+          <declname>literals</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates the NOT IN predicate against a list of literals. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="55" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1aa5f77ea1cbf05f4ba6db521056bdf9ef" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitStartsWith</definition>
+        <argsstring>(const Literal &amp;prefix) override</argsstring>
+        <name>VisitStartsWith</name>
+        <qualifiedname>paimon::FileIndexReader::VisitStartsWith</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1adce72b1f0226f7415d907c2f37275261">VisitStartsWith</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>prefix</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values start with the given prefix. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="58" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a62202cc09795a88939600441d6e9096b" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitEndsWith</definition>
+        <argsstring>(const Literal &amp;suffix) override</argsstring>
+        <name>VisitEndsWith</name>
+        <qualifiedname>paimon::FileIndexReader::VisitEndsWith</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a0912a7c916bc37d64508e96447be76fe">VisitEndsWith</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>suffix</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values end with the given prefix. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="60" column="12"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_reader_1a6e3e91b4bef4608775157a6dcb2db655" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexReader::VisitContains</definition>
+        <argsstring>(const Literal &amp;literal) override</argsstring>
+        <name>VisitContains</name>
+        <qualifiedname>paimon::FileIndexReader::VisitContains</qualifiedname>
+        <reimplements refid="classpaimon_1_1_function_visitor_1a9bf050077573e5a8633b64dfe28c02cd">VisitContains</reimplements>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_literal" kindref="compound">Literal</ref> &amp;</type>
+          <declname>literal</declname>
+        </param>
+        <briefdescription>
+<para>Evaluates whether string values contain the given substring. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="62" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Evaluates filter predicates against a file-level index to determine file eligibility. </para>
+    </briefdescription>
+    <detaileddescription>
+<para><computeroutput><ref refid="classpaimon_1_1_file_index_reader" kindref="compound">FileIndexReader</ref></computeroutput> implements the <computeroutput><ref refid="classpaimon_1_1_function_visitor" kindref="compound">FunctionVisitor</ref></computeroutput> interface specialized to produce <computeroutput>std::shared_ptr&lt;<ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref>&gt;</computeroutput> objects. It reads pre-built file-level index data (e.g., bitmap, bsi or bloom filters) from index file and evaluates whether a given data file may contain rows matching a specific predicate. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileIndexReader</label>
+        <link refid="classpaimon_1_1_file_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::FunctionVisitor&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt;</label>
+        <link refid="classpaimon_1_1_function_visitor"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileIndexReader</label>
+        <link refid="classpaimon_1_1_file_index_reader"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" line="35" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_reader.h" bodystart="35" bodyend="63"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_index_reader_1a6e3e91b4bef4608775157a6dcb2db655" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitContains</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a62202cc09795a88939600441d6e9096b" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitEndsWith</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a558e538048d59cb5413da1ccd09a9675" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitEqual</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a3f9f42b10b1012a12dbe7085f9d1f8cb" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitGreaterOrEqual</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a4b02900deeff72acc61b2502a3dc3758" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitGreaterThan</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1ac431ea1d2f3355daeb1bca1c1b67715e" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitIn</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a9daf300c2c8f065ae12c515b14ae2387" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitIsNotNull</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1aab36bf149e33b71f963b89b1270a881d" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitIsNull</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1a39afec2fae4175c59acf0cf3a5719a97" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitLessOrEqual</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1adf7c4ce733768247291c5328138818f6" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitLessThan</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1aecf551234e70423934f380d1356b7343" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitNotEqual</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1ad0710577b26687597c5c28ea72dd9564" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitNotIn</name></member>
+      <member refid="classpaimon_1_1_file_index_reader_1aa5f77ea1cbf05f4ba6db521056bdf9ef" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>VisitStartsWith</name></member>
+      <member refid="classpaimon_1_1_function_visitor_1af9314ce379e89077c46cd3fcfaca76ae" prot="public" virt="virtual"><scope>paimon::FileIndexReader</scope><name>~FunctionVisitor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

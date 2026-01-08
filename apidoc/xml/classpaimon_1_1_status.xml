@@ -1,0 +1,1184 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_status" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Status</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">util::EqualityComparable&lt; Status &gt;</basecompoundref>
+    <basecompoundref refid="classpaimon_1_1util_1_1_to_string_ostreamable" prot="public" virt="non-virtual">paimon::util::ToStringOstreamable&lt; Status &gt;</basecompoundref>
+    <includes refid="status_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h</includes>
+    <innerclass refid="structpaimon_1_1_status_1_1_state" prot="private">paimon::Status::State</innerclass>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" prot="private" static="no" mutable="no">
+        <type><ref refid="structpaimon_1_1_status_1_1_state" kindref="compound">State</ref> *</type>
+        <definition>State* paimon::Status::state_</definition>
+        <argsstring></argsstring>
+        <name>state_</name>
+        <qualifiedname>paimon::Status::state_</qualifiedname>
+        <initializer>{<ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">nullptr</ref>}</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="318" column="11" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="318" bodyend="318"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" prot="public" static="no" const="no" explicit="no" inline="no" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::Status</definition>
+        <argsstring>() noexcept=default</argsstring>
+        <name>Status</name>
+        <qualifiedname>paimon::Status::Status</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="91" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a7e8cddbff58dab861c66df9cecd1b0bd" prot="public" static="no" const="no" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::~Status</definition>
+        <argsstring>() noexcept</argsstring>
+        <name>~Status</name>
+        <qualifiedname>paimon::Status::~Status</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="92" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="92" bodyend="98"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a17c8a01529c2cf096c0f05b7ce1817ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::Status</definition>
+        <argsstring>(StatusCode code, const std::string &amp;msg)</argsstring>
+        <name>Status</name>
+        <qualifiedname>paimon::Status::Status</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="100" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a016bdae5456f990e5c44a8a6552da20d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::Status</definition>
+        <argsstring>(StatusCode code, std::string msg, std::shared_ptr&lt; StatusDetail &gt; detail)</argsstring>
+        <name>Status</name>
+        <qualifiedname>paimon::Status::Status</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type>std::string</type>
+          <declname>msg</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &gt;</type>
+          <declname>detail</declname>
+        </param>
+        <briefdescription>
+<para>Pluggable constructor for use by sub-systems. detail cannot be null. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="102" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a674d56de758befdb58df135ad0737b17" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::Status</definition>
+        <argsstring>(const Status &amp;s)</argsstring>
+        <name>Status</name>
+        <qualifiedname>paimon::Status::Status</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="105" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="334" bodyend="334"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a17ed5a104ced8c6caf54231e1a0b0dc1" prot="public" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+        <definition>Status &amp; paimon::Status::operator=</definition>
+        <argsstring>(const Status &amp;s)</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Status::operator=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="106" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="336" bodyend="343"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a2ac90c76c02abd6a35b9ca88ad58428b" prot="public" static="no" const="no" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type></type>
+        <definition>paimon::Status::Status</definition>
+        <argsstring>(Status &amp;&amp;s) noexcept</argsstring>
+        <name>Status</name>
+        <qualifiedname>paimon::Status::Status</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;&amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="109" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="345" bodyend="347"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a22282873c1e4a4b09e851bcb0baf101a" prot="public" static="no" const="no" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+        <definition>Status &amp; paimon::Status::operator=</definition>
+        <argsstring>(Status &amp;&amp;s) noexcept</argsstring>
+        <name>operator=</name>
+        <qualifiedname>paimon::Status::operator=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;&amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="110" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="349" bodyend="352"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a407f19a1de6f6504c767d15c6b807b93" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::Equals</definition>
+        <argsstring>(const Status &amp;s) const</argsstring>
+        <name>Equals</name>
+        <qualifiedname>paimon::Status::Equals</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="112" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="354" bodyend="371"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" prot="public" static="no" const="yes" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::Status::operator&amp;</definition>
+        <argsstring>(const Status &amp;s) const noexcept</argsstring>
+        <name>operator&amp;</name>
+        <qualifiedname>paimon::Status::operator&amp;</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="115" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a4b5b3941b5e2c0d884c740109da26976" prot="public" static="no" const="yes" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::Status::operator&amp;</definition>
+        <argsstring>(Status &amp;&amp;s) const noexcept</argsstring>
+        <name>operator&amp;</name>
+        <qualifiedname>paimon::Status::operator&amp;</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;&amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="116" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" prot="public" static="no" const="no" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+        <definition>Status &amp; paimon::Status::operator&amp;=</definition>
+        <argsstring>(const Status &amp;s) noexcept</argsstring>
+        <name>operator&amp;=</name>
+        <qualifiedname>paimon::Status::operator&amp;=</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="117" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a6020aa800904ba21be357c75f327d841" prot="public" static="no" const="no" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+        <definition>Status &amp; paimon::Status::operator&amp;=</definition>
+        <argsstring>(Status &amp;&amp;s) noexcept</argsstring>
+        <name>operator&amp;=</name>
+        <qualifiedname>paimon::Status::operator&amp;=</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;&amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="118" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a589cabbd6509603f3419000bae095c92" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::ok</definition>
+        <argsstring>() const</argsstring>
+        <name>ok</name>
+        <qualifiedname>paimon::Status::ok</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates success. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="210" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="210" bodyend="212"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ab56b950a547b853b004be8a7b8f05be3" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsOutOfMemory</definition>
+        <argsstring>() const</argsstring>
+        <name>IsOutOfMemory</name>
+        <qualifiedname>paimon::Status::IsOutOfMemory</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an out-of-memory error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="215" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="215" bodyend="217"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a86a6e8c03fd5755a6d3394a45080ab9b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsKeyError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsKeyError</name>
+        <qualifiedname>paimon::Status::IsKeyError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates a key lookup error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="219" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="219" bodyend="221"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a0bd6699e2d6e08e3918f18b7497429d9" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsInvalid</definition>
+        <argsstring>() const</argsstring>
+        <name>IsInvalid</name>
+        <qualifiedname>paimon::Status::IsInvalid</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates invalid data. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="223" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="223" bodyend="225"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a1670df9e548372ba699509287460b9ab" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsIOError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsIOError</name>
+        <qualifiedname>paimon::Status::IsIOError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an IO-related failure. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="227" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="227" bodyend="229"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a3d58ead9a3db0913c3983dfbaca82c3a" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsCapacityError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsCapacityError</name>
+        <qualifiedname>paimon::Status::IsCapacityError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates a container reaching capacity limits. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="231" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="231" bodyend="233"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1acbf364dc927150b891d37639f3f4eed4" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsIndexError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsIndexError</name>
+        <qualifiedname>paimon::Status::IsIndexError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an out of bounds index. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="235" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="235" bodyend="237"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1afb6de03e39d9031553333fbe21b11dbf" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsTypeError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsTypeError</name>
+        <qualifiedname>paimon::Status::IsTypeError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates a type error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="239" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="239" bodyend="241"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a0b6318f0364ca8f5f8799552f1ac60ef" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsUnknownError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsUnknownError</name>
+        <qualifiedname>paimon::Status::IsUnknownError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an unknown error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="243" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="243" bodyend="245"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a33c4399af80719ab9d9f9e9c6c657405" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsNotImplemented</definition>
+        <argsstring>() const</argsstring>
+        <name>IsNotImplemented</name>
+        <qualifiedname>paimon::Status::IsNotImplemented</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an unimplemented operation. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="247" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="247" bodyend="249"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a4f4ed1b551382e97ed5b36350d2ef268" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsSerializationError</definition>
+        <argsstring>() const</argsstring>
+        <name>IsSerializationError</name>
+        <qualifiedname>paimon::Status::IsSerializationError</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates a (de)serialization failure. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="251" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="251" bodyend="253"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1add4e34738a567d846aceaf89f699d880" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsNotExist</definition>
+        <argsstring>() const</argsstring>
+        <name>IsNotExist</name>
+        <qualifiedname>paimon::Status::IsNotExist</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates a not exist error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="255" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="255" bodyend="257"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a0c15ea6f24f81d4169117a51ff9d2cd2" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::Status::IsExist</definition>
+        <argsstring>() const</argsstring>
+        <name>IsExist</name>
+        <qualifiedname>paimon::Status::IsExist</qualifiedname>
+        <briefdescription>
+<para>Return true iff the status indicates an exist error. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="259" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="259" bodyend="261"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1aa42f805701e838579d59e6629e02d4bf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Status::ToString</definition>
+        <argsstring>() const</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::Status::ToString</qualifiedname>
+        <briefdescription>
+<para>Return a string representation of this status suitable for printing. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>The string &quot;OK&quot; is returned for success. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="266" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ae910dbe8e294b8ec3fda2b6c81c6e961" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Status::CodeAsString</definition>
+        <argsstring>() const</argsstring>
+        <name>CodeAsString</name>
+        <qualifiedname>paimon::Status::CodeAsString</qualifiedname>
+        <briefdescription>
+<para>Return a string representation of the status code, without the message text or POSIX code information. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="270" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1aaf8e97b117983ea87dfabad6558340a0" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+        <definition>StatusCode paimon::Status::code</definition>
+        <argsstring>() const</argsstring>
+        <name>code</name>
+        <qualifiedname>paimon::Status::code</qualifiedname>
+        <briefdescription>
+<para>Return the StatusCode value attached to this status. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="274" column="16" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="274" bodyend="276"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ae8a300f94797e71210e5b62e05450b50" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type>std::string</type>
+        <definition>std::string paimon::Status::message</definition>
+        <argsstring>() const</argsstring>
+        <name>message</name>
+        <qualifiedname>paimon::Status::message</qualifiedname>
+        <briefdescription>
+<para>Return the specific error message attached to this status. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="279" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="279" bodyend="281"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &gt; &amp;</type>
+        <definition>const std::shared_ptr&lt; StatusDetail &gt; &amp; paimon::Status::detail</definition>
+        <argsstring>() const</argsstring>
+        <name>detail</name>
+        <qualifiedname>paimon::Status::detail</qualifiedname>
+        <briefdescription>
+<para>Return the status detail attached to this message. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="284" column="27" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="284" bodyend="287"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ac2b68b370563ec520c808fc7892e5a7b" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::Status::WithDetail</definition>
+        <argsstring>(std::shared_ptr&lt; StatusDetail &gt; new_detail) const</argsstring>
+        <name>WithDetail</name>
+        <qualifiedname>paimon::Status::WithDetail</qualifiedname>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &gt;</type>
+          <declname>new_detail</declname>
+        </param>
+        <briefdescription>
+<para>Return a new <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> copying the existing status, but updating with the existing detail. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="291" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="291" bodyend="293"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a679677c422b40ff2eb31b814b34a7c04" prot="public" static="no" const="yes" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>Status paimon::Status::WithMessage</definition>
+        <argsstring>(Args &amp;&amp;... args) const</argsstring>
+        <name>WithMessage</name>
+        <qualifiedname>paimon::Status::WithMessage</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return a new <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> with changed message, copying the existing status code and detail. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="298" column="12" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="298" bodyend="300"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a5646dcc5f2881d168c7c61151d4d6059" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Status::Abort</definition>
+        <argsstring>() const</argsstring>
+        <name>Abort</name>
+        <qualifiedname>paimon::Status::Abort</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="302" column="11"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1af853d291ee6604976ae5a4c78432c2e7" prot="public" static="no" const="yes" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Status::Abort</definition>
+        <argsstring>(const std::string &amp;message) const</argsstring>
+        <name>Abort</name>
+        <qualifiedname>paimon::Status::Abort</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>message</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="303" column="11"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::OK</definition>
+        <argsstring>()</argsstring>
+        <name>OK</name>
+        <qualifiedname>paimon::Status::OK</qualifiedname>
+        <briefdescription>
+<para>Return a success status. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="121" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="121" bodyend="123"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a21794c7b23c1a50f8417085d228ff833" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::FromArgs</definition>
+        <argsstring>(StatusCode code, Args &amp;&amp;... args)</argsstring>
+        <name>FromArgs</name>
+        <qualifiedname>paimon::Status::FromArgs</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="126" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="126" bodyend="128"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1adffec4a5cee813d7600b3cce7a7e9da0" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::FromDetailAndArgs</definition>
+        <argsstring>(StatusCode code, std::shared_ptr&lt; StatusDetail &gt; detail, Args &amp;&amp;... args)</argsstring>
+        <name>FromDetailAndArgs</name>
+        <qualifiedname>paimon::Status::FromDetailAndArgs</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+          <declname>code</declname>
+        </param>
+        <param>
+          <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &gt;</type>
+          <declname>detail</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="131" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="131" bodyend="134"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a257f843c6b46ae3f71026ca68e693516" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::OutOfMemory</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>OutOfMemory</name>
+        <qualifiedname>paimon::Status::OutOfMemory</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status for out-of-memory conditions. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="138" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="138" bodyend="140"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ae7ac6f987334404cab0bc3a31f9e7893" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::KeyError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>KeyError</name>
+        <qualifiedname>paimon::Status::KeyError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status for failed key lookups (e.g. column name in a table) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="144" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="144" bodyend="146"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a786883a7b8a8c41f318e09bedcaa2a68" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::TypeError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>TypeError</name>
+        <qualifiedname>paimon::Status::TypeError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status for type errors (such as mismatching data types) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="150" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="150" bodyend="152"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1aa98127f1cf488be656e4f1cd09943497" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::UnknownError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>UnknownError</name>
+        <qualifiedname>paimon::Status::UnknownError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status for unknown errors. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="156" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="156" bodyend="158"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ade3bf02ffe02144cdbe87a40cc935869" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::NotImplemented</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>NotImplemented</name>
+        <qualifiedname>paimon::Status::NotImplemented</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when an operation or a combination of operation and data types is unimplemented. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="163" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="163" bodyend="165"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1adf27576c2f0a515e153ca1af9bf93fc1" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::Invalid</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>Invalid</name>
+        <qualifiedname>paimon::Status::Invalid</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status for invalid data (for example a string that fails parsing) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="169" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="169" bodyend="171"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1ab6d9895460f5cf36d618db4fca8d990a" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::IndexError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>IndexError</name>
+        <qualifiedname>paimon::Status::IndexError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when an index is out of bounds. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="175" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="175" bodyend="177"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a40986cebd0d6385235916c977561fd80" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::CapacityError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>CapacityError</name>
+        <qualifiedname>paimon::Status::CapacityError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when a container&apos;s capacity would exceed its limits. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="181" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="181" bodyend="183"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a392f2c07e1beface3ca5d9aac87109c4" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::IOError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>IOError</name>
+        <qualifiedname>paimon::Status::IOError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when some IO-related operation failed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="187" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="187" bodyend="189"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a36891e6221061815c046016b6723a31d" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::SerializationError</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>SerializationError</name>
+        <qualifiedname>paimon::Status::SerializationError</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when some (de)serialization operation failed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="193" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="193" bodyend="195"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a33c6225bf4989a1bbf8a85a085dbd42b" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::NotExist</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>NotExist</name>
+        <qualifiedname>paimon::Status::NotExist</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when something is not existed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="199" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="199" bodyend="201"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a5845f5f34fed90a3c51b09988fc7049b" prot="public" static="yes" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <templateparamlist>
+          <param>
+            <type>typename...</type>
+            <declname>Args</declname>
+            <defname>Args</defname>
+          </param>
+        </templateparamlist>
+        <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref></type>
+        <definition>static Status paimon::Status::Exist</definition>
+        <argsstring>(Args &amp;&amp;... args)</argsstring>
+        <name>Exist</name>
+        <qualifiedname>paimon::Status::Exist</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Args</ref> &amp;&amp;...</type>
+          <declname>args</declname>
+        </param>
+        <briefdescription>
+<para>Return an error status when something is already existed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="205" column="19" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="205" bodyend="207"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a898ec4b25a625282f3c60ae1aa4a1799" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::string</type>
+        <definition>static std::string paimon::Status::CodeAsString</definition>
+        <argsstring>(StatusCode)</argsstring>
+        <name>CodeAsString</name>
+        <qualifiedname>paimon::Status::CodeAsString</qualifiedname>
+        <param>
+          <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="271" column="24"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="private-func">
+      <memberdef kind="function" id="classpaimon_1_1_status_1a409b28611f3c7541299724c8fbf1eff9" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Status::DeleteState</definition>
+        <argsstring>()</argsstring>
+        <name>DeleteState</name>
+        <qualifiedname>paimon::Status::DeleteState</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="320" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="320" bodyend="323"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1aedfec1189f6d93d85230283e14103169" prot="private" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Status::CopyFrom</definition>
+        <argsstring>(const Status &amp;s)</argsstring>
+        <name>CopyFrom</name>
+        <qualifiedname>paimon::Status::CopyFrom</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="324" column="10"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_1a844d67f9b4d139d15f3f484071dc8dff" prot="private" static="no" const="no" explicit="no" inline="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">void</ref></type>
+        <definition>void paimon::Status::MoveFrom</definition>
+        <argsstring>(Status &amp;s)</argsstring>
+        <name>MoveFrom</name>
+        <qualifiedname>paimon::Status::MoveFrom</qualifiedname>
+        <param>
+          <type><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> &amp;</type>
+          <declname>s</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="325" column="17" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="328" bodyend="332"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> outcome object (success or error) </para>
+    </briefdescription>
+    <detaileddescription>
+<para>The <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref> object is an object holding the outcome of an operation. The outcome is represented as a StatusCode, either success (<ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411eae0aa021e21dddbd6d8cecec71e9cf564" kindref="member">StatusCode::OK</ref>) or an error (any other of the StatusCode enumeration values).</para>
+<para>Additionally, if an error occurred, a specific error message is generally attached. </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>paimon::util::ToStringOstreamable&lt; Status &gt;</label>
+        <link refid="classpaimon_1_1util_1_1_to_string_ostreamable"/>
+      </node>
+      <node id="1">
+        <label>paimon::Status</label>
+        <link refid="classpaimon_1_1_status"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>util::EqualityComparable&lt; Status &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="3">
+        <label>paimon::util::ToStringOstreamable&lt; Status &gt;</label>
+        <link refid="classpaimon_1_1util_1_1_to_string_ostreamable"/>
+      </node>
+      <node id="1">
+        <label>paimon::Status</label>
+        <link refid="classpaimon_1_1_status"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+        <childnode refid="3" relation="public-inheritance">
+        </childnode>
+        <childnode refid="4" relation="usage">
+          <edgelabel>state_</edgelabel>
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::Status::State</label>
+        <link refid="structpaimon_1_1_status_1_1_state"/>
+      </node>
+      <node id="2">
+        <label>util::EqualityComparable&lt; Status &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="87" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="88" bodyend="326"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_status_1a5646dcc5f2881d168c7c61151d4d6059" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Abort</name></member>
+      <member refid="classpaimon_1_1_status_1af853d291ee6604976ae5a4c78432c2e7" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Abort</name></member>
+      <member refid="classpaimon_1_1_status_1a40986cebd0d6385235916c977561fd80" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>CapacityError</name></member>
+      <member refid="classpaimon_1_1util_1_1_to_string_ostreamable_1a82f3f4419414561b68474f0a1f7cf3da" prot="private" virt="non-virtual"><scope>paimon::Status</scope><name>cast</name></member>
+      <member refid="classpaimon_1_1_status_1aaf8e97b117983ea87dfabad6558340a0" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>code</name></member>
+      <member refid="classpaimon_1_1_status_1ae910dbe8e294b8ec3fda2b6c81c6e961" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>CodeAsString</name></member>
+      <member refid="classpaimon_1_1_status_1a898ec4b25a625282f3c60ae1aa4a1799" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>CodeAsString</name></member>
+      <member refid="classpaimon_1_1_status_1aedfec1189f6d93d85230283e14103169" prot="private" virt="non-virtual"><scope>paimon::Status</scope><name>CopyFrom</name></member>
+      <member refid="classpaimon_1_1_status_1a409b28611f3c7541299724c8fbf1eff9" prot="private" virt="non-virtual"><scope>paimon::Status</scope><name>DeleteState</name></member>
+      <member refid="classpaimon_1_1_status_1ac9183c29a30e3fca206c04f9a3bc2bdb" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>detail</name></member>
+      <member refid="classpaimon_1_1_status_1a407f19a1de6f6504c767d15c6b807b93" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Equals</name></member>
+      <member refid="classpaimon_1_1_status_1a5845f5f34fed90a3c51b09988fc7049b" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Exist</name></member>
+      <member refid="classpaimon_1_1_status_1a21794c7b23c1a50f8417085d228ff833" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>FromArgs</name></member>
+      <member refid="classpaimon_1_1_status_1adffec4a5cee813d7600b3cce7a7e9da0" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>FromDetailAndArgs</name></member>
+      <member refid="classpaimon_1_1_status_1ab6d9895460f5cf36d618db4fca8d990a" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IndexError</name></member>
+      <member refid="classpaimon_1_1_status_1adf27576c2f0a515e153ca1af9bf93fc1" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Invalid</name></member>
+      <member refid="classpaimon_1_1_status_1a392f2c07e1beface3ca5d9aac87109c4" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IOError</name></member>
+      <member refid="classpaimon_1_1_status_1a3d58ead9a3db0913c3983dfbaca82c3a" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsCapacityError</name></member>
+      <member refid="classpaimon_1_1_status_1a0c15ea6f24f81d4169117a51ff9d2cd2" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsExist</name></member>
+      <member refid="classpaimon_1_1_status_1acbf364dc927150b891d37639f3f4eed4" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsIndexError</name></member>
+      <member refid="classpaimon_1_1_status_1a0bd6699e2d6e08e3918f18b7497429d9" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsInvalid</name></member>
+      <member refid="classpaimon_1_1_status_1a1670df9e548372ba699509287460b9ab" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsIOError</name></member>
+      <member refid="classpaimon_1_1_status_1a86a6e8c03fd5755a6d3394a45080ab9b" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsKeyError</name></member>
+      <member refid="classpaimon_1_1_status_1add4e34738a567d846aceaf89f699d880" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsNotExist</name></member>
+      <member refid="classpaimon_1_1_status_1a33c4399af80719ab9d9f9e9c6c657405" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsNotImplemented</name></member>
+      <member refid="classpaimon_1_1_status_1ab56b950a547b853b004be8a7b8f05be3" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsOutOfMemory</name></member>
+      <member refid="classpaimon_1_1_status_1a4f4ed1b551382e97ed5b36350d2ef268" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsSerializationError</name></member>
+      <member refid="classpaimon_1_1_status_1afb6de03e39d9031553333fbe21b11dbf" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsTypeError</name></member>
+      <member refid="classpaimon_1_1_status_1a0b6318f0364ca8f5f8799552f1ac60ef" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>IsUnknownError</name></member>
+      <member refid="classpaimon_1_1_status_1ae7ac6f987334404cab0bc3a31f9e7893" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>KeyError</name></member>
+      <member refid="classpaimon_1_1_status_1ae8a300f94797e71210e5b62e05450b50" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>message</name></member>
+      <member refid="classpaimon_1_1_status_1a844d67f9b4d139d15f3f484071dc8dff" prot="private" virt="non-virtual"><scope>paimon::Status</scope><name>MoveFrom</name></member>
+      <member refid="classpaimon_1_1_status_1a33c6225bf4989a1bbf8a85a085dbd42b" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>NotExist</name></member>
+      <member refid="classpaimon_1_1_status_1ade3bf02ffe02144cdbe87a40cc935869" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>NotImplemented</name></member>
+      <member refid="classpaimon_1_1_status_1a589cabbd6509603f3419000bae095c92" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>ok</name></member>
+      <member refid="classpaimon_1_1_status_1a04244225fdb6970c87200795a44fa66e" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>OK</name></member>
+      <member refid="classpaimon_1_1_status_1a663088a0d650d40ab70bec8be2f9a321" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator&amp;</name></member>
+      <member refid="classpaimon_1_1_status_1a4b5b3941b5e2c0d884c740109da26976" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator&amp;</name></member>
+      <member refid="classpaimon_1_1_status_1a2e31908463391ce78af0e7876abe2533" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator&amp;=</name></member>
+      <member refid="classpaimon_1_1_status_1a6020aa800904ba21be357c75f327d841" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator&amp;=</name></member>
+      <member refid="classpaimon_1_1_status_1a17ed5a104ced8c6caf54231e1a0b0dc1" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_status_1a22282873c1e4a4b09e851bcb0baf101a" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>operator=</name></member>
+      <member refid="classpaimon_1_1_status_1a257f843c6b46ae3f71026ca68e693516" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>OutOfMemory</name></member>
+      <member refid="classpaimon_1_1_status_1a36891e6221061815c046016b6723a31d" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>SerializationError</name></member>
+      <member refid="classpaimon_1_1_status_1aee129a44df3969fde293d32631d2f76e" prot="private" virt="non-virtual"><scope>paimon::Status</scope><name>state_</name></member>
+      <member refid="classpaimon_1_1_status_1a6e47be589870f56d8994ea404b04c6f6" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Status</name></member>
+      <member refid="classpaimon_1_1_status_1a17c8a01529c2cf096c0f05b7ce1817ad" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Status</name></member>
+      <member refid="classpaimon_1_1_status_1a016bdae5456f990e5c44a8a6552da20d" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Status</name></member>
+      <member refid="classpaimon_1_1_status_1a674d56de758befdb58df135ad0737b17" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Status</name></member>
+      <member refid="classpaimon_1_1_status_1a2ac90c76c02abd6a35b9ca88ad58428b" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>Status</name></member>
+      <member refid="classpaimon_1_1_status_1aa42f805701e838579d59e6629e02d4bf" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_status_1a786883a7b8a8c41f318e09bedcaa2a68" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>TypeError</name></member>
+      <member refid="classpaimon_1_1_status_1aa98127f1cf488be656e4f1cd09943497" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>UnknownError</name></member>
+      <member refid="classpaimon_1_1_status_1ac2b68b370563ec520c808fc7892e5a7b" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>WithDetail</name></member>
+      <member refid="classpaimon_1_1_status_1a679677c422b40ff2eb31b814b34a7c04" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>WithMessage</name></member>
+      <member refid="classpaimon_1_1_status_1a7e8cddbff58dab861c66df9cecd1b0bd" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>~Status</name></member>
+      <member refid="classpaimon_1_1util_1_1_to_string_ostreamable_1a2edbad546105658c2a08acd47363630f" prot="public" virt="non-virtual"><scope>paimon::Status</scope><name>~ToStringOstreamable</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

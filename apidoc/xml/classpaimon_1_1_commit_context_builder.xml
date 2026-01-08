@@ -1,0 +1,318 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_commit_context_builder" kind="class" language="C++" prot="public">
+    <compoundname>paimon::CommitContextBuilder</compoundname>
+    <includes refid="commit__context_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h</includes>
+    <sectiondef kind="private-attrib">
+      <memberdef kind="variable" id="classpaimon_1_1_commit_context_builder_1ac0e88921ffe20853386496c696ebd860" prot="private" static="no" mutable="no">
+        <type>std::unique_ptr&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">Impl</ref> &gt;</type>
+        <definition>std::unique_ptr&lt;Impl&gt; paimon::CommitContextBuilder::impl_</definition>
+        <argsstring></argsstring>
+        <name>impl_</name>
+        <qualifiedname>paimon::CommitContextBuilder::impl_</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="139" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="139" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1ad11f5f4ebcc18251e3090c08d4f24261" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CommitContextBuilder::CommitContextBuilder</definition>
+        <argsstring>(const std::string &amp;root_path, const std::string &amp;commit_user)</argsstring>
+        <name>CommitContextBuilder</name>
+        <qualifiedname>paimon::CommitContextBuilder::CommitContextBuilder</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>root_path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>commit_user</declname>
+        </param>
+        <briefdescription>
+<para>Constructs a <computeroutput><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref></computeroutput> with required parameters. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>root_path</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The root path of the Paimon table. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>commit_user</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The user identifier for the commit operation. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="89" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1abab143e3062bc63aafada827545df899" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::CommitContextBuilder::~CommitContextBuilder</definition>
+        <argsstring>()</argsstring>
+        <name>~CommitContextBuilder</name>
+        <qualifiedname>paimon::CommitContextBuilder::~CommitContextBuilder</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="91" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1a62f56fb4e3c4362ba54c2a7ce3f74547" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::SetOptions</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>SetOptions</name>
+        <qualifiedname>paimon::CommitContextBuilder::SetOptions</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Set a configuration options map to set some option entries which are not defined in the table schema or whose values you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>The options map will clear the options added by <computeroutput><ref refid="classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce" kindref="member">AddOption()</ref></computeroutput> before. </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>options</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The configuration options map. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="98" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::AddOption</definition>
+        <argsstring>(const std::string &amp;key, const std::string &amp;value)</argsstring>
+        <name>AddOption</name>
+        <qualifiedname>paimon::CommitContextBuilder::AddOption</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>key</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>value</declname>
+        </param>
+        <briefdescription>
+<para>Add a single configuration option which is not defined in the table schema or whose value you want to overwrite. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>If you want to add multiple options, call <computeroutput><ref refid="classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce" kindref="member">AddOption()</ref></computeroutput> multiple times or use <computeroutput><ref refid="classpaimon_1_1_commit_context_builder_1a62f56fb4e3c4362ba54c2a7ce3f74547" kindref="member">SetOptions()</ref></computeroutput> instead. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>key</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option key. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>value</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The option value. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="108" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1a3af910fbc87d8990d7175951d4c91a1b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::IgnoreEmptyCommit</definition>
+        <argsstring>(bool ignore_empty_commit)</argsstring>
+        <name>IgnoreEmptyCommit</name>
+        <qualifiedname>paimon::CommitContextBuilder::IgnoreEmptyCommit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>ignore_empty_commit</declname>
+        </param>
+        <briefdescription>
+<para>Sets whether to ignore empty commits (default is true). </para>
+        </briefdescription>
+        <detaileddescription>
+<para>When set to true, commits that don&apos;t contain any actual data changes will be ignored. <parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>ignore_empty_commit</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>True to ignore empty commits, false otherwise. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="114" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1ae9b915cd4fd9a12757ca11239ec2fbc6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::UseRESTCatalogCommit</definition>
+        <argsstring>(bool use_rest_catalog_commit)</argsstring>
+        <name>UseRESTCatalogCommit</name>
+        <qualifiedname>paimon::CommitContextBuilder::UseRESTCatalogCommit</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+          <declname>use_rest_catalog_commit</declname>
+        </param>
+        <briefdescription>
+<para>Sets whether to use REST catalog commit (default is false). </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="note"><para>Temporary interface, will be removed in the future. </para>
+</simplesect>
+<parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>use_rest_catalog_commit</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>True to use REST catalog commit, false otherwise. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="120" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1afb03e59547889d68a13390d74ba08a36" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::WithMemoryPool</definition>
+        <argsstring>(const std::shared_ptr&lt; MemoryPool &gt; &amp;memory_pool)</argsstring>
+        <name>WithMemoryPool</name>
+        <qualifiedname>paimon::CommitContextBuilder::WithMemoryPool</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>memory_pool</declname>
+        </param>
+        <briefdescription>
+<para>Sets the memory pool to be used for memory allocation during commit operations. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>memory_pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared pointer to the memory pool instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="125" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1a771dcadc571d4c4bfd8808850f324480" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref> &amp;</type>
+        <definition>CommitContextBuilder &amp; paimon::CommitContextBuilder::WithExecutor</definition>
+        <argsstring>(const std::shared_ptr&lt; Executor &gt; &amp;executor)</argsstring>
+        <name>WithExecutor</name>
+        <qualifiedname>paimon::CommitContextBuilder::WithExecutor</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_executor" kindref="compound">Executor</ref> &gt; &amp;</type>
+          <declname>executor</declname>
+        </param>
+        <briefdescription>
+<para>Sets the executor to be used for asynchronous operations during commit. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>executor</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Shared pointer to the executor instance. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>Reference to this builder for method chaining. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="130" column="26"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_commit_context_builder_1a9dbc721d50c637585fc12e9dc141b72f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref> &gt; &gt;</type>
+        <definition>Result&lt; std::unique_ptr&lt; CommitContext &gt; &gt; paimon::CommitContextBuilder::Finish</definition>
+        <argsstring>()</argsstring>
+        <name>Finish</name>
+        <qualifiedname>paimon::CommitContextBuilder::Finish</qualifiedname>
+        <briefdescription>
+<para>Build and return a <computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput> instance with input validation. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the constructed <computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="134" column="12"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><computeroutput><ref refid="classpaimon_1_1_commit_context_builder" kindref="compound">CommitContextBuilder</ref></computeroutput> used to build a <computeroutput><ref refid="classpaimon_1_1_commit_context" kindref="compound">CommitContext</ref></computeroutput>, has input validation. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" line="84" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/commit_context.h" bodystart="84" bodyend="140"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_commit_context_builder_1a5bafddcf4b5bc55286542595576089ce" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>AddOption</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1ad11f5f4ebcc18251e3090c08d4f24261" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>CommitContextBuilder</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1a9dbc721d50c637585fc12e9dc141b72f" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>Finish</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1a3af910fbc87d8990d7175951d4c91a1b" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>IgnoreEmptyCommit</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1ac0e88921ffe20853386496c696ebd860" prot="private" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>impl_</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1a62f56fb4e3c4362ba54c2a7ce3f74547" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>SetOptions</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1ae9b915cd4fd9a12757ca11239ec2fbc6" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>UseRESTCatalogCommit</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1a771dcadc571d4c4bfd8808850f324480" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>WithExecutor</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1afb03e59547889d68a13390d74ba08a36" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>WithMemoryPool</name></member>
+      <member refid="classpaimon_1_1_commit_context_builder_1abab143e3062bc63aafada827545df899" prot="public" virt="non-virtual"><scope>paimon::CommitContextBuilder</scope><name>~CommitContextBuilder</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

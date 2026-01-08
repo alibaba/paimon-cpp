@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_status_detail" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::StatusDetail</compoundname>
+    <includes refid="status_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_status_detail_1a45e18a38958a9c385f5dee1a859b99af" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::StatusDetail::~StatusDetail</definition>
+        <argsstring>()=default</argsstring>
+        <name>~StatusDetail</name>
+        <qualifiedname>paimon::StatusDetail::~StatusDetail</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="67" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_detail_1ab01ad69a92827bf19cbb126063bd82b9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+        <definition>virtual const char * paimon::StatusDetail::type_id</definition>
+        <argsstring>() const =0</argsstring>
+        <name>type_id</name>
+        <qualifiedname>paimon::StatusDetail::type_id</qualifiedname>
+        <briefdescription>
+<para>Return a unique id for the type of the <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> (effectively a poor man&apos;s substitute for RTTI). </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="70" column="24"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_detail_1a0ab060edabfc4528915885c7f584950b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::StatusDetail::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::StatusDetail::ToString</qualifiedname>
+        <briefdescription>
+<para>Produce a human-readable description of this status. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="72" column="25"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_status_detail_1a3027eb33a5f35ebb1859c7ecaf93def9" prot="public" static="no" const="yes" explicit="no" inline="yes" noexcept="yes" virt="non-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>bool paimon::StatusDetail::operator==</definition>
+        <argsstring>(const StatusDetail &amp;other) const noexcept</argsstring>
+        <name>operator==</name>
+        <qualifiedname>paimon::StatusDetail::operator==</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="74" column="10" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="74" bodyend="76"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An opaque class that allows subsystems to retain additional information inside the <ref refid="classpaimon_1_1_status" kindref="compound">Status</ref>. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="65" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="65" bodyend="77"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_status_detail_1a3027eb33a5f35ebb1859c7ecaf93def9" prot="public" virt="non-virtual"><scope>paimon::StatusDetail</scope><name>operator==</name></member>
+      <member refid="classpaimon_1_1_status_detail_1a0ab060edabfc4528915885c7f584950b" prot="public" virt="pure-virtual"><scope>paimon::StatusDetail</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_status_detail_1ab01ad69a92827bf19cbb126063bd82b9" prot="public" virt="pure-virtual"><scope>paimon::StatusDetail</scope><name>type_id</name></member>
+      <member refid="classpaimon_1_1_status_detail_1a45e18a38958a9c385f5dee1a859b99af" prot="public" virt="virtual"><scope>paimon::StatusDetail</scope><name>~StatusDetail</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

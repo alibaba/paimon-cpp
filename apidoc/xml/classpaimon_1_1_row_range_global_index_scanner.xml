@@ -1,0 +1,121 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_row_range_global_index_scanner" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::RowRangeGlobalIndexScanner</compoundname>
+    <includes refid="row__range__global__index__scanner_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_row_range_global_index_scanner_1abdfdb6a0db739c8b82c654d119469eee" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::RowRangeGlobalIndexScanner::~RowRangeGlobalIndexScanner</definition>
+        <argsstring>()=default</argsstring>
+        <name>~RowRangeGlobalIndexScanner</name>
+        <qualifiedname>paimon::RowRangeGlobalIndexScanner::~RowRangeGlobalIndexScanner</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h" line="29" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_global_index_scanner_1ac03bced85190e92ca2b7db34e676948c" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; paimon::RowRangeGlobalIndexScanner::CreateReader</definition>
+        <argsstring>(const std::string &amp;field_name, const std::string &amp;index_type) const =0</argsstring>
+        <name>CreateReader</name>
+        <qualifiedname>paimon::RowRangeGlobalIndexScanner::CreateReader</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>index_type</declname>
+        </param>
+        <briefdescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput> for a specific field and index type within this range. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>This reader provides low-level access to the serialized index data for the given column (<computeroutput>field_name</computeroutput>) and index kind (<computeroutput>index_type</computeroutput>, such as &quot;bitmap&quot;).</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the indexed column. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>index_type</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Type of the global index (e.g., &quot;bitmap&quot;, &quot;lumina&quot;). </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> that is:<itemizedlist>
+<listitem><para>Successful with a non-null reader if the index exists and loads correctly;</para>
+</listitem><listitem><para>Successful with a null pointer if no index was built for the given field and type;</para>
+</listitem><listitem><para>An error only if loading fails (e.g., file corruption, I/O error, unsupported format). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+<simplesect kind="note"><para>All <computeroutput><ref refid="classpaimon_1_1_global_index_result" kindref="compound">GlobalIndexResult</ref></computeroutput> objects returned by <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput> use <bold>local row ids</bold> that start from 0 — not global row ids in the entire table. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h" line="45" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_row_range_global_index_scanner_1a8d171e568878db1be161eb11ff33f9cf" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::vector&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref> &gt; &gt; &gt;</type>
+        <definition>virtual Result&lt; std::vector&lt; std::shared_ptr&lt; GlobalIndexReader &gt; &gt; &gt; paimon::RowRangeGlobalIndexScanner::CreateReaders</definition>
+        <argsstring>(const std::string &amp;field_name) const =0</argsstring>
+        <name>CreateReaders</name>
+        <qualifiedname>paimon::RowRangeGlobalIndexScanner::CreateReaders</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>field_name</declname>
+        </param>
+        <briefdescription>
+<para>Creates several <computeroutput><ref refid="classpaimon_1_1_global_index_reader" kindref="compound">GlobalIndexReader</ref></computeroutput>s for a specific field within this range. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>field_name</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Name of the indexed column. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>A <computeroutput><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref></computeroutput> that is:<itemizedlist>
+<listitem><para>Successful with several readers if the indexes exist and load correctly;</para>
+</listitem><listitem><para>Successful with an empty vector if no index was built for the given field;</para>
+</listitem><listitem><para>Error returns when loading fails (e.g., file corruption, I/O error, unsupported format). </para>
+</listitem></itemizedlist>
+</para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h" line="56" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Interface for scanning global index data at the range level. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h" line="27" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/row_range_global_index_scanner.h" bodystart="27" bodyend="58"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_row_range_global_index_scanner_1ac03bced85190e92ca2b7db34e676948c" prot="public" virt="pure-virtual"><scope>paimon::RowRangeGlobalIndexScanner</scope><name>CreateReader</name></member>
+      <member refid="classpaimon_1_1_row_range_global_index_scanner_1a8d171e568878db1be161eb11ff33f9cf" prot="public" virt="pure-virtual"><scope>paimon::RowRangeGlobalIndexScanner</scope><name>CreateReaders</name></member>
+      <member refid="classpaimon_1_1_row_range_global_index_scanner_1abdfdb6a0db739c8b82c654d119469eee" prot="public" virt="virtual"><scope>paimon::RowRangeGlobalIndexScanner</scope><name>~RowRangeGlobalIndexScanner</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

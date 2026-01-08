@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="structpaimon_1_1_status_1_1_state" kind="struct" language="C++" prot="private">
+    <compoundname>paimon::Status::State</compoundname>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structpaimon_1_1_status_1_1_state_1ae67aee8b053231dfb964942bf820b072" prot="public" static="no" mutable="no">
+        <type><ref refid="namespacepaimon_1ac977bebe75f574f353e1869a800c411e" kindref="member">StatusCode</ref></type>
+        <definition>StatusCode paimon::Status::State::code</definition>
+        <argsstring></argsstring>
+        <name>code</name>
+        <qualifiedname>paimon::Status::State::code</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="312" column="20" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="312" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_status_1_1_state_1ab4d24f20908fe8a024c9622e7112b064" prot="public" static="no" mutable="no">
+        <type>std::string</type>
+        <definition>std::string paimon::Status::State::msg</definition>
+        <argsstring></argsstring>
+        <name>msg</name>
+        <qualifiedname>paimon::Status::State::msg</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="313" column="21" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="313" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structpaimon_1_1_status_1_1_state_1ad67a33c735408d8166de438038746728" prot="public" static="no" mutable="no">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_status_detail" kindref="compound">StatusDetail</ref> &gt;</type>
+        <definition>std::shared_ptr&lt;StatusDetail&gt; paimon::Status::State::detail</definition>
+        <argsstring></argsstring>
+        <name>detail</name>
+        <qualifiedname>paimon::Status::State::detail</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="314" column="25" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="314" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" line="311" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/status.h" bodystart="311" bodyend="315"/>
+    <listofallmembers>
+      <member refid="structpaimon_1_1_status_1_1_state_1ae67aee8b053231dfb964942bf820b072" prot="public" virt="non-virtual"><scope>paimon::Status::State</scope><name>code</name></member>
+      <member refid="structpaimon_1_1_status_1_1_state_1ad67a33c735408d8166de438038746728" prot="public" virt="non-virtual"><scope>paimon::Status::State</scope><name>detail</name></member>
+      <member refid="structpaimon_1_1_status_1_1_state_1ab4d24f20908fe8a024c9622e7112b064" prot="public" virt="non-virtual"><scope>paimon::Status::State</scope><name>msg</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

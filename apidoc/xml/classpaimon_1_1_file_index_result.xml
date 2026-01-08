@@ -1,0 +1,203 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_index_result" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileIndexResult</compoundname>
+    <basecompoundref prot="public" virt="non-virtual">std::enable_shared_from_this&lt; FileIndexResult &gt;</basecompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_bitmap_index_result" prot="public" virt="non-virtual">paimon::BitmapIndexResult</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_remain" prot="public" virt="non-virtual">paimon::Remain</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_skip" prot="public" virt="non-virtual">paimon::Skip</derivedcompoundref>
+    <includes refid="file__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1a606652e02127a4ff25ceb16523b3a219" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FileIndexResult::~FileIndexResult</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FileIndexResult</name>
+        <qualifiedname>paimon::FileIndexResult::~FileIndexResult</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="31" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1a09dd9fb3c6aaf92dca100bf62e6d684b" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref> &gt;</type>
+        <definition>virtual Result&lt; bool &gt; paimon::FileIndexResult::IsRemain</definition>
+        <argsstring>() const =0</argsstring>
+        <name>IsRemain</name>
+        <qualifiedname>paimon::FileIndexResult::IsRemain</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_index_result_1a376e69106cfc7b59339a2396bc9d7fe9">IsRemain</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_remain_1af36deb1e8da138e8aa22a62f19ba7fa3">IsRemain</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_skip_1ac3b5dec0b8350ffd12274558b6bb98f5">IsRemain</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>Whether the file is remained. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="42" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1aad183054045c2000e120921278ec81de" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexResult::And</definition>
+        <argsstring>(const std::shared_ptr&lt; FileIndexResult &gt; &amp;other)</argsstring>
+        <name>And</name>
+        <qualifiedname>paimon::FileIndexResult::And</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_index_result_1ac8a278b501a57fb71a43190bf2617e81">And</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_remain_1ac7c0ba731b5788d1ac78eec606d2893e">And</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_skip_1a0c90d0b90aa259039d652f31e654c347">And</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the intersection of the current result with the provided result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="45" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1a0c7e7d61e45bc4e4abe66f926d8561f1" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::shared_ptr&lt; FileIndexResult &gt; &gt; paimon::FileIndexResult::Or</definition>
+        <argsstring>(const std::shared_ptr&lt; FileIndexResult &gt; &amp;other)</argsstring>
+        <name>Or</name>
+        <qualifiedname>paimon::FileIndexResult::Or</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_index_result_1ae42303c66939824af06d1ed6ba5b5d50">Or</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_remain_1a1db27277507d782cb848ecf479a3d4ba">Or</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_skip_1afb24684bd1e42927a1297269d4934581">Or</reimplementedby>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt; &amp;</type>
+          <declname>other</declname>
+        </param>
+        <briefdescription>
+<para>Compute the union of the current result with the provided result. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="49" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1a8141fe8daef18f552b0bd01a1b6ad6d5" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type>std::string</type>
+        <definition>virtual std::string paimon::FileIndexResult::ToString</definition>
+        <argsstring>() const =0</argsstring>
+        <name>ToString</name>
+        <qualifiedname>paimon::FileIndexResult::ToString</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_index_result_1aafeed8a56468750949e973d28adb0ac6">ToString</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_remain_1a08d9dbb8a3b82bf76288e257e3fc8ca4">ToString</reimplementedby>
+        <reimplementedby refid="classpaimon_1_1_skip_1a04ae603cc345e969a53a893e574da332">ToString</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="52" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1a6f56e0bf2501247a97f9d68456eb6e3e" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt;</type>
+        <definition>static std::shared_ptr&lt; FileIndexResult &gt; paimon::FileIndexResult::Remain</definition>
+        <argsstring>()</argsstring>
+        <name>Remain</name>
+        <qualifiedname>paimon::FileIndexResult::Remain</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A shared instance representing &quot;retain the file&quot;. </para>
+</simplesect>
+<simplesect kind="note"><para>This is a singleton-like utility; all calls return equivalent objects. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="35" column="28"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_index_result_1aa3f2676efb24a9a9ef200fbed194c45a" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_index_result" kindref="compound">FileIndexResult</ref> &gt;</type>
+        <definition>static std::shared_ptr&lt; FileIndexResult &gt; paimon::FileIndexResult::Skip</definition>
+        <argsstring>()</argsstring>
+        <name>Skip</name>
+        <qualifiedname>paimon::FileIndexResult::Skip</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>A shared instance representing &quot;skip the file&quot;. </para>
+</simplesect>
+<simplesect kind="note"><para>This is a singleton-like utility; all calls return equivalent objects. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="39" column="28"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>File index result to decide whether filter a file. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="3">
+        <label>paimon::BitmapIndexResult</label>
+        <link refid="classpaimon_1_1_bitmap_index_result"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::FileIndexResult</label>
+        <link refid="classpaimon_1_1_file_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="4">
+        <label>paimon::Remain</label>
+        <link refid="classpaimon_1_1_remain"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="5">
+        <label>paimon::Skip</label>
+        <link refid="classpaimon_1_1_skip"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; FileIndexResult &gt;</label>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="1">
+        <label>paimon::FileIndexResult</label>
+        <link refid="classpaimon_1_1_file_index_result"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>std::enable_shared_from_this&lt; FileIndexResult &gt;</label>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" line="29" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/file_index/file_index_result.h" bodystart="29" bodyend="53"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_index_result_1aad183054045c2000e120921278ec81de" prot="public" virt="virtual"><scope>paimon::FileIndexResult</scope><name>And</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a09dd9fb3c6aaf92dca100bf62e6d684b" prot="public" virt="pure-virtual"><scope>paimon::FileIndexResult</scope><name>IsRemain</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a0c7e7d61e45bc4e4abe66f926d8561f1" prot="public" virt="virtual"><scope>paimon::FileIndexResult</scope><name>Or</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a6f56e0bf2501247a97f9d68456eb6e3e" prot="public" virt="non-virtual"><scope>paimon::FileIndexResult</scope><name>Remain</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1aa3f2676efb24a9a9ef200fbed194c45a" prot="public" virt="non-virtual"><scope>paimon::FileIndexResult</scope><name>Skip</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a8141fe8daef18f552b0bd01a1b6ad6d5" prot="public" virt="pure-virtual"><scope>paimon::FileIndexResult</scope><name>ToString</name></member>
+      <member refid="classpaimon_1_1_file_index_result_1a606652e02127a4ff25ceb16523b3a219" prot="public" virt="virtual"><scope>paimon::FileIndexResult</scope><name>~FileIndexResult</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

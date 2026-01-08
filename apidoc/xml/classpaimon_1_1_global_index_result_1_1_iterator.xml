@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_global_index_result_1_1_iterator" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::GlobalIndexResult::Iterator</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator" prot="public" virt="non-virtual">paimon::BitmapGlobalIndexResult::Iterator</derivedcompoundref>
+    <includes refid="global__index__result_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1_1_iterator_1aac4fb487be27001bafee04694a02d036" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::GlobalIndexResult::Iterator::~Iterator</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Iterator</name>
+        <qualifiedname>paimon::GlobalIndexResult::Iterator::~Iterator</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="38" column="17"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1_1_iterator_1a20a59325817772e958f9433b56e11ab9" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">bool</ref></type>
+        <definition>virtual bool paimon::GlobalIndexResult::Iterator::HasNext</definition>
+        <argsstring>() const =0</argsstring>
+        <name>HasNext</name>
+        <qualifiedname>paimon::GlobalIndexResult::Iterator::HasNext</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1ab2955ec4b6bcbb7ae0df16d10e18e893">HasNext</reimplementedby>
+        <briefdescription>
+<para>Checks whether more row ids are available. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="41" column="22"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_global_index_result_1_1_iterator_1aec3a22bc75ba73c1e043b5b1db52ce07" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">int64_t</ref></type>
+        <definition>virtual int64_t paimon::GlobalIndexResult::Iterator::Next</definition>
+        <argsstring>()=0</argsstring>
+        <name>Next</name>
+        <qualifiedname>paimon::GlobalIndexResult::Iterator::Next</qualifiedname>
+        <reimplementedby refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator_1a30fc7c3c5e779784b9ff8398668f7623">Next</reimplementedby>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="return"><para>The next global row id and advances the iterator. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="44" column="25"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para><ref refid="classpaimon_1_1_global_index_result_1_1_iterator" kindref="compound">Iterator</ref> interface for traversing selected global row ids. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::BitmapGlobalIndexResult::Iterator</label>
+        <link refid="classpaimon_1_1_bitmap_global_index_result_1_1_iterator"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::GlobalIndexResult::Iterator</label>
+        <link refid="classpaimon_1_1_global_index_result_1_1_iterator"/>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" line="36" column="5" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/global_index/global_index_result.h" bodystart="36" bodyend="45"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_global_index_result_1_1_iterator_1a20a59325817772e958f9433b56e11ab9" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult::Iterator</scope><name>HasNext</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1_1_iterator_1aec3a22bc75ba73c1e043b5b1db52ce07" prot="public" virt="pure-virtual"><scope>paimon::GlobalIndexResult::Iterator</scope><name>Next</name></member>
+      <member refid="classpaimon_1_1_global_index_result_1_1_iterator_1aac4fb487be27001bafee04694a02d036" prot="public" virt="virtual"><scope>paimon::GlobalIndexResult::Iterator</scope><name>~Iterator</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

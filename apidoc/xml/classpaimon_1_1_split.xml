@@ -1,0 +1,157 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_split" kind="class" language="C++" prot="public">
+    <compoundname>paimon::Split</compoundname>
+    <derivedcompoundref refid="classpaimon_1_1_data_split" prot="public" virt="non-virtual">paimon::DataSplit</derivedcompoundref>
+    <derivedcompoundref refid="classpaimon_1_1_indexed_split" prot="public" virt="non-virtual">paimon::IndexedSplit</derivedcompoundref>
+    <includes refid="split_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_split_1ad1bc1ca6627a627b1396991113b178b7" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::Split::~Split</definition>
+        <argsstring>()=default</argsstring>
+        <name>~Split</name>
+        <qualifiedname>paimon::Split::~Split</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h" line="39" column="13"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_split_1aad238266c89e85852982405e60cdd9b2" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::shared_ptr&lt; <ref refid="classpaimon_1_1_split" kindref="compound">Split</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::shared_ptr&lt; Split &gt; &gt; paimon::Split::Deserialize</definition>
+        <argsstring>(const char *buffer, size_t length, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Deserialize</name>
+        <qualifiedname>paimon::Split::Deserialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> <ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">char</ref> *</type>
+          <declname>buffer</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">size_t</ref></type>
+          <declname>length</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Deserialize a <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> from a binary buffer. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Creates a <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> instance from its serialized binary representation. This is typically used in distributed computing scenarios where splits are transmitted between different nodes or processes.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>buffer</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Const pointer to the binary data containing the serialized <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput>. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>length</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Size of the buffer in bytes. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for allocating objects during deserialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the deserialized <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h" line="51" column="19"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_split_1a21cf471702ca3bb471eacc4bce9cf050" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::string &gt;</type>
+        <definition>static Result&lt; std::string &gt; paimon::Split::Serialize</definition>
+        <argsstring>(const std::shared_ptr&lt; Split &gt; &amp;split, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)</argsstring>
+        <name>Serialize</name>
+        <qualifiedname>paimon::Split::Serialize</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_split" kindref="compound">Split</ref> &gt; &amp;</type>
+          <declname>split</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Serialize a <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> to a binary string. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>Converts a <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> instance to its binary representation for storage or transmission. The serialized data can later be deserialized using the Deserialize method.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>split</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>The <computeroutput><ref refid="classpaimon_1_1_split" kindref="compound">Split</ref></computeroutput> instance to serialize. </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>pool</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>Memory pool for allocating temporary objects during serialization. </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref> containing the serialized binary data as a string or an error status. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h" line="63" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>An input split for reading operation. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Needed by most batch computation engines. Support Serialize and Deserialize, compatible with java version. This split can be either a <computeroutput><ref refid="classpaimon_1_1_data_split" kindref="compound">DataSplit</ref></computeroutput> (for direct data file reads) or an <computeroutput><ref refid="classpaimon_1_1_indexed_split" kindref="compound">IndexedSplit</ref></computeroutput> (for reads leveraging global indexes). </para>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::DataSplit</label>
+        <link refid="classpaimon_1_1_data_split"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>paimon::IndexedSplit</label>
+        <link refid="classpaimon_1_1_indexed_split"/>
+        <childnode refid="1" relation="public-inheritance">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>paimon::Split</label>
+        <link refid="classpaimon_1_1_split"/>
+      </node>
+    </inheritancegraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h" line="37" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/table/source/split.h" bodystart="37" bodyend="65"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_split_1aad238266c89e85852982405e60cdd9b2" prot="public" virt="non-virtual"><scope>paimon::Split</scope><name>Deserialize</name></member>
+      <member refid="classpaimon_1_1_split_1a21cf471702ca3bb471eacc4bce9cf050" prot="public" virt="non-virtual"><scope>paimon::Split</scope><name>Serialize</name></member>
+      <member refid="classpaimon_1_1_split_1ad1bc1ca6627a627b1396991113b178b7" prot="public" virt="virtual"><scope>paimon::Split</scope><name>~Split</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

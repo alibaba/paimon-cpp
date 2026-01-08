@@ -1,0 +1,108 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_file_format_factory" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FileFormatFactory</compoundname>
+    <basecompoundref refid="classpaimon_1_1_factory" prot="public" virt="non-virtual">paimon::Factory</basecompoundref>
+    <includes refid="file__format__factory_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h</includes>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_format_factory_1a8985f35b3ad8d1b0400d3cb0f9b7c3fa" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type></type>
+        <definition>paimon::FileFormatFactory::~FileFormatFactory</definition>
+        <argsstring>() override</argsstring>
+        <name>~FileFormatFactory</name>
+        <qualifiedname>paimon::FileFormatFactory::~FileFormatFactory</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h" line="34" column="5"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_file_format_factory_1a4d5699589bb9bf6998be41af9cfe0eb2" prot="public" static="no" const="yes" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::unique_ptr&lt; FileFormat &gt; &gt; paimon::FileFormatFactory::Create</definition>
+        <argsstring>(const std::map&lt; std::string, std::string &gt; &amp;options) const =0</argsstring>
+        <name>Create</name>
+        <qualifiedname>paimon::FileFormatFactory::Create</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Create a <computeroutput><ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref></computeroutput> with the corresponding options. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h" line="43" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="public-static-func">
+      <memberdef kind="function" id="classpaimon_1_1_file_format_factory_1a28fb855da5c5fa43575a3ede52caf911" prot="public" static="yes" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::unique_ptr&lt; <ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref> &gt; &gt;</type>
+        <definition>static Result&lt; std::unique_ptr&lt; FileFormat &gt; &gt; paimon::FileFormatFactory::Get</definition>
+        <argsstring>(const std::string &amp;identifier, const std::map&lt; std::string, std::string &gt; &amp;options)</argsstring>
+        <name>Get</name>
+        <qualifiedname>paimon::FileFormatFactory::Get</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>identifier</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::map&lt; std::string, std::string &gt; &amp;</type>
+          <declname>options</declname>
+        </param>
+        <briefdescription>
+<para>Get <computeroutput><ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref></computeroutput> corresponding to identifier. </para>
+        </briefdescription>
+        <detaileddescription>
+<para><simplesect kind="pre"><para><ref refid="classpaimon_1_1_factory" kindref="compound">Factory</ref> is already registered. </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h" line="39" column="19"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>A factory for creating <computeroutput><ref refid="classpaimon_1_1_file_format" kindref="compound">FileFormat</ref></computeroutput> instances. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <inheritancegraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileFormatFactory</label>
+        <link refid="classpaimon_1_1_file_format_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </inheritancegraph>
+    <collaborationgraph>
+      <node id="2">
+        <label>paimon::Factory</label>
+        <link refid="classpaimon_1_1_factory"/>
+      </node>
+      <node id="1">
+        <label>paimon::FileFormatFactory</label>
+        <link refid="classpaimon_1_1_file_format_factory"/>
+        <childnode refid="2" relation="public-inheritance">
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h" line="32" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/file_format_factory.h" bodystart="32" bodyend="45"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_file_format_factory_1a4d5699589bb9bf6998be41af9cfe0eb2" prot="public" virt="pure-virtual"><scope>paimon::FileFormatFactory</scope><name>Create</name></member>
+      <member refid="classpaimon_1_1_file_format_factory_1a28fb855da5c5fa43575a3ede52caf911" prot="public" virt="non-virtual"><scope>paimon::FileFormatFactory</scope><name>Get</name></member>
+      <member refid="classpaimon_1_1_factory_1ac808cd0782a47c534bc16b3b5e3b0edd" prot="public" virt="pure-virtual"><scope>paimon::FileFormatFactory</scope><name>Identifier</name></member>
+      <member refid="classpaimon_1_1_factory_1a9dd9931db9fb33c829b1401d2b2b80ad" prot="public" virt="virtual"><scope>paimon::FileFormatFactory</scope><name>~Factory</name></member>
+      <member refid="classpaimon_1_1_file_format_factory_1a8985f35b3ad8d1b0400d3cb0f9b7c3fa" prot="public" virt="non-virtual"><scope>paimon::FileFormatFactory</scope><name>~FileFormatFactory</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.8" xml:lang="en-US">
+  <compounddef id="classpaimon_1_1_format_stats_extractor" kind="class" language="C++" prot="public" abstract="yes">
+    <compoundname>paimon::FormatStatsExtractor</compoundname>
+    <includes refid="format__stats__extractor_8h" local="no">/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h</includes>
+    <innerclass refid="classpaimon_1_1_format_stats_extractor_1_1_file_info" prot="public">paimon::FormatStatsExtractor::FileInfo</innerclass>
+    <sectiondef kind="public-func">
+      <memberdef kind="function" id="classpaimon_1_1_format_stats_extractor_1a4732fe1bbe7bb127e63d8c926d8bbc5a" prot="public" static="no" const="no" explicit="no" inline="no" virt="virtual">
+        <type></type>
+        <definition>virtual paimon::FormatStatsExtractor::~FormatStatsExtractor</definition>
+        <argsstring>()=default</argsstring>
+        <name>~FormatStatsExtractor</name>
+        <qualifiedname>paimon::FormatStatsExtractor::~FormatStatsExtractor</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="32" column="13"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_stats_extractor_1a286589bfa52690e64d144d95d0c8bc76" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; <ref refid="namespacepaimon_1acc645dad64b7eea72db8fe50386b97cb" kindref="member">ColumnStatsVector</ref> &gt;</type>
+        <definition>virtual Result&lt; ColumnStatsVector &gt; paimon::FormatStatsExtractor::Extract</definition>
+        <argsstring>(const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::string &amp;path, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)=0</argsstring>
+        <name>Extract</name>
+        <qualifiedname>paimon::FormatStatsExtractor::Extract</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Extracts statistics for each column of a data file based on the file path and file system. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="47" column="20"/>
+      </memberdef>
+      <memberdef kind="function" id="classpaimon_1_1_format_stats_extractor_1a3752abc455e667aee823f31f60eb2a2f" prot="public" static="no" const="no" explicit="no" inline="no" virt="pure-virtual">
+        <type><ref refid="classpaimon_1_1_result" kindref="compound">Result</ref>&lt; std::pair&lt; <ref refid="namespacepaimon_1acc645dad64b7eea72db8fe50386b97cb" kindref="member">ColumnStatsVector</ref>, <ref refid="classpaimon_1_1_format_stats_extractor_1_1_file_info" kindref="compound">FileInfo</ref> &gt; &gt;</type>
+        <definition>virtual Result&lt; std::pair&lt; ColumnStatsVector, FileInfo &gt; &gt; paimon::FormatStatsExtractor::ExtractWithFileInfo</definition>
+        <argsstring>(const std::shared_ptr&lt; FileSystem &gt; &amp;file_system, const std::string &amp;path, const std::shared_ptr&lt; MemoryPool &gt; &amp;pool)=0</argsstring>
+        <name>ExtractWithFileInfo</name>
+        <qualifiedname>paimon::FormatStatsExtractor::ExtractWithFileInfo</qualifiedname>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_file_system" kindref="compound">FileSystem</ref> &gt; &amp;</type>
+          <declname>file_system</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::string &amp;</type>
+          <declname>path</declname>
+        </param>
+        <param>
+          <type><ref refid="memory__pool_8h_1a147ba4ba34a215b3a4f3a95c1ee11704" kindref="member">const</ref> std::shared_ptr&lt; <ref refid="classpaimon_1_1_memory_pool" kindref="compound">MemoryPool</ref> &gt; &amp;</type>
+          <declname>pool</declname>
+        </param>
+        <briefdescription>
+<para>Extracts statistics for each column and <computeroutput><ref refid="classpaimon_1_1_format_stats_extractor_1_1_file_info" kindref="compound">FileInfo</ref></computeroutput> of a data file based on the file path and file system. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="53" column="20"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+<para>Extracts statistics directly from file. </para>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" line="30" column="1" bodyfile="/home/runner/work/paimon-cpp/paimon-cpp/include/paimon/format/format_stats_extractor.h" bodystart="30" bodyend="56"/>
+    <listofallmembers>
+      <member refid="classpaimon_1_1_format_stats_extractor_1a286589bfa52690e64d144d95d0c8bc76" prot="public" virt="pure-virtual"><scope>paimon::FormatStatsExtractor</scope><name>Extract</name></member>
+      <member refid="classpaimon_1_1_format_stats_extractor_1a3752abc455e667aee823f31f60eb2a2f" prot="public" virt="pure-virtual"><scope>paimon::FormatStatsExtractor</scope><name>ExtractWithFileInfo</name></member>
+      <member refid="classpaimon_1_1_format_stats_extractor_1a4732fe1bbe7bb127e63d8c926d8bbc5a" prot="public" virt="virtual"><scope>paimon::FormatStatsExtractor</scope><name>~FormatStatsExtractor</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>
