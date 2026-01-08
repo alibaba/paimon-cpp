@@ -77,16 +77,16 @@ TEST_F(SstFileIOTest, TestSimple) {
     for (size_t i = 1; i <= 5; i++) {
         std::string key = "k" + std::to_string(i);
         std::string value = std::to_string(i);
-        writer->Write(std::make_shared<Bytes>(key, pool_.get()),
-                      std::make_shared<Bytes>(value, pool_.get()));
+        ASSERT_OK(writer->Write(std::make_shared<Bytes>(key, pool_.get()),
+                                std::make_shared<Bytes>(value, pool_.get())));
         auto bytes = std::make_shared<Bytes>(key, pool_.get());
         value_hash.insert(MurmurHashUtils::HashBytes(bytes));
     }
     for (size_t i = 10; i <= 20; i++) {
         std::string key = "k9" + std::to_string(i);
         std::string value = "looooooooooong-值-" + std::to_string(i);
-        writer->Write(std::make_shared<Bytes>(key, pool_.get()),
-                      std::make_shared<Bytes>(value, pool_.get()));
+        ASSERT_OK(writer->Write(std::make_shared<Bytes>(key, pool_.get()),
+                                std::make_shared<Bytes>(value, pool_.get())));
         auto bytes = std::make_shared<Bytes>(key, pool_.get());
         value_hash.insert(MurmurHashUtils::HashBytes(bytes));
     }
