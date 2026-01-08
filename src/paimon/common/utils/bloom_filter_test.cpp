@@ -26,6 +26,7 @@
 #include "gtest/gtest.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
