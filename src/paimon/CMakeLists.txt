@@ -57,11 +57,17 @@ set(PAIMON_COMMON_SRCS
     common/io/data_output_stream.cpp
     common/io/memory_segment_output_stream.cpp
     common/io/offset_input_stream.cpp
+    common/io/cache/cache.cpp
+    common/io/cache/cache_key.cpp
+    common/io/cache/cache_manager.cpp
     common/logging/logging.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
     common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
+    common/memory/memory_slice.cpp
+    common/memory/memory_slice_input.cpp
+    common/memory/memory_slice_output.cpp
     common/metrics/metrics_impl.cpp
     common/options/memory_size.cpp
     common/options/time_duration.cpp
@@ -90,6 +96,13 @@ set(PAIMON_COMMON_SRCS
     common/reader/reader_utils.cpp
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
+    common/sst/block_handle.cpp
+    common/sst/block_iterator.cpp
+    common/sst/block_trailer.cpp
+    common/sst/block_reader.cpp
+    common/sst/block_writer.cpp
+    common/sst/sst_file_reader.cpp
+    common/sst/sst_file_writer.cpp
     common/types/data_field.cpp
     common/types/data_type.cpp
     common/types/data_type_json_parser.cpp
@@ -97,6 +110,8 @@ set(PAIMON_COMMON_SRCS
     common/types/row_type.cpp
     common/utils/arrow/mem_utils.cpp
     common/utils/binary_row_partition_computer.cpp
+    common/utils/bit_set.cpp
+    common/utils/bloom_filter.cpp
     common/utils/bloom_filter64.cpp
     common/utils/bucket_id_calculator.cpp
     common/utils/decimal_utils.cpp
@@ -367,6 +382,8 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/concurrent_hash_map_test.cpp
                     common/utils/projected_row_test.cpp
                     common/utils/projected_array_test.cpp
+                    common/utils/bit_set_test.cpp
+                    common/utils/bloom_filter_test.cpp
                     common/utils/bloom_filter64_test.cpp
                     common/utils/xxhash_test.cpp
                     common/utils/bucket_id_calculator_test.cpp
@@ -412,6 +429,17 @@ if(PAIMON_BUILD_TESTS)
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
+                    ${GTEST_LINK_TOOLCHAIN})
+
+    add_paimon_test(common_sst_file_format_test
+                    SOURCES
+                    common/sst/sst_file_io_test.cpp
+                    STATIC_LINK_LIBS
+                    paimon_shared
+                    test_utils_static
+                    "-Wl,--whole-archive"
+                    paimon_local_file_system_static
+                    "-Wl,--no-whole-archive"
                     ${GTEST_LINK_TOOLCHAIN})
 
     add_paimon_test(core_test
