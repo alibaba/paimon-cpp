@@ -249,9 +249,12 @@ macro(build_fmt)
     string(REPLACE "-Werror" "" FMT_CMAKE_CXX_FLAGS ${FMT_CMAKE_CXX_FLAGS})
 
     set(FMT_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${FMT_PREFIX}
-        "-DCMAKE_CXX_FLAGS=${FMT_CMAKE_CXX_FLAGS}" "-DCMAKE_C_FLAGS=${FMT_CMAKE_C_FLAGS}"
-        -DFMT_TEST=OFF -DFMT_DOC=OFF)
+        ${EP_COMMON_CMAKE_ARGS}
+        -DCMAKE_INSTALL_PREFIX=${FMT_PREFIX}
+        "-DCMAKE_CXX_FLAGS=${FMT_CMAKE_CXX_FLAGS}"
+        "-DCMAKE_C_FLAGS=${FMT_CMAKE_C_FLAGS}"
+        -DFMT_TEST=OFF
+        -DFMT_DOC=OFF)
     set(FMT_CONFIGURE CMAKE_ARGS ${FMT_CMAKE_ARGS})
     externalproject_add(fmt_ep
                         URL ${FMT_SOURCE_URL}
@@ -366,8 +369,7 @@ macro(build_lz4)
     )
     set(LZ4_LIBRARIES ${LZ4_STATIC_LIB})
     set(LZ4_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} -DCMAKE_INSTALL_PREFIX=${LZ4_PREFIX}
-                       -DLZ4_BUILD_CLI=OFF
-                       -DLZ4_BUILD_LEGACY_LZ4C=OFF)
+                       -DLZ4_BUILD_CLI=OFF -DLZ4_BUILD_LEGACY_LZ4C=OFF)
 
     set(LZ4_CONFIGURE SOURCE_SUBDIR "build/cmake" CMAKE_ARGS ${LZ4_CMAKE_ARGS})
     externalproject_add(lz4_ep
