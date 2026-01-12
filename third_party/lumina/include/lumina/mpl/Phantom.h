@@ -15,27 +15,26 @@
  */
 
 #pragma once
-#include <lumina/core/Macro.h>
-
-#if LUMINA_CXX_VER >= 202002L
-template <class T>
-using LuminaRemoveCvrefT = std::remove_cvref_t<T>;
-#else
-template <class T>
-using LuminaRemoveCvrefT = std::remove_cv_t<std::remove_reference_t<T>>;
-#endif
+#include <array>
+#include <cstddef>
+#include <string_view>
+#include <type_traits>
+#include <utility>
 
 namespace lumina::mpl {
-template <class T>
-inline constexpr bool Stringable =
-    std::is_same_v<LuminaRemoveCvrefT<T>, std::string> || std::is_same_v<LuminaRemoveCvrefT<T>, std::string_view>;
 
-template <class T, class... Args>
-inline constexpr bool LuminaConstructibleFrom =
-#if LUMINA_CXX_VER >= 202002L
-    std::constructible_from<T, Args...>;
-#else
-    std::is_constructible_v<T, Args...>;
-#endif
+template <typename T, typename Tag>
+struct PhantomWrapper {
+    template <typename... Args>
+    constexpr explicit PhantomWrapper(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>)
+        : _val(std::forward<Args>(args)...)
+    {
+    }
+    T& Get() { return _val; }
+    const T& Get() const { return _val; }
+
+private:
+    T _val;
+};
 
 } // namespace lumina::mpl

@@ -30,7 +30,7 @@ class LuminaInterfaceTest : public ::testing::Test {
     void TearDown() override {}
 
     void WriteAndFlush(const std::string& index_path,
-                       const std::vector<::lumina::core::VectorId>& row_ids) const {
+                       const std::vector<::lumina::core::vector_id_t>& row_ids) const {
         auto fs = std::make_shared<LocalFileSystem>();
         std::shared_ptr<MemoryPool> paimon_pool = GetMemoryPool();
         auto pool = std::make_shared<LuminaMemoryPool>(paimon_pool);
@@ -43,8 +43,8 @@ class LuminaInterfaceTest : public ::testing::Test {
                 .Set(::lumina::core::kEncodingType, ::lumina::core::kEncodingRawf32);
             auto builder_result =
                 ::lumina::api::LuminaBuilder::Create(builder_options, memory_resource);
-            ASSERT_TRUE(builder_result.status.IsOk()) << builder_result.status.Message();
-            auto writer = std::move(builder_result.value);
+            ASSERT_TRUE(builder_result.IsOk()) << builder_result.GetStatus().Message();
+            auto writer = std::move(builder_result).TakeValue();
             // pretrain
             ASSERT_TRUE(writer.Pretrain(/*data=*/nullptr, /*n=*/0).IsOk());
             // insert data
@@ -65,9 +65,9 @@ class LuminaInterfaceTest : public ::testing::Test {
     }
 
     void Search(const std::string& index_path, int32_t topk,
-                const std::vector<::lumina::core::VectorId>& expected_row_ids,
+                const std::vector<::lumina::core::vector_id_t>& expected_row_ids,
                 const std::vector<float>& expected_distances,
-                const std::function<bool(::lumina::core::VectorId id)>& filter = nullptr) const {
+                const std::function<bool(::lumina::core::vector_id_t id)>& filter = nullptr) const {
         ASSERT_EQ(expected_row_ids.size(), expected_distances.size());
         auto fs = std::make_shared<LocalFileSystem>();
         std::shared_ptr<MemoryPool> paimon_pool = GetMemoryPool();
@@ -77,12 +77,11 @@ class LuminaInterfaceTest : public ::testing::Test {
             // create reader
             ::lumina::api::SearcherOptions searcher_options;
             searcher_options.Set(::lumina::core::kIndexType, ::lumina::core::kIndexTypeBruteforce)
-                .Set(::lumina::core::kDimension, 4)
-                .Set(::lumina::core::kSearchThreadCount, 10);
+                .Set(::lumina::core::kDimension, 4);
             auto reader_result =
                 ::lumina::api::LuminaSearcher::Create(searcher_options, memory_resource);
-            ASSERT_TRUE(reader_result.status.IsOk());
-            auto reader = std::move(reader_result.value);
+            ASSERT_TRUE(reader_result.IsOk());
+            auto reader = std::move(reader_result).TakeValue();
             ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(index_path));
             auto file_reader = std::make_unique<LuminaFileReader>(in);
             ASSERT_TRUE(reader.Open(std::move(file_reader), ::lumina::api::IOOptions()).IsOk());
@@ -102,18 +101,20 @@ class LuminaInterfaceTest : public ::testing::Test {
                 if (parallel_number > 0) {
                     search_options.Set(::lumina::core::kSearchParallelNumber, parallel_number);
                 }
-                ::lumina::core::Result<::lumina::api::LuminaSearcher::SearchResult> search_result;
+
                 if (!filter) {
-                    search_result = reader.Search(query, search_options, *pool);
+                    auto search_result = reader.Search(query, search_options, *pool);
+                    ASSERT_TRUE(search_result.IsOk()) << search_result.GetStatus().Message();
+                    CheckResult(search_result.Value().topk, expected_row_ids, expected_distances);
                 } else {
                     search_options.Set(::lumina::core::kSearchThreadSafeFilter, true);
                     ::lumina::extensions::SearchWithFilterExtension reader_with_filter;
                     ASSERT_TRUE(reader.Attach(reader_with_filter).IsOk());
-                    search_result =
+                    auto search_result =
                         reader_with_filter.SearchWithFilter(query, filter, search_options, *pool);
+                    ASSERT_TRUE(search_result.IsOk()) << search_result.GetStatus().Message();
+                    CheckResult(search_result.Value().topk, expected_row_ids, expected_distances);
                 }
-                ASSERT_TRUE(search_result.status.IsOk()) << search_result.status.Message();
-                CheckResult(search_result.value.topk, expected_row_ids, expected_distances);
 
                 // TODO(xinyu.lxy): check memory paimon_pool, current memory use = query mem +
                 // reader mem
@@ -133,7 +134,7 @@ class LuminaInterfaceTest : public ::testing::Test {
     }
 
     void CheckResult(const std::vector<::lumina::api::LuminaSearcher::SearchHit>& search_result,
-                     const std::vector<::lumina::core::VectorId>& expected_row_ids,
+                     const std::vector<::lumina::core::vector_id_t>& expected_row_ids,
                      const std::vector<float>& expected_distances) const {
         ASSERT_EQ(search_result.size(), expected_row_ids.size());
         for (size_t i = 0; i < search_result.size(); i++) {
@@ -155,11 +156,11 @@ TEST_F(LuminaInterfaceTest, TestSimple) {
     std::string index_path = dir->Str() + "/lumina_test.index";
 
     // write index
-    std::vector<::lumina::core::VectorId> row_ids = {0l, 1l, 2l, 3l};
+    std::vector<::lumina::core::vector_id_t> row_ids = {0l, 1l, 2l, 3l};
     WriteAndFlush(index_path, row_ids);
 
     // read index
-    std::vector<::lumina::core::VectorId> expected_row_ids = {3l, 1l, 2l, 0l};
+    std::vector<::lumina::core::vector_id_t> expected_row_ids = {3l, 1l, 2l, 0l};
     std::vector<float> expected_distances = {0.01f, 2.01f, 2.21f, 4.21f};
     Search(index_path, /*topk=*/4, expected_row_ids, expected_distances);
 }
@@ -169,11 +170,11 @@ TEST_F(LuminaInterfaceTest, TestWithDocIdGap) {
     std::string index_path = dir->Str() + "/lumina_test.index";
 
     // write index
-    std::vector<::lumina::core::VectorId> row_ids = {0l, 2l, 4l, 6l};
+    std::vector<::lumina::core::vector_id_t> row_ids = {0l, 2l, 4l, 6l};
     WriteAndFlush(index_path, row_ids);
 
     // read index
-    std::vector<::lumina::core::VectorId> expected_row_ids = {6l, 2l, 4l, 0l};
+    std::vector<::lumina::core::vector_id_t> expected_row_ids = {6l, 2l, 4l, 0l};
     std::vector<float> expected_distances = {0.01f, 2.01f, 2.21f, 4.21f};
     Search(index_path, /*topk=*/4, expected_row_ids, expected_distances);
 }
@@ -183,11 +184,11 @@ TEST_F(LuminaInterfaceTest, TestWithSmallTopk) {
     std::string index_path = dir->Str() + "/lumina_test.index";
 
     // write index
-    std::vector<::lumina::core::VectorId> row_ids = {0l, 1l, 2l, 3l};
+    std::vector<::lumina::core::vector_id_t> row_ids = {0l, 1l, 2l, 3l};
     WriteAndFlush(index_path, row_ids);
 
     // read index
-    std::vector<::lumina::core::VectorId> expected_row_ids = {3l, 1l, 2l};
+    std::vector<::lumina::core::vector_id_t> expected_row_ids = {3l, 1l, 2l};
     std::vector<float> expected_distances = {0.01f, 2.01f, 2.21f};
     Search(index_path, /*topk=*/3, expected_row_ids, expected_distances);
 }
@@ -197,20 +198,20 @@ TEST_F(LuminaInterfaceTest, TestWithFilter) {
     std::string index_path = dir->Str() + "/lumina_test.index";
 
     // write index
-    std::vector<::lumina::core::VectorId> row_ids = {0l, 1l, 2l, 3l};
+    std::vector<::lumina::core::vector_id_t> row_ids = {0l, 1l, 2l, 3l};
     WriteAndFlush(index_path, row_ids);
 
     // read index
     {
-        std::vector<::lumina::core::VectorId> expected_row_ids = {1l, 2l};
+        std::vector<::lumina::core::vector_id_t> expected_row_ids = {1l, 2l};
         std::vector<float> expected_distances = {2.01f, 2.21f};
-        auto filter = [](::lumina::core::VectorId id) -> bool { return id < 3; };
+        auto filter = [](::lumina::core::vector_id_t id) -> bool { return id < 3; };
         Search(index_path, /*topk=*/2, expected_row_ids, expected_distances, filter);
     }
     {
-        std::vector<::lumina::core::VectorId> expected_row_ids = {1l, 2l, 0l};
+        std::vector<::lumina::core::vector_id_t> expected_row_ids = {1l, 2l, 0l};
         std::vector<float> expected_distances = {2.01f, 2.21f, 4.21f};
-        auto filter = [](::lumina::core::VectorId id) -> bool { return id < 3; };
+        auto filter = [](::lumina::core::vector_id_t id) -> bool { return id < 3; };
         Search(index_path, /*topk=*/4, expected_row_ids, expected_distances, filter);
     }
 }

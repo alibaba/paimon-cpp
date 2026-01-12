@@ -18,6 +18,7 @@
 #include <cstdint>
 
 namespace lumina::core { inline namespace v1 {
+// Type-safe enum with int32 backing for cross-language/protocol transport.
 enum class ErrorCode : int32_t {
     Ok = 0,
     InvalidArgument = 1,
@@ -39,6 +40,7 @@ enum class ErrorCode : int32_t {
     PartialFailure = 17,
     RateLimited = 18,
     FailedPrecondition = 19,
+    // 19..∞ append-only; do not change existing values.
 };
 
 constexpr int32_t ToInt(ErrorCode c) noexcept { return static_cast<int32_t>(c); }
@@ -55,4 +57,4 @@ constexpr bool IsRetryable(ErrorCode c) noexcept
     }
 }
 
-}}
+}} // namespace lumina::core::v1

@@ -22,14 +22,16 @@
 #include <string_view>
 #include <type_traits>
 
-#include "lumina/core/Constants.h"
-#include "lumina/mpl/EnumHelper.h"
-#include "lumina/mpl/TypeList.h"
+#include <lumina/core/Constants.h>
+#include <lumina/mpl/EnumHelper.h>
+#include <lumina/mpl/TypeList.h>
 
 namespace lumina::dist::encode_space {
 
+// -- Encoding enum --
 enum class EncodingE { rawf32, sq8, pq, dummy };
 
+// -- Read-only view of encoded data --
 struct EncodedRow {
     const std::byte* data {nullptr};
     uint64_t bytes {0};
@@ -45,6 +47,7 @@ struct EncodedBatch {
     uint64_t n {0};
 };
 
+// -- Mirror Metric's type system: provide compile-time tags for encoding --
 template <EncodingE E>
 struct EncodingT {
     static constexpr std::string_view Name = "dummy";
@@ -69,4 +72,4 @@ using RawF32 = EncodingT<EncodingE::rawf32>;
 using SQ8 = EncodingT<EncodingE::sq8>;
 using PQ = EncodingT<EncodingE::pq>;
 
-}
+} // namespace lumina::dist::encode_space

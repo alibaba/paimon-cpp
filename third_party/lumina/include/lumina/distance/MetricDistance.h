@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <lumina/core/Constants.h>
+#include <lumina/core/Types.h>
 #include <lumina/distance/Metric.h>
 #include <span>
 #include <string_view>
@@ -30,7 +31,7 @@ constexpr float kDefaultEps = 1e-9;
 
 template <class Tag, class... Args>
 concept TagInvocable = requires(Tag t, Args&&... args) {
-    TagInvoke(t, static_cast<Args&&>(args)...);
+    TagInvoke(t, static_cast<Args&&>(args)...); // Find implementation via ADL
 };
 
 template <class Tag, class... Args>
@@ -46,6 +47,7 @@ concept IsMetricT = requires {
     } -> std::convertible_to<bool>;
 };
 
+// -- CPO: Eval --
 struct EvalTag {
     template <IsMetricT M>
         requires(TagInvocable<EvalTag, M, std::span<const float>, std::span<const float>>)
@@ -58,18 +60,21 @@ struct EvalTag {
 };
 inline constexpr EvalTag EvalF {};
 
+// -- CPO: BatchEval --
 struct BatchEvalTag {
     template <IsMetricT M>
-        requires(TagInvocable<BatchEvalTag, M, const float*, const float*, uint32_t, uint64_t, float*>)
-    constexpr void operator()(const M& m, const float* q, const float* base, uint32_t dim, uint64_t n, float* out) const
+        requires(TagInvocable<BatchEvalTag, M, const float*, const float*, core::dimension_t, uint64_t, float*>)
+    constexpr void operator()(const M& m, const float* q, const float* base, core::dimension_t dim, uint64_t n,
+                              float* out) const
         noexcept(noexcept(TagInvoke(std::declval<BatchEvalTag>(), m, q, base, dim, n, out)))
     {
         TagInvoke(*this, m, q, base, dim, n, out);
     }
 
+    // Final fallback: loop over EvalF
     template <IsMetricT M>
-        requires(!TagInvocable<BatchEvalTag, M, const float*, const float*, uint32_t, uint64_t, float*>)
-    constexpr void operator()(const M& m, const float* q, const float* base, uint32_t dim, uint64_t n,
+        requires(!TagInvocable<BatchEvalTag, M, const float*, const float*, core::dimension_t, uint64_t, float*>)
+    constexpr void operator()(const M& m, const float* q, const float* base, core::dimension_t dim, uint64_t n,
                               float* out) const noexcept
     {
         for (uint64_t i = 0; i < n; ++i) {
@@ -79,6 +84,7 @@ struct BatchEvalTag {
 };
 inline constexpr BatchEvalTag BatchEvalF {};
 
+// check dist val
 struct IsMinDistTag {
     template <IsMetricT M>
         requires TagInvocable<IsMinDistTag, M, float>
@@ -90,4 +96,4 @@ struct IsMinDistTag {
 };
 inline constexpr IsMinDistTag IsMinDistF {};
 
-}
+} // namespace lumina::dist

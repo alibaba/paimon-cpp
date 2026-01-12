@@ -19,14 +19,15 @@
 #include <string>
 #include <unordered_map>
 
-#include "lumina/api/Options.h"
-#include "lumina/core/Result.h"
-#include "lumina/core/Status.h"
+#include <lumina/api/Options.h>
+#include <lumina/core/Result.h>
+#include <lumina/core/Status.h>
 
 namespace lumina::api {
 
+// Weakly-typed C++ entry: normalize string->string maps into typed Options.
 core::Result<BuilderOptions> NormalizeBuilderOptions(const std::unordered_map<std::string, std::string>& raw);
 core::Result<SearcherOptions> NormalizeSearcherOptions(const std::unordered_map<std::string, std::string>& raw);
 core::Result<SearchOptions> NormalizeSearchOptions(const std::unordered_map<std::string, std::string>& raw);
 
-}
+} // namespace lumina::api

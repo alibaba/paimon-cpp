@@ -159,11 +159,11 @@ class LuminaGlobalIndexTest : public ::testing::Test {
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
-    std::map<std::string, std::string> options_ = {{"lumina.dimension", "4"},
-                                                   {"lumina.indextype", "bruteforce"},
+    std::map<std::string, std::string> options_ = {{"lumina.index.dimension", "4"},
+                                                   {"lumina.index.type", "bruteforce"},
                                                    {"lumina.distance.metric", "l2"},
-                                                   {"lumina.encoding.type", "encoding.rawf32"},
-                                                   {"lumina.search.threadcount", "10"}};
+                                                   {"lumina.encoding.type", "rawf32"},
+                                                   {"lumina.search.thread_count", "10"}};
     std::shared_ptr<arrow::DataType> data_type_ =
         arrow::struct_({arrow::field("f0", arrow::list(arrow::float32()))});
     std::shared_ptr<arrow::Array> array_ = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
@@ -250,15 +250,15 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
     {
         // invalid options
         std::map<std::string, std::string> options = options_;
-        options["lumina.dimension"] = "xxx";
+        options["lumina.index.dimension"] = "xxx";
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, data_type_, options, /*array=*/nullptr, Range(0, 0)),
-            "convert key lumina.dimension, value xxx to unsigned int failed");
+            "convert key lumina.index.dimension, value xxx to unsigned int failed");
         GlobalIndexIOMeta fake_meta("fake_file_name", /*file_size=*/10,
                                     /*range_end=*/5,
                                     /*metadata=*/nullptr);
         ASSERT_NOK_WITH_MSG(CreateGlobalIndexReader(index_root, data_type_, options, fake_meta),
-                            "convert key lumina.dimension, value xxx to unsigned int failed");
+                            "convert key lumina.index.dimension, value xxx to unsigned int failed");
     }
     {
         // invalid inputs in write
@@ -367,7 +367,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         }
         {
             std::map<std::string, std::string> options = options_;
-            options["lumina.dimension"] = "5";
+            options["lumina.index.dimension"] = "5";
             ASSERT_NOK_WITH_MSG(CreateGlobalIndexReader(index_root, data_type_, options, meta),
                                 "lumina index dimension 4 mismatch dimension 5 in options");
         }

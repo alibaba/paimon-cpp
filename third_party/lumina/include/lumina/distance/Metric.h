@@ -44,6 +44,7 @@ struct MetricT<MetricE::ip> {
     static constexpr bool LowerIsBetter = false;
 };
 
+// Cosine distance is 1 - cos<a, b>.
 template <>
 struct MetricT<MetricE::cosine> {
     static constexpr std::string_view Name = core::kDistanceCosine;
@@ -54,4 +55,4 @@ using L2 = MetricT<MetricE::l2>;
 using IP = MetricT<MetricE::ip>;
 using Cosine = MetricT<MetricE::cosine>;
 
-}
+} // namespace lumina::dist

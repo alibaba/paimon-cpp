@@ -23,25 +23,17 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <variant>
 
-#include "lumina/core/Result.h"
-#include "lumina/core/Status.h"
-#include "lumina/mpl/Concepts.h"
-#include "lumina/telemetry/Log.h"
+#include <lumina/core/Result.h>
+#include <lumina/core/Status.h>
+#include <lumina/mpl/Concepts.h>
+#include <lumina/telemetry/Log.h>
 
 namespace lumina::api {
-
-
-template <class T>
-struct OptionKey {
-    const char* name;
-    constexpr explicit OptionKey(const char* n) : name(n) {}
-    constexpr std::string_view str() const { return name; }
-    using value_type = T;
-};
 
 enum class OptionsType {
     Search,
@@ -61,6 +53,7 @@ public:
     using Value = std::variant<int64_t, double, bool, std::string>;
     using Map = std::unordered_map<std::string, Value>;
 
+    // -- Set: fluent API --
     template <typename K, typename V>
     std::enable_if_t<lumina::mpl::Stringable<K>, Options&> Set(K&& key, V&& v)
     {
@@ -71,13 +64,6 @@ public:
         } else {
             static_assert(std::is_same_v<void, std::void_t<K>> && false);
         }
-        return *this;
-    }
-
-    template <class V>
-    Options& Set(const OptionKey<V>& key, V&& v)
-    {
-        _values[std::string(key.str())] = Value(std::forward<V>(v));
         return *this;
     }
 
@@ -102,31 +88,17 @@ public:
         return v ? *v : std::move(def);
     }
 
-    bool Has(std::string_view key) const { return _values.find(std::string(key)) != _values.end(); }
-
     template <class V>
-    bool Has(const OptionKey<V>& key) const
+    bool HasValueOfType(std::string_view key) const
     {
-        return Has(key.str());
-    }
-
-    core::Status HasAll(std::initializer_list<std::string_view> keys) const
-    {
-        return HasAll(std::vector<std::string_view>(keys.begin(), keys.end()));
-    }
-
-    core::Status HasAll(std::vector<std::string_view> keys) const
-    {
-        std::string errorMsg;
-        for (auto key : keys) {
-            if (!Has(key)) {
-                errorMsg += std::string(" lack key: ") + std::string(key);
-            }
+        auto it = _values.find(std::string(key));
+        if (it == _values.end()) {
+            return false;
         }
-        if (!errorMsg.empty()) {
-            return core::Status(core::ErrorCode::InvalidArgument, errorMsg);
+        if (auto p = std::get_if<V>(&it->second)) {
+            return true;
         }
-        return core::Status::Ok();
+        return false;
     }
 
     template <OptionsType V>
@@ -150,8 +122,10 @@ public:
         return options;
     }
 
+    // Direct access to all key/value pairs (read-only)
     const Map& Values() const noexcept { return _values; }
 
+    // Debug string representation of all options
     std::string DebugString() const
     {
         std::ostringstream oss;
@@ -182,24 +156,6 @@ public:
         return oss.str();
     }
 
-    template <class V>
-    V Get(const OptionKey<V>& key, V def) const
-    {
-        auto v = Get<V>(key.str());
-        return v ? *v : def;
-    }
-
-    template <class V>
-    core::Result<V> Require(const OptionKey<V>& key) const
-    {
-        auto v = Get<V>(key.str());
-        if (!v) {
-            return core::Result<V>::Err(core::Status(core::ErrorCode::InvalidArgument,
-                                                     "Option missing or type mismatch: " + std::string(key.str())));
-        }
-        return core::Result<V>::Ok(*v);
-    }
-
 private:
     template <class V>
     std::optional<V> Get(std::string_view key) const
@@ -226,4 +182,4 @@ using BuilderOptions = Options<OptionsType::Builder>;
 using QuantizerOptions = Options<OptionsType::Quantizer>;
 using IOOptions = Options<OptionsType::IO>;
 
-}
+} // namespace lumina::api

@@ -62,7 +62,7 @@ class LuminaFileReader : public ::lumina::io::FileReader {
                 return PaimonToLuminaStatus(read_result.status());
             }
             if (static_cast<uint64_t>(read_result.value()) != current_read_size) {
-                return ::lumina::core::Status::Error(
+                return ::lumina::core::Status(
                     ::lumina::core::ErrorCode::IoError,
                     fmt::format("expect read len {} mismatch actual read len {}", current_read_size,
                                 read_result.value()));

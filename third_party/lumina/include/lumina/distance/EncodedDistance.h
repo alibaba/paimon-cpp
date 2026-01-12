@@ -26,10 +26,10 @@ namespace lumina::dist {
 
 struct PrepareTag {
     template <class M, class E, class... Ctx>
-        requires TagInvocable<PrepareTag, M, E, std::span<const float>, const Ctx&...>
-    constexpr auto operator()(const M& m, const E& e, std::span<const float> q, const Ctx&... ctx) const
-        noexcept(noexcept(TagInvoke(std::declval<PrepareTag>(), m, e, q, ctx...)))
-            -> TagInvokeResult<PrepareTag, M, E, std::span<const float>, const Ctx&...>
+        requires TagInvocable<PrepareTag, M, E, std::span<const float>, Ctx&&...>
+    constexpr auto operator()(const M& m, const E& e, std::span<const float> q, Ctx&&... ctx) const
+        noexcept(noexcept(TagInvoke(std::declval<PrepareTag>(), m, e, q, std::forward<Ctx>(ctx)...)))
+            -> TagInvokeResult<PrepareTag, M, E, std::span<const float>, Ctx&&...>
     {
         return TagInvoke(*this, m, e, q, ctx...);
     }
@@ -59,4 +59,4 @@ struct BatchEvalEncodedTag {
 };
 inline constexpr BatchEvalEncodedTag BatchEvalEncoded {};
 
-}
+} // namespace lumina::dist

@@ -48,7 +48,7 @@ class LuminaFileWriter : public ::lumina::io::FileWriter {
                 return PaimonToLuminaStatus(write_result.status());
             }
             if (static_cast<uint64_t>(write_result.value()) != current_write_size) {
-                return ::lumina::core::Status::Error(
+                return ::lumina::core::Status(
                     ::lumina::core::ErrorCode::IoError,
                     fmt::format("expect write len {} mismatch actual write len {}",
                                 current_write_size, write_result.value()));

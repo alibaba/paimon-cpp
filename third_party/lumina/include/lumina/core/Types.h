@@ -19,7 +19,8 @@
 
 namespace lumina::core {
 
-using VectorId = std::uint64_t;
+// Unified external identifier types
+using vector_id_t = std::uint64_t;
+using dimension_t = std::uint32_t;
 
-}
-
+} // namespace lumina::core

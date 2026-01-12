@@ -164,7 +164,7 @@ class LuminaDataset : public ::lumina::api::Dataset {
 
     ::lumina::core::Result<uint64_t> GetNextBatch(
         std::vector<float>& vector_buffer,
-        std::vector<::lumina::core::VectorId>& id_buffer) override {
+        std::vector<::lumina::core::vector_id_t>& id_buffer) override {
         if (cursor_ >= array_vec_.size()) {
             return ::lumina::core::Result<uint64_t>::Ok(0);
         }
@@ -189,7 +189,7 @@ class LuminaDataset : public ::lumina::api::Dataset {
     uint32_t dimension_;
     std::vector<std::shared_ptr<arrow::FloatArray>> array_vec_;
     size_t cursor_ = 0;
-    ::lumina::core::VectorId id_ = 0;
+    ::lumina::core::vector_id_t id_ = 0;
 };
 
 LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
@@ -208,7 +208,6 @@ LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
       io_options_(std::move(io_options)) {}
 
 Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array) {
-    // TODO(xinyu.lxy): may use async thread to read data and build index
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                       arrow::ImportArray(arrow_array, arrow_type_));
     if (array->null_count() != 0) {
@@ -297,7 +296,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
     } else {
         search_options.Set(::lumina::core::kSearchThreadSafeFilter, true);
         auto lumina_filter = [filter = vector_search->pre_filter](
-                                 ::lumina::core::VectorId id) -> bool { return filter(id); };
+                                 ::lumina::core::vector_id_t id) -> bool { return filter(id); };
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
             search_result, searcher_with_filter_->SearchWithFilter(lumina_query, lumina_filter,
                                                                    search_options, *pool_));

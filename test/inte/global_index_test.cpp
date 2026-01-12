@@ -222,12 +222,11 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
                                  arrow::field("f1", arrow::list(arrow::float32()))};
     auto schema = arrow::schema(fields);
-    std::map<std::string, std::string> lumina_options = {
-        {"lumina.dimension", "4"},
-        {"lumina.indextype", "bruteforce"},
-        {"lumina.distance.metric", "l2"},
-        {"lumina.encoding.type", "encoding.rawf32"},
-        {"lumina.search.threadcount", "10"}};
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.thread_count", "10"}};
 
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -892,12 +891,11 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
-    std::map<std::string, std::string> lumina_options = {
-        {"lumina.dimension", "4"},
-        {"lumina.indextype", "bruteforce"},
-        {"lumina.distance.metric", "l2"},
-        {"lumina.encoding.type", "encoding.rawf32"},
-        {"lumina.search.threadcount", "10"}};
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.thread_count", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1066,12 +1064,11 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
-    std::map<std::string, std::string> lumina_options = {
-        {"lumina.dimension", "4"},
-        {"lumina.indextype", "bruteforce"},
-        {"lumina.distance.metric", "l2"},
-        {"lumina.encoding.type", "encoding.rawf32"},
-        {"lumina.search.threadcount", "10"}};
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.thread_count", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1757,12 +1754,11 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
-    std::map<std::string, std::string> lumina_options = {
-        {"lumina.dimension", "4"},
-        {"lumina.indextype", "bruteforce"},
-        {"lumina.distance.metric", "l2"},
-        {"lumina.encoding.type", "encoding.rawf32"},
-        {"lumina.search.threadcount", "10"}};
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.thread_count", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1921,12 +1917,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
-    std::map<std::string, std::string> lumina_options = {
-        {"lumina.dimension", "4"},
-        {"lumina.indextype", "bruteforce"},
-        {"lumina.distance.metric", "l2"},
-        {"lumina.encoding.type", "encoding.rawf32"},
-        {"lumina.search.threadcount", "10"}};
+    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
+                                                         {"lumina.index.type", "bruteforce"},
+                                                         {"lumina.distance.metric", "l2"},
+                                                         {"lumina.encoding.type", "rawf32"},
+                                                         {"lumina.search.thread_count", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},

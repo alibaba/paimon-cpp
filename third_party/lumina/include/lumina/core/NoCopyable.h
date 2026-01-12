@@ -38,4 +38,4 @@ protected:
     NoMoveable& operator=(NoMoveable&&) = delete;
 };
 
-}
+} // namespace lumina::core

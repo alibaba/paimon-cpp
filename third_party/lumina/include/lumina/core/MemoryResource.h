@@ -28,7 +28,9 @@ inline std::shared_ptr<std::pmr::memory_resource> RefMemoryResource(std::pmr::me
 }
 
 struct MemoryResourceConfig {
+    // huge but thread unsafe
     std::shared_ptr<std::pmr::memory_resource> storage;
+    // thread safe
     std::shared_ptr<std::pmr::memory_resource> instant;
 
     MemoryResourceConfig() = default;
@@ -62,4 +64,4 @@ inline std::pmr::memory_resource& GetInstantResource(const MemoryResourceConfig&
     return GetStorageResource(config);
 }
 
-}
+} // namespace lumina::core
