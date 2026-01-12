@@ -234,13 +234,15 @@ Result<std::vector<std::unique_ptr<RecordBatch>>> DataGenerator::SplitArrayByPar
              std::vector<RecordBatch::RowKind>>
         row_kinds_holder;
     auto schema = DataField::ConvertDataFieldsToArrowSchema(fields);
-    PAIMON_ASSIGN_OR_RAISE(auto path_factory,
-                           FileStorePathFactory::Create(
-                               /*root=*/"/tmp", schema, partition_keys,
-                               /*default_part_value=*/"__DEFAULT_PARTITION__",
-                               /*identifier=*/"orc", /*data_file_prefix=*/"data-",
-                               /*legacy_partition_name_enabled=*/true, std::vector<std::string>(),
-                               /*index_file_in_data_file_dir=*/false, memory_pool_));
+    PAIMON_ASSIGN_OR_RAISE(
+        auto path_factory,
+        FileStorePathFactory::Create(
+            /*root=*/"/tmp", schema, partition_keys,
+            /*default_part_value=*/"__DEFAULT_PARTITION__",
+            /*identifier=*/"orc", /*data_file_prefix=*/"data-",
+            /*legacy_partition_name_enabled=*/true, /*external_paths=*/std::vector<std::string>(),
+            /*global_index_external_path=*/std::nullopt,
+            /*index_file_in_data_file_dir=*/false, memory_pool_));
 
     for (const auto& binary_row : binary_rows) {
         PAIMON_ASSIGN_OR_RAISE(BinaryRow partition_row,

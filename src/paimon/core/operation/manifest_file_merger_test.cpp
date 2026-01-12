@@ -118,12 +118,15 @@ class ManifestFileMergerTest : public testing::Test {
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap({}));
         ASSERT_OK_AND_ASSIGN(std::vector<std::string> external_paths,
                              options.CreateExternalPaths());
+        ASSERT_OK_AND_ASSIGN(std::optional<std::string> global_index_external_path,
+                             options.CreateGlobalIndexExternalPath());
+
         ASSERT_OK_AND_ASSIGN(
             static std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 path_str, schema, /*partition_keys=*/{"f0"}, options.GetPartitionDefaultName(),
                 options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
-                options.LegacyPartitionNameEnabled(), external_paths,
+                options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> partition_schema,
                              FieldMapping::GetPartitionSchema(schema, {"f0"}));

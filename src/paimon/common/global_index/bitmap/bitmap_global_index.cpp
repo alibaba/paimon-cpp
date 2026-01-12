@@ -41,7 +41,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
     }
     const auto& meta = files[0];
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in,
-                           file_reader->GetInputStream(meta.file_name));
+                           file_reader->GetInputStream(meta.file_path));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileIndexReader> reader,
         index_->CreateReader(arrow_schema, /*start=*/0, meta.file_size, in, pool));

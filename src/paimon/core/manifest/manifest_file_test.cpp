@@ -59,6 +59,7 @@ class ManifestFileTest : public testing::Test {
                                  /*default_part_value=*/"", file_format->Identifier(),
                                  /*data_file_prefix=*/"data-",
                                  /*legacy_partition_name_enabled=*/true, /*external_paths=*/{},
+                                 /*global_index_external_path=*/std::nullopt,
                                  /*index_file_in_data_file_dir=*/false, pool));
         EXPECT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"},

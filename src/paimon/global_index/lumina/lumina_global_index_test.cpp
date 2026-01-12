@@ -86,8 +86,9 @@ class LuminaGlobalIndexTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
         EXPECT_EQ(result_metas.size(), 1);
-        EXPECT_TRUE(StringUtils::StartsWith(result_metas[0].file_name, "lumina-global-index-"));
-        EXPECT_TRUE(StringUtils::EndsWith(result_metas[0].file_name, ".index"));
+        auto file_name = PathUtil::GetName(result_metas[0].file_path);
+        EXPECT_TRUE(StringUtils::StartsWith(file_name, "lumina-global-index-"));
+        EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
         EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_FALSE(result_metas[0].metadata);
         return result_metas[0];
@@ -260,70 +261,60 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         ASSERT_NOK_WITH_MSG(CreateGlobalIndexReader(index_root, data_type_, options, fake_meta),
                             "convert key lumina.index.dimension, value xxx to unsigned int failed");
     }
+    // invalid inputs in write
     {
-        // invalid inputs in write
-        {
-            auto data_type = arrow::int32();
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
-                "arrow schema must be struct type when create LuminaIndexWriter");
-        }
-        {
-            auto data_type = arrow::struct_({arrow::field("f1", arrow::list(arrow::float32()))});
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
-                "field f0 not exist in arrow schema when create LuminaIndexWriter");
-        }
-        {
-            auto data_type = arrow::struct_({arrow::field("f0", arrow::float32())});
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
-                "field type must be list[float] when create LuminaIndexWriter");
-        }
-        {
-            auto data_type = arrow::struct_({arrow::field("f0", arrow::list(arrow::float64()))});
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
-                "field type must be list[float] when create LuminaIndexWriter");
-        }
-        {
-            std::shared_ptr<arrow::Array> array =
-                arrow::ipc::internal::json::ArrayFromJSON(data_type_,
-                                                          R"([
+        auto data_type = arrow::int32();
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
+                            "arrow schema must be struct type when create LuminaIndexWriter");
+    }
+    {
+        auto data_type = arrow::struct_({arrow::field("f1", arrow::list(arrow::float32()))});
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
+                            "field f0 not exist in arrow schema when create LuminaIndexWriter");
+    }
+    {
+        auto data_type = arrow::struct_({arrow::field("f0", arrow::float32())});
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
+                            "field type must be list[float] when create LuminaIndexWriter");
+    }
+    {
+        auto data_type = arrow::struct_({arrow::field("f0", arrow::list(arrow::float64()))});
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type, options_, array_, Range(0, 3)),
+                            "field type must be list[float] when create LuminaIndexWriter");
+    }
+    {
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                        R"([
                [[0.0, 0.0, 0.0, 0.0]],
                null
             ])")
-                    .ValueOrDie();
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
-                "arrow_array in LuminaIndexWriter is invalid, must not null");
-        }
-        {
-            std::shared_ptr<arrow::Array> array =
-                arrow::ipc::internal::json::ArrayFromJSON(data_type_,
-                                                          R"([
+                                                  .ValueOrDie();
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
+                            "arrow_array in LuminaIndexWriter is invalid, must not null");
+    }
+    {
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                        R"([
                [[0.0, 0.0, 0.0, 0.0]],
                [[0.0, 1.0, 0.0, null]]
             ])")
-                    .ValueOrDie();
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
-                "field value array in LuminaIndexWriter is invalid, must not null");
-        }
-        {
-            std::shared_ptr<arrow::Array> array =
-                arrow::ipc::internal::json::ArrayFromJSON(data_type_,
-                                                          R"([
+                                                  .ValueOrDie();
+        ASSERT_NOK_WITH_MSG(WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
+                            "field value array in LuminaIndexWriter is invalid, must not null");
+    }
+    {
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                        R"([
                [[0.0, 0.0, 0.0, 0.0]],
                [[0.0, 1.0, 0.0]]
             ])")
-                    .ValueOrDie();
-            ASSERT_NOK_WITH_MSG(
-                WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
-                "invalid input array in LuminaIndexWriter, length of field  array [2] multiplied "
-                "dimension [4] must match length of field value array [7]");
-        }
+                                                  .ValueOrDie();
+        ASSERT_NOK_WITH_MSG(
+            WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
+            "invalid input array in LuminaIndexWriter, length of field  array [2] multiplied "
+            "dimension [4] must match length of field value array [7]");
     }
+
     {
         // invalid inputs in read
         auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
@@ -360,7 +351,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
         }
         {
             auto fake_meta = meta;
-            fake_meta.file_name = "non-exist-file";
+            fake_meta.file_path = "non-exist-file";
             ASSERT_NOK_WITH_MSG(
                 CreateGlobalIndexReader(index_root, data_type_, options_, fake_meta),
                 "non-exist-file\' not exists");

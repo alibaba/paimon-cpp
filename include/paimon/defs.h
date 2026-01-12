@@ -284,6 +284,9 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_AS_DESCRIPTOR[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
+    /// "global-index.external-path" - The external path where the global index will be
+    /// written.
+    static const char GLOBAL_INDEX_EXTERNAL_PATH[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

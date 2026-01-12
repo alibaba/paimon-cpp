@@ -89,13 +89,16 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
             table_schema.value()->PartitionKeys(), arrow_schema, options.GetPartitionDefaultName(),
             options.LegacyPartitionNameEnabled(), ctx->GetMemoryPool()));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           options.CreateGlobalIndexExternalPath());
+
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             root_path, arrow_schema, table_schema.value()->PartitionKeys(),
             options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
             options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
-            options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
+            global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
 
     auto snapshot_manager = std::make_shared<SnapshotManager>(options.GetFileSystem(), root_path);
     PAIMON_ASSIGN_OR_RAISE(

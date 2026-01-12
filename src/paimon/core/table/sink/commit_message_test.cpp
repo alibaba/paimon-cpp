@@ -91,7 +91,8 @@ TEST(CommitMessageTest, TestCompatibleWithVersion11) {
     std::vector<CommitMessageImpl> expected_msgs;
     auto index_meta = std::make_shared<IndexFileMeta>(
         "bitmap", "bitmap-global-index-6f974a9b-07bb-4a06-9696-6646020d8139.index",
-        /*file_size=*/120, /*row_count=*/5,
+        /*file_size=*/120, /*row_count=*/5, /*dv_ranges=*/std::nullopt,
+        /*external_path=*/std::nullopt,
         GlobalIndexMeta(/*row_range_start=*/0, /*row_range_end=*/4, /*index_field_id=*/0,
                         /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr));
 

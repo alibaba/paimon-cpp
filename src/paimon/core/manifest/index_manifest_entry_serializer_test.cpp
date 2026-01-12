@@ -42,6 +42,8 @@ TEST(IndexManifestEntrySerializerTest, TestSerialize) {
             /*bucket=*/0,
             std::make_shared<IndexFileMeta>(
                 "bsi", "bsi.index", /*file_size=*/110, /*row_count=*/210,
+                /*dv_ranges=*/std::nullopt,
+                /*external_path=*/std::nullopt,
                 GlobalIndexMeta(/*row_range_start=*/41, /*row_range_end=*/71, /*index_field_id=*/2,
                                 /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr))),
         IndexManifestEntry(
@@ -49,6 +51,8 @@ TEST(IndexManifestEntrySerializerTest, TestSerialize) {
             /*bucket=*/0,
             std::make_shared<IndexFileMeta>(
                 "bitmap", "bitmap.index", /*file_size=*/100, /*row_count=*/200,
+                /*dv_ranges=*/std::nullopt,
+                /*external_path=*/std::optional<std::string>("FILE:/tmp/external/bitmap.index"),
                 GlobalIndexMeta(/*row_range_start=*/30, /*row_range_end=*/70, /*index_field_id=*/0,
                                 /*extra_field_ids=*/std::optional<std::vector<int32_t>>({3, 4}),
                                 /*index_meta=*/bytes))),

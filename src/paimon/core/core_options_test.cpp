@@ -87,6 +87,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.DataEvolutionEnabled());
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
+    ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -144,6 +145,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::DATA_EVOLUTION_ENABLED, "true"},
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
+        {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
     };
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
@@ -212,6 +214,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.DataEvolutionEnabled());
     ASSERT_FALSE(core_options.LegacyPartitionNameEnabled());
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
+    ASSERT_TRUE(core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -271,6 +275,25 @@ TEST(CoreOptionsTest, TestInvalidCreateExternalPath) {
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
         ASSERT_NOK_WITH_MSG(core_options.CreateExternalPaths(), "external paths is empty");
     }
+}
+
+TEST(CoreOptionsTest, TestCreateGlobalIndexExternalPath) {
+    std::map<std::string, std::string> options = {
+        {Options::GLOBAL_INDEX_EXTERNAL_PATH, " FILE:///tmp/index1"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(std::optional<std::string> external_path,
+                         core_options.CreateGlobalIndexExternalPath());
+    ASSERT_EQ("FILE:/tmp/index1", external_path.value());
+}
+
+TEST(CoreOptionsTest, TestInvalidCreateGlobalIndexExternalPath) {
+    std::map<std::string, std::string> options = {
+        {Options::GLOBAL_INDEX_EXTERNAL_PATH, "/tmp/index1"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_NOK_WITH_MSG(core_options.CreateGlobalIndexExternalPath(),
+                        "scheme is null, path is /tmp/index1");
 }
 
 TEST(CoreOptionsTest, TestFileSystem) {

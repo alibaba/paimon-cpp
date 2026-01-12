@@ -265,7 +265,8 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
         /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr);
     auto expected_index_file_meta =
         std::make_shared<IndexFileMeta>("lumina", /*file_name=*/"fake_index_file", /*file_size=*/10,
-                                        /*row_count=*/4, expected_global_index_meta);
+                                        /*row_count=*/4, /*dv_ranges=*/std::nullopt,
+                                        /*external_path=*/std::nullopt, expected_global_index_meta);
     DataIncrement expected_data_increment({expected_index_file_meta});
     auto expected_commit_message = std::make_shared<CommitMessageImpl>(
         /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0, /*total_buckets=*/std::nullopt,
@@ -309,7 +310,8 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
         /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr);
     auto expected_index_file_meta =
         std::make_shared<IndexFileMeta>("bitmap", /*file_name=*/"fake_index_file", /*file_size=*/10,
-                                        /*row_count=*/8, expected_global_index_meta);
+                                        /*row_count=*/8, /*dv_ranges=*/std::nullopt,
+                                        /*external_path=*/std::nullopt, expected_global_index_meta);
     DataIncrement expected_data_increment({expected_index_file_meta});
     auto expected_commit_message = std::make_shared<CommitMessageImpl>(
         /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0, /*total_buckets=*/std::nullopt,
@@ -394,7 +396,8 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
                 /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr);
             auto expected_index_file_meta = std::make_shared<IndexFileMeta>(
                 "bitmap", /*file_name=*/"fake_index_file", /*file_size=*/10,
-                /*row_count=*/expected_range.Count(), expected_global_index_meta);
+                /*row_count=*/expected_range.Count(), /*dv_ranges=*/std::nullopt,
+                /*external_path=*/std::nullopt, expected_global_index_meta);
             DataIncrement expected_data_increment({expected_index_file_meta});
             auto expected_commit_message = std::make_shared<CommitMessageImpl>(
                 /*partition=*/expected_partition_row,
@@ -1984,6 +1987,81 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     // query f2
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f2"));
     ASSERT_EQ(index_readers.size(), 0);
+}
+
+TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    std::map<std::string, std::string> lumina_options = {
+        {"lumina.dimension", "4"},
+        {"lumina.indextype", "bruteforce"},
+        {"lumina.distance.metric", "l2"},
+        {"lumina.encoding.type", "encoding.rawf32"},
+        {"lumina.search.threadcount", "10"}};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1],
+["Bob", [0.0, 1.0, 0.0, 1.0], 10, 12.1],
+["Emily", [1.0, 0.0, 1.0, 0.0], 10, 13.1],
+["Tony", [1.0, 1.0, 1.0, 1.0], 10, 14.1],
+["Lucy", [10.0, 10.0, 10.0, 10.0], 20, 15.1],
+["Bob", [10.0, 11.0, 10.0, 11.0], 20, 16.1],
+["Tony", [11.0, 10.0, 11.0, 10.0], 20, 17.1],
+["Alice", [11.0, 11.0, 11.0, 11.0], 20, 18.1],
+["Paul", [10.0, 10.0, 10.0, 10.0], 20, 19.1]
+    ])")
+            .ValueOrDie());
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    // write and commit bitmap global index
+    auto external_dir1 = UniqueTestDirectory::Create("local");
+    ASSERT_OK(
+        WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
+                   /*options=*/{{"global-index.external-path", "FILE://" + external_dir1->Str()}},
+                   Range(0, 8)));
+
+    auto external_dir2 = UniqueTestDirectory::Create("local");
+    auto lumina_options_with_external_path = lumina_options;
+    lumina_options_with_external_path["global-index.external-path"] =
+        "FILE://" + external_dir2->Str();
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
+                         /*options=*/lumina_options_with_external_path, Range(0, 8)));
+
+    auto read_cols = write_cols;
+    read_cols.push_back("_INDEX_SCORE");
+    auto result_fields = fields;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    result_fields.insert(result_fields.end(), SpecialFields::IndexScore().ArrowField());
+
+    // test scan and read
+    auto predicate =
+        PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                Literal(FieldType::STRING, "Alice", 5));
+    auto vector_search = std::make_shared<VectorSearch>(
+        "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
+        /*predicate=*/nullptr);
+    ASSERT_OK_AND_ASSIGN(
+        auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_options));
+
+    auto expected_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", [0.0, 0.0, 0.0, 0.0], 10, 11.1, 4.21]
+    ])")
+            .ValueOrDie();
+    ASSERT_OK(ReadData(table_path, read_cols, expected_array, predicate, plan));
 }
 
 TEST_P(GlobalIndexTest, TestIOException) {

@@ -124,7 +124,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
     auto searcher = std::make_unique<::lumina::api::LuminaSearcher>(std::move(lumina_searcher));
     // get input stream and open index
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in,
-                           file_manager->GetInputStream(io_meta.file_name));
+                           file_manager->GetInputStream(io_meta.file_path));
     auto lumina_file_reader = std::make_unique<LuminaFileReader>(in);
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(
         searcher->Open(std::move(lumina_file_reader), ::lumina::api::IOOptions()));
@@ -264,7 +264,8 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.Dump(std::move(file_writer), io_options_));
     // prepare GlobalIndexIOMeta
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, file_manager_->GetFileSize(index_file_name));
-    GlobalIndexIOMeta meta(index_file_name, file_size, /*range_end=*/count_ - 1,
+    GlobalIndexIOMeta meta(file_manager_->ToPath(index_file_name), file_size,
+                           /*range_end=*/count_ - 1,
                            /*metadata=*/nullptr);
     return std::vector<GlobalIndexIOMeta>({meta});
 }

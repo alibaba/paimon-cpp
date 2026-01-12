@@ -39,13 +39,16 @@ Result<std::shared_ptr<GlobalIndexFileManager>> CreateGlobalIndexFileManager(
     auto all_arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
                            core_options.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           core_options.CreateGlobalIndexExternalPath());
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             table_path, all_arrow_schema, table_schema->PartitionKeys(),
             core_options.GetPartitionDefaultName(), core_options.GetWriteFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
-            external_paths, core_options.IndexFileInDataFileDir(), pool));
+            external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+            pool));
     std::shared_ptr<IndexPathFactory> index_path_factory =
         path_factory->CreateGlobalIndexFileFactory();
     return std::make_shared<GlobalIndexFileManager>(core_options.GetFileSystem(),
@@ -118,17 +121,24 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
 Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
     const std::string& index_type, int32_t field_id, const Range& range,
     const std::vector<GlobalIndexIOMeta>& global_index_io_metas, const BinaryRow& partition,
-    int32_t bucket) {
+    int32_t bucket, const std::shared_ptr<GlobalIndexFileManager>& file_manager) {
     std::vector<std::shared_ptr<IndexFileMeta>> index_file_metas;
     index_file_metas.reserve(global_index_io_metas.size());
+    bool is_external_path = file_manager->IsExternalPath();
     for (const auto& io_meta : global_index_io_metas) {
         if (range.Count() != io_meta.range_end + 1) {
             return Status::Invalid(
                 fmt::format("specified range length {} mismatch indexed range length {}",
                             range.Count(), io_meta.range_end + 1));
         }
+        std::optional<std::string> external_path;
+        if (is_external_path) {
+            PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(io_meta.file_path));
+            external_path = path.ToString();
+        }
         index_file_metas.push_back(std::make_shared<IndexFileMeta>(
-            index_type, io_meta.file_name, io_meta.file_size, io_meta.range_end + 1,
+            index_type, PathUtil::GetName(io_meta.file_path), io_meta.file_size,
+            io_meta.range_end + 1, /*dv_ranges=*/std::nullopt, external_path,
             GlobalIndexMeta(range.from, io_meta.range_end + range.from, field_id,
                             /*extra_field_ids=*/std::nullopt, io_meta.metadata)));
     }
@@ -192,7 +202,7 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
 
     // generate commit message
     return ToCommitMessage(index_type, field.Id(), range, global_index_io_metas,
-                           data_split->Partition(), data_split->Bucket());
+                           data_split->Partition(), data_split->Bucket(), index_file_manager);
 }
 
 }  // namespace paimon

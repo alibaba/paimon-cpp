@@ -36,6 +36,9 @@ class PAIMON_EXPORT GlobalIndexFileWriter {
 
     /// Get the file size of input file name.
     virtual Result<int64_t> GetFileSize(const std::string& file_name) const = 0;
+
+    /// Get the index file path of input file name.
+    virtual std::string ToPath(const std::string& file_name) const = 0;
 };
 
 }  // namespace paimon

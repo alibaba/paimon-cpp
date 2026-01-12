@@ -53,6 +53,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
         const std::vector<std::string>& partition_keys, const std::string& default_part_value,
         const std::string& identifier, const std::string& data_file_prefix,
         bool legacy_partition_name_enabled, const std::vector<std::string>& external_paths,
+        const std::optional<std::string>& global_index_external_path,
         bool index_file_in_data_file_dir, const std::shared_ptr<MemoryPool>& memory_pool);
 
     static std::string ManifestPath(const std::string& root) {
@@ -90,6 +91,10 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
     }
     const std::vector<std::string>& GetExternalPaths() const {
         return external_paths_;
+    }
+
+    const std::optional<std::string>& GetGlobalIndexExternalPath() const {
+        return global_index_external_path_;
     }
 
     /// @note This method is NOT THREAD SAFE.
@@ -137,6 +142,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
                          const std::string& data_file_prefix, const std::string& uuid,
                          std::unique_ptr<BinaryRowPartitionComputer> partition_computer,
                          const std::vector<std::string>& external_paths,
+                         const std::optional<std::string>& global_index_external_path,
                          bool index_file_in_data_file_dir);
 
     Result<std::unique_ptr<ExternalPathProvider>> CreateExternalPathProvider(
@@ -149,6 +155,7 @@ class FileStorePathFactory : public std::enable_shared_from_this<FileStorePathFa
     std::string uuid_;
     std::unique_ptr<BinaryRowPartitionComputer> partition_computer_;
     std::vector<std::string> external_paths_;
+    std::optional<std::string> global_index_external_path_;
     bool index_file_in_data_file_dir_;
 
     mutable std::atomic<int32_t> manifest_file_count_ = 0;

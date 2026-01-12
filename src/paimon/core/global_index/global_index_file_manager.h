@@ -34,8 +34,8 @@ class GlobalIndexFileManager : public GlobalIndexFileReader, public GlobalIndexF
         : fs_(fs), path_factory_(path_factory) {}
 
     Result<std::unique_ptr<InputStream>> GetInputStream(
-        const std::string& file_name) const override {
-        return fs_->Open(path_factory_->ToPath(file_name));
+        const std::string& file_path) const override {
+        return fs_->Open(file_path);
     }
 
     Result<std::string> NewFileName(const std::string& prefix) const override {
@@ -46,15 +46,27 @@ class GlobalIndexFileManager : public GlobalIndexFileReader, public GlobalIndexF
         return prefix + "-" + "global-index-" + uuid + ".index";
     }
 
+    std::string ToPath(const std::string& file_name) const override {
+        return path_factory_->ToPath(file_name);
+    }
+
+    std::string ToPath(const std::shared_ptr<IndexFileMeta>& file) const {
+        return path_factory_->ToPath(file);
+    }
+
     Result<std::unique_ptr<OutputStream>> NewOutputStream(
         const std::string& file_name) const override {
-        return fs_->Create(path_factory_->ToPath(file_name), /*overwrite=*/false);
+        return fs_->Create(ToPath(file_name), /*overwrite=*/false);
     }
 
     Result<int64_t> GetFileSize(const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status,
-                               fs_->GetFileStatus(path_factory_->ToPath(file_name)));
+                               fs_->GetFileStatus(ToPath(file_name)));
         return file_status->GetLen();
+    }
+
+    bool IsExternalPath() const {
+        return path_factory_->IsExternalPath();
     }
 
  private:
