@@ -481,17 +481,15 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
         ASSERT_OK_AND_ASSIGN(
             auto index_path_factory,
             file_store_path_factory->CreateIndexFileFactory(partition, /*bucket=*/2));
-        ASSERT_EQ(index_path_factory->ToPath("bitmap.index"),
-                  "/tmp/external-path/index/bitmap.index");
+        ASSERT_EQ(index_path_factory->ToPath("bitmap.index"), "/tmp/external-path/bitmap.index");
         ASSERT_TRUE(index_path_factory->IsExternalPath());
 
         auto index_file_meta = std::make_shared<IndexFileMeta>(
             /*index_type=*/"bitmap", /*file_name=*/"bitmap.index", /*file_size=*/10,
             /*row_count=*/5, /*dv_ranges=*/std::nullopt,
-            /*external_path=*/"/tmp/external-path/index/bitmap.index",
+            /*external_path=*/"/tmp/external-path/bitmap.index",
             /*global_index_meta=*/std::nullopt);
-        ASSERT_EQ(index_path_factory->ToPath(index_file_meta),
-                  "/tmp/external-path/index/bitmap.index");
+        ASSERT_EQ(index_path_factory->ToPath(index_file_meta), "/tmp/external-path/bitmap.index");
     }
 }
 }  // namespace paimon::test

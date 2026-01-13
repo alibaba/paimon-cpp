@@ -157,6 +157,7 @@ std::unique_ptr<IndexPathFactory> FileStorePathFactory::CreateGlobalIndexFileFac
         std::string NewPath() const override {
             return factory_->NewIndexFile();
         }
+        
         std::string ToPath(const std::shared_ptr<IndexFileMeta>& file) const override {
             const auto& external_path = file->ExternalPath();
             if (external_path) {
@@ -168,7 +169,7 @@ std::unique_ptr<IndexPathFactory> FileStorePathFactory::CreateGlobalIndexFileFac
         std::string ToPath(const std::string& file_name) const override {
             const auto& external_path = factory_->GetGlobalIndexExternalPath();
             if (external_path) {
-                return PathUtil::JoinPath(factory_->IndexPath(external_path.value()), file_name);
+                return PathUtil::JoinPath(external_path.value(), file_name);
             }
             return PathUtil::JoinPath(factory_->IndexPath(factory_->RootPath()), file_name);
         }
