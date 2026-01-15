@@ -87,6 +87,12 @@ Result<bool> FileSystemCatalog::DataBaseExists(const std::string& db_name) const
     return fs_->Exists(NewDatabasePath(warehouse_, db_name));
 }
 
+Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                       TableSchemaExists(identifier));
+    return latest_schema != std::nullopt;
+}
+
 Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema* c_schema,
                                       const std::vector<std::string>& partition_keys,
                                       const std::vector<std::string>& primary_keys,
