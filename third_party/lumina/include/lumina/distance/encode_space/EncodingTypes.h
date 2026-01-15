@@ -18,13 +18,12 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <span>
-#include <string_view>
-#include <type_traits>
-
 #include <lumina/core/Constants.h>
 #include <lumina/mpl/EnumHelper.h>
 #include <lumina/mpl/TypeList.h>
+#include <span>
+#include <string_view>
+#include <type_traits>
 
 namespace lumina::dist::encode_space {
 

@@ -17,12 +17,11 @@
 #pragma once
 #include <cassert>
 #include <lumina/core/Macro.h>
+#include <lumina/core/Status.h>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include <lumina/core/Status.h>
 
 namespace lumina::core {
 

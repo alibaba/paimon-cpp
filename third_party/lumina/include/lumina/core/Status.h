@@ -15,10 +15,9 @@
  */
 
 #pragma once
+#include <lumina/core/ErrorCodes.h>
 #include <string>
 #include <utility>
-
-#include <lumina/core/ErrorCodes.h>
 
 namespace lumina::core {
 

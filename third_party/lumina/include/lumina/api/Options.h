@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <lumina/core/Result.h>
+#include <lumina/core/Status.h>
+#include <lumina/mpl/Concepts.h>
+#include <lumina/telemetry/Log.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -27,11 +31,6 @@
 #include <unordered_map>
 #include <utility>
 #include <variant>
-
-#include <lumina/core/Result.h>
-#include <lumina/core/Status.h>
-#include <lumina/mpl/Concepts.h>
-#include <lumina/telemetry/Log.h>
 
 namespace lumina::api {
 

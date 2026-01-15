@@ -30,7 +30,7 @@ class PAIMON_EXPORT GlobalIndexFileReader {
 
     /// Opens an input stream for reading the specified global index file.
     virtual Result<std::unique_ptr<InputStream>> GetInputStream(
-        const std::string& file_name) const = 0;
+        const std::string& file_path) const = 0;
 };
 
 }  // namespace paimon

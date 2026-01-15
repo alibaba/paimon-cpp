@@ -18,15 +18,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <string>
-#include <string_view>
-#include <unordered_map>
-#include <vector>
-
 #include <lumina/api/Options.h>
 #include <lumina/api/Query.h>
 #include <lumina/core/NoCopyable.h>
 #include <lumina/core/Status.h>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace lumina::api {
 

@@ -22,6 +22,7 @@
 #include "paimon/defs.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
+#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -42,6 +43,7 @@ TEST(ReadContextTest, TestSimple) {
     ASSERT_EQ(1, ctx->GetRowToBatchThreadNumber());
     ASSERT_EQ("main", ctx->GetBranch());
     ASSERT_TRUE(ctx->GetFileSystemSchemeToIdentifierMap().empty());
+    ASSERT_FALSE(ctx->GetSpecificFileSystem());
 }
 
 TEST(ReadContextTest, TestSetContent) {
@@ -59,6 +61,8 @@ TEST(ReadContextTest, TestSetContent) {
     builder.SetRowToBatchThreadNumber(9);
     builder.WithBranch("rt");
     builder.WithFileSystemSchemeToIdentifierMap({{"file", "local"}});
+    auto fs = std::make_shared<MockFileSystem>();
+    builder.WithFileSystem(fs);
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
 
     // test result
@@ -78,6 +82,7 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_EQ(expected_fs_map, ctx->GetFileSystemSchemeToIdentifierMap());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
+    ASSERT_EQ(ctx->GetSpecificFileSystem(), fs);
 }
 
 }  // namespace paimon::test

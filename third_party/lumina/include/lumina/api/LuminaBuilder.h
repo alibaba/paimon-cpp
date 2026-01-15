@@ -36,7 +36,7 @@ enum class BuilderStatus : uint8_t {
     Initial,        ///< Builder just created; no training or writes yet.
     Trained,        ///< Training completed; Insert* is allowed.
     TrainNotNeeded, ///< Backend declares training is unnecessary (flat, etc.); can write directly.
-    DataInjected,   ///< At least one batch has been inserted (Batch or Dataset).
+    DataInjected,   ///< Data insert completed (Batch or Dataset); dump is allowed.
     Dumped,         ///< Dump completed; builder is in teardown stage.
     Error           ///< An error occurred; the builder can no longer be used.
 };
