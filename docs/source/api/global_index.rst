@@ -13,7 +13,7 @@
 .. limitations under the License.
 
 ============
-GLobal Index
+Global Index
 ============
 
 .. _cpp-api-global-index:
