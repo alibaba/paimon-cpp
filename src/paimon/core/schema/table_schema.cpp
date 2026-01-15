@@ -27,6 +27,7 @@
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
@@ -169,6 +170,14 @@ bool TableSchema::operator==(const TableSchema& other) const {
            options_ == other.options_ && comment_ == other.comment_ &&
            time_millis_ == other.time_millis_;
 }
+
+Result<std::unique_ptr<::ArrowSchema>> TableSchema::GetArrowSchema() const {
+    auto schema = DataField::ConvertDataFieldsToArrowSchema(fields_);
+    auto c_schema = std::make_unique<::ArrowSchema>();
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, c_schema.get()));
+    return c_schema;
+}
+
 std::vector<std::string> TableSchema::FieldNames() const {
     std::vector<std::string> field_names;
     field_names.reserve(fields_.size());
