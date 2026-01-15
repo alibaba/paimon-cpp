@@ -74,4 +74,10 @@ TEST(DefaultExecutorTest, TestViaWithResult) {
     ASSERT_EQ(4, results.size());
 }
 
+TEST(DefaultExecutorTest, TestViaWithException) {
+    auto executor = GetGlobalDefaultExecutor();
+    auto future = Via(executor.get(), []() { throw std::runtime_error("test"); });
+    ASSERT_THROW(future.get(), std::runtime_error);
+}
+
 }  // namespace paimon::test
