@@ -134,12 +134,16 @@ TEST(FileSystemCatalogTest, TestCreateTable) {
     arrow::Schema typed_schema(fields);
     ::ArrowSchema schema;
     ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
-    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+    Identifier identifier("db1", "tbl1");
+    ASSERT_OK_AND_ASSIGN(auto exist, catalog.TableExists(identifier));
+    ASSERT_FALSE(exist);
+
+    ASSERT_OK(catalog.CreateTable(identifier, &schema,
                                   /*partition_keys=*/{"f1", "f2"}, /*primary_keys=*/{"f3"}, options,
                                   false));
-    ASSERT_OK_AND_ASSIGN(std::vector<std::string> table_names, catalog.ListTables("db1"));
-    ASSERT_EQ(1, table_names.size());
-    ASSERT_EQ(table_names[0], "tbl1");
+
+    ASSERT_OK_AND_ASSIGN(exist, catalog.TableExists(identifier));
+    ASSERT_TRUE(exist);
     ArrowSchemaRelease(&schema);
 }
 
@@ -349,13 +353,19 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     std::vector<std::string> expected_field_names = {"f0", "f1", "f2", "f3"};
     ASSERT_EQ(field_names, expected_field_names);
 
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string schema_path = PathUtil::JoinPath(dir->Str(), "db1.db/tbl1/schema/schema-0");
+    std::string expected_json_schema;;
+    ASSERT_OK(fs->ReadFile(schema_path, &expected_json_schema));
+
+    ASSERT_OK_AND_ASSIGN(auto json_schema, table_schema->GetJsonSchema());
+    ASSERT_EQ(expected_json_schema, json_schema);
+
     ASSERT_OK_AND_ASSIGN(auto arrow_schema, table_schema->GetArrowSchema());
     auto loaded_schema = arrow::ImportSchema(arrow_schema.get()).ValueOrDie();
     ASSERT_TRUE(typed_schema.Equals(loaded_schema));
 
-    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
-    ASSERT_OK(fs->Delete(PathUtil::JoinPath(dir->Str(), "db1.db/tbl1/schema/schema-0")));
-
+    ASSERT_OK(fs->Delete(schema_path));
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl1")),
                         "Identifier{database=\'db1\', table=\'tbl1\'} not exist");
 
