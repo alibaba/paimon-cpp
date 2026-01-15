@@ -60,6 +60,10 @@ class TableSchema : public Schema, public Jsonizable<TableSchema> {
 
     Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const override;
 
+    Result<std::string> GetJsonSchema() const override {
+        return ToJsonString();
+    }
+
     std::vector<std::string> FieldNames() const override;
 
     int64_t Id() const override {
