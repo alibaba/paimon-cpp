@@ -219,7 +219,8 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
 
         // test visit vector search
         ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(std::make_shared<VectorSearch>(
-                                "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr)),
+                                "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr,
+                                std::nullopt, std::map<std::string, std::string>())),
                             "FileIndexReaderWrapper is not supposed to handle vector search query");
     };
 

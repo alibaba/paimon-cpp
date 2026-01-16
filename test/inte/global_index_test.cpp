@@ -260,9 +260,11 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     ASSERT_TRUE(index_commit_msg_impl);
 
     // check commit message
+    std::string index_meta_json =
+        R"({"distance.metric":"l2","encoding.type":"rawf32","index.dimension":"4","index.type":"bruteforce","search.thread_count":"10"})";
     GlobalIndexMeta expected_global_index_meta(
         /*row_range_start=*/0, /*row_range_end=*/3, /*index_field_id=*/1,
-        /*extra_field_ids=*/std::nullopt, /*index_meta=*/nullptr);
+        /*extra_field_ids=*/std::nullopt, std::make_shared<Bytes>(index_meta_json, pool_.get()));
     auto expected_index_file_meta =
         std::make_shared<IndexFileMeta>("lumina", /*file_name=*/"fake_index_file", /*file_size=*/10,
                                         /*row_count=*/4, /*dv_ranges=*/std::nullopt,
@@ -987,8 +989,9 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         ASSERT_OK_AND_ASSIGN(auto lumina_reader, range_scanner->CreateReader("f1", "lumina"));
 
         std::vector<float> query = {1.0f, 1.0f, 1.0f, 1.1f};
-        auto vector_search = std::make_shared<VectorSearch>("f1", limit, query, filter,
-                                                            /*predicate=*/nullptr);
+        auto vector_search = std::make_shared<VectorSearch>(
+            "f1", limit, query, filter,
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options);
         ASSERT_OK_AND_ASSIGN(auto vector_search_result,
                              lumina_reader->VisitVectorSearch(vector_search));
         ASSERT_EQ(vector_search_result->ToString(), lumina_result);
@@ -1289,11 +1292,12 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
-    std::map<std::string, std::string> lumina_options = {{"lumina.index.dimension", "4"},
-                                                         {"lumina.index.type", "bruteforce"},
-                                                         {"lumina.distance.metric", "l2"},
-                                                         {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+    std::map<std::string, std::string> lumina_write_options = {{"lumina.index.dimension", "4"},
+                                                               {"lumina.index.type", "bruteforce"},
+                                                               {"lumina.distance.metric", "l2"},
+                                                               {"lumina.encoding.type", "rawf32"}};
+    std::map<std::string, std::string> lumina_read_options = {{"lumina.search.thread_count", "10"}};
+
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1330,9 +1334,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                     Literal(FieldType::STRING, "Alice", 5));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
-                                                               lumina_options));
+                                                               lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1364,9 +1368,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                     Literal(FieldType::STRING, "Alice", 5));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
-                                                               lumina_options));
+                                                               lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1379,7 +1383,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
 
     // write and commit lumina global index
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
-                         /*options=*/lumina_options, Range(0, 8)));
+                         /*options=*/lumina_write_options, Range(0, 8)));
 
     // scan and read with global index
     {
@@ -1388,9 +1392,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                     Literal(FieldType::STRING, "Alice", 5));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
-                                                               lumina_options));
+                                                               lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1405,9 +1409,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                     Literal(FieldType::STRING, "Alice", 5));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
-                                                               lumina_options));
+                                                               lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1423,9 +1427,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                     Literal(FieldType::STRING, "Bob", 3));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search,
-                                                               lumina_options));
+                                                               lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1440,9 +1444,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
             /*filter=*/[](int64_t row_id) { return row_id == 1 || row_id == 5; },
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
-                                                               vector_search, lumina_options));
+                                                               vector_search, lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1457,9 +1461,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/2, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
             /*filter=*/nullptr,
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
-                                                               vector_search, lumina_options));
+                                                               vector_search, lumina_read_options));
 
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
@@ -1477,9 +1481,9 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/3, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}),
             /*filter=*/[](int64_t row_id) { return true; },
-            /*predicate=*/nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_read_options);
         ASSERT_NOK_WITH_MSG(
-            ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_options),
+            ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_read_options),
             "Predicate result and pre_filter in VectorSearch conflict");
     }
 }
@@ -1978,10 +1982,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f1"));
     ASSERT_EQ(index_readers.size(), 1);
     std::vector<float> query = {11.0f, 11.0f, 11.0f, 11.0f};
-    ASSERT_OK_AND_ASSIGN(auto vector_search_result,
-                         index_readers[0]->VisitVectorSearch(
-                             std::make_shared<VectorSearch>("f1", 1, query, /*filter=*/nullptr,
-                                                            /*predicate*/ nullptr)));
+    ASSERT_OK_AND_ASSIGN(
+        auto vector_search_result,
+        index_readers[0]->VisitVectorSearch(std::make_shared<VectorSearch>(
+            "f1", 1, query, /*filter=*/nullptr,
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options)));
     ASSERT_EQ(vector_search_result->ToString(), "row ids: {7}, scores: {0.00}");
 
     // query f2
@@ -2051,7 +2056,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
                                 Literal(FieldType::STRING, "Alice", 5));
     auto vector_search = std::make_shared<VectorSearch>(
         "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-        /*predicate=*/nullptr);
+        /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options);
     ASSERT_OK_AND_ASSIGN(
         auto plan, ScanGlobalIndexAndData(table_path, predicate, vector_search, lumina_options));
 
@@ -2136,7 +2141,7 @@ TEST_P(GlobalIndexTest, TestIOException) {
                                     Literal(FieldType::STRING, "Alice", 5));
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", /*limit=*/1, std::vector<float>({1.0f, 1.0f, 1.0f, 1.1f}), /*filter=*/nullptr,
-            /*predicate*/ nullptr);
+            /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options);
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
 [0, "Alice", [1.0, 0.0, 1.0, 0.0], 10, 13.1, 2.21]

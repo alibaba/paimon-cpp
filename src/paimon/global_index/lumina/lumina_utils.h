@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "lumina/core/Status.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/status.h"
 
 namespace paimon::lumina {
@@ -80,4 +81,25 @@ inline Status LuminaToPaimonStatus(const ::lumina::core::Status& status) {
             return Status::Invalid(status.Message());
     }
 }
+
+class LuminaUtils {
+ public:
+    LuminaUtils() = delete;
+    ~LuminaUtils() = delete;
+
+    static std::map<std::string, std::string> FetchLuminaOptions(
+        const std::map<std::string, std::string>& options) {
+        std::map<std::string, std::string> lumina_options;
+        int64_t prefix_len = strlen(kOptionKeyPrefix);
+        for (const auto& [key, value] : options) {
+            if (StringUtils::StartsWith(key, kOptionKeyPrefix)) {
+                lumina_options[key.substr(prefix_len)] = value;
+            }
+        }
+        return lumina_options;
+    }
+
+ private:
+    static constexpr char kOptionKeyPrefix[] = "lumina.";
+};
 }  // namespace paimon::lumina

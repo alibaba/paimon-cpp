@@ -23,6 +23,7 @@
 #include <lumina/api/Extension.h>
 #include <lumina/api/LuminaSearcher.h>
 #include <lumina/api/Options.h>
+#include <lumina/api/OptionsNormalize.h>
 #include <lumina/core/Constants.h>
 namespace lumina::extensions {
 
@@ -46,21 +47,9 @@ public:
                                                                             const api::SearchOptions& options,
                                                                             std::pmr::memory_resource& sessionPool)
     {
-        if (!options.HasValueOfType<int64_t>(core::kTopK)) {
-            return core::Result<api::LuminaSearcher::SearchResult>::Err(
-                core::Status {core::ErrorCode::InvalidArgument, "topk value is required"});
-        }
-        auto topk = options.GetInt(core::kTopK, 0);
-        if (topk <= 0) {
-            return core::Result<api::LuminaSearcher::SearchResult>::Err(
-                core::Status {core::ErrorCode::InvalidArgument, "topk value must be positive"});
-        }
-        if (options.HasValueOfType<int64_t>(core::kSearchParallelNumber)) {
-            auto parallelNum = options.GetInt(core::kSearchParallelNumber, 0);
-            if (parallelNum <= 0) {
-                return core::Result<api::LuminaSearcher::SearchResult>::Err(
-                    core::Status {core::ErrorCode::InvalidArgument, "parallel number must be positive"});
-            }
+        auto status = api::ValidateSearchOptions(options);
+        if (!status.IsOk()) {
+            return core::Result<api::LuminaSearcher::SearchResult>::Err(status);
         }
         if (!_callee) {
             return core::Result<api::LuminaSearcher::SearchResult>::Err(
