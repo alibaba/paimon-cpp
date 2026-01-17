@@ -88,7 +88,7 @@ Result<bool> FileSystemCatalog::DataBaseExists(const std::string& db_name) const
 
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
-                       TableSchemaExists(identifier));
+                           TableSchemaExists(identifier));
     return latest_schema != std::nullopt;
 }
 

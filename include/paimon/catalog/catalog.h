@@ -98,7 +98,8 @@ class PAIMON_EXPORT Catalog {
     /// Checks whether a database with the specified name exists in the catalog.
     ///
     /// @param db_name The name of the database to check for existence.
-    /// @return A result containing true if the database exists, false otherwise, or an error status.
+    /// @return A result containing true if the database exists, false otherwise, or an error
+    /// status.
     virtual Result<bool> DataBaseExists(const std::string& db_name) const = 0;
 
     /// Checks whether a table with the specified identifier exists in the catalog.

@@ -355,7 +355,7 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
 
     ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
     std::string schema_path = PathUtil::JoinPath(dir->Str(), "db1.db/tbl1/schema/schema-0");
-    std::string expected_json_schema;;
+    std::string expected_json_schema;
     ASSERT_OK(fs->ReadFile(schema_path, &expected_json_schema));
 
     ASSERT_OK_AND_ASSIGN(auto json_schema, table_schema->GetJsonSchema());
