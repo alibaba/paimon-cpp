@@ -437,7 +437,7 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
 
     auto search_with_filter = [&]() {
-        int32_t limit = paimon::test::RandomNumber(0, 99);
+        int32_t limit = paimon::test::RandomNumber(0, 99) + 1;
         auto filter = [](int64_t id) -> bool { return id % 2; };
         ASSERT_OK_AND_ASSIGN(
             auto vector_search_result,
@@ -451,16 +451,16 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
     };
 
     auto search = [&]() {
-        int32_t k = paimon::test::RandomNumber(0, 99);
+        int32_t limit = paimon::test::RandomNumber(0, 99) + 1;
         ASSERT_OK_AND_ASSIGN(
             auto vector_search_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
-                "f0", k, query_, /*filter=*/nullptr,
+                "f0", limit, query_, /*filter=*/nullptr,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
         auto typed_result =
             std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(vector_search_result);
         ASSERT_TRUE(typed_result);
-        ASSERT_EQ(typed_result->bitmap_.Cardinality(), k);
+        ASSERT_EQ(typed_result->bitmap_.Cardinality(), limit);
     };
 
     std::vector<std::thread> threads;
