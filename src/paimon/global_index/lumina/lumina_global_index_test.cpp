@@ -437,7 +437,7 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
 
     auto search_with_filter = [&]() {
-        int32_t limit = paimon::test::RandomNumber(0, 99) + 1;
+        int32_t limit = paimon::test::RandomNumber(1, 100);
         auto filter = [](int64_t id) -> bool { return id % 2; };
         ASSERT_OK_AND_ASSIGN(
             auto vector_search_result,
@@ -451,7 +451,7 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
     };
 
     auto search = [&]() {
-        int32_t limit = paimon::test::RandomNumber(0, 99) + 1;
+        int32_t limit = paimon::test::RandomNumber(1, 100);
         ASSERT_OK_AND_ASSIGN(
             auto vector_search_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
