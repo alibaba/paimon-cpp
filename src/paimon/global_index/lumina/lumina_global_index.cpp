@@ -141,12 +141,12 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
     auto lumina_options = LuminaUtils::FetchLuminaOptions(options_);
     lumina_options[std::string(::lumina::core::kDimension)] = std::to_string(index_info.dimension);
     lumina_options[std::string(::lumina::core::kIndexType)] = index_info.index_type;
-    lumina_options[std::string(::lumina::core::kSearchThreadSafeFilter)] = "true";
 
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::SearcherOptions searcher_options,
         ::lumina::api::NormalizeSearcherOptions(std::unordered_map<std::string, std::string>(
             lumina_options.begin(), lumina_options.end())));
+
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::LuminaSearcher lumina_searcher,
         ::lumina::api::LuminaSearcher::Create(searcher_options, memory_resource));
@@ -338,6 +338,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
     }
 
     lumina_options[std::string(::lumina::core::kTopK)] = std::to_string(vector_search->limit);
+    lumina_options[std::string(::lumina::core::kSearchThreadSafeFilter)] = "true";
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::SearchOptions search_options,
         ::lumina::api::NormalizeSearchOptions(std::string(::lumina::core::kIndexType),

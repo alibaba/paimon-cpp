@@ -226,7 +226,7 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
 
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -261,7 +261,7 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
 
     // check commit message
     std::string index_meta_json =
-        R"({"distance.metric":"l2","encoding.type":"rawf32","index.dimension":"4","index.type":"bruteforce","search.thread_count":"10"})";
+        R"({"distance.metric":"l2","encoding.type":"rawf32","index.dimension":"4","index.type":"bruteforce","search.parallel_number":"10"})";
     GlobalIndexMeta expected_global_index_meta(
         /*row_range_start=*/0, /*row_range_end=*/3, /*index_field_id=*/1,
         /*extra_field_ids=*/std::nullopt, std::make_shared<Bytes>(index_meta_json, pool_.get()));
@@ -900,7 +900,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1074,7 +1074,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1296,7 +1296,8 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
                                                                {"lumina.index.type", "bruteforce"},
                                                                {"lumina.distance.metric", "l2"},
                                                                {"lumina.encoding.type", "rawf32"}};
-    std::map<std::string, std::string> lumina_read_options = {{"lumina.search.thread_count", "10"}};
+    std::map<std::string, std::string> lumina_read_options = {
+        {"lumina.search.parallel_number", "10"}};
 
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
@@ -1764,7 +1765,7 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -1927,7 +1928,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -2002,7 +2003,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, GetParam()},
@@ -2095,7 +2096,7 @@ TEST_P(GlobalIndexTest, TestIOException) {
                                                          {"lumina.index.type", "bruteforce"},
                                                          {"lumina.distance.metric", "l2"},
                                                          {"lumina.encoding.type", "rawf32"},
-                                                         {"lumina.search.thread_count", "10"}};
+                                                         {"lumina.search.parallel_number", "10"}};
     std::string table_path;
     bool write_run_complete = false;
     auto io_hook = IOHook::GetInstance();

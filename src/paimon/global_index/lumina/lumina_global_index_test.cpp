@@ -164,7 +164,7 @@ class LuminaGlobalIndexTest : public ::testing::Test {
                                                    {"lumina.index.type", "bruteforce"},
                                                    {"lumina.distance.metric", "l2"},
                                                    {"lumina.encoding.type", "rawf32"},
-                                                   {"lumina.search.thread_count", "10"}};
+                                                   {"lumina.search.parallel_number", "10"}};
     std::shared_ptr<arrow::DataType> data_type_ =
         arrow::struct_({arrow::field("f0", arrow::list(arrow::float32()))});
     std::shared_ptr<arrow::Array> array_ = arrow::ipc::internal::json::ArrayFromJSON(data_type_,

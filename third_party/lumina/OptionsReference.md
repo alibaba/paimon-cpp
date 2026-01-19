@@ -9,37 +9,37 @@ When enabling the Lumina global index in `paimon-cpp`, all configuration paramet
 
 | Key | Type | Required | Validator | Description |
 | --- | ---- | -------- | --------- | ----------- |
-| `build.log_threshold` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Threshold of builder log.  |
-| `distance.metric` | `FieldType::kString` | `false` | `ValidateMetric` | Distance metric.  |
-| `encoding.type` | `FieldType::kString` | `false` | `ValidateEncodingType` | Encoding type.  |
-| `extension.build.ckpt.count` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Number of checkpoints.  |
-| `extension.build.ckpt.threshold` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Threshold for triggering checkpoint.  |
-| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Vector dimension.  |
-| `index.type` | `FieldType::kString` | `true` | `ValidateIndexType` | Index type.  |
-| `pretrain.sample_ratio` | `FieldType::kDouble` | `false` | `ValidateRatio01` | Sample ratio for pretrain.  |
+| `build.log_threshold` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Threshold of builder log. |
+| `distance.metric` | `FieldType::kString` | `false` | `ValidateMetric` | Distance metric. |
+| `encoding.type` | `FieldType::kString` | `false` | `ValidateEncodingType` | Encoding type. |
+| `extension.build.ckpt.count` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Number of checkpoints. |
+| `extension.build.ckpt.threshold` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Threshold for triggering checkpoint. |
+| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Vector dimension. |
+| `index.type` | `FieldType::kString` | `true` | `ValidateIndexType` | Index type. |
+| `pretrain.sample_ratio` | `FieldType::kDouble` | `false` | `ValidateRatio01` | Sample ratio for pretrain. |
 
 ## core / quantizer
 
 | Key | Type | Required | Validator | Description |
 | --- | ---- | -------- | --------- | ----------- |
-| `distance.metric` | `FieldType::kString` | `true` | `ValidateMetric` | Distance metric.  |
-| `encoding.type` | `FieldType::kString` | `false` | `ValidateEncodingType` | Encoding type.  |
-| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Vector dimension.  |
+| `distance.metric` | `FieldType::kString` | `true` | `ValidateMetric` | Distance metric. |
+| `encoding.type` | `FieldType::kString` | `false` | `ValidateEncodingType` | Encoding type. |
+| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Vector dimension. |
 
 ## core / search
 
 | Key | Type | Required | Validator | Description |
 | --- | ---- | -------- | --------- | ----------- |
-| `search.parallel_number` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Search parallel number.  |
-| `search.topk` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Search-time topK override.  |
+| `search.parallel_number` | `FieldType::kInt` | `false` | `ValidatePositiveInt` | Search parallel number. |
+| `search.thread_safe_filter` | `FieldType::kBool` | `false` | `nullptr` | Thread safe filter. |
+| `search.topk` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Search-time topK override. |
 
 ## core / searcher
 
 | Key | Type | Required | Validator | Description |
 | --- | ---- | -------- | --------- | ----------- |
-| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Index dimension.  |
-| `index.type` | `FieldType::kString` | `true` | `ValidateIndexType` | Index type.  |
-| `search.thread_safe_filter` | `FieldType::kBool` | `false` | `nullptr` | Thread safe filter.  |
+| `index.dimension` | `FieldType::kInt` | `true` | `ValidatePositiveInt` | Index dimension. |
+| `index.type` | `FieldType::kString` | `true` | `ValidateIndexType` | Index type. |
 
 ## diskann / builder
 
@@ -77,10 +77,10 @@ Note: `io.*` options apply to built-in file reader/writer implementations only.
 
 | Key | Type | Required | Validator | Description |
 | --- | ---- | -------- | --------- | ----------- |
-| `index.path` | `FieldType::kString` | `true` | `nullptr` | Index path (built-in IO only).  |
-| `io.reader.mmap.lock_mode` | `FieldType::kString` | `false` | `ValidateMmapLockMode` | mmap lock mode (none/mlock/populate, built-in IO only).  |
-| `io.reader.type` | `FieldType::kString` | `false` | `ValidateReaderType` | Reader type (local/mmap, built-in IO only).  |
-| `io.verify_crc` | `FieldType::kBool` | `false` | `nullptr` | Verify section CRC on read (built-in IO only).  |
+| `index.path` | `FieldType::kString` | `true` | `nullptr` | Index path (built-in IO only). |
+| `io.reader.mmap.lock_mode` | `FieldType::kString` | `false` | `ValidateMmapLockMode` | mmap lock mode (none/mlock/populate, built-in IO only). |
+| `io.reader.type` | `FieldType::kString` | `false` | `ValidateReaderType` | Reader type (local/mmap, built-in IO only). |
+| `io.verify_crc` | `FieldType::kBool` | `false` | `nullptr` | Verify section CRC on read (built-in IO only). |
 
 ## ivf / builder
 
