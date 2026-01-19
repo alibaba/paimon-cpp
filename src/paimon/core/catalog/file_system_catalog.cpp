@@ -49,7 +49,7 @@ Status FileSystemCatalog::CreateDatabase(const std::string& db_name,
         return Status::Invalid(
             fmt::format("Cannot create database for system database {}.", db_name));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool exist, DataBaseExists(db_name));
+    PAIMON_ASSIGN_OR_RAISE(bool exist, DatabaseExists(db_name));
     if (exist) {
         if (ignore_if_exists) {
             return Status::OK();
@@ -78,10 +78,10 @@ Status FileSystemCatalog::CreateDatabaseImpl(const std::string& db_name,
     return Status::OK();
 }
 
-Result<bool> FileSystemCatalog::DataBaseExists(const std::string& db_name) const {
+Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const {
     if (IsSystemDatabase(db_name)) {
         return Status::NotImplemented(
-            "do not support checking DataBaseExists for system database.");
+            "do not support checking DatabaseExists for system database.");
     }
     return fs_->Exists(NewDatabasePath(warehouse_, db_name));
 }
@@ -102,7 +102,7 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
             fmt::format("Cannot create table for system table {}, please use data table.",
                         identifier.ToString()));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool db_exist, DataBaseExists(identifier.GetDatabaseName()));
+    PAIMON_ASSIGN_OR_RAISE(bool db_exist, DatabaseExists(identifier.GetDatabaseName()));
     if (!db_exist) {
         return Status::Invalid(
             fmt::format("database {} is not exist", identifier.GetDatabaseName()));

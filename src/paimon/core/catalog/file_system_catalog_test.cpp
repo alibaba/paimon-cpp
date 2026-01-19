@@ -32,7 +32,7 @@
 
 namespace paimon::test {
 
-TEST(FileSystemCatalogTest, TestDataBaseExists) {
+TEST(FileSystemCatalogTest, TestDatabaseExists) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";
     options[Options::FILE_FORMAT] = "orc";
@@ -41,14 +41,14 @@ TEST(FileSystemCatalogTest, TestDataBaseExists) {
     ASSERT_TRUE(dir);
     FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
 
-    ASSERT_OK_AND_ASSIGN(auto exist, catalog.DataBaseExists("db1"));
+    ASSERT_OK_AND_ASSIGN(auto exist, catalog.DatabaseExists("db1"));
     ASSERT_FALSE(exist);
 
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/false));
     ASSERT_NOK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/false));
     ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
 
-    ASSERT_OK_AND_ASSIGN(exist, catalog.DataBaseExists("db1"));
+    ASSERT_OK_AND_ASSIGN(exist, catalog.DatabaseExists("db1"));
     ASSERT_TRUE(exist);
     ASSERT_OK_AND_ASSIGN(std::vector<std::string> db_names, catalog.ListDatabases());
     ASSERT_EQ(1, db_names.size());
