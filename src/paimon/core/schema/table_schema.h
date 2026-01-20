@@ -27,6 +27,7 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/jsonizable.h"
 #include "paimon/result.h"
+#include "paimon/schema/schema.h"
 #include "rapidjson/allocators.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
@@ -35,7 +36,7 @@ struct ArrowSchema;
 
 namespace paimon {
 /// Schema of a table, including schemaId and fieldId.
-class TableSchema : public Jsonizable<TableSchema> {
+class TableSchema : public Schema, public Jsonizable<TableSchema> {
  public:
     static constexpr int64_t FIRST_SCHEMA_ID = 0;
     static constexpr int32_t PAIMON_07_VERSION = 1;
@@ -57,28 +58,37 @@ class TableSchema : public Jsonizable<TableSchema> {
 
     bool operator==(const TableSchema& other) const;
 
-    std::vector<std::string> FieldNames() const;
-    int64_t Id() const {
+    Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const override;
+
+    Result<std::string> GetJsonSchema() const override {
+        return ToJsonString();
+    }
+
+    std::vector<std::string> FieldNames() const override;
+
+    Result<FieldType> GetFieldType(const std::string& field_name) const override;
+
+    int64_t Id() const override {
         return id_;
     }
-    const std::vector<std::string>& PrimaryKeys() const {
+    const std::vector<std::string>& PrimaryKeys() const override {
         return primary_keys_;
     }
-    const std::vector<std::string>& PartitionKeys() const {
+    const std::vector<std::string>& PartitionKeys() const override {
         return partition_keys_;
     }
 
-    const std::vector<std::string>& BucketKeys() const {
+    const std::vector<std::string>& BucketKeys() const override {
         return bucket_keys_;
     }
 
-    int32_t NumBuckets() const {
+    int32_t NumBuckets() const override {
         return num_bucket_;
     }
-    int32_t HighestFieldId() const {
+    int32_t HighestFieldId() const override {
         return highest_field_id_;
     }
-    const std::map<std::string, std::string>& Options() const {
+    const std::map<std::string, std::string>& Options() const override {
         return options_;
     }
     const std::vector<DataField>& Fields() const {
@@ -92,7 +102,7 @@ class TableSchema : public Jsonizable<TableSchema> {
     Result<std::vector<DataField>> GetFields(const std::vector<std::string>& field_names) const;
     Result<std::vector<std::string>> TrimmedPrimaryKeys() const;
 
-    std::optional<std::string> Comment() const {
+    std::optional<std::string> Comment() const override {
         return comment_;
     }
 
@@ -130,7 +140,7 @@ class TableSchema : public Jsonizable<TableSchema> {
     std::vector<std::string> partition_keys_;
     std::vector<std::string> primary_keys_;
     std::vector<std::string> bucket_keys_;
-    int32_t num_bucket_;
+    int32_t num_bucket_ = -1;
     std::map<std::string, std::string> options_;
     std::optional<std::string> comment_;
     int64_t time_millis_ = -1;

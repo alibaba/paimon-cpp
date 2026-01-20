@@ -48,7 +48,7 @@ TEST(IndexInDataFileDirPathFactoryTest, TestSimple) {
     ASSERT_EQ(factory.ToPath(meta), "/tmp/p0=1/p1=0/bucket-0/deletion_file");
 
     // test ToPath with file_name
-    ASSERT_EQ(factory.ToPath("bitmap_global.index"), "/tmp/p0=1/p1=0/bucket-0/bitmap_global.index");
+    ASSERT_EQ(factory.ToPath("bitmap.index"), "/tmp/p0=1/p1=0/bucket-0/bitmap.index");
     // test external path
     ASSERT_FALSE(factory.IsExternalPath());
 }

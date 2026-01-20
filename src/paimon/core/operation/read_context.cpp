@@ -36,6 +36,7 @@ ReadContext::ReadContext(const std::string& path, const std::string& branch,
                          const std::optional<std::string>& table_schema,
                          const std::shared_ptr<MemoryPool>& memory_pool,
                          const std::shared_ptr<Executor>& executor,
+                         const std::shared_ptr<FileSystem>& specific_file_system,
                          const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                          const std::map<std::string, std::string>& options)
     : path_(path),
@@ -51,6 +52,7 @@ ReadContext::ReadContext(const std::string& path, const std::string& branch,
       table_schema_(table_schema),
       memory_pool_(memory_pool),
       executor_(executor),
+      specific_file_system_(specific_file_system),
       fs_scheme_to_identifier_map_(fs_scheme_to_identifier_map),
       options_(options) {}
 
@@ -74,6 +76,7 @@ class ReadContextBuilder::Impl {
         table_schema_ = std::nullopt;
         memory_pool_ = GetDefaultPool();
         executor_.reset();
+        specific_file_system_.reset();
     }
 
  private:
@@ -92,6 +95,7 @@ class ReadContextBuilder::Impl {
     std::optional<std::string> table_schema_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
 };
 
 ReadContextBuilder::ReadContextBuilder(const std::string& path)
@@ -100,6 +104,9 @@ ReadContextBuilder::ReadContextBuilder(const std::string& path)
 }
 
 ReadContextBuilder::~ReadContextBuilder() = default;
+
+ReadContextBuilder::ReadContextBuilder(ReadContextBuilder&&) noexcept = default;
+ReadContextBuilder& ReadContextBuilder::operator=(ReadContextBuilder&&) noexcept = default;
 
 ReadContextBuilder& ReadContextBuilder::AddOption(const std::string& key,
                                                   const std::string& value) {
@@ -180,6 +187,12 @@ ReadContextBuilder& ReadContextBuilder::WithFileSystemSchemeToIdentifierMap(
     return *this;
 }
 
+ReadContextBuilder& ReadContextBuilder::WithFileSystem(
+    const std::shared_ptr<FileSystem>& file_system) {
+    impl_->specific_file_system_ = file_system;
+    return *this;
+}
+
 Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->path_, PathUtil::NormalizePath(impl_->path_));
     if (impl_->path_.empty()) {
@@ -207,7 +220,8 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         impl_->enable_predicate_filter_, impl_->enable_prefetch_, impl_->prefetch_batch_count_,
         impl_->prefetch_max_parallel_num_, impl_->enable_multi_thread_row_to_batch_,
         impl_->row_to_batch_thread_number_, impl_->table_schema_, impl_->memory_pool_,
-        impl_->executor_, impl_->fs_scheme_to_identifier_map_, impl_->options_);
+        impl_->executor_, impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_,
+        impl_->options_);
     impl_->Reset();
     return ctx;
 }

@@ -100,8 +100,9 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
         EXPECT_EQ(result_metas.size(), 1);
-        EXPECT_TRUE(StringUtils::StartsWith(result_metas[0].file_name, "bitmap-global-index-"));
-        EXPECT_TRUE(StringUtils::EndsWith(result_metas[0].file_name, ".index"));
+        auto file_name = PathUtil::GetName(result_metas[0].file_path);
+        EXPECT_TRUE(StringUtils::StartsWith(file_name, "bitmap-global-index-"));
+        EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
         EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_FALSE(result_metas[0].metadata);
         return result_metas[0];
@@ -218,7 +219,8 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
 
         // test visit vector search
         ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(std::make_shared<VectorSearch>(
-                                "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr)),
+                                "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr,
+                                std::nullopt, std::map<std::string, std::string>())),
                             "FileIndexReaderWrapper is not supposed to handle vector search query");
     };
 

@@ -17,12 +17,11 @@
 #pragma once
 #include <cstdint>
 #include <functional>
-#include <memory>
-
 #include <lumina/api/Options.h>
 #include <lumina/core/NoCopyable.h>
 #include <lumina/core/Result.h>
 #include <lumina/core/Status.h>
+#include <memory>
 
 namespace lumina::io {
 
@@ -33,9 +32,9 @@ core::Result<std::unique_ptr<FileReader>> CreateFileReader(const api::IOOptions&
 class FileReader : public core::NoCopyable
 {
 public:
-    virtual ~FileReader() = default;
-    virtual core::Status Read(char* data, uint64_t size) = 0;
-    virtual core::Status Close() = 0;
+    virtual ~FileReader() noexcept = default;
+    virtual core::Status Read(char* data, uint64_t size) noexcept = 0;
+    virtual core::Status Close() noexcept = 0;
 
     template <typename T>
     core::Status ReadObj(T& val) noexcept
@@ -47,7 +46,9 @@ public:
     virtual core::Status Seek(uint64_t position) noexcept = 0;
     // Ownership is transferred when a reader is passed to LuminaSearcher::Open.
     // Implementations must support Close being called before destruction.
-    // Thread-safe. When using async reads, do not call any sync APIs, and Position is not guaranteed after async calls.
+    // Thread-safe: Individual operations (Read, Close, etc.) are synchronized internally.
+    // However, callers should manage their own concurrency pattern (e.g., external locking) if needed.
+    // When using async reads, do not call any sync APIs, and Position is not guaranteed after async calls.
     virtual void ReadAsync(char* data, uint64_t size, uint64_t offset,
                            std::function<void(core::Status)> callBack) noexcept
     {

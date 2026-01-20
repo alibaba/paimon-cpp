@@ -102,7 +102,6 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<std::string> GetScanFallbackBranch() const;
     std::string GetBranch() const;
 
-    std::optional<std::string> GetDataFileExternalPaths() const;
     ExternalPathStrategy GetExternalPathStrategy() const;
     Result<std::vector<std::string>> CreateExternalPaths() const;
     bool EnableAdaptivePrefetchStrategy() const;
@@ -117,7 +116,13 @@ class PAIMON_EXPORT CoreOptions {
     bool LegacyPartitionNameEnabled() const;
 
     bool GlobalIndexEnabled() const;
+    Result<std::optional<std::string>> CreateGlobalIndexExternalPath() const;
+
     const std::map<std::string, std::string>& ToMap() const;
+
+ private:
+    std::optional<std::string> GetDataFileExternalPaths() const;
+    std::optional<std::string> GetGlobalIndexExternalPath() const;
 
  private:
     struct Impl;

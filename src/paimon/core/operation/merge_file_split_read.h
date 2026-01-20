@@ -117,20 +117,24 @@ class MergeFileSplitRead : public AbstractSplitRead {
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReader(
         std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers) const;
 
-    MergeFileSplitRead(
-        const std::shared_ptr<FileStorePathFactory>& path_factory,
-        const std::shared_ptr<InternalReadContext>& context,
-        std::unique_ptr<SchemaManager>&& schema_manager, int32_t key_arity,
-        const std::shared_ptr<arrow::Schema>& value_schema,
-        const std::shared_ptr<arrow::Schema>& read_schema, const std::vector<int32_t>& projection,
-        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
-        const std::shared_ptr<FieldsComparator>& key_comparator,
-        const std::shared_ptr<FieldsComparator>& interval_partition_comparator,
-        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
-        const std::shared_ptr<Predicate>& predicate_for_keys,
-        const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
+    MergeFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
+                       const std::shared_ptr<InternalReadContext>& context,
+                       std::unique_ptr<SchemaManager>&& schema_manager, int32_t key_arity,
+                       const std::shared_ptr<arrow::Schema>& value_schema,
+                       const std::shared_ptr<arrow::Schema>& read_schema,
+                       const std::vector<int32_t>& projection,
+                       const std::shared_ptr<FieldsComparator>& key_comparator,
+                       const std::shared_ptr<FieldsComparator>& interval_partition_comparator,
+                       const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+                       const std::shared_ptr<Predicate>& predicate_for_keys,
+                       const std::shared_ptr<MemoryPool>& memory_pool,
+                       const std::shared_ptr<Executor>& executor);
 
  private:
+    static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(
+        const CoreOptions& core_options, const std::shared_ptr<TableSchema>& table_schema,
+        const std::shared_ptr<arrow::Schema>& value_schema);
+
     static Status GenerateKeyValueReadSchema(
         const TableSchema& table_schema, const CoreOptions& options,
         const std::shared_ptr<arrow::Schema>& raw_read_schema,

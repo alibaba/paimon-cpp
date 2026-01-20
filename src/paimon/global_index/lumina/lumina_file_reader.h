@@ -52,7 +52,7 @@ class LuminaFileReader : public ::lumina::io::FileReader {
         return PaimonToLuminaStatus(in_->Seek(position, SeekOrigin::FS_SEEK_SET));
     }
 
-    ::lumina::core::Status Read(char* data, uint64_t size) override {
+    ::lumina::core::Status Read(char* data, uint64_t size) noexcept override {
         uint64_t total_read_size = 0;
         while (total_read_size < size) {
             uint64_t current_read_size = std::min(size - total_read_size, max_read_size_);
@@ -125,7 +125,7 @@ class LuminaFileReader : public ::lumina::io::FileReader {
         read_next();
     }
 
-    ::lumina::core::Status Close() override {
+    ::lumina::core::Status Close() noexcept override {
         return PaimonToLuminaStatus(in_->Close());
     }
 

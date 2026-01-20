@@ -104,13 +104,15 @@ Status GlobalIndexScanImpl::Scan() {
     }
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema_->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options_.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           options_.CreateGlobalIndexExternalPath());
     PAIMON_ASSIGN_OR_RAISE(
         path_factory_,
         FileStorePathFactory::Create(
             root_path_, arrow_schema, table_schema_->PartitionKeys(),
             options_.GetPartitionDefaultName(), options_.GetWriteFileFormat()->Identifier(),
             options_.DataFilePrefix(), options_.LegacyPartitionNameEnabled(), external_paths,
-            options_.IndexFileInDataFileDir(), pool_));
+            global_index_external_path, options_.IndexFileInDataFileDir(), pool_));
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<IndexManifestFile> index_manifest_file,
                            IndexManifestFile::Create(

@@ -105,8 +105,8 @@ struct PAIMON_EXPORT Options {
     /// Default value is local.
     static const char FILE_SYSTEM[];
 
-    /// "target-file-size" - Target size of a file. Default value is 128MB.
-    // TODO(yonghao.fyh): xinyu, change the default value to 128MB for primary key table.
+    /// "target-file-size" - Target size of a file. Default value is 256MB.
+    // TODO(xinyu.lxy): change the default value to 128MB for primary key table.
     static const char TARGET_FILE_SIZE[];
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
@@ -284,6 +284,9 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_AS_DESCRIPTOR[];
     /// "global-index.enabled" - Whether to enable global index for scan. Default value is "true".
     static const char GLOBAL_INDEX_ENABLED[];
+    /// "global-index.external-path" - Global index root directory, if not set, the global index
+    /// files will be stored under the index directory.
+    static const char GLOBAL_INDEX_EXTERNAL_PATH[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

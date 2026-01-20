@@ -25,14 +25,14 @@
 namespace paimon {
 /// Metadata describing a single file entry in a global index.
 struct PAIMON_EXPORT GlobalIndexIOMeta {
-    GlobalIndexIOMeta(const std::string& _file_name, int64_t _file_size, int64_t _range_end,
+    GlobalIndexIOMeta(const std::string& _file_path, int64_t _file_size, int64_t _range_end,
                       const std::shared_ptr<Bytes>& _metadata)
-        : file_name(_file_name),
+        : file_path(_file_path),
           file_size(_file_size),
           range_end(_range_end),
           metadata(_metadata) {}
 
-    std::string file_name;
+    std::string file_path;
     int64_t file_size;
     /// The inclusive range end covered by this file (i.e., the last local row id).
     int64_t range_end;

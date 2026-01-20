@@ -115,12 +115,15 @@ class ExpireSnapshotsTest : public testing::Test {
         EXPECT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(raw_options));
         EXPECT_OK_AND_ASSIGN(std::vector<std::string> external_paths,
                              options.CreateExternalPaths());
-        EXPECT_OK_AND_ASSIGN(auto path_factory,
-                             FileStorePathFactory::Create(
-                                 root, schema_, partition_keys_, options.GetPartitionDefaultName(),
-                                 options.GetWriteFileFormat()->Identifier(),
-                                 options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
-                                 external_paths, options.IndexFileInDataFileDir(), mem_pool_));
+        EXPECT_OK_AND_ASSIGN(std::optional<std::string> global_index_external_path,
+                             options.CreateGlobalIndexExternalPath());
+        EXPECT_OK_AND_ASSIGN(
+            auto path_factory,
+            FileStorePathFactory::Create(
+                root, schema_, partition_keys_, options.GetPartitionDefaultName(),
+                options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
+                options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
+                options.IndexFileInDataFileDir(), mem_pool_));
         return path_factory;
     }
 

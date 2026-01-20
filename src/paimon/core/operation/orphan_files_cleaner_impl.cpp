@@ -142,8 +142,9 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::ListPaimonFileDirs() const
     std::set<std::string> file_dirs = ListFileDirs(root_path_, partition_keys_.size());
     paimon_file_dirs.insert(file_dirs.begin(), file_dirs.end());
     // add external data paths
-    std::optional<std::string> data_file_external_paths = options_.GetDataFileExternalPaths();
-    if (data_file_external_paths) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> data_file_external_paths,
+                           options_.CreateExternalPaths());
+    if (!data_file_external_paths.empty()) {
         return Status::Invalid(
             "OrphanFilesCleaner do not support cleaning table with external paths");
     }

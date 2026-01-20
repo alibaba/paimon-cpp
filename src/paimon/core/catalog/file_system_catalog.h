@@ -48,7 +48,11 @@ class FileSystemCatalog : public Catalog {
                        bool ignore_if_exists) override;
 
     Result<std::vector<std::string>> ListDatabases() const override;
-    Result<std::vector<std::string>> ListTables(const std::string& database_names) const override;
+    Result<std::vector<std::string>> ListTables(const std::string& db_name) const override;
+    Result<bool> DatabaseExists(const std::string& db_name) const override;
+    Result<bool> TableExists(const Identifier& identifier) const override;
+    std::string GetDatabaseLocation(const std::string& db_name) const override;
+    std::string GetTableLocation(const Identifier& identifier) const override;
     Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const override;
 
  private:
@@ -57,7 +61,6 @@ class FileSystemCatalog : public Catalog {
     static bool IsSystemDatabase(const std::string& db_name);
     static bool IsSpecifiedSystemTable(const Identifier& identifier);
     static bool IsSystemTable(const Identifier& identifier);
-    Result<bool> DataBaseExists(const std::string& db_name) const;
     Result<std::optional<std::shared_ptr<TableSchema>>> TableSchemaExists(
         const Identifier& identifier) const;
 

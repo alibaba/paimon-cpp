@@ -167,13 +167,16 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(ctx->GetOptions()));
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           options.CreateGlobalIndexExternalPath());
+
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
             options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
             options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
-            options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
+            global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =
         std::make_shared<SnapshotManager>(options.GetFileSystem(), ctx->GetRootPath());
     PAIMON_ASSIGN_OR_RAISE(

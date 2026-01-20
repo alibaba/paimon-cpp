@@ -23,6 +23,7 @@
 #include <lumina/api/Extension.h>
 #include <lumina/api/LuminaSearcher.h>
 #include <lumina/api/Options.h>
+#include <lumina/api/OptionsNormalize.h>
 #include <lumina/core/Constants.h>
 namespace lumina::extensions {
 
@@ -46,6 +47,14 @@ public:
                                                                             const api::SearchOptions& options,
                                                                             std::pmr::memory_resource& sessionPool)
     {
+        auto status = api::ValidateSearchOptions(options);
+        if (!status.IsOk()) {
+            return core::Result<api::LuminaSearcher::SearchResult>::Err(status);
+        }
+        if (!_callee) {
+            return core::Result<api::LuminaSearcher::SearchResult>::Err(
+                core::Status {core::ErrorCode::FailedPrecondition, "extension not attached"});
+        }
         return _callee(q, std::move(filter), options, sessionPool);
     }
 

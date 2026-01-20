@@ -41,11 +41,6 @@ class IndexFileMeta {
                         /*global_index_meta=*/std::nullopt) {}
 
     IndexFileMeta(const std::string& index_type, const std::string& file_name, int64_t file_size,
-                  int64_t row_count, const std::optional<GlobalIndexMeta>& global_index_meta)
-        : IndexFileMeta(index_type, file_name, file_size, row_count, /*dv_ranges=*/std::nullopt,
-                        /*external_path=*/std::nullopt, global_index_meta) {}
-
-    IndexFileMeta(const std::string& index_type, const std::string& file_name, int64_t file_size,
                   int64_t row_count,
                   const std::optional<LinkedHashMap<std::string, DeletionVectorMeta>>& dv_ranges,
                   const std::optional<std::string>& external_path,

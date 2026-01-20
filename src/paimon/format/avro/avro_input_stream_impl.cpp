@@ -99,7 +99,7 @@ void AvroInputStreamImpl::seek(int64_t position) {
 }
 
 bool AvroInputStreamImpl::fill() {
-    if (static_cast<uint64_t>(total_read_len_) > total_length_) {
+    if (static_cast<uint64_t>(total_read_len_) >= total_length_) {
         // eof
         return false;
     }

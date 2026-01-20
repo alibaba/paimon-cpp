@@ -39,9 +39,23 @@ class PAIMON_EXPORT Schema {
     /// @return A result containing an ArrowSchema, or an error status if conversion fails.
     virtual Result<std::unique_ptr<::ArrowSchema>> GetArrowSchema() const = 0;
 
+    /// Get the JSON schema representation of this table schema.
+    ///
+    /// This method provides a JSON string that represents the complete schema information.
+    ///
+    /// @return A string containing the JSON schema, or an error status on failure.
+    virtual Result<std::string> GetJsonSchema() const = 0;
+
     /// Get the names of all fields in the table schema.
     /// @return A vector of field names.
     virtual std::vector<std::string> FieldNames() const = 0;
+
+    /// Get the type of specific field.
+    ///
+    /// @param field_name The name of the field to query.
+    /// @return Result containing the FieldType of the specified field, or an error status on
+    /// failure.
+    virtual Result<FieldType> GetFieldType(const std::string& field_name) const = 0;
 
     /// Get the unique identifier of this table schema.
     /// @return The schema id

@@ -235,7 +235,7 @@ inline std::string FormatString(const char* fmt, ...)
     do {                                                                                                               \
         const auto& _s = (status_expr);                                                                                \
         if (!_s.IsOk()) {                                                                                              \
-            LUMINA_LOG_WARN_F("Status=%d Msg=%s: " fmt, static_cast<int>(_s.Code()), _s.Message().c_str(),             \
+            LUMINA_LOG_WARN_F("Status=[%d] Msg=[%s]: " fmt, static_cast<int>(_s.Code()), _s.Message().c_str(),         \
                               ##__VA_ARGS__);                                                                          \
         }                                                                                                              \
     } while (0)

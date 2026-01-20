@@ -16,11 +16,10 @@
 
 #pragma once
 
-#include <string_view>
-
 #include <lumina/core/Constants.h>
 #include <lumina/mpl/EnumHelper.h>
 #include <lumina/mpl/TypeList.h>
+#include <string_view>
 
 namespace lumina::core {
 

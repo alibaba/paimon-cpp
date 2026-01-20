@@ -27,7 +27,6 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
-#include "paimon/core/schema/schema_impl.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/logging.h"
@@ -50,7 +49,7 @@ Status FileSystemCatalog::CreateDatabase(const std::string& db_name,
         return Status::Invalid(
             fmt::format("Cannot create database for system database {}.", db_name));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool exist, DataBaseExists(db_name));
+    PAIMON_ASSIGN_OR_RAISE(bool exist, DatabaseExists(db_name));
     if (exist) {
         if (ignore_if_exists) {
             return Status::OK();
@@ -79,12 +78,26 @@ Status FileSystemCatalog::CreateDatabaseImpl(const std::string& db_name,
     return Status::OK();
 }
 
-Result<bool> FileSystemCatalog::DataBaseExists(const std::string& db_name) const {
+Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const {
     if (IsSystemDatabase(db_name)) {
         return Status::NotImplemented(
-            "do not support checking DataBaseExists for system database.");
+            "do not support checking DatabaseExists for system database.");
     }
     return fs_->Exists(NewDatabasePath(warehouse_, db_name));
+}
+
+Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                           TableSchemaExists(identifier));
+    return latest_schema != std::nullopt;
+}
+
+std::string FileSystemCatalog::GetDatabaseLocation(const std::string& db_name) const {
+    return NewDatabasePath(warehouse_, db_name);
+}
+
+std::string FileSystemCatalog::GetTableLocation(const Identifier& identifier) const {
+    return NewDataTablePath(warehouse_, identifier);
 }
 
 Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema* c_schema,
@@ -97,7 +110,7 @@ Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema*
             fmt::format("Cannot create table for system table {}, please use data table.",
                         identifier.ToString()));
     }
-    PAIMON_ASSIGN_OR_RAISE(bool db_exist, DataBaseExists(identifier.GetDatabaseName()));
+    PAIMON_ASSIGN_OR_RAISE(bool db_exist, DatabaseExists(identifier.GetDatabaseName()));
     if (!db_exist) {
         return Status::Invalid(
             fmt::format("database {} is not exist", identifier.GetDatabaseName()));
@@ -216,7 +229,7 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     if (!latest_schema) {
         return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
     }
-    return std::make_shared<SchemaImpl>(*latest_schema);
+    return std::static_pointer_cast<Schema>(*latest_schema);
 }
 
 }  // namespace paimon

@@ -66,11 +66,15 @@ auto Via(Executor* executor, Func&& func) -> std::future<decltype(func())> {
 
     // Wrap the task and submit it to the executor.
     executor->Add([promise, func = std::forward<Func>(func)]() mutable {
-        if constexpr (std::is_void_v<ResultType>) {
-            func();
-            promise->set_value();
-        } else {
-            promise->set_value(func());
+        try {
+            if constexpr (std::is_void_v<ResultType>) {
+                func();
+                promise->set_value();
+            } else {
+                promise->set_value(func());
+            }
+        } catch (...) {
+            promise->set_exception(std::current_exception());
         }
     });
 

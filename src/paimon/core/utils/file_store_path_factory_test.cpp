@@ -70,7 +70,8 @@ class FileStorePathFactoryTest : public ::testing::Test {
                                  root, schema, {"f0", "f3"}, options.GetPartitionDefaultName(),
                                  options.GetWriteFileFormat()->Identifier(),
                                  options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
-                                 external_paths, options.IndexFileInDataFileDir(), mem_pool_));
+                                 external_paths, /*global_index_external_path=*/std::nullopt,
+                                 options.IndexFileInDataFileDir(), mem_pool_));
         return path_factory;
     }
 
@@ -151,6 +152,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateFactoryWithNoPartition) {
                              dir->Str(), schema, {}, "default", /*identifier=*/"mock_format",
                              /*data_file_prefix=*/"data-", /*legacy_partition_name_enabled=*/true,
                              /*external_paths=*/std::vector<std::string>(),
+                             /*global_index_external_path=*/std::nullopt,
                              /*index_file_in_data_file_dir=*/false, mem_pool_));
     ASSERT_OK_AND_ASSIGN(auto data_file_path_factory,
                          path_factory->CreateDataFilePathFactory(BinaryRow::EmptyRow(), 123));
@@ -208,6 +210,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateDataFilePathFactoryWithPartition) {
                                                 /*data_file_prefix=*/"data-",
                                                 /*legacy_partition_name_enabled=*/true,
                                                 /*external_paths=*/std::vector<std::string>(),
+                                                /*global_index_external_path=*/std::nullopt,
                                                 /*index_file_in_data_file_dir=*/false, mem_pool_));
     CheckPartition(20211224, 18, *path_factory, "/dt=20211224/hr=18");
     CheckPartition(20211224, std::nullopt, *path_factory, "/dt=20211224/hr=default");
@@ -235,6 +238,7 @@ TEST_F(FileStorePathFactoryTest, TestGetHierarchicalPartitionPath) {
                                      /*identifier=*/"mock_format", /*data_file_prefix=*/"data-",
                                      /*legacy_partition_name_enabled=*/true,
                                      /*external_paths=*/std::vector<std::string>(),
+                                     /*global_index_external_path=*/std::nullopt,
                                      /*index_file_in_data_file_dir=*/false, mem_pool_));
 
     {
@@ -272,6 +276,7 @@ TEST_F(FileStorePathFactoryTest, TestToBinaryRowAndToPartitionString) {
                                                 /*data_file_prefix=*/"data-",
                                                 /*legacy_partition_name_enabled=*/true,
                                                 /*external_paths=*/std::vector<std::string>(),
+                                                /*global_index_external_path=*/std::nullopt,
                                                 /*index_file_in_data_file_dir=*/false, mem_pool_));
     {
         std::map<std::string, std::string> partition_map;
@@ -369,6 +374,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
                                          /*data_file_prefix=*/"data-",
                                          /*legacy_partition_name_enabled=*/true,
                                          /*external_paths=*/{},
+                                         /*global_index_external_path=*/std::nullopt,
                                          /*index_file_in_data_file_dir=*/false, mem_pool_));
         auto partition = BinaryRowGenerator::GenerateRow({true, 10}, mem_pool_.get());
         ASSERT_OK_AND_ASSIGN(
@@ -394,6 +400,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
                                          /*data_file_prefix=*/"data-",
                                          /*legacy_partition_name_enabled=*/true,
                                          /*external_paths=*/{"/tmp/external-path"},
+                                         /*global_index_external_path=*/std::nullopt,
                                          /*index_file_in_data_file_dir=*/false, mem_pool_));
         auto partition = BinaryRowGenerator::GenerateRow({true, 10}, mem_pool_.get());
         ASSERT_OK_AND_ASSIGN(
@@ -419,6 +426,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
                                          /*data_file_prefix=*/"data-",
                                          /*legacy_partition_name_enabled=*/true,
                                          /*external_paths=*/{},
+                                         /*global_index_external_path=*/std::nullopt,
                                          /*index_file_in_data_file_dir=*/true, mem_pool_));
         auto partition = BinaryRowGenerator::GenerateRow({true, 10}, mem_pool_.get());
         ASSERT_OK_AND_ASSIGN(
@@ -442,6 +450,7 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
                                          /*data_file_prefix=*/"data-",
                                          /*legacy_partition_name_enabled=*/true,
                                          /*external_paths=*/{"/tmp/external-path"},
+                                         /*global_index_external_path=*/std::nullopt,
                                          /*index_file_in_data_file_dir=*/true, mem_pool_));
         auto partition = BinaryRowGenerator::GenerateRow({true, 10}, mem_pool_.get());
         ASSERT_OK_AND_ASSIGN(
@@ -450,6 +459,37 @@ TEST_F(FileStorePathFactoryTest, TestCreateIndexFileFactory) {
         ASSERT_EQ(index_path_factory->NewPath(),
                   "/tmp/external-path/f0=true/f1=10/bucket-2/index-" +
                       file_store_path_factory->uuid_ + "-0");
+    }
+    {
+        // test with global index external path
+        auto dir = UniqueTestDirectory::Create();
+        ASSERT_TRUE(dir);
+        arrow::FieldVector fields = {
+            arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int32()),
+            arrow::field("f2", arrow::int64()), arrow::field("f3", arrow::int16())};
+        auto schema = arrow::schema(fields);
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<FileStorePathFactory> file_store_path_factory,
+            FileStorePathFactory::Create(dir->Str(), schema, {"f0", "f1"}, "default",
+                                         /*identifier=*/"mock_format",
+                                         /*data_file_prefix=*/"data-",
+                                         /*legacy_partition_name_enabled=*/true,
+                                         /*external_paths=*/std::vector<std::string>(),
+                                         /*global_index_external_path=*/{"/tmp/external-path"},
+                                         /*index_file_in_data_file_dir=*/false, mem_pool_));
+        auto partition = BinaryRowGenerator::GenerateRow({true, 10}, mem_pool_.get());
+        ASSERT_OK_AND_ASSIGN(
+            auto index_path_factory,
+            file_store_path_factory->CreateIndexFileFactory(partition, /*bucket=*/2));
+        ASSERT_EQ(index_path_factory->ToPath("bitmap.index"), "/tmp/external-path/bitmap.index");
+        ASSERT_TRUE(index_path_factory->IsExternalPath());
+
+        auto index_file_meta = std::make_shared<IndexFileMeta>(
+            /*index_type=*/"bitmap", /*file_name=*/"bitmap.index", /*file_size=*/10,
+            /*row_count=*/5, /*dv_ranges=*/std::nullopt,
+            /*external_path=*/"/tmp/external-path/bitmap.index",
+            /*global_index_meta=*/std::nullopt);
+        ASSERT_EQ(index_path_factory->ToPath(index_file_meta), "/tmp/external-path/bitmap.index");
     }
 }
 }  // namespace paimon::test

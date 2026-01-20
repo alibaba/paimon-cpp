@@ -152,6 +152,7 @@ Result<std::unique_ptr<CommitMessage>> FileMetaUtils::GenerateCommitMessage(
                                      core_options.DataFilePrefix(),
                                      core_options.LegacyPartitionNameEnabled(),
                                      /*external_paths=*/std::vector<std::string>(),
+                                     /*global_index_external_path=*/std::nullopt,
                                      /*index_file_in_data_file_dir=*/false, memory_pool));
     PAIMON_ASSIGN_OR_RAISE(std::string bucket_path,
                            file_store_path_factory->BucketPath(partition_row, /*bucket=*/0));

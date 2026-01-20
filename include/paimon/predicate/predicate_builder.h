@@ -126,5 +126,12 @@ class PAIMON_EXPORT PredicateBuilder {
     /// @param predicates A vector of shared pointers to the predicates, which must not be empty.
     static Result<std::shared_ptr<Predicate>> Or(
         const std::vector<std::shared_ptr<Predicate>>& predicates);
+
+    /// Create a NOT predicate negating the result of another predicate.
+    ///
+    /// Creates a logical NOT operation that inverts the truth value of the input predicate.
+    ///
+    /// @param predicate A shared pointer to the predicate to be negated, which must not be nullptr.
+    static Result<std::shared_ptr<Predicate>> Not(const std::shared_ptr<Predicate>& predicate);
 };
 }  // namespace paimon

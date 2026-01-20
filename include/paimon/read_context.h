@@ -32,6 +32,7 @@ namespace paimon {
 class Executor;
 class MemoryPool;
 class Predicate;
+class FileSystem;
 
 /// `ReadContext` is some configuration for read operations.
 ///
@@ -48,6 +49,7 @@ class PAIMON_EXPORT ReadContext {
                 uint32_t row_to_batch_thread_number, const std::optional<std::string>& table_schema,
                 const std::shared_ptr<MemoryPool>& memory_pool,
                 const std::shared_ptr<Executor>& executor,
+                const std::shared_ptr<FileSystem>& specific_file_system,
                 const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                 const std::map<std::string, std::string>& options);
     ~ReadContext();
@@ -103,6 +105,9 @@ class PAIMON_EXPORT ReadContext {
     std::shared_ptr<Executor> GetExecutor() const {
         return executor_;
     }
+    std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
+        return specific_file_system_;
+    }
 
  private:
     std::string path_;
@@ -118,6 +123,7 @@ class PAIMON_EXPORT ReadContext {
     std::optional<std::string> table_schema_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
 };
@@ -130,6 +136,9 @@ class PAIMON_EXPORT ReadContextBuilder {
     explicit ReadContextBuilder(const std::string& path);
 
     ~ReadContextBuilder();
+
+    ReadContextBuilder(ReadContextBuilder&&) noexcept;
+    ReadContextBuilder& operator=(ReadContextBuilder&&) noexcept;
 
     /// Set the schema fields to read from the table.
     ///
@@ -258,14 +267,28 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @note Default branch is "main" if not specified.
     ReadContextBuilder& WithBranch(const std::string& branch);
 
-    /// Set the file system scheme to identifier mapping for custom file system configurations.
-    /// This allows using different file system implementations for different URI schemes.
+    /// Sets a mapping from URI schemes (e.g., "file", "oss") to registered file system
+    /// identifiers. This allows selecting different pre-registered file system implementations
+    /// based on the URI scheme at runtime.
     ///
-    /// @param fs_scheme_to_identifier_map Map from URI scheme to file system identifier.
+    /// @param fs_scheme_to_identifier_map Map from URI scheme (like "oss") to the corresponding
+    /// file system identifier.
     /// @return Reference to this builder for method chaining.
-    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`).
+    /// @note
+    ///   - This method is intended for environments where multiple file systems are pre-registered.
+    ///   - The specified identifiers must correspond to file systems that have been registered at
+    ///   compile time or initialization.
+    ///   - Cannot be used together with `WithFileSystem()`.
+    ///   - If not set, use default file system (configured in `Options::FILE_SYSTEM`).
+    /// Example:
+    ///   builder.WithFileSystemSchemeToIdentifierMap({{"oss", "jindo"}, {"file", "local"}});
+    ///
     ReadContextBuilder& WithFileSystemSchemeToIdentifierMap(
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map);
+
+    /// Sets a custom file system instance to be used for all file operations in this read context.
+    /// This bypasses the global file system registry and uses the provided implementation directly.
+    ReadContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
 
     /// Build and return a `ReadContext` instance with input validation.
     /// @return Result containing the constructed `ReadContext` or an error status.

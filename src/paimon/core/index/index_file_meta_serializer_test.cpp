@@ -93,18 +93,32 @@ TEST_F(IndexFileMetaSerializerTest, TestToFromRowWithNullDeletionVectorMetas) {
 
 TEST_F(IndexFileMetaSerializerTest, TestToFromRowWithGlobalIndex) {
     auto bytes = std::make_shared<Bytes>("apple", memory_pool_.get());
+    IndexFileMetaSerializer serializer(memory_pool_);
     GlobalIndexMeta global_index_meta(
         /*row_range_start=*/10, /*row_range_end=*/50,
         /*index_field_id=*/5, /*extra_field_ids=*/std::optional<std::vector<int32_t>>({0, 1}),
         bytes);
-    IndexFileMetaSerializer serializer(memory_pool_);
-    auto expected =
-        std::make_shared<IndexFileMeta>("bitmap", "bitmap_index_file_0", /*file_size=*/10,
-                                        /*row_count=*/41, global_index_meta);
-    ASSERT_OK_AND_ASSIGN(BinaryRow row, serializer.ToRow(expected));
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<IndexFileMeta> actual, serializer.FromRow(row));
-    ASSERT_EQ(expected->ToString(), actual->ToString());
-    ASSERT_EQ(*expected, *actual);
+    {
+        auto expected =
+            std::make_shared<IndexFileMeta>("bitmap", "bitmap_index_file_0", /*file_size=*/10,
+                                            /*row_count=*/41, /*dv_ranges=*/std::nullopt,
+                                            /*external_path=*/std::nullopt, global_index_meta);
+        ASSERT_OK_AND_ASSIGN(BinaryRow row, serializer.ToRow(expected));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<IndexFileMeta> actual, serializer.FromRow(row));
+        ASSERT_EQ(expected->ToString(), actual->ToString());
+        ASSERT_EQ(*expected, *actual);
+    }
+    {
+        // test external path
+        auto expected = std::make_shared<IndexFileMeta>(
+            "bitmap", "bitmap_index_file_0", /*file_size=*/10,
+            /*row_count=*/41, /*dv_ranges=*/std::nullopt,
+            /*external_path=*/"FILE:/tmp/external/bitmap_index_file_0", global_index_meta);
+        ASSERT_OK_AND_ASSIGN(BinaryRow row, serializer.ToRow(expected));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<IndexFileMeta> actual, serializer.FromRow(row));
+        ASSERT_EQ(expected->ToString(), actual->ToString());
+        ASSERT_EQ(*expected, *actual);
+    }
 }
 
 TEST_F(IndexFileMetaSerializerTest, TestSerialize) {

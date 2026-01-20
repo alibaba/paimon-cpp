@@ -30,6 +30,10 @@ class LuminaMemoryPool : public std::pmr::memory_resource {
     LuminaMemoryPool(const LuminaMemoryPool&) = delete;
     LuminaMemoryPool& operator=(const LuminaMemoryPool&) = delete;
 
+    std::shared_ptr<MemoryPool> GetPaimonPool() const {
+        return pool_;
+    }
+
  private:
     void* do_allocate(std::size_t bytes, std::size_t alignment) override {
         static const size_t min_alignment = alignof(std::max_align_t);

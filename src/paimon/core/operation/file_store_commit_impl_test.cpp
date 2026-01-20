@@ -817,7 +817,8 @@ TEST_F(FileStoreCommitImplTest, TestCleanUpTmpManifests) {
         std::vector<std::shared_ptr<IndexFileMeta>> new_index_files;
         new_index_files.push_back(std::make_shared<IndexFileMeta>(
             "bitmap", "bitmap-global-index-567ff117-68a0-436d-a270-dc8f6e403d06.index", 100, 5,
-            std::nullopt));
+            /*dv_ranges=*/std::nullopt,
+            /*external_path=*/std::nullopt, std::nullopt));
         DataIncrement data_increment({}, {}, {}, std::move(new_index_files), {});
         std::shared_ptr<CommitMessage> msgs = std::make_shared<CommitMessageImpl>(
             BinaryRowGenerator::GenerateRow({10}, GetDefaultPool().get()), /*bucket=*/0,

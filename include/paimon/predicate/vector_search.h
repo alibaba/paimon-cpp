@@ -16,7 +16,9 @@
 
 #pragma once
 #include <functional>
+#include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -35,16 +37,24 @@ struct PAIMON_EXPORT VectorSearch {
     /// @note Must be thread-safe.
     using PreFilter = std::function<bool(int64_t)>;
 
+    /// Enumeration of distance or similarity metrics for vector comparison.
+    enum class DistanceType { EUCLIDEAN = 1, INNER_PRODUCT = 2, COSINE = 3, UNKNOWN = 128 };
+
     VectorSearch(const std::string& _field_name, int32_t _limit, const std::vector<float>& _query,
-                 PreFilter _pre_filter, const std::shared_ptr<Predicate>& _predicate)
+                 PreFilter _pre_filter, const std::shared_ptr<Predicate>& _predicate,
+                 const std::optional<DistanceType>& _distance_type,
+                 const std::map<std::string, std::string>& _options)
         : field_name(_field_name),
           limit(_limit),
           query(_query),
           pre_filter(_pre_filter),
-          predicate(_predicate) {}
+          predicate(_predicate),
+          distance_type(_distance_type),
+          options(_options) {}
 
     std::shared_ptr<VectorSearch> ReplacePreFilter(PreFilter _pre_filter) const {
-        return std::make_shared<VectorSearch>(field_name, limit, query, _pre_filter, predicate);
+        return std::make_shared<VectorSearch>(field_name, limit, query, _pre_filter, predicate,
+                                              distance_type, options);
     }
 
     /// Search field name.
@@ -65,5 +75,13 @@ struct PAIMON_EXPORT VectorSearch {
     /// @note All fields referenced in the predicate must have been materialized
     ///       in the index during build to ensure availability.
     std::shared_ptr<Predicate> predicate;
+    /// The distance metric to use for this query, if explicitly specified.
+    /// If set, this value must match the distance type used by the index (e.g., EUCLIDEAN, COSINE).
+    /// A mismatch will result in an error during query execution.
+    /// If not set (std::nullopt), the query will use the distance type configured in the index.
+    std::optional<DistanceType> distance_type;
+    /// A key-value map of query-specific runtime options.
+    /// Such as the size of candidate list in approximate search or parallelism for this query.
+    std::map<std::string, std::string> options;
 };
 }  // namespace paimon

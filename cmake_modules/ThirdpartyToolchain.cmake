@@ -1008,6 +1008,11 @@ macro(build_glog)
                                      INTERFACE_COMPILE_DEFINITIONS "GLOG_USE_GLOG_EXPORT")
 
     add_dependencies(glog glog_ep)
+
+    find_library(LIBUNWIND_LIBRARY NAMES unwind)
+    if(LIBUNWIND_LIBRARY)
+        target_link_libraries(glog INTERFACE ${LIBUNWIND_LIBRARY})
+    endif()
 endmacro()
 
 build_fmt()

@@ -35,6 +35,7 @@ if(PAIMON_ENABLE_LUMINA)
     if(PAIMON_BUILD_TESTS)
         add_paimon_test(lumina_index_test
                         SOURCES
+                        lumina_utils_test.cpp
                         lumina_api_test.cpp
                         lumina_file_io_test.cpp
                         lumina_global_index_test.cpp

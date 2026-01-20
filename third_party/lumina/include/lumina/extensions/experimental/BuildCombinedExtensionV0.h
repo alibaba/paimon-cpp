@@ -25,7 +25,6 @@
 #include <lumina/api/LuminaSearcher.h>
 #include <lumina/api/Options.h>
 #include <lumina/core/Constants.h>
-
 #include <lumina/extensions/experimental/CkptManager.h>
 
 namespace lumina::extensions { inline namespace experimental {
@@ -74,15 +73,15 @@ class BuildCombinedExtensionV0<RoleSet<BuildExtension::checkpoint>> final : publ
 public:
     BuildCombinedExtensionV0();
     ~BuildCombinedExtensionV0();
-    static inline std::string_view ExtensionName() { return RoleSet<BuildExtension::checkpoint>::Name(); }
+    static std::string_view ExtensionName() { return RoleSet<BuildExtension::checkpoint>::Name(); }
 
     using FuncType = std::function<core::Status(std::unique_ptr<InnerCkptManager>)>;
 
-    inline std::string_view Name() const noexcept override { return ExtensionName(); }
+    std::string_view Name() const noexcept override { return ExtensionName(); }
 
     core::Status LoadCkptManager(std::unique_ptr<CkptManager> manager) noexcept;
 
-    inline void SetFunc(FuncType func) noexcept { _func = func; }
+    void SetFunc(FuncType func) noexcept { _func = func; }
 
 private:
     FuncType _func;

@@ -303,6 +303,7 @@ struct CoreOptions::Impl {
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
+    std::optional<std::string> global_index_external_path;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -470,6 +471,15 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse global-index.enabled
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::GLOBAL_INDEX_ENABLED, &impl->global_index_enabled));
+
+    // Parse global_index.external-path
+    std::string global_index_external_path;
+    PAIMON_RETURN_NOT_OK(
+        parser.ParseString(Options::GLOBAL_INDEX_EXTERNAL_PATH, &global_index_external_path));
+    if (!global_index_external_path.empty()) {
+        impl->global_index_external_path = global_index_external_path;
+    }
+
     return options;
 }
 
@@ -746,4 +756,23 @@ bool CoreOptions::LegacyPartitionNameEnabled() const {
 bool CoreOptions::GlobalIndexEnabled() const {
     return impl_->global_index_enabled;
 }
+
+std::optional<std::string> CoreOptions::GetGlobalIndexExternalPath() const {
+    return impl_->global_index_external_path;
+}
+
+Result<std::optional<std::string>> CoreOptions::CreateGlobalIndexExternalPath() const {
+    std::optional<std::string> global_index_external_path = GetGlobalIndexExternalPath();
+    if (global_index_external_path == std::nullopt) {
+        return global_index_external_path;
+    }
+    std::string tmp_path = global_index_external_path.value();
+    StringUtils::Trim(&tmp_path);
+    PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(tmp_path));
+    if (path.scheme.empty()) {
+        return Status::Invalid(fmt::format("scheme is null, path is {}", tmp_path));
+    }
+    return std::optional<std::string>(path.ToString());
+}
+
 }  // namespace paimon

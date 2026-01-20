@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <lumina/core/Result.h>
+#include <lumina/core/Status.h>
+#include <lumina/mpl/Concepts.h>
+#include <lumina/telemetry/Log.h>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -27,11 +31,6 @@
 #include <unordered_map>
 #include <utility>
 #include <variant>
-
-#include <lumina/core/Result.h>
-#include <lumina/core/Status.h>
-#include <lumina/mpl/Concepts.h>
-#include <lumina/telemetry/Log.h>
 
 namespace lumina::api {
 
@@ -47,8 +46,8 @@ template <OptionsType T>
 class Options
 {
 public:
-    Options() = default;
-    ~Options() = default;
+    Options() noexcept = default;
+    ~Options() noexcept = default;
 
     using Value = std::variant<int64_t, double, bool, std::string>;
     using Map = std::unordered_map<std::string, Value>;
@@ -82,14 +81,14 @@ public:
         auto v = Get<bool>(key);
         return v ? *v : def;
     }
-    std::string GetString(std::string_view key, std::string def) const
+    std::string GetString(std::string_view key, std::string def) const noexcept
     {
         auto v = Get<std::string>(key);
         return v ? *v : std::move(def);
     }
 
     template <class V>
-    bool HasValueOfType(std::string_view key) const
+    bool HasValueOfType(std::string_view key) const noexcept
     {
         auto it = _values.find(std::string(key));
         if (it == _values.end()) {
@@ -102,7 +101,7 @@ public:
     }
 
     template <OptionsType V>
-    Options& MergeFrom(const Options<V>& other)
+    Options& MergeFrom(const Options<V>& other) noexcept
     {
         for (const auto& kv : other._values) {
             _values.emplace(kv.first, kv.second);
@@ -111,7 +110,7 @@ public:
     }
 
     template <OptionsType V = T>
-    Options<V> Derive(std::string_view keyPrefix) const
+    Options<V> Derive(std::string_view keyPrefix) const noexcept
     {
         Options<V> options;
         for (const auto& kv : _values) {
@@ -126,7 +125,7 @@ public:
     const Map& Values() const noexcept { return _values; }
 
     // Debug string representation of all options
-    std::string DebugString() const
+    std::string DebugString() const noexcept
     {
         std::ostringstream oss;
         oss << "{";

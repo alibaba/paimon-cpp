@@ -203,13 +203,17 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     }
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
                            core_options.CreateExternalPaths());
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
+                           core_options.CreateGlobalIndexExternalPath());
+
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
             core_options.GetPartitionDefaultName(), core_options.GetWriteFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
-            external_paths, core_options.IndexFileInDataFileDir(), context->GetMemoryPool()));
+            external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+            context->GetMemoryPool()));
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan> file_store_scan,
                            TableScanImpl::CreateFileStoreScan(

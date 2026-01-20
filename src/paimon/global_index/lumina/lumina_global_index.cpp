@@ -27,12 +27,12 @@
 #include "lumina/core/Status.h"
 #include "lumina/core/Types.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/lumina/lumina_file_reader.h"
 #include "paimon/global_index/lumina/lumina_file_writer.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
-
 namespace paimon::lumina {
 #define CHECK_NOT_NULL(pointer, error_msg)     \
     do {                                       \
@@ -61,29 +61,54 @@ Result<std::shared_ptr<GlobalIndexWriter>> LuminaGlobalIndex::CreateWriter(
     }
 
     // check options
-    PAIMON_ASSIGN_OR_RAISE(
-        uint32_t dimension,
-        OptionsUtils::GetValueFromMap<uint32_t>(
-            options_, std::string(kOptionKeyPrefix) + std::string(::lumina::core::kDimension)));
-    auto lumina_options = FetchLuminaOptions(options_);
-    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(::lumina::api::BuilderOptions builder_options,
-                                       ::lumina::api::NormalizeBuilderOptions(lumina_options));
+    auto lumina_options = LuminaUtils::FetchLuminaOptions(options_);
+    PAIMON_ASSIGN_OR_RAISE(uint32_t dimension,
+                           OptionsUtils::GetValueFromMap<uint32_t>(
+                               lumina_options, std::string(::lumina::core::kDimension)));
+
+    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
+        ::lumina::api::BuilderOptions builder_options,
+        ::lumina::api::NormalizeBuilderOptions(std::unordered_map<std::string, std::string>(
+            lumina_options.begin(), lumina_options.end())));
     auto lumina_pool = std::make_shared<LuminaMemoryPool>(pool);
-    return std::make_shared<LuminaIndexWriter>(field_name, arrow_type, dimension, file_writer,
-                                               std::move(builder_options),
-                                               ::lumina::api::IOOptions(), lumina_pool);
+    return std::make_shared<LuminaIndexWriter>(
+        field_name, arrow_type, dimension, file_writer, std::move(builder_options),
+        ::lumina::api::IOOptions(), lumina_options, lumina_pool);
 }
 
-std::unordered_map<std::string, std::string> LuminaGlobalIndex::FetchLuminaOptions(
-    const std::map<std::string, std::string>& options) {
-    std::unordered_map<std::string, std::string> lumina_options;
-    int64_t prefix_len = strlen(kOptionKeyPrefix);
-    for (const auto& [key, value] : options) {
-        if (StringUtils::StartsWith(key, kOptionKeyPrefix)) {
-            lumina_options[key.substr(prefix_len)] = value;
-        }
+Result<LuminaIndexReader::IndexInfo> LuminaIndexReader::GetIndexInfo(
+    const GlobalIndexIOMeta& io_meta) {
+    auto meta_bytes = io_meta.metadata;
+    if (!meta_bytes) {
+        return Status::Invalid("Lumina global index must have meta data");
     }
-    return lumina_options;
+    std::map<std::string, std::string> lumina_write_options;
+    PAIMON_RETURN_NOT_OK(RapidJsonUtil::FromJsonString(
+        std::string(meta_bytes->data(), meta_bytes->size()), &lumina_write_options));
+
+    // check options
+    PAIMON_ASSIGN_OR_RAISE(uint32_t dimension,
+                           OptionsUtils::GetValueFromMap<uint32_t>(
+                               lumina_write_options, std::string(::lumina::core::kDimension)));
+    PAIMON_ASSIGN_OR_RAISE(std::string index_type,
+                           OptionsUtils::GetValueFromMap<std::string>(
+                               lumina_write_options, std::string(::lumina::core::kIndexType)));
+    PAIMON_ASSIGN_OR_RAISE(std::string distance_type_str,
+                           OptionsUtils::GetValueFromMap<std::string>(
+                               lumina_write_options, std::string(::lumina::core::kDistanceMetric)));
+    VectorSearch::DistanceType distance_type = VectorSearch::DistanceType::UNKNOWN;
+    if (distance_type_str == ::lumina::core::kDistanceL2) {
+        distance_type = VectorSearch::DistanceType::EUCLIDEAN;
+    } else if (distance_type_str == ::lumina::core::kDistanceCosine) {
+        distance_type = VectorSearch::DistanceType::COSINE;
+    } else if (distance_type_str == ::lumina::core::kDistanceInnerProduct) {
+        distance_type = VectorSearch::DistanceType::INNER_PRODUCT;
+    }
+    if (distance_type == VectorSearch::DistanceType::UNKNOWN) {
+        return Status::Invalid(
+            fmt::format("invalid distance type {} for lumina", distance_type_str));
+    }
+    return LuminaIndexReader::IndexInfo({dimension, index_type, distance_type});
 }
 
 Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
@@ -106,47 +131,53 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
         return Status::Invalid("field type must be list[float] when create LuminaIndexReader");
     }
 
-    // check options
-    PAIMON_ASSIGN_OR_RAISE(
-        uint32_t dimension,
-        OptionsUtils::GetValueFromMap<uint32_t>(
-            options_, std::string(kOptionKeyPrefix) + std::string(::lumina::core::kDimension)));
+    // get index info from meta
+    PAIMON_ASSIGN_OR_RAISE(LuminaIndexReader::IndexInfo index_info,
+                           LuminaIndexReader::GetIndexInfo(io_meta));
 
     auto lumina_pool = std::make_shared<LuminaMemoryPool>(pool);
     ::lumina::core::MemoryResourceConfig memory_resource(lumina_pool.get());
 
-    auto lumina_options = FetchLuminaOptions(options_);
-    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(::lumina::api::SearcherOptions searcher_options,
-                                       ::lumina::api::NormalizeSearcherOptions(lumina_options));
+    auto lumina_options = LuminaUtils::FetchLuminaOptions(options_);
+    lumina_options[std::string(::lumina::core::kDimension)] = std::to_string(index_info.dimension);
+    lumina_options[std::string(::lumina::core::kIndexType)] = index_info.index_type;
+
+    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
+        ::lumina::api::SearcherOptions searcher_options,
+        ::lumina::api::NormalizeSearcherOptions(std::unordered_map<std::string, std::string>(
+            lumina_options.begin(), lumina_options.end())));
+
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::LuminaSearcher lumina_searcher,
         ::lumina::api::LuminaSearcher::Create(searcher_options, memory_resource));
     auto searcher = std::make_unique<::lumina::api::LuminaSearcher>(std::move(lumina_searcher));
     // get input stream and open index
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in,
-                           file_manager->GetInputStream(io_meta.file_name));
+                           file_manager->GetInputStream(io_meta.file_path));
     auto lumina_file_reader = std::make_unique<LuminaFileReader>(in);
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(
         searcher->Open(std::move(lumina_file_reader), ::lumina::api::IOOptions()));
 
     // check meta
-    auto meta = searcher->GetMeta();
+    PAIMON_RETURN_NOT_OK(CheckLuminaIndexMeta(
+        searcher->GetMeta(), /*row_count=*/io_meta.range_end + 1, index_info.dimension));
+    auto searcher_with_filter = std::make_unique<::lumina::extensions::SearchWithFilterExtension>();
+    PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_filter));
+    return std::make_shared<LuminaIndexReader>(io_meta.range_end, index_info, std::move(searcher),
+                                               std::move(searcher_with_filter), lumina_pool);
+}
+
+Status LuminaGlobalIndex::CheckLuminaIndexMeta(const ::lumina::api::LuminaSearcher::IndexInfo& meta,
+                                               int64_t row_count, uint32_t dimension) {
     if (meta.dim != dimension) {
         return Status::Invalid(fmt::format(
-            "lumina index dimension {} mismatch dimension {} in options", meta.dim, dimension));
+            "lumina index dimension {} mismatch dimension {} in io meta", meta.dim, dimension));
     }
-    auto row_count = io_meta.range_end + 1;
     if (meta.count != static_cast<uint64_t>(row_count)) {
         return Status::Invalid(fmt::format(
             "lumina index row count {} mismatch row count {} in io meta", meta.count, row_count));
     }
-    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(::lumina::api::SearchOptions search_options,
-                                       ::lumina::api::NormalizeSearchOptions(lumina_options));
-    auto searcher_with_filter = std::make_unique<::lumina::extensions::SearchWithFilterExtension>();
-    PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_filter));
-    return std::make_shared<LuminaIndexReader>(io_meta.range_end, std::move(search_options),
-                                               std::move(searcher), std::move(searcher_with_filter),
-                                               lumina_pool);
+    return Status::OK();
 }
 
 class LuminaDataset : public ::lumina::api::Dataset {
@@ -155,16 +186,16 @@ class LuminaDataset : public ::lumina::api::Dataset {
                   const std::vector<std::shared_ptr<arrow::FloatArray>>& array_vec)
         : element_count_(element_count), dimension_(dimension), array_vec_(array_vec) {}
 
-    uint32_t Dim() const override {
+    uint32_t Dim() const noexcept override {
         return dimension_;
     }
-    uint64_t TotalSize() const override {
+    uint64_t TotalSize() const noexcept override {
         return element_count_;
     }
 
     ::lumina::core::Result<uint64_t> GetNextBatch(
         std::vector<float>& vector_buffer,
-        std::vector<::lumina::core::vector_id_t>& id_buffer) override {
+        std::vector<::lumina::core::vector_id_t>& id_buffer) noexcept override {
         if (cursor_ >= array_vec_.size()) {
             return ::lumina::core::Result<uint64_t>::Ok(0);
         }
@@ -198,6 +229,7 @@ LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
                                      const std::shared_ptr<GlobalIndexFileWriter>& file_manager,
                                      ::lumina::api::BuilderOptions&& builder_options,
                                      ::lumina::api::IOOptions&& io_options,
+                                     const std::map<std::string, std::string>& lumina_options,
                                      const std::shared_ptr<LuminaMemoryPool>& pool)
     : pool_(pool),
       field_name_(field_name),
@@ -205,7 +237,8 @@ LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
       dimension_(dimension),
       file_manager_(file_manager),
       builder_options_(std::move(builder_options)),
-      io_options_(std::move(io_options)) {}
+      io_options_(std::move(io_options)),
+      lumina_options_(lumina_options) {}
 
 Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
@@ -264,19 +297,23 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(builder.Dump(std::move(file_writer), io_options_));
     // prepare GlobalIndexIOMeta
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, file_manager_->GetFileSize(index_file_name));
-    GlobalIndexIOMeta meta(index_file_name, file_size, /*range_end=*/count_ - 1,
-                           /*metadata=*/nullptr);
+    std::string options_json;
+    PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(lumina_options_, &options_json));
+    auto meta_bytes = std::make_shared<Bytes>(options_json, pool_->GetPaimonPool().get());
+    GlobalIndexIOMeta meta(file_manager_->ToPath(index_file_name), file_size,
+                           /*range_end=*/count_ - 1,
+                           /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 
 LuminaIndexReader::LuminaIndexReader(
-    int64_t range_end, ::lumina::api::SearchOptions&& search_options,
+    int64_t range_end, const LuminaIndexReader::IndexInfo& index_info,
     std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
     std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
     const std::shared_ptr<LuminaMemoryPool>& pool)
     : range_end_(range_end),
+      index_info_(index_info),
       pool_(pool),
-      search_options_(std::move(search_options)),
       searcher_(std::move(searcher)),
       searcher_with_filter_(std::move(searcher_with_filter)) {}
 
@@ -285,8 +322,28 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
     if (vector_search->predicate) {
         return Status::NotImplemented("lumina index not support predicate in VisitVectorSearch");
     }
-    auto search_options = search_options_;
-    search_options.Set(::lumina::core::kTopK, vector_search->limit);
+    if (vector_search->distance_type &&
+        vector_search->distance_type.value() != index_info_.distance_type) {
+        return Status::Invalid("distance type for index and search not match");
+    }
+    if (vector_search->query.size() != index_info_.dimension) {
+        return Status::Invalid("dimension for index and search not match");
+    }
+
+    auto lumina_options = LuminaUtils::FetchLuminaOptions(vector_search->options);
+    auto index_type_iter = lumina_options.find(std::string(::lumina::core::kIndexType));
+    if (index_type_iter != lumina_options.end() &&
+        index_type_iter->second != index_info_.index_type) {
+        return Status::Invalid("index type for index and search not match");
+    }
+
+    lumina_options[std::string(::lumina::core::kTopK)] = std::to_string(vector_search->limit);
+    lumina_options[std::string(::lumina::core::kSearchThreadSafeFilter)] = "true";
+    PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
+        ::lumina::api::SearchOptions search_options,
+        ::lumina::api::NormalizeSearchOptions(std::string(::lumina::core::kIndexType),
+                                              std::unordered_map<std::string, std::string>(
+                                                  lumina_options.begin(), lumina_options.end())));
 
     ::lumina::api::Query lumina_query(vector_search->query.data(), vector_search->query.size());
     ::lumina::api::LuminaSearcher::SearchResult search_result;
@@ -294,7 +351,6 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(search_result,
                                            searcher_->Search(lumina_query, search_options, *pool_));
     } else {
-        search_options.Set(::lumina::core::kSearchThreadSafeFilter, true);
         auto lumina_filter = [filter = vector_search->pre_filter](
                                  ::lumina::core::vector_id_t id) -> bool { return filter(id); };
         PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(

@@ -34,7 +34,8 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     const std::map<std::string, std::string>& options) {
     PAIMON_ASSIGN_OR_RAISE(
         CoreOptions core_options,
-        CoreOptions::FromMap(options, context->GetFileSystemSchemeToIdentifierMap()));
+        CoreOptions::FromMap(options, context->GetFileSystemSchemeToIdentifierMap(),
+                             context->GetSpecificFileSystem()));
     // prepare read schema
     std::vector<DataField> read_data_fields;
     read_data_fields.reserve(context->GetReadSchema().size());

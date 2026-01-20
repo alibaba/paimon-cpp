@@ -72,7 +72,8 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
         }
         PAIMON_RETURN_NOT_OK(out->Flush());
         PAIMON_RETURN_NOT_OK(out->Close());
-        GlobalIndexIOMeta meta(file_name, /*file_size=*/bytes->size(), /*range_end=*/count_ - 1,
+        GlobalIndexIOMeta meta(file_manager_->ToPath(file_name), /*file_size=*/bytes->size(),
+                               /*range_end=*/count_ - 1,
                                /*metadata=*/nullptr);
         return std::vector<GlobalIndexIOMeta>({meta});
     }

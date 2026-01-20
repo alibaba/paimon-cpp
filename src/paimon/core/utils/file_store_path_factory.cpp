@@ -41,13 +41,15 @@ FileStorePathFactory::FileStorePathFactory(
     const std::string& root, const std::string& format_identifier,
     const std::string& data_file_prefix, const std::string& uuid,
     std::unique_ptr<BinaryRowPartitionComputer> partition_computer,
-    const std::vector<std::string>& external_paths, bool index_file_in_data_file_dir)
+    const std::vector<std::string>& external_paths,
+    const std::optional<std::string>& global_index_external_path, bool index_file_in_data_file_dir)
     : root_(root),
       format_identifier_(format_identifier),
       data_file_prefix_(data_file_prefix),
       uuid_(uuid),
       partition_computer_(std::move(partition_computer)),
       external_paths_(external_paths),
+      global_index_external_path_(global_index_external_path),
       index_file_in_data_file_dir_(index_file_in_data_file_dir) {}
 
 Result<std::unique_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
@@ -55,7 +57,8 @@ Result<std::unique_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
     const std::vector<std::string>& partition_keys, const std::string& default_part_value,
     const std::string& identifier, const std::string& data_file_prefix,
     bool legacy_partition_name_enabled, const std::vector<std::string>& external_paths,
-    bool index_file_in_data_file_dir, const std::shared_ptr<MemoryPool>& memory_pool) {
+    const std::optional<std::string>& global_index_external_path, bool index_file_in_data_file_dir,
+    const std::shared_ptr<MemoryPool>& memory_pool) {
     if (memory_pool == nullptr) {
         return Status::Invalid("memory pool is null pointer");
     }
@@ -69,7 +72,7 @@ Result<std::unique_ptr<FileStorePathFactory>> FileStorePathFactory::Create(
                                            legacy_partition_name_enabled, memory_pool));
     return std::unique_ptr<FileStorePathFactory>(new FileStorePathFactory(
         root, identifier, data_file_prefix, uuid, std::move(partition_computer), external_paths,
-        index_file_in_data_file_dir));
+        global_index_external_path, index_file_in_data_file_dir));
 }
 
 std::unique_ptr<PathFactory> FileStorePathFactory::CreateManifestFileFactory() {
@@ -155,13 +158,21 @@ std::unique_ptr<IndexPathFactory> FileStorePathFactory::CreateGlobalIndexFileFac
             return factory_->NewIndexFile();
         }
         std::string ToPath(const std::shared_ptr<IndexFileMeta>& file) const override {
+            const auto& external_path = file->ExternalPath();
+            if (external_path) {
+                return external_path.value();
+            }
             return PathUtil::JoinPath(factory_->IndexPath(factory_->RootPath()), file->FileName());
         }
         std::string ToPath(const std::string& file_name) const override {
+            const auto& external_path = factory_->GetGlobalIndexExternalPath();
+            if (external_path) {
+                return PathUtil::JoinPath(external_path.value(), file_name);
+            }
             return PathUtil::JoinPath(factory_->IndexPath(factory_->RootPath()), file_name);
         }
         bool IsExternalPath() const override {
-            return false;
+            return factory_->GetGlobalIndexExternalPath() != std::nullopt;
         }
 
      private:

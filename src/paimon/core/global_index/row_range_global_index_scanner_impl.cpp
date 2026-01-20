@@ -117,7 +117,7 @@ Result<std::shared_ptr<GlobalIndexReader>> RowRangeGlobalIndexScannerImpl::Creat
 }
 
 std::vector<GlobalIndexIOMeta> RowRangeGlobalIndexScannerImpl::ToGlobalIndexIOMetas(
-    const std::vector<IndexManifestEntry>& entries) {
+    const std::vector<IndexManifestEntry>& entries) const {
     std::vector<GlobalIndexIOMeta> index_io_metas;
     index_io_metas.reserve(entries.size());
     for (const auto& entry : entries) {
@@ -127,11 +127,11 @@ std::vector<GlobalIndexIOMeta> RowRangeGlobalIndexScannerImpl::ToGlobalIndexIOMe
 }
 
 GlobalIndexIOMeta RowRangeGlobalIndexScannerImpl::ToGlobalIndexIOMeta(
-    const IndexManifestEntry& entry) {
+    const IndexManifestEntry& entry) const {
     const auto& index_file = entry.index_file;
     assert(index_file->GetGlobalIndexMeta());
     const auto& global_index_meta = index_file->GetGlobalIndexMeta().value();
-    return {index_file->FileName(), index_file->FileSize(),
+    return {index_file_manager_->ToPath(index_file), index_file->FileSize(),
             /*range_end=*/global_index_meta.row_range_end - global_index_meta.row_range_start,
             global_index_meta.index_meta};
 }

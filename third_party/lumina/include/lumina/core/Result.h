@@ -17,12 +17,11 @@
 #pragma once
 #include <cassert>
 #include <lumina/core/Macro.h>
+#include <lumina/core/Status.h>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-#include <lumina/core/Status.h>
 
 namespace lumina::core {
 
@@ -34,7 +33,7 @@ public:
     static_assert(!std::is_same_v<T, Status>, "Result<Status> is not supported; use Status directly.");
     [[nodiscard]] bool IsOk() const noexcept { return std::holds_alternative<T>(_v); }
 
-    [[nodiscard]] const Status& GetStatus() const LUMINA_LIFETIME_BOUND
+    [[nodiscard]] const Status& GetStatus() const noexcept LUMINA_LIFETIME_BOUND
     {
         if (IsOk()) {
             static const auto status = Status::Ok();
@@ -75,12 +74,12 @@ public:
     [[nodiscard]] explicit operator bool() const noexcept { return IsOk(); }
 
     template <class... Args>
-    static Result Ok(Args&&... args)
+    static Result Ok(Args&&... args) noexcept
     {
         return Result(std::in_place_index<0>, std::forward<Args>(args)...);
     }
 
-    static Result Err(Status s)
+    static Result Err(Status s) noexcept
     {
         assert(!s.IsOk());
         return Result(std::in_place_index<1>, std::move(s));

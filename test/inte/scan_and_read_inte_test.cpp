@@ -1228,6 +1228,72 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanSnapshot3WithPredicate) {
     ASSERT_TRUE(result_plan->Splits().empty());
 }
 
+TEST_P(ScanAndReadInteTest, TestWithPKWithDvWithInvalidAggregateBatchScanSnapshot3) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
+
+    ScanContextBuilder scan_context_builder(table_path);
+    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3")
+        .AddOption(Options::MERGE_ENGINE, "aggregation")
+        .AddOption("fields.f3.aggregate-function", "rbm32");
+    scan_context_builder.SetBucketFilter(1).SetPartitionFilter({{{"f1", "10"}}});
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    read_context_builder.AddOption(Options::MERGE_ENGINE, "aggregation")
+        .AddOption("fields.f3.aggregate-function", "rbm32");
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+    ASSERT_EQ(result_plan->SnapshotId().value(), 3);
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    // check result
+    auto expected = std::make_shared<arrow::ChunkedArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
+[0, "Alex", 10, 0, 16.1],
+[0, "Bob", 10, 0, 12.1],
+[0, "David", 10, 0, 17.1],
+[0, "Emily", 10, 0, 13.1],
+[0, "Tony", 10, 0, 14.1]
+   ])")
+            .ValueOrDie());
+    ASSERT_TRUE(expected);
+    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+}
+
+TEST_P(ScanAndReadInteTest, TestWithPKWithMorWithInvalidAggregateBatchScanSnapshot3) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+
+    ScanContextBuilder scan_context_builder(table_path);
+    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "3")
+        .AddOption(Options::MERGE_ENGINE, "aggregation")
+        .AddOption("fields.f3.aggregate-function", "rbm32");
+    scan_context_builder.SetBucketFilter(1).SetPartitionFilter({{{"f1", "10"}}});
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    read_context_builder.AddOption(Options::MERGE_ENGINE, "aggregation")
+        .AddOption("fields.f3.aggregate-function", "rbm32");
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+    ASSERT_EQ(result_plan->SnapshotId().value(), 3);
+    ASSERT_NOK_WITH_MSG(
+        table_read->CreateReader(result_plan->Splits()),
+        "Use unsupported aggregation rbm32 or spell aggregate function incorrectly");
+}
+
 TEST_P(ScanAndReadInteTest, TestWithPKWithAggregateBatchScanSnapshot3WithPredicate) {
     auto [file_format, enable_prefetch] = GetParam();
     std::string table_path = paimon::test::GetDataDir() + file_format +

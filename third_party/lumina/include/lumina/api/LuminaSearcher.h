@@ -43,17 +43,17 @@ class LuminaSearcher final : public core::NoCopyable
 {
 public:
     class Impl;
-    LuminaSearcher(std::unique_ptr<Impl> impl);
+    LuminaSearcher(std::unique_ptr<Impl> impl) noexcept;
     // -- Semantics: movable, not copyable --
     LuminaSearcher(LuminaSearcher&&) noexcept;
-    ~LuminaSearcher();
+    ~LuminaSearcher() noexcept;
 
-    static core::Result<LuminaSearcher> Create(const SearcherOptions& options);
+    static core::Result<LuminaSearcher> Create(const SearcherOptions& options) noexcept;
     static core::Result<LuminaSearcher> Create(const SearcherOptions& options,
-                                               const core::MemoryResourceConfig& memoryConfig);
+                                               const core::MemoryResourceConfig& memoryConfig) noexcept;
 
-    core::Status Open(const IOOptions& ioOptions);
-    core::Status Open(std::unique_ptr<io::FileReader> reader, const IOOptions& ioOptions);
+    core::Status Open(const IOOptions& ioOptions) noexcept;
+    core::Status Open(std::unique_ptr<io::FileReader> reader, const IOOptions& ioOptions) noexcept;
 
     struct SearchHit {
         core::vector_id_t id {0};
@@ -68,12 +68,12 @@ public:
     // Index info: basic searcher metadata
     struct IndexInfo {
         uint64_t count {0}; // Total vectors
-        uint32_t dim {0};   // Vector dimension
+        core::dimension_t dim {0};   // Vector dimension
     };
 
-    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options);
+    core::Result<SearchResult> Search(const Query& q, const SearchOptions& options) noexcept;
     core::Result<SearchResult> Search(const Query& q, const SearchOptions& options,
-                                      std::pmr::memory_resource& sessionPool);
+                                      std::pmr::memory_resource& sessionPool) noexcept;
     // -- Metadata --
     IndexInfo GetMeta() const noexcept;
 
@@ -81,7 +81,7 @@ public:
     core::Status Close() noexcept;
 
     // -- Extension attach (per instance) --
-    core::Status Attach(ISearchExtension& ext);
+    core::Status Attach(ISearchExtension& ext) noexcept;
 
 private:
     // pImpl: internal orchestration and backend selection live in the implementation

@@ -60,10 +60,10 @@ class RowRangeGlobalIndexScannerImpl
         const DataField& field, const std::string& index_type,
         const std::vector<IndexManifestEntry>& entries) const;
 
-    static std::vector<GlobalIndexIOMeta> ToGlobalIndexIOMetas(
-        const std::vector<IndexManifestEntry>& entries);
+    std::vector<GlobalIndexIOMeta> ToGlobalIndexIOMetas(
+        const std::vector<IndexManifestEntry>& entries) const;
 
-    static GlobalIndexIOMeta ToGlobalIndexIOMeta(const IndexManifestEntry& entry);
+    GlobalIndexIOMeta ToGlobalIndexIOMeta(const IndexManifestEntry& entry) const;
 
  private:
     std::shared_ptr<MemoryPool> pool_;
