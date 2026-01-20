@@ -46,6 +46,7 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
+    common/global_config.cpp
     common/global_index/complete_index_score_batch_reader.cpp
     common/global_index/bitmap_vector_search_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
