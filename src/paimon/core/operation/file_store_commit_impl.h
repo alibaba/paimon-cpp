@@ -145,7 +145,11 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Status CollectChanges(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages,
                           std::vector<ManifestEntry>* append_table_files,
-                          std::vector<IndexManifestEntry>* append_table_index_files);
+                          std::vector<ManifestEntry>* append_changelog_files,
+                          std::vector<ManifestEntry>* compact_table_files,
+                          std::vector<ManifestEntry>* compact_changelog_files,
+                          std::vector<IndexManifestEntry>* append_table_index_files,
+                          std::vector<IndexManifestEntry>* compact_table_index_files);
 
     Result<int32_t> TryCommit(const std::vector<ManifestEntry>& delta_files,
                               const std::vector<IndexManifestEntry>& index_entries,
@@ -191,6 +195,12 @@ class FileStoreCommitImpl : public FileStoreCommit {
     Result<std::set<std::map<std::string, std::string>>> ChangedPartitions(
         const std::vector<ManifestEntry>& data_files,
         const std::vector<IndexManifestEntry>& index_files) const;
+
+    static int64_t RowCounts(const std::vector<ManifestEntry>& files);
+
+    static int64_t NumChangedPartitions(const std::vector<std::vector<ManifestEntry>>& changes);
+
+    static int64_t NumChangedBuckets(const std::vector<std::vector<ManifestEntry>>& changes);
 
  private:
     std::shared_ptr<MemoryPool> memory_pool_;

@@ -61,14 +61,6 @@ class ComplexPredicateTest : public ::testing::Test {
     void SetUp() override {
         pool_ = GetDefaultPool();
         batch_size_ = 10;
-
-        arrow::FieldVector fields = {
-            arrow::field("f1", arrow::int32()),
-            arrow::field("f2", arrow::int32()),
-            arrow::field("f3", arrow::date32()),
-            arrow::field("f4", arrow::timestamp(arrow::TimeUnit::NANO)),
-            arrow::field("f5", arrow::decimal128(23, 5)),
-        };
     }
     void TearDown() override {}
 

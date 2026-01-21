@@ -174,12 +174,15 @@ TEST_F(MergeTreeWriterTest, TestSimple) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Paul"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Paul"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Paul")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Paul")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 13.1}, {"Paul", 20, 1, 14.1},
-                                          {0, 0, 0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 13.1},
+                                          {std::string("Paul"), 20, 1, 14.1}, {0, 0, 0, 1},
+                                          pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/1,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -253,12 +256,15 @@ TEST_F(MergeTreeWriterTest, TestWriteMultiBatch) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Skye"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Skye"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Skye")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Skye")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 15.1}, {"Skye", 20, 1, 118.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 15.1},
+                                          {std::string("Skye"), 20, 1, 118.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/13, /*max_sequence_number=*/16, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -331,12 +337,15 @@ TEST_F(MergeTreeWriterTest, TestWriteWithDeleteRow) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Paul"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Paul"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Paul")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Paul")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 13.1}, {"Paul", 20, 1, 14.1},
-                                          {0, 0, 0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 13.1},
+                                          {std::string("Paul"), 20, 1, 14.1}, {0, 0, 0, 1},
+                                          pool_.get()),
         /*min_sequence_number=*/10, /*max_sequence_number=*/12, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -440,12 +449,15 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
     ASSERT_EQ(1, commit_increment2.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta1 = std::make_shared<DataFileMeta>(
         expected_data_file_name1, /*file_size=*/data_file_status1->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Paul"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Paul"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Paul")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Paul")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 13.1}, {"Paul", 20, 1, 15.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 13.1},
+                                          {std::string("Paul"), 20, 1, 15.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/10, /*max_sequence_number=*/13, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment1.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -456,12 +468,15 @@ TEST_F(MergeTreeWriterTest, TestMultiplePrepareCommit) {
 
     auto expected_data_file_meta2 = std::make_shared<DataFileMeta>(
         expected_data_file_name2, /*file_size=*/data_file_status2->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Skye"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Skye"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Skye")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Skye")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 113.1}, {"Skye", 20, 1, 118.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 113.1},
+                                          {std::string("Skye"), 20, 1, 118.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/14, /*max_sequence_number=*/16, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment2.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -625,12 +640,15 @@ TEST_F(MergeTreeWriterTest, TestAutoFlush) {
     ASSERT_EQ(2, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta1 = std::make_shared<DataFileMeta>(
         expected_data_file_name1, /*file_size=*/data_file_status1->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Paul"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Paul"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Paul")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Paul")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 13.1}, {"Paul", 20, 1, 15.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 13.1},
+                                          {std::string("Paul"), 20, 1, 15.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/10, /*max_sequence_number=*/13, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[0]->creation_time,
@@ -641,12 +659,15 @@ TEST_F(MergeTreeWriterTest, TestAutoFlush) {
 
     auto expected_data_file_meta2 = std::make_shared<DataFileMeta>(
         expected_data_file_name2, /*file_size=*/data_file_status2->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Skye"}, pool_.get()),
-        /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Skye"}, {0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Skye")}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Skye")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 113.1}, {"Skye", 20, 1, 118.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 113.1},
+                                          {std::string("Skye"), 20, 1, 118.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/14, /*max_sequence_number=*/16, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[1]->creation_time,
@@ -822,12 +843,15 @@ TEST_F(MergeTreeWriterTest, TestBulkData) {
         // check data file meta
         auto expected_data_file_meta = std::make_shared<DataFileMeta>(
             expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/3,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"Paul"}, pool_.get()),
-            /*key_stats=*/BinaryRowGenerator::GenerateStats({"Alice"}, {"Paul"}, {0}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Paul")}, pool_.get()),
+            /*key_stats=*/
+            BinaryRowGenerator::GenerateStats({std::string("Alice")}, {std::string("Paul")}, {0},
+                                              pool_.get()),
             /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 13.1}, {"Paul", 20, 1, 15.1},
-                                              {0, 0, 0, 0}, pool_.get()),
+            BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 13.1},
+                                              {std::string("Paul"), 20, 1, 15.1}, {0, 0, 0, 0},
+                                              pool_.get()),
             /*min_sequence_number=*/i * 4, /*max_sequence_number=*/i * 4 + 3, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/commit_increment.GetNewFilesIncrement().NewFiles()[i]->creation_time,

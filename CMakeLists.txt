@@ -309,6 +309,10 @@ if(PAIMON_BUILD_TESTS)
         message(FATAL_ERROR "PAIMON_ENABLE_ORC must be enabled if PAIMON_BUILD_TESTS is enable"
         )
     endif()
+    if(NOT PAIMON_ENABLE_AVRO)
+        message(FATAL_ERROR "PAIMON_ENABLE_AVRO must be enabled if PAIMON_BUILD_TESTS is enable"
+        )
+    endif()
     # Adding unit tests part of the "paimon" portion of the test suite
     add_custom_target(paimon-tests)
     build_gtest()

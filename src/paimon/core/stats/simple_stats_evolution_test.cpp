@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <string>
 #include <variant>
 
 #include "gtest/gtest.h"
@@ -146,13 +147,14 @@ class SimpleStatsEvolutionTest : public ::testing::Test {
     }
 
     SimpleStats CreateStats() const {
-        auto min = BinaryRowGenerator::GenerateRow({0, 1, "100", TimestampType(Timestamp(0, 0), 9),
-                                                    Decimal(5, 2, 12345), "nO", 10, NullType()},
-                                                   pool_.get());
-        auto max =
-            BinaryRowGenerator::GenerateRow({20, 21, "110", TimestampType(Timestamp(0, 1), 9),
-                                             Decimal(5, 2, 32345), "Yes", 20, NullType()},
-                                            pool_.get());
+        auto min = BinaryRowGenerator::GenerateRow(
+            {0, 1, std::string("100"), TimestampType(Timestamp(0, 0), 9), Decimal(5, 2, 12345),
+             std::string("nO"), 10, NullType()},
+            pool_.get());
+        auto max = BinaryRowGenerator::GenerateRow(
+            {20, 21, std::string("110"), TimestampType(Timestamp(0, 1), 9), Decimal(5, 2, 32345),
+             std::string("Yes"), 20, NullType()},
+            pool_.get());
         auto null_count = BinaryArray::FromLongArray({0, 0, 1, 0, 0, 0, 1, 4}, pool_.get());
         return SimpleStats(min, max, null_count);
     }
@@ -315,8 +317,8 @@ TEST_F(SimpleStatsEvolutionTest, TestSchemaChangeWithDenseFields) {
     SimpleStatsEvolution evo(old_schema_->Fields(), new_schema_->Fields(), /*need_mapping=*/true,
                              pool_);
 
-    auto min = BinaryRowGenerator::GenerateRow({"no", 10, 1234l}, pool_.get());
-    auto max = BinaryRowGenerator::GenerateRow({"yes", 20, 2234l}, pool_.get());
+    auto min = BinaryRowGenerator::GenerateRow({std::string("no"), 10, 1234l}, pool_.get());
+    auto max = BinaryRowGenerator::GenerateRow({std::string("yes"), 20, 2234l}, pool_.get());
     auto null_count = BinaryArray::FromLongArray({0, 1, 1}, pool_.get());
     SimpleStats old_stats(min, max, null_count);
 

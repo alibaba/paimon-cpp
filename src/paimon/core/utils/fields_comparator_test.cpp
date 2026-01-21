@@ -145,9 +145,11 @@ TEST_F(FieldsComparatorTest, TestSimple) {
     {
         auto bytes = std::make_shared<Bytes>("快乐每一天", pool.get());
         BinaryRow row1 = BinaryRowGenerator::GenerateRow(
-            {"abandon", bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)}, pool.get());
+            {std::string("abandon"), bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)},
+            pool.get());
         BinaryRow row2 = BinaryRowGenerator::GenerateRow(
-            {"abandon-", bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)}, pool.get());
+            {std::string("abandon-"), bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)},
+            pool.get());
         CheckResult(row1, row2,
                     {arrow::utf8(), arrow::binary(), arrow::timestamp(arrow::TimeUnit::NANO)});
     }
@@ -155,18 +157,22 @@ TEST_F(FieldsComparatorTest, TestSimple) {
         auto bytes1 = std::make_shared<Bytes>("快乐每一天", pool.get());
         auto bytes2 = std::make_shared<Bytes>("快乐每一天！", pool.get());
         BinaryRow row1 = BinaryRowGenerator::GenerateRow(
-            {"abandon", bytes1, TimestampType(Timestamp(1725875365442l, 120000), 9)}, pool.get());
+            {std::string("abandon"), bytes1, TimestampType(Timestamp(1725875365442l, 120000), 9)},
+            pool.get());
         BinaryRow row2 = BinaryRowGenerator::GenerateRow(
-            {"abandon", bytes2, TimestampType(Timestamp(1725875365442l, 120000), 9)}, pool.get());
+            {std::string("abandon"), bytes2, TimestampType(Timestamp(1725875365442l, 120000), 9)},
+            pool.get());
         CheckResult(row1, row2,
                     {arrow::utf8(), arrow::binary(), arrow::timestamp(arrow::TimeUnit::NANO)});
     }
     {
         auto bytes = std::make_shared<Bytes>("快乐每一天", pool.get());
         BinaryRow row1 = BinaryRowGenerator::GenerateRow(
-            {"abandon", bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)}, pool.get());
+            {std::string("abandon"), bytes, TimestampType(Timestamp(1725875365442l, 120000), 9)},
+            pool.get());
         BinaryRow row2 = BinaryRowGenerator::GenerateRow(
-            {"abandon", bytes, TimestampType(Timestamp(1725875365442l, 120100), 9)}, pool.get());
+            {std::string("abandon"), bytes, TimestampType(Timestamp(1725875365442l, 120100), 9)},
+            pool.get());
         CheckResult(row1, row2,
                     {arrow::utf8(), arrow::binary(), arrow::timestamp(arrow::TimeUnit::NANO)});
     }
