@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,10 +34,10 @@ PAIMON_EXPORT int GetArrowCpuThreadPoolCapacity();
 /// Set the capacity of the arrow's global thread pool
 /// This is a simple wrapper of arrow::SetCpuThreadPoolCapacity()
 ///
-/// Set the number of worker threads int the thread pool to which
+/// Set the number of worker threads in the thread pool to which
 /// Arrow dispatches various CPU-bound tasks.
 ///
-/// The current number is returned by GetCpuThreadPoolCapacity().
+/// The current number is returned by GetArrowCpuThreadPoolCapacity().
 /// Currently, this capacity will significantly affect the performance
 /// of parquet file batch read.
 PAIMON_EXPORT Status SetArrowCpuThreadPoolCapacity(int threads);

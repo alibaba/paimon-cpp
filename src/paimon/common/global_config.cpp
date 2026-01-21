@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #include "paimon/global_config.h"
 
 #include "arrow/util/thread_pool.h"
-#include "utils/arrow/status_utils.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 
 namespace paimon {
 PAIMON_EXPORT int GetArrowCpuThreadPoolCapacity() {

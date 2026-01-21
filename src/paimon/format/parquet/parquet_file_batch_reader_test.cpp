@@ -406,6 +406,7 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
         ASSERT_EQ(arrow_reader_properties.use_threads(), false);
     }
     {
+        int original_capacity = GetArrowCpuThreadPoolCapacity();
         ASSERT_OK(SetArrowCpuThreadPoolCapacity(6));
         std::map<std::string, std::string> options = {{PARQUET_READ_USE_THREADS, "true"}};
         int32_t batch_size = 1024;
@@ -414,6 +415,7 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
             ParquetFileBatchReader::CreateArrowReaderProperties(pool_, options, batch_size));
         ASSERT_EQ(arrow_reader_properties.use_threads(), true);
         ASSERT_EQ(GetArrowCpuThreadPoolCapacity(), 6);
+        ASSERT_OK(SetArrowCpuThreadPoolCapacity(original_capacity));
     }
 }
 
