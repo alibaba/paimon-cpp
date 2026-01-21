@@ -74,7 +74,7 @@ class SstFileReader {
      */
     std::shared_ptr<BlockReader> ReadBlock(std::shared_ptr<BlockHandle>&& handle, bool index);
 
-        /**
+    /**
      * @param handle The block handle.
      * @param index Whether read the block as an index.
      * @return The reader of the target block.
