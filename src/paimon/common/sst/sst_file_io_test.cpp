@@ -49,6 +49,15 @@ class SstFileIOTest : public ::testing::Test {
         fs_ = dir_->GetFileSystem();
         index_path_ = dir_->Str() + "/sst_file_test.data";
         pool_ = GetDefaultPool();
+        comparator_ = [](const std::shared_ptr<MemorySlice>& a,
+                         const std::shared_ptr<MemorySlice>& b) -> int32_t {
+            std::string_view va = a->ReadStringView();
+            std::string_view vb = b->ReadStringView();
+            if (va == vb) {
+                return 0;
+            }
+            return va > vb ? 1 : -1;
+        };
     }
 
     void TearDown() override {
@@ -60,6 +69,9 @@ class SstFileIOTest : public ::testing::Test {
     std::shared_ptr<paimon::FileSystem> fs_;
     std::string index_path_;
     std::shared_ptr<paimon::MemoryPool> pool_;
+
+    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
+        comparator_;
 };
 
 TEST_F(SstFileIOTest, TestSimple) {
@@ -96,27 +108,20 @@ TEST_F(SstFileIOTest, TestSimple) {
 
     auto bloom_filter_handle_ret = writer->WriteBloomFilter();
     ASSERT_OK(bloom_filter_handle_ret);
-    auto index_block_handle = writer->WriteIndexBlock();
-    ASSERT_OK(index_block_handle);
+    auto index_block_handle_ret = writer->WriteIndexBlock();
+    ASSERT_OK(index_block_handle_ret);
+    auto index_block_handle = index_block_handle_ret.value();
+    auto bloom_filter_handle = bloom_filter_handle_ret.value();
+    ASSERT_OK(writer->WriteFooter(index_block_handle, bloom_filter_handle));
 
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(index_path_));
     auto block_cache =
-        std::make_unique<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
-    auto comparator = [](const std::shared_ptr<MemorySlice>& a,
-                         const std::shared_ptr<MemorySlice>& b) -> int32_t {
-        std::string_view va = a->ReadStringView();
-        std::string_view vb = b->ReadStringView();
-        if (va == vb) {
-            return 0;
-        }
-        return va > vb ? 1 : -1;
-    };
+        std::make_shared<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
 
     // bloom filter test
-    auto bloom_filter_handle = bloom_filter_handle_ret.value();
     auto entries = bloom_filter_handle->ExpectedEntries();
     auto offset = bloom_filter_handle->Offset();
     auto size = bloom_filter_handle->Size();
@@ -132,8 +137,9 @@ TEST_F(SstFileIOTest, TestSimple) {
     }
 
     // test read
-    auto reader = std::make_shared<SstFileReader>(
-        pool_, std::move(block_cache), index_block_handle.value(), bloom_filter, comparator);
+    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    ASSERT_OK(reader_ret);
+    auto reader = reader_ret.value();
     // not exist key
     std::string k0 = "k0";
     ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
@@ -155,6 +161,39 @@ TEST_F(SstFileIOTest, TestSimple) {
     ASSERT_TRUE(v15);
     std::string string15{v15->data(), v15->size()};
     ASSERT_EQ("looooooooooong-值-15", string15);
+}
+
+TEST_F(SstFileIOTest, TestJavaCompatitable) {
+    // key range [1_000_000, 2_000_000], value is equal to the key
+    std::string file = GetDataDir() + "/sst/none/79d01717-8380-4504-86e1-387e6c058d0a";
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
+    auto block_cache =
+        std::make_shared<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
+
+    // test read
+    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    ASSERT_OK(reader_ret);
+    auto reader = reader_ret.value();
+    // not exist key
+    std::string k0 = "10000";
+    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
+
+    // k1314520
+    std::string k1314520 = "1314520";
+    auto v1314520 = reader->Lookup(std::make_shared<Bytes>(k1314520, pool_.get()));
+    ASSERT_TRUE(v1314520);
+    std::string string1314520{v1314520->data(), v1314520->size()};
+    ASSERT_EQ("1314520", string1314520);
+
+    // not exist key
+    std::string k13145200 = "13145200";
+    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k13145200, pool_.get())));
+
+    std::string k1314521 = "1314521";
+    auto v1314521 = reader->Lookup(std::make_shared<Bytes>(k1314521, pool_.get()));
+    ASSERT_TRUE(v1314521);
+    std::string string1314521{v1314521->data(), v1314521->size()};
+    ASSERT_EQ("1314521", string1314521);
 }
 
 }  // namespace paimon::test

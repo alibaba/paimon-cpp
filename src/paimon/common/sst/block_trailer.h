@@ -30,9 +30,6 @@ class BlockTrailer {
  public:
     static std::unique_ptr<BlockTrailer> ReadBlockTrailer(std::shared_ptr<MemorySliceInput>& input);
 
-    static void WriteBlockTrailer(std::unique_ptr<BlockTrailer>& trailer,
-                                  std::unique_ptr<MemorySliceInput>& input);
-
  public:
     BlockTrailer(int8_t compression_type, int32_t crc32c)
         : crc32c_(crc32c), compression_type_(compression_type) {}

@@ -19,17 +19,17 @@
 #include "paimon/common/memory/memory_slice_input.h"
 
 namespace paimon {
-std::shared_ptr<MemorySlice> MemorySlice::Wrap(std::shared_ptr<Bytes>& bytes) {
+std::shared_ptr<MemorySlice> MemorySlice::Wrap(const std::shared_ptr<Bytes>& bytes) {
     auto segment = MemorySegment::Wrap(bytes);
     auto ptr = std::make_shared<MemorySegment>(segment);
     return std::make_shared<MemorySlice>(ptr, 0, ptr->Size());
 }
 
-std::shared_ptr<MemorySlice> MemorySlice::Wrap(std::shared_ptr<MemorySegment>& segment) {
+std::shared_ptr<MemorySlice> MemorySlice::Wrap(const std::shared_ptr<MemorySegment>& segment) {
     return std::make_shared<MemorySlice>(segment, 0, segment->Size());
 }
 
-MemorySlice::MemorySlice(std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length)
+MemorySlice::MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length)
     : segment_(segment), offset_(offset), length_(length) {}
 
 std::shared_ptr<MemorySlice> MemorySlice::Slice(int32_t index, int32_t length) {

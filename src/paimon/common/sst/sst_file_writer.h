@@ -18,7 +18,10 @@
 
 #include <memory>
 
+#include "arrow/util/crc32.h"
+#include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
+#include "paimon/common/sst/block_trailer.h"
 #include "paimon/common/sst/block_writer.h"
 #include "paimon/common/sst/bloom_filter_handle.h"
 #include "paimon/common/utils/bit_set.h"
@@ -59,12 +62,15 @@ class SstFileWriter {
 
     Result<std::shared_ptr<BloomFilterHandle>> WriteBloomFilter();
 
+    Status WriteFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
+                       const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle);
+
  private:
     Result<std::shared_ptr<BlockHandle>> FlushBlockWriter(std::unique_ptr<BlockWriter>& writer);
 
     Status WriteBytes(const char* data, size_t size);
 
-    // For testing
+    // api for testing
     BlockWriter* IndexWriter() const {
         return index_block_writer_.get();
     }

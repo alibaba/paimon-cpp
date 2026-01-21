@@ -15,10 +15,6 @@
  */
 
 #include "paimon/common/sst/sst_file_writer.h"
-
-#include "arrow/util/crc32.h"
-#include "paimon/common/sst/block_trailer.h"
-
 namespace paimon {
 class MemoryPool;
 
@@ -43,12 +39,11 @@ Status SstFileWriter::Flush() {
     if (data_block_writer_->Size() == 0) {
         return Status::OK();
     }
-    auto handle = FlushBlockWriter(data_block_writer_);
-    if (!handle.ok()) {
-        return handle.status();
-    }
 
-    auto slice = handle.value()->WriteBlockHandle(pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockHandle> handle,
+                           FlushBlockWriter(data_block_writer_));
+
+    auto slice = handle->WriteBlockHandle(pool_.get());
     auto value = slice->CopyBytes(pool_.get());
     index_block_writer_->Write(last_key_, value);
     return Status::OK();
@@ -73,14 +68,19 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     return handle;
 }
 
+Status SstFileWriter::WriteFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
+                                  const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle) {
+    auto footer = std::make_shared<BlockFooter>(index_block_handle, bloom_filter_handle);
+    auto slice = footer->WriteBlockFooter(pool_.get());
+    auto data = slice->ReadStringView();
+    PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
+    return Status::OK();
+}
+
 Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     std::unique_ptr<BlockWriter>& writer) {
-    auto ret = writer->Finish();
-    if (!ret.ok()) {
-        return ret.status();
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::MemorySlice> block_data, writer->Finish());
 
-    auto& block_data = ret.value();
     auto size = block_data->Length();
     // todo attempt to compress the block
     auto view = block_data->ReadStringView();
@@ -101,10 +101,7 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
 }
 
 Status SstFileWriter::WriteBytes(const char* data, size_t size) {
-    auto ret = out_->Write(data, size);
-    if (!ret.ok()) {
-        return ret.status();
-    }
+    PAIMON_RETURN_NOT_OK(out_->Write(data, size));
     return Status::OK();
 }
 }  // namespace paimon

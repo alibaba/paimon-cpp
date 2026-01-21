@@ -36,8 +36,10 @@ int8_t BlockTrailer::CompressionType() const {
 }
 
 std::string BlockTrailer::ToString() const {
+    std::stringstream sstream;
+    sstream << std::hex << crc32c_;
     return "BlockTrailer{compression_type=" + std::to_string(compression_type_) + ", crc32c_=0x" +
-           std::to_string(crc32c_) + "}";
+           sstream.str() + "}";
 }
 
 std::shared_ptr<MemorySlice> BlockTrailer::WriteBlockTrailer(MemoryPool* pool) {

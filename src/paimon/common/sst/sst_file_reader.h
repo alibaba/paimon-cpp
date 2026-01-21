@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "paimon/common/sst/block_cache.h"
+#include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
 #include "paimon/common/sst/block_iterator.h"
 #include "paimon/common/sst/block_reader.h"
@@ -38,9 +39,17 @@ class SstFileIterator;
 /// queries. Note that this class is NOT thread-safe.
 class SstFileReader {
  public:
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool, std::shared_ptr<BlockCache> block_cache,
-                  std::shared_ptr<BlockHandle> index_block_handle,
-                  std::shared_ptr<BloomFilter> bloom_filter,
+    static Result<std::shared_ptr<SstFileReader>> Create(
+        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
+        int64_t file_len,
+        std::function<int32_t(const std::shared_ptr<MemorySlice>&,
+                              const std::shared_ptr<MemorySlice>&)>
+            comparator);
+
+    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
+                  const std::shared_ptr<BlockCache>& block_cache,
+                  const std::shared_ptr<BlockHandle>& index_block_handle,
+                  const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
                       comparator);
@@ -64,6 +73,13 @@ class SstFileReader {
      * @return The reader of the target block.
      */
     std::shared_ptr<BlockReader> ReadBlock(std::shared_ptr<BlockHandle>&& handle, bool index);
+
+        /**
+     * @param handle The block handle.
+     * @param index Whether read the block as an index.
+     * @return The reader of the target block.
+     */
+    std::shared_ptr<BlockReader> ReadBlock(const std::shared_ptr<BlockHandle>& handle, bool index);
 
  private:
     std::shared_ptr<MemoryPool> pool_;

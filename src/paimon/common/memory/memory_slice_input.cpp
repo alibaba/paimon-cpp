@@ -20,7 +20,7 @@
 
 namespace paimon {
 
-MemorySliceInput::MemorySliceInput(std::shared_ptr<MemorySlice>& slice)
+MemorySliceInput::MemorySliceInput(const std::shared_ptr<MemorySlice>& slice)
     : slice_(slice), position_(0) {}
 
 int32_t MemorySliceInput::Position() const {

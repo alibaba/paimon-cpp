@@ -97,6 +97,7 @@ set(PAIMON_COMMON_SRCS
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
     common/sst/block_handle.cpp
+    common/sst/block_footer.cpp
     common/sst/block_iterator.cpp
     common/sst/block_trailer.cpp
     common/sst/block_reader.cpp

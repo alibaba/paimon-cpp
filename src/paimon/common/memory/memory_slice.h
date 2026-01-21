@@ -33,13 +33,13 @@ class MemorySliceInput;
 ///  Slice of a MemorySegment.
 class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlice> {
  public:
-    static std::shared_ptr<MemorySlice> Wrap(std::shared_ptr<Bytes>& bytes);
-    static std::shared_ptr<MemorySlice> Wrap(std::shared_ptr<MemorySegment>& segment);
+    static std::shared_ptr<MemorySlice> Wrap(const std::shared_ptr<Bytes>& bytes);
+    static std::shared_ptr<MemorySlice> Wrap(const std::shared_ptr<MemorySegment>& segment);
 
  public:
     MemorySlice() = default;
 
-    MemorySlice(std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length);
+    MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length);
     std::shared_ptr<MemorySlice> Slice(int32_t index, int32_t length);
 
     int32_t Length() const;

@@ -19,13 +19,39 @@
 
 namespace paimon {
 
+Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
+    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
+    int64_t file_len,
+    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
+        comparator) {
+    auto segment = block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,
+                                         BlockFooter::ENCODED_LENGTH, true);
+    if (!segment.get()) {
+        return Status::Invalid("Read footer error");
+    }
+    auto slice = MemorySlice::Wrap(segment);
+    auto input = slice->ToInput();
+    auto footer = BlockFooter::ReadBlockFooter(input);
+    if (!footer.get()) {
+        return Status::Invalid("Read footer error");
+    }
+    return std::make_shared<SstFileReader>(pool, block_cache, footer->GetIndexBlockHandle(),
+                                           footer->GetBloomFilterHandle(), comparator);
+}
+
 SstFileReader::SstFileReader(
-    const std::shared_ptr<MemoryPool>& pool, std::shared_ptr<BlockCache> block_cache,
-    std::shared_ptr<BlockHandle> index_block_handle, std::shared_ptr<BloomFilter> bloom_filter,
+    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
+    const std::shared_ptr<BlockHandle>& index_block_handle,
+    const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator)
-    : pool_(pool), block_cache_(block_cache), bloom_filter_(bloom_filter), comparator_(comparator) {
-    index_block_reader_ = ReadBlock(std::move(index_block_handle), true);
+    : pool_(pool), block_cache_(block_cache), comparator_(comparator) {
+    bloom_filter_ = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
+                                                  bloom_filter_handle->Size());
+    bloom_filter_->SetMemorySegment(
+        block_cache->GetBlock(bloom_filter_handle->Offset(), bloom_filter_handle->Size(), true));
+
+    index_block_reader_ = ReadBlock(index_block_handle, true);
 }
 
 std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {
@@ -70,6 +96,12 @@ std::unique_ptr<BlockIterator> SstFileReader::GetNextBlock(
 }
 
 std::shared_ptr<BlockReader> SstFileReader::ReadBlock(std::shared_ptr<BlockHandle>&& handle,
+                                                      bool index) {
+    auto block_handle = handle;
+    return ReadBlock(block_handle, index);
+}
+
+std::shared_ptr<BlockReader> SstFileReader::ReadBlock(const std::shared_ptr<BlockHandle>& handle,
                                                       bool index) {
     // read block trailer
     auto trailer_data = block_cache_->GetBlock(handle->Offset() + handle->Size(),
