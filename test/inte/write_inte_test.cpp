@@ -307,10 +307,10 @@ TEST_P(WriteInteTest, TestAppendTableBatchWrite) {
         BinaryRowGenerator::GenerateStats(
             {false, static_cast<int8_t>(-2), static_cast<int16_t>(-32768),
              static_cast<int32_t>(-2147483648), NullType(), static_cast<int64_t>(-4294967298),
-             static_cast<float>(0.5), 1.141592659, "20250326", NullType()},
+             static_cast<float>(0.5), 1.141592659, std::string("20250326"), NullType()},
             {true, static_cast<int8_t>(1), static_cast<int16_t>(32767),
              static_cast<int32_t>(2147483647), NullType(), static_cast<int64_t>(4294967296),
-             static_cast<float>(2.0), 3.141592657, "20250327", NullType()},
+             static_cast<float>(2.0), 3.141592657, std::string("20250327"), NullType()},
             std::vector<int64_t>({1, 0, 0, 1, 4, 1, 0, 0, 1, 0}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -411,10 +411,10 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
         BinaryRowGenerator::GenerateStats(
             {false, static_cast<int8_t>(-2), static_cast<int16_t>(-32768),
              static_cast<int32_t>(-2147483648), NullType(), static_cast<int64_t>(-4294967298),
-             static_cast<float>(0.5), 1.141592659, "20250326", NullType()},
+             static_cast<float>(0.5), 1.141592659, std::string("20250326"), NullType()},
             {true, static_cast<int8_t>(1), static_cast<int16_t>(32767),
              static_cast<int32_t>(2147483647), NullType(), static_cast<int64_t>(4294967296),
-             static_cast<float>(2.0), 3.141592657, "20250327", NullType()},
+             static_cast<float>(2.0), 3.141592657, std::string("20250327"), NullType()},
             std::vector<int64_t>({1, 0, 0, 1, 4, 1, 0, 0, 1, 0}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -479,12 +479,12 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithOneBucket) {
         BinaryRowGenerator::GenerateStats(
             {false, std::numeric_limits<int8_t>::min(), std::numeric_limits<int16_t>::min(),
              std::numeric_limits<int32_t>::min(), NullType(), std::numeric_limits<int64_t>::min(),
-             std::numeric_limits<float>::min(), -std::numeric_limits<double>::infinity(), "",
-             NullType()},
+             std::numeric_limits<float>::min(), -std::numeric_limits<double>::infinity(),
+             std::string(""), NullType()},
             {true, std::numeric_limits<int8_t>::max(), std::numeric_limits<int16_t>::max(),
              std::numeric_limits<int32_t>::max(), NullType(), std::numeric_limits<int64_t>::max(),
-             std::numeric_limits<float>::max(), std::numeric_limits<double>::max(), "∞",
-             NullType()},
+             std::numeric_limits<float>::max(), std::numeric_limits<double>::max(),
+             std::string("∞"), NullType()},
             std::vector<int64_t>({0, 0, 0, 0, 3, 0, 0, 0, 0, 0}), pool_.get()),
         /*min_sequence_number=*/4, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -552,14 +552,22 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
 
     DataGenerator gen(table_schema.value(), pool_);
     std::vector<BinaryRow> datas_1;
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({0, 19, "20250326", 9.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({0, 19, "20250326", 10.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({1, 19, "20250326", 11.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({1, 19, "20250326", 12.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({1, 19, "20250326", 13.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({0, 22, "20250326", 14.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({0, 22, "20250326", 15.1}, pool_.get()));
-    datas_1.push_back(BinaryRowGenerator::GenerateRow({0, 22, "20250326", 16.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({0, 19, std::string("20250326"), 9.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({0, 19, std::string("20250326"), 10.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({1, 19, std::string("20250326"), 11.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({1, 19, std::string("20250326"), 12.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({1, 19, std::string("20250326"), 13.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({0, 22, std::string("20250326"), 14.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({0, 22, std::string("20250326"), 15.1}, pool_.get()));
+    datas_1.push_back(
+        BinaryRowGenerator::GenerateRow({0, 22, std::string("20250326"), 16.1}, pool_.get()));
     ASSERT_OK_AND_ASSIGN(auto batches_1, gen.SplitArrayByPartitionAndBucket(datas_1));
     ASSERT_EQ(3, batches_1.size());
     ASSERT_OK_AND_ASSIGN(
@@ -609,14 +617,22 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithPartitionAndMultiBuckets) {
     }
 
     std::vector<BinaryRow> datas_2;
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({0, 20, "20250326", 19.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({0, 20, "20250326", 20.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({1, 20, "20250326", 21.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({1, 20, "20250326", 22.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({1, 20, "20250326", 23.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({0, 23, "20250326", 24.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({0, 23, "20250326", 25.1}, pool_.get()));
-    datas_2.push_back(BinaryRowGenerator::GenerateRow({0, 23, "20250326", 26.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({0, 20, std::string("20250326"), 19.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({0, 20, std::string("20250326"), 20.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({1, 20, std::string("20250326"), 21.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({1, 20, std::string("20250326"), 22.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({1, 20, std::string("20250326"), 23.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({0, 23, std::string("20250326"), 24.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({0, 23, std::string("20250326"), 25.1}, pool_.get()));
+    datas_2.push_back(
+        BinaryRowGenerator::GenerateRow({0, 23, std::string("20250326"), 26.1}, pool_.get()));
     ASSERT_OK_AND_ASSIGN(auto batches_2, gen.SplitArrayByPartitionAndBucket(datas_2));
     ASSERT_EQ(3, batches_2.size());
     ASSERT_OK_AND_ASSIGN(
@@ -885,14 +901,15 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     auto file_meta_1 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"David"}, {"David"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325", 21, 13.1},
-                                          {"David", "20250325", 21, 13.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -903,20 +920,22 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_1 = ReconstructDataFileMeta(file_meta_1);
     DataIncrement data_increment_1({file_meta_1}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_1 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/0,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/0,
         /*total_bucket=*/2, data_increment_1, CompactIncrement({}, {}, {}));
 
     auto file_meta_2 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Cathy"}, {"Cathy"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Cathy", "20250325", 20, 12.1},
-                                          {"Cathy", "20250325", 20, 12.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Cathy")}, {std::string("Cathy")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Cathy"), std::string("20250325"), 20, 12.1},
+                                          {std::string("Cathy"), std::string("20250325"), 20, 12.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -927,20 +946,22 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_2 = ReconstructDataFileMeta(file_meta_2);
     DataIncrement data_increment_2({file_meta_2}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_2 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, data_increment_2, CompactIncrement({}, {}, {}));
 
     auto file_meta_3 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Evan"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Evan")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex"}, {"Evan"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", "20250326", 18, 10.1},
-                                          {"Evan", "20250326", 22, 14.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex")}, {std::string("Evan")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), std::string("20250326"), 18, 10.1},
+                                          {std::string("Evan"), std::string("20250326"), 22, 14.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -951,7 +972,8 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_3 = ReconstructDataFileMeta(file_meta_3);
     DataIncrement data_increment_3({file_meta_3}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_3 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, data_increment_3, CompactIncrement({}, {}, {}));
 
     std::vector<std::shared_ptr<CommitMessage>> expected_commit_messages_1 = {
@@ -1003,14 +1025,15 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     auto file_meta_4 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"David"}, {"David"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325", 22, 24.1},
-                                          {"David", "20250325", 22, 24.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325"), 22, 24.1},
+                                          {std::string("David"), std::string("20250325"), 22, 24.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1021,19 +1044,22 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_4 = ReconstructDataFileMeta(file_meta_4);
     DataIncrement data_increment_4({file_meta_4}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_4 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/0,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/0,
         /*total_bucket=*/2, data_increment_4, CompactIncrement({}, {}, {}));
 
     auto file_meta_5 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Go"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Hi"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Go")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Hi")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Go"}, {"Hi"}, {0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Go")}, {std::string("Hi")}, {0},
+                                          pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Go", "20250325", 22, 23.1},
-                                          {"Hi", "20250325", 23, 24.1}, {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Go"), std::string("20250325"), 22, 23.1},
+                                          {std::string("Hi"), std::string("20250325"), 23, 24.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1044,20 +1070,22 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_5 = ReconstructDataFileMeta(file_meta_5);
     DataIncrement data_increment_5({file_meta_5}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_5 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, data_increment_5, CompactIncrement({}, {}, {}));
 
     auto file_meta_6 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Farm"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Farm"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Farm")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Farm")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Farm"}, {"Farm"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Farm", "20250326", 15, 22.1},
-                                          {"Farm", "20250326", 15, 22.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Farm")}, {std::string("Farm")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Farm"), std::string("20250326"), 15, 22.1},
+                                          {std::string("Farm"), std::string("20250326"), 15, 22.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1068,11 +1096,13 @@ TEST_P(WriteInteTest, TestPkTableStreamWrite) {
     file_meta_6 = ReconstructDataFileMeta(file_meta_6);
     DataIncrement data_increment_6({file_meta_6}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_6 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()), /*bucket=*/0,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")}, pool_.get()),
+        /*bucket=*/0,
         /*total_bucket=*/2, data_increment_6, CompactIncrement({}, {}, {}));
 
     std::shared_ptr<CommitMessage> expected_commit_message_7 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, DataIncrement({}, {}, {}), CompactIncrement({}, {}, {}));
 
     std::vector<std::shared_ptr<CommitMessage>> expected_commit_messages_2 = {
@@ -1145,14 +1175,15 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     auto file_meta_1 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"David"}, {"David"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325", 21, 13.1},
-                                          {"David", "20250325", 21, 13.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1163,20 +1194,22 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     file_meta_1 = ReconstructDataFileMeta(file_meta_1);
     DataIncrement data_increment_1({file_meta_1}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_1 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/0,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/0,
         /*total_bucket=*/2, data_increment_1, CompactIncrement({}, {}, {}));
 
     auto file_meta_2 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Cathy"}, {"Cathy"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Cathy", "20250325", 20, 12.1},
-                                          {"Cathy", "20250325", 20, 12.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Cathy")}, {std::string("Cathy")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Cathy"), std::string("20250325"), 20, 12.1},
+                                          {std::string("Cathy"), std::string("20250325"), 20, 12.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1187,20 +1220,22 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     file_meta_2 = ReconstructDataFileMeta(file_meta_2);
     DataIncrement data_increment_2({file_meta_2}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_2 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, data_increment_2, CompactIncrement({}, {}, {}));
 
     auto file_meta_3 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Evan"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Evan")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex"}, {"Evan"}, {0}, pool_.get()),
-        /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", "20250326", 18, 10.1},
-                                          {"Evan", "20250326", 22, 14.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex")}, {std::string("Evan")}, {0},
                                           pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), std::string("20250326"), 18, 10.1},
+                                          {std::string("Evan"), std::string("20250326"), 22, 14.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1211,7 +1246,8 @@ TEST_P(WriteInteTest, TestPkTableBatchWrite) {
     file_meta_3 = ReconstructDataFileMeta(file_meta_3);
     DataIncrement data_increment_3({file_meta_3}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_3 = std::make_shared<CommitMessageImpl>(
-        /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()), /*bucket=*/1,
+        /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")}, pool_.get()),
+        /*bucket=*/1,
         /*total_bucket=*/2, data_increment_3, CompactIncrement({}, {}, {}));
 
     std::vector<std::shared_ptr<CommitMessage>> expected_commit_messages_1 = {
@@ -1301,15 +1337,20 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     auto file_meta_1 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David", "20250325"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"David", "20250325"}, pool_.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("David"), std::string("20250325")},
+                                        pool_.get()),
+        /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("David"), std::string("20250325")},
+                                        pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325"}, {"David", "20250325"}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325")},
+                                          {std::string("David"), std::string("20250325")}, {0, 0},
                                           pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325", 21, 13.1},
-                                          {"David", "20250325", 21, 13.1}, {0, 0, 0, 0},
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {std::string("David"), std::string("20250325"), 21, 13.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1326,15 +1367,20 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     auto file_meta_2 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", "20250326"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Evan", "20250326"}, pool_.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alex"), std::string("20250326")},
+                                        pool_.get()),
+        /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Evan"), std::string("20250326")},
+                                        pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", "20250325"}, {"Evan", "20250326"}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), std::string("20250325")},
+                                          {std::string("Evan"), std::string("20250326")}, {0, 0},
                                           pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", "20250325", 18, 10.1},
-                                          {"Evan", "20250326", 22, 14.1}, {0, 0, 0, 0},
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), std::string("20250325"), 18, 10.1},
+                                          {std::string("Evan"), std::string("20250326"), 22, 14.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/5, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1397,15 +1443,20 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     auto file_meta_3 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David", "20250325"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Farm", "20250326"}, pool_.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("David"), std::string("20250325")},
+                                        pool_.get()),
+        /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Farm"), std::string("20250326")},
+                                        pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325"}, {"Farm", "20250326"}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325")},
+                                          {std::string("Farm"), std::string("20250326")}, {0, 0},
                                           pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"David", "20250325", 15, 22.1},
-                                          {"Farm", "20250326", 22, 24.1}, {0, 0, 0, 0},
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("David"), std::string("20250325"), 15, 22.1},
+                                          {std::string("Farm"), std::string("20250326"), 22, 24.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1422,14 +1473,18 @@ TEST_P(WriteInteTest, TestPkTableWriteWithNoPartitionKey) {
     auto file_meta_4 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Go", "20250325"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Hi", "20250325"}, pool_.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Go"), std::string("20250325")}, pool_.get()),
+        /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Hi"), std::string("20250325")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Go", "20250325"}, {"Hi", "20250325"}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Go"), std::string("20250325")},
+                                          {std::string("Hi"), std::string("20250325")}, {0, 0},
                                           pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Go", "20250325", 22, 23.1},
-                                          {"Hi", "20250325", 23, 24.1}, {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Go"), std::string("20250325"), 22, 23.1},
+                                          {std::string("Hi"), std::string("20250325"), 23, 24.1},
+                                          {0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/6, /*max_sequence_number=*/7, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1926,14 +1981,16 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         auto file_meta_1 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/1,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"David"}, {"David"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"David", "20250325", 21, 13.1},
-                                              {"David", "20250325", 21, 13.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("David"), std::string("20250325"), 21, 13.1},
+                {std::string("David"), std::string("20250325"), 21, 13.1}, {0, 0, 0, 0},
+                pool_.get()),
             /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1945,21 +2002,24 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_1({file_meta_1}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_1 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")},
+                                                                  pool_.get()),
                 /*bucket=*/0,
                 /*total_bucket=*/2, data_increment_1, CompactIncrement({}, {}, {}));
 
         auto file_meta_2 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/1,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"Cathy"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"Cathy"}, {"Cathy"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"Cathy", "20250325", 20, 12.1},
-                                              {"Cathy", "20250325", 20, 12.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("Cathy")}, {std::string("Cathy")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("Cathy"), std::string("20250325"), 20, 12.1},
+                {std::string("Cathy"), std::string("20250325"), 20, 12.1}, {0, 0, 0, 0},
+                pool_.get()),
             /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1971,21 +2031,24 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_2({file_meta_2}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_2 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")},
+                                                                  pool_.get()),
                 /*bucket=*/1,
                 /*total_bucket=*/2, data_increment_2, CompactIncrement({}, {}, {}));
 
         auto file_meta_3 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/3,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"Evan"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Evan")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"Alex"}, {"Evan"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"Alex", "20250326", 18, 10.1},
-                                              {"Evan", "20250326", 22, 14.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("Alex")}, {std::string("Evan")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("Alex"), std::string("20250326"), 18, 10.1},
+                {std::string("Evan"), std::string("20250326"), 22, 14.1}, {0, 0, 0, 0},
+                pool_.get()),
             /*min_sequence_number=*/2, /*max_sequence_number=*/4, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -1997,7 +2060,8 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_3({file_meta_3}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_3 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")},
+                                                                  pool_.get()),
                 /*bucket=*/1,
                 /*total_bucket=*/2, data_increment_3, CompactIncrement({}, {}, {}));
 
@@ -2007,14 +2071,16 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         auto file_meta_4 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/1,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"David"}, {"David"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"David", "20250325", 22, 24.1},
-                                              {"David", "20250325", 22, 24.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("David")}, {std::string("David")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("David"), std::string("20250325"), 22, 24.1},
+                {std::string("David"), std::string("20250325"), 22, 24.1}, {0, 0, 0, 0},
+                pool_.get()),
             /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -2026,21 +2092,23 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_4({file_meta_4}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_4 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")},
+                                                                  pool_.get()),
                 /*bucket=*/0,
                 /*total_bucket=*/2, data_increment_4, CompactIncrement({}, {}, {}));
 
         auto file_meta_5 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/2,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"Go"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"Hi"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Go")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Hi")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"Go"}, {"Hi"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"Go", "20250325", 22, 23.1},
-                                              {"Hi", "20250325", 23, 24.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("Go")}, {std::string("Hi")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("Go"), std::string("20250325"), 22, 23.1},
+                {std::string("Hi"), std::string("20250325"), 23, 24.1}, {0, 0, 0, 0}, pool_.get()),
             /*min_sequence_number=*/1, /*max_sequence_number=*/2, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -2052,21 +2120,24 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_5({file_meta_5}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_5 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250325"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250325")},
+                                                                  pool_.get()),
                 /*bucket=*/1,
                 /*total_bucket=*/2, data_increment_5, CompactIncrement({}, {}, {}));
 
         auto file_meta_6 = std::make_shared<DataFileMeta>(
             "data-xxx.xxx", /*file_size=*/543,
             /*row_count=*/1,
-            /*min_key=*/BinaryRowGenerator::GenerateRow({"Farm"}, pool_.get()),
-            /*max_key=*/BinaryRowGenerator::GenerateRow({"Farm"}, pool_.get()),
+            /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Farm")}, pool_.get()),
+            /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Farm")}, pool_.get()),
             /*key_stats=*/
-            BinaryRowGenerator::GenerateStats({"Farm"}, {"Farm"}, {0}, pool_.get()),
-            /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({"Farm", "20250326", 15, 22.1},
-                                              {"Farm", "20250326", 15, 22.1}, {0, 0, 0, 0},
+            BinaryRowGenerator::GenerateStats({std::string("Farm")}, {std::string("Farm")}, {0},
                                               pool_.get()),
+            /*value_stats=*/
+            BinaryRowGenerator::GenerateStats(
+                {std::string("Farm"), std::string("20250326"), 15, 22.1},
+                {std::string("Farm"), std::string("20250326"), 15, 22.1}, {0, 0, 0, 0},
+                pool_.get()),
             /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -2078,13 +2149,15 @@ TEST_P(WriteInteTest, TestPkTableWriteWithIOException) {
         DataIncrement data_increment_6({file_meta_6}, {}, {});
         std::shared_ptr<CommitMessage> expected_commit_message_6 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")},
+                                                                  pool_.get()),
                 /*bucket=*/0,
                 /*total_bucket=*/2, data_increment_6, CompactIncrement({}, {}, {}));
 
         std::shared_ptr<CommitMessage> expected_commit_message_7 =
             std::make_shared<CommitMessageImpl>(
-                /*partition_map=*/BinaryRowGenerator::GenerateRow({"20250326"}, pool_.get()),
+                /*partition_map=*/BinaryRowGenerator::GenerateRow({std::string("20250326")},
+                                                                  pool_.get()),
                 /*bucket=*/1,
                 /*total_bucket=*/2, DataIncrement({}, {}, {}), CompactIncrement({}, {}, {}));
 
@@ -2215,9 +2288,10 @@ TEST_F(WriteInteTest, TestPKTableWriteWithAlterTable) {
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/1, min_key, max_key,
         BinaryRowGenerator::GenerateStats({0, 0}, {0, 0}, {0, 0}, pool_.get()),
-        BinaryRowGenerator::GenerateStats({0, 0, 0, 0, "apple", NullType(), 210, "new", 210},
-                                          {0, 0, 0, 0, "apple", NullType(), 210, "new", 210},
-                                          {0, 0, 0, 0, 0, 0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats(
+            {0, 0, 0, 0, std::string("apple"), NullType(), 210, std::string("new"), 210},
+            {0, 0, 0, 0, std::string("apple"), NullType(), 210, std::string("new"), 210},
+            {0, 0, 0, 0, 0, 0, 0, 0, 0}, pool_.get()),
         /*min_sequence_number=*/9, /*max_sequence_number=*/9, /*schema_id=*/4,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -2667,10 +2741,10 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
         BinaryRowGenerator::GenerateStats(
             {false, static_cast<int8_t>(-2), static_cast<int16_t>(-32768),
              static_cast<int32_t>(-2147483648), NullType(), static_cast<int64_t>(-4294967298),
-             static_cast<float>(0.5), 1.141592659, "20250326", NullType()},
+             static_cast<float>(0.5), 1.141592659, std::string("20250326"), NullType()},
             {true, static_cast<int8_t>(1), static_cast<int16_t>(32767),
              static_cast<int32_t>(2147483647), NullType(), static_cast<int64_t>(4294967296),
-             static_cast<float>(2.0), 3.141592657, "20250327", NullType()},
+             static_cast<float>(2.0), 3.141592657, std::string("20250327"), NullType()},
             std::vector<int64_t>({1, 0, 0, 1, 4, 1, 0, 0, 1, 0}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -2734,12 +2808,12 @@ TEST_P(WriteInteTest, TestAppendTableStreamWriteWithExternalPath) {
         BinaryRowGenerator::GenerateStats(
             {false, std::numeric_limits<int8_t>::min(), std::numeric_limits<int16_t>::min(),
              std::numeric_limits<int32_t>::min(), NullType(), std::numeric_limits<int64_t>::min(),
-             std::numeric_limits<float>::min(), -std::numeric_limits<double>::infinity(), "",
-             NullType()},
+             std::numeric_limits<float>::min(), -std::numeric_limits<double>::infinity(),
+             std::string(""), NullType()},
             {true, std::numeric_limits<int8_t>::max(), std::numeric_limits<int16_t>::max(),
              std::numeric_limits<int32_t>::max(), NullType(), std::numeric_limits<int64_t>::max(),
-             std::numeric_limits<float>::max(), std::numeric_limits<double>::max(), "∞",
-             NullType()},
+             std::numeric_limits<float>::max(), std::numeric_limits<double>::max(),
+             std::string("∞"), NullType()},
             std::vector<int64_t>({0, 0, 0, 0, 3, 0, 0, 0, 0, 0}), pool_.get()),
         /*min_sequence_number=*/4, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -2889,6 +2963,11 @@ TEST_P(WriteInteTest, TestWriteAndReadWithSpecialPartitionValue) {
                 .ValueOrDie();
         auto expected = std::make_shared<arrow::ChunkedArray>(array);
         ASSERT_TRUE(expected);
+        auto schema = std::make_shared<arrow::Schema>(fields_with_row_kind);
+        ASSERT_OK_AND_ASSIGN(expected, ReadResultCollector::SortArray(expected, schema));
+        if (read_result && read_result->length() > 0) {
+            ASSERT_OK_AND_ASSIGN(read_result, ReadResultCollector::SortArray(read_result, schema));
+        }
         ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
     }
     {
@@ -3342,8 +3421,8 @@ TEST_P(WriteInteTest, TestPkTablePostponeBucket) {
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
         /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 50}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Cathy", 30}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 50}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Cathy"), 30}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType(), NullType()}, {NullType(), NullType()},
                                           {-1, -1}, pool_.get()),
@@ -3430,12 +3509,13 @@ TEST_F(WriteInteTest, TestBranchWrite) {
     ASSERT_TRUE(result_commit_msgs);
     auto file_meta_0 = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"orange"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"watermelon"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("orange")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("watermelon")}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"orange"}, {"watermelon"}, {0}, pool_.get()),
-        BinaryRowGenerator::GenerateStats({"20240726", "orange", 12},
-                                          {"20240726", "watermelon", 23},
+        BinaryRowGenerator::GenerateStats({std::string("orange")}, {std::string("watermelon")}, {0},
+                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("20240726"), std::string("orange"), 12},
+                                          {std::string("20240726"), std::string("watermelon"), 23},
                                           std::vector<int64_t>({0, 0, 0}), pool_.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/2, /*schema_id=*/1,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -3446,7 +3526,7 @@ TEST_F(WriteInteTest, TestBranchWrite) {
         /*write_cols=*/std::nullopt);
     DataIncrement data_increment_0({file_meta_0}, {}, {});
     auto expected_commit_message_0 = std::make_shared<CommitMessageImpl>(
-        BinaryRowGenerator::GenerateRow({"20240726"}, pool_.get()), /*bucket=*/0,
+        BinaryRowGenerator::GenerateRow({std::string("20240726")}, pool_.get()), /*bucket=*/0,
         /*total_bucket=*/2, data_increment_0, CompactIncrement({}, {}, {}));
     ASSERT_TRUE(expected_commit_message_0->TEST_Equal(*result_commit_msgs));
 
@@ -3476,7 +3556,8 @@ TEST_F(WriteInteTest, TestBranchWrite) {
         /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/
         SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"20240725", "orange", 2}, {"20240725", "watermelon", 3},
+        BinaryRowGenerator::GenerateStats({std::string("20240725"), std::string("orange"), 2},
+                                          {std::string("20240725"), std::string("watermelon"), 3},
                                           std::vector<int64_t>({0, 0, 0}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/1,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -3487,7 +3568,7 @@ TEST_F(WriteInteTest, TestBranchWrite) {
         /*write_cols=*/std::nullopt);
     DataIncrement data_increment_1({file_meta_1}, {}, {});
     auto expected_commit_message_1 = std::make_shared<CommitMessageImpl>(
-        BinaryRowGenerator::GenerateRow({"20240725"}, pool_.get()), /*bucket=*/0,
+        BinaryRowGenerator::GenerateRow({std::string("20240725")}, pool_.get()), /*bucket=*/0,
         /*total_bucket=*/-1, data_increment_1, CompactIncrement({}, {}, {}));
     ASSERT_TRUE(expected_commit_message_1->TEST_Equal(*result_commit_msgs1));
 }
@@ -3603,10 +3684,11 @@ TEST_P(WriteInteTest, TestDataEvolutionWrite) {
         "data-xxx.xxx", /*file_size=*/100, /*row_count=*/2,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats(
-            {"David", static_cast<int8_t>(2), static_cast<int16_t>(12), 1, 2000l, NullType()},
-            {"Lucy", static_cast<int8_t>(5), static_cast<int16_t>(12), 1, 2000l, NullType()},
-            std::vector<int64_t>({0, 0, 1, 1, 1, 2}), pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("David"), static_cast<int8_t>(2),
+                                           static_cast<int16_t>(12), 1, 2000l, NullType()},
+                                          {std::string("Lucy"), static_cast<int8_t>(5),
+                                           static_cast<int16_t>(12), 1, 2000l, NullType()},
+                                          std::vector<int64_t>({0, 0, 1, 1, 1, 2}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -3636,8 +3718,8 @@ TEST_P(WriteInteTest, TestDataEvolutionWrite) {
         "data-xxx.xxx", /*file_size=*/100, /*row_count=*/5,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Alice", static_cast<int16_t>(5), 0l, 11.1},
-                                          {"Paul", static_cast<int16_t>(50), 1l, 14.1},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), static_cast<int16_t>(5), 0l, 11.1},
+                                          {std::string("Paul"), static_cast<int16_t>(50), 1l, 14.1},
                                           std::vector<int64_t>({0, 0, 1, 2}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -3663,8 +3745,8 @@ TEST_P(WriteInteTest, TestDataEvolutionWrite) {
         "data-xxx.xxx", /*file_size=*/100, /*row_count=*/2,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"David3"}, {"Lucy3"}, std::vector<int64_t>({0}),
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("David3")}, {std::string("Lucy3")},
+                                          std::vector<int64_t>({0}), pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),
@@ -3756,8 +3838,8 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithBlobType) {
         "data-xxx.xxx", /*file_size=*/405, /*row_count=*/4,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"str_0", 1}, {"str_3", 2}, std::vector<int64_t>({0, 2}),
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("str_0"), 1}, {std::string("str_3"), 2},
+                                          std::vector<int64_t>({0, 2}), pool_.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1724090888706ll, 0),

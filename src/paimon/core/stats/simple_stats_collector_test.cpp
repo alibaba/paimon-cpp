@@ -48,20 +48,24 @@ TEST(SimpleStatsCollectorTest, TestSimple) {
     auto pool = GetDefaultPool();
     ASSERT_OK(collector.Collect(BinaryRowGenerator::GenerateRow(
         {true, static_cast<int8_t>(1), static_cast<int16_t>(1), static_cast<int32_t>(1),
-         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0), "abc", 2025},
+         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0),
+         std::string("abc"), 2025},
         pool.get())));
     ASSERT_OK(collector.Collect(BinaryRowGenerator::GenerateRow(
         {false, static_cast<int8_t>(2), static_cast<int16_t>(2), static_cast<int32_t>(2),
-         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0), "bcd", 2026},
+         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0),
+         std::string("bcd"), 2026},
         pool.get())));
     ASSERT_OK_AND_ASSIGN(auto col_stats, collector.GetResult());
     ASSERT_OK_AND_ASSIGN(SimpleStats stats, SimpleStatsConverter::ToBinary(col_stats, pool.get()));
 
     auto expected_stats = BinaryRowGenerator::GenerateStats(
         {false, static_cast<int8_t>(1), static_cast<int16_t>(1), static_cast<int32_t>(1),
-         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0), "abc", 2025},
+         static_cast<int64_t>(1), static_cast<float>(3.0), static_cast<double>(3.0),
+         std::string("abc"), 2025},
         {true, static_cast<int8_t>(2), static_cast<int16_t>(2), static_cast<int32_t>(2),
-         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0), "bcd", 2026},
+         static_cast<int64_t>(2), static_cast<float>(6.0), static_cast<double>(6.0),
+         std::string("bcd"), 2026},
         std::vector<int64_t>({0, 0, 0, 0, 0, 0, 0, 0, 0}), GetDefaultPool().get());
 
     ASSERT_EQ(stats, expected_stats);

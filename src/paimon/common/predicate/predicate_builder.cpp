@@ -152,4 +152,12 @@ Result<std::shared_ptr<Predicate>> PredicateBuilder::Or(
     }
     return std::make_shared<CompoundPredicateImpl>(Or::Instance(), predicates);
 }
+
+Result<std::shared_ptr<Predicate>> PredicateBuilder::Not(
+    const std::shared_ptr<Predicate>& predicate) {
+    if (!predicate) {
+        return Status::Invalid("There must not be nullptr to construct a NOT predicate");
+    }
+    return predicate->Negate();
+}
 }  // namespace paimon

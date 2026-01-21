@@ -175,8 +175,8 @@ TEST_P(PostponeBucketWriterTest, TestSimple) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Lucy"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Lucy")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, {-1}, pool_.get()),
         /*value_stats=*/SimpleStats::EmptyStats(),
@@ -256,8 +256,8 @@ TEST_P(PostponeBucketWriterTest, TestNestedType) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Lucy"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Alice"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Lucy")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice")}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, {-1}, pool_.get()),
         /*value_stats=*/SimpleStats::EmptyStats(),
@@ -352,8 +352,8 @@ TEST_P(PostponeBucketWriterTest, TestWriteMultiBatch) {
     ASSERT_EQ(1, commit_increment.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta = std::make_shared<DataFileMeta>(
         expected_data_file_name, /*file_size=*/data_file_status->GetLen(), /*row_count=*/9,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tom"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tom")}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, {-1}, pool_.get()),
         /*value_stats=*/SimpleStats::EmptyStats(),
@@ -462,8 +462,8 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     ASSERT_EQ(1, commit_increment1.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta1 = std::make_shared<DataFileMeta>(
         expected_data_file_name1, /*file_size=*/data_file_status1->GetLen(), /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"David"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Alex"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("David")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex")}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, {-1}, pool_.get()),
         /*value_stats=*/SimpleStats::EmptyStats(),
@@ -482,8 +482,8 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     ASSERT_EQ(1, commit_increment2.GetNewFilesIncrement().NewFiles().size());
     auto expected_data_file_meta2 = std::make_shared<DataFileMeta>(
         expected_data_file_name2, /*file_size=*/data_file_status2->GetLen(), /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Judy"}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tom"}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Judy")}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tom")}, pool_.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({NullType()}, {NullType()}, {-1}, pool_.get()),
         /*value_stats=*/SimpleStats::EmptyStats(),

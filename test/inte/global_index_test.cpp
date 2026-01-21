@@ -218,6 +218,8 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
 };
 
+#ifdef PAIMON_ENABLE_LUMINA
+
 TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
                                  arrow::field("f1", arrow::list(arrow::float32()))};
@@ -417,6 +419,7 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
     build_index_and_check({{{"f1", "10"}}}, Range(0, 4),
                           BinaryRowGenerator::GenerateRow({10}, pool_.get()));
 }
+#endif
 
 TEST_P(GlobalIndexTest, TestScanIndex) {
     if (GetParam() == "lance") {
@@ -892,6 +895,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_EQ(index_result->ToString(), "{0,7}");
 }
 
+#ifdef PAIMON_ENABLE_LUMINA
 TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
@@ -1171,6 +1175,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
         scan_and_check_result({Range(2, 3), Range(7, 8)}, expected_array, /*id_to_score=*/{});
     }
 }
+#endif
 
 TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
     CreateTable();
@@ -1288,6 +1293,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScan) {
     }
 }
 
+#ifdef PAIMON_ENABLE_LUMINA
 TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
@@ -1488,6 +1494,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
             "Predicate result and pre_filter in VectorSearch conflict");
     }
 }
+#endif
 
 TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithOnlyOnePartitionHasIndex) {
     CreateTable(/*partition_keys=*/{"f1"});
@@ -1757,6 +1764,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithTwoPartitionAllWithIndex) 
     }
 }
 
+#ifdef PAIMON_ENABLE_LUMINA
 TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDifferentType) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
@@ -1817,6 +1825,7 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
     ASSERT_NOK_WITH_MSG(global_index_scan->GetRowRangeList(),
                         "Inconsistent row ranges among index types");
 }
+#endif
 
 TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
     CreateTable(/*partition_keys=*/{"f1", "f2"});
@@ -1920,6 +1929,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithPartitionWithTwoFields) {
     }
 }
 
+#ifdef PAIMON_ENABLE_LUMINA
 TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::list(arrow::float32())),
@@ -2160,6 +2170,7 @@ TEST_P(GlobalIndexTest, TestIOException) {
     }
     ASSERT_TRUE(read_run_complete);
 }
+#endif
 
 std::vector<std::string> GetTestValuesForGlobalIndexTest() {
     std::vector<std::string> values;

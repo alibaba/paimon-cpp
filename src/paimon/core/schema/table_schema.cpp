@@ -186,6 +186,11 @@ std::vector<std::string> TableSchema::FieldNames() const {
     return field_names;
 }
 
+Result<FieldType> TableSchema::GetFieldType(const std::string& field_name) const {
+    PAIMON_ASSIGN_OR_RAISE(DataField field, GetField(field_name));
+    return FieldTypeUtils::ConvertToFieldType(field.Type()->id());
+}
+
 Result<DataField> TableSchema::GetField(const std::string& field_name) const {
     for (const auto& field : Fields()) {
         if (field.Name() == field_name) {

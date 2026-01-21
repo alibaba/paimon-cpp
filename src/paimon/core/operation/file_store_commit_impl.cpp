@@ -262,9 +262,15 @@ Status FileStoreCommitImpl::Overwrite(
     std::shared_ptr<ManifestCommittable> committable =
         CreateManifestCommittable(identifier, commit_messages, watermark);
     std::vector<ManifestEntry> append_table_files;
+    std::vector<ManifestEntry> append_changelog_files;
+    std::vector<ManifestEntry> compact_table_files;
+    std::vector<ManifestEntry> compact_changelog_files;
     std::vector<IndexManifestEntry> append_table_index_files;
+    std::vector<IndexManifestEntry> compact_table_index_files;
     PAIMON_RETURN_NOT_OK(CollectChanges(committable->FileCommittables(), &append_table_files,
-                                        &append_table_index_files));
+                                        &append_changelog_files, &compact_table_files,
+                                        &compact_changelog_files, &append_table_index_files,
+                                        &compact_table_index_files));
     if (!append_table_index_files.empty()) {
         return Status::NotImplemented("Overwrite not support index for now");
     }
@@ -283,9 +289,15 @@ Result<int32_t> FileStoreCommitImpl::FilterAndOverwrite(
                            FilterCommitted(committables));
     if (!actual_committables.empty()) {
         std::vector<ManifestEntry> append_table_files;
+        std::vector<ManifestEntry> append_changelog_files;
+        std::vector<ManifestEntry> compact_table_files;
+        std::vector<ManifestEntry> compact_changelog_files;
         std::vector<IndexManifestEntry> append_table_index_files;
+        std::vector<IndexManifestEntry> compact_table_index_files;
         PAIMON_RETURN_NOT_OK(CollectChanges(actual_committables[0]->FileCommittables(),
-                                            &append_table_files, &append_table_index_files));
+                                            &append_table_files, &append_changelog_files,
+                                            &compact_table_files, &compact_changelog_files,
+                                            &append_table_index_files, &compact_table_index_files));
         if (!append_table_index_files.empty()) {
             return Status::NotImplemented("FilterAndOverwrite not support index for now");
         }
@@ -355,11 +367,19 @@ Status FileStoreCommitImpl::TryOverwrite(
 Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& committable,
                                    bool check_append_files) {
     std::vector<ManifestEntry> append_table_files;
+    std::vector<ManifestEntry> append_changelog_files;
+    std::vector<ManifestEntry> compact_table_files;
+    std::vector<ManifestEntry> compact_changelog_files;
     std::vector<IndexManifestEntry> append_table_index_files;
+    std::vector<IndexManifestEntry> compact_table_index_files;
     PAIMON_RETURN_NOT_OK(CollectChanges(committable->FileCommittables(), &append_table_files,
-                                        &append_table_index_files));
+                                        &append_changelog_files, &compact_table_files,
+                                        &compact_changelog_files, &append_table_index_files,
+                                        &compact_table_index_files));
 
     int32_t attempt = 0;
+    int32_t generated_snapshot = 0;
+    const auto started = std::chrono::high_resolution_clock::now();
     if (!ignore_empty_commit_ || !append_table_files.empty() || !append_table_index_files.empty()) {
         PAIMON_ASSIGN_OR_RAISE(int32_t cnt,
                                TryCommit(append_table_files, append_table_index_files,
@@ -367,8 +387,52 @@ Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& c
                                          committable->LogOffsets(), committable->Properties(),
                                          Snapshot::CommitKind::Append(), check_append_files));
         attempt += cnt;
+        ++generated_snapshot;
     }
+    auto table_files_added = static_cast<int32_t>(append_table_files.size());
+    int32_t table_files_deleted = 0;
+    int64_t compaction_input_file_size = 0;
+    int64_t compaction_output_file_size = 0;
+    for (const auto& entry : compact_table_files) {
+        const auto& kind = entry.Kind();
+        if (kind == FileKind::Add()) {
+            ++table_files_added;
+            compaction_output_file_size += entry.File()->file_size;
+        } else if (kind == FileKind::Delete()) {
+            ++table_files_deleted;
+            compaction_input_file_size += entry.File()->file_size;
+        }
+    }
+    metrics_->SetCounter(CommitMetrics::LAST_COMMIT_DURATION,
+                         std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             std::chrono::high_resolution_clock::now() - started)
+                             .count());
     metrics_->SetCounter(CommitMetrics::LAST_COMMIT_ATTEMPTS, attempt);
+    metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_ADDED, table_files_added);
+    metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_DELETED, table_files_deleted);
+    metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_APPENDED, append_table_files.size());
+    metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_COMMIT_COMPACTED,
+                         compact_table_files.size());
+    metrics_->SetCounter(CommitMetrics::LAST_CHANGELOG_FILES_APPENDED,
+                         append_changelog_files.size());
+    metrics_->SetCounter(CommitMetrics::LAST_CHANGELOG_FILES_COMMIT_COMPACTED,
+                         compact_changelog_files.size());
+    metrics_->SetCounter(CommitMetrics::LAST_GENERATED_SNAPSHOTS, generated_snapshot);
+    metrics_->SetCounter(CommitMetrics::LAST_DELTA_RECORDS_APPENDED, RowCounts(append_table_files));
+    metrics_->SetCounter(CommitMetrics::LAST_CHANGELOG_RECORDS_APPENDED,
+                         RowCounts(append_changelog_files));
+    metrics_->SetCounter(CommitMetrics::LAST_DELTA_RECORDS_COMMIT_COMPACTED,
+                         RowCounts(compact_table_files));
+    metrics_->SetCounter(CommitMetrics::LAST_CHANGELOG_RECORDS_COMMIT_COMPACTED,
+                         RowCounts(compact_changelog_files));
+    metrics_->SetCounter(CommitMetrics::LAST_PARTITIONS_WRITTEN,
+                         NumChangedPartitions({append_table_files, compact_table_files}));
+    metrics_->SetCounter(CommitMetrics::LAST_BUCKETS_WRITTEN,
+                         NumChangedBuckets({append_table_files, compact_table_files}));
+    metrics_->SetCounter(CommitMetrics::LAST_COMPACTION_INPUT_FILE_SIZE,
+                         compaction_input_file_size);
+    metrics_->SetCounter(CommitMetrics::LAST_COMPACTION_OUTPUT_FILE_SIZE,
+                         compaction_output_file_size);
     return Status::OK();
 }
 
@@ -784,7 +848,11 @@ std::shared_ptr<ManifestCommittable> FileStoreCommitImpl::CreateManifestCommitta
 Status FileStoreCommitImpl::CollectChanges(
     const std::vector<std::shared_ptr<CommitMessage>>& commit_messages,
     std::vector<ManifestEntry>* append_table_files,
-    std::vector<IndexManifestEntry>* append_table_index_files) {
+    std::vector<ManifestEntry>* append_changelog_files,
+    std::vector<ManifestEntry>* compact_table_files,
+    std::vector<ManifestEntry>* compact_changelog_files,
+    std::vector<IndexManifestEntry>* append_table_index_files,
+    std::vector<IndexManifestEntry>* compact_table_index_files) {
     for (const auto& message : commit_messages) {
         auto commit_message = std::dynamic_pointer_cast<CommitMessageImpl>(message);
         if (commit_message) {
@@ -797,6 +865,11 @@ Status FileStoreCommitImpl::CollectChanges(
                 append_table_files->push_back(
                     MakeEntry(FileKind::Delete(), commit_message, deleted_file));
             }
+            for (const std::shared_ptr<DataFileMeta>& changelog_file :
+                 new_files_increment.ChangelogFiles()) {
+                append_changelog_files->push_back(
+                    MakeEntry(FileKind::Add(), commit_message, changelog_file));
+            }
             for (const std::shared_ptr<IndexFileMeta>& deleted_index_file :
                  new_files_increment.DeletedIndexFiles()) {
                 append_table_index_files->emplace_back(
@@ -807,6 +880,34 @@ Status FileStoreCommitImpl::CollectChanges(
                  new_files_increment.NewIndexFiles()) {
                 append_table_index_files->emplace_back(FileKind::Add(), commit_message->Partition(),
                                                        commit_message->Bucket(), new_index_file);
+            }
+            CompactIncrement compact_increment = commit_message->GetCompactIncrement();
+            for (const std::shared_ptr<DataFileMeta>& compact_before :
+                 compact_increment.CompactBefore()) {
+                compact_table_files->push_back(
+                    MakeEntry(FileKind::Delete(), commit_message, compact_before));
+            }
+            for (const std::shared_ptr<DataFileMeta>& compact_after :
+                 compact_increment.CompactAfter()) {
+                compact_table_files->push_back(
+                    MakeEntry(FileKind::Add(), commit_message, compact_after));
+            }
+            for (const std::shared_ptr<DataFileMeta>& changelog_file :
+                 compact_increment.ChangelogFiles()) {
+                compact_changelog_files->push_back(
+                    MakeEntry(FileKind::Add(), commit_message, changelog_file));
+            }
+            for (const std::shared_ptr<IndexFileMeta>& deleted_index_file :
+                 compact_increment.DeletedIndexFiles()) {
+                compact_table_index_files->emplace_back(
+                    FileKind::Delete(), commit_message->Partition(), commit_message->Bucket(),
+                    deleted_index_file);
+            }
+            for (const std::shared_ptr<IndexFileMeta>& new_index_file :
+                 compact_increment.NewIndexFiles()) {
+                compact_table_index_files->emplace_back(FileKind::Add(),
+                                                        commit_message->Partition(),
+                                                        commit_message->Bucket(), new_index_file);
             }
         } else {
             return Status::Invalid("fail to cast commit message to commit message impl");
@@ -823,6 +924,39 @@ ManifestEntry FileStoreCommitImpl::MakeEntry(
                                 : commit_message->TotalBuckets().value();
     return ManifestEntry(kind, commit_message->Partition(), commit_message->Bucket(), total_buckets,
                          file);
+}
+
+int64_t FileStoreCommitImpl::RowCounts(const std::vector<ManifestEntry>& files) {
+    return std::accumulate(files.begin(), files.end(), 0L,
+                           [](int64_t row_count, const ManifestEntry& entry) {
+                               return row_count + entry.File()->row_count;
+                           });
+}
+
+int64_t FileStoreCommitImpl::NumChangedPartitions(
+    const std::vector<std::vector<ManifestEntry>>& changes) {
+    std::unordered_set<BinaryRow> changed_partitions;
+    for (const auto& change : changes) {
+        for (const auto& entry : change) {
+            changed_partitions.insert(entry.Partition());
+        }
+    }
+    return static_cast<int64_t>(changed_partitions.size());
+}
+
+int64_t FileStoreCommitImpl::NumChangedBuckets(
+    const std::vector<std::vector<ManifestEntry>>& changes) {
+    std::unordered_map<BinaryRow, std::unordered_set<int>> changed_partition_buckets;
+    for (const auto& change : changes) {
+        for (const auto& entry : change) {
+            changed_partition_buckets[entry.Partition()].insert(entry.Bucket());
+        }
+    }
+    return std::accumulate(changed_partition_buckets.begin(), changed_partition_buckets.end(),
+                           int64_t{0}, [](int64_t num_changed_buckets, const auto& bucket) {
+                               return num_changed_buckets +
+                                      static_cast<int64_t>(bucket.second.size());
+                           });
 }
 
 }  // namespace paimon

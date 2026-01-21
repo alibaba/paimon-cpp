@@ -60,18 +60,19 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteColsAndExternalPath) {
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-72b62a5f-d698-4db5-b51a-04c0dc027702-0.orc", /*file_size=*/961, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
                                           {
                                               0,
                                               0,
                                           },
                                           pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 17.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 17.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1757354415711ll, 0),
@@ -124,18 +125,19 @@ TEST(DataSplitTest, TestDeserializeVersion8WithWriteCols) {
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-aa87291d-2a90-4846-b106-1bb4c76d74db-0.orc", /*file_size=*/961, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
                                           {
                                               0,
                                               0,
                                           },
                                           pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 17.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 17.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1757349273246ll, 0),
@@ -193,8 +195,9 @@ TEST(DataSplitTest, TestDeserializeVersion7WithFirstRowId) {
         /*key_stats=*/
         SimpleStats::EmptyStats(),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 110, 0, 11.1}, {"Tony", 110, 1, 16.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 110, 0, 11.1},
+                                          {std::string("Tony"), 110, 1, 16.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1754073518741ll, 0),
@@ -244,8 +247,9 @@ TEST(DataSplitTest, TestDeserializeVersion7WithNullFirstRowId) {
         /*key_stats=*/
         SimpleStats::EmptyStats(),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.1}, {"Alice", 10, 1, 11.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.1},
+                                          {std::string("Alice"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1754068646844ll, 0),
@@ -288,13 +292,15 @@ TEST(DataSplitTest, TestDeserializeVersion6PkWithTotalBuckets) {
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-d7725088-6bd4-4e70-9ce6-714ae93b47cc-0.orc", /*file_size=*/863, /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Alice", 1}, {0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("Alice"), 1},
+                                          {0, 0}, pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.1}, {"Alice", 10, 1, 11.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.1},
+                                          {std::string("Alice"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1743525392885ll, 0),
@@ -337,8 +343,9 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithExternalPath) {
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-80110e15-97b5-4bcf-ac09-6ca2659a4950-0.orc", /*file_size=*/645, /*row_count=*/5,
         BinaryRow::EmptyRow(), BinaryRow::EmptyRow(), SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 11.1}, {"Tony", 20, 1, 14.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 11.1},
+                                          {std::string("Tony"), 20, 1, 14.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1737111915429ll, 0),
@@ -386,8 +393,9 @@ TEST(DataSplitTest, TestDeserializeVersion5PkWithEmptyExternalPath) {
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-64d93fc3-eaf2-4253-9cff-a9faa701e207-0.orc", /*file_size=*/645, /*row_count=*/5,
         BinaryRow::EmptyRow(), BinaryRow::EmptyRow(), SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 0, 11.1}, {"Tony", 20, 1, 14.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 0, 11.1},
+                                          {std::string("Tony"), 20, 1, 14.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1737052260143ll, 0),
@@ -428,16 +436,19 @@ TEST(DataSplitTest, TestDeserializeVersion4PkWithSnapshot4WithDvCardinality) {
     auto result_data_split = std::dynamic_pointer_cast<DataSplitImpl>(result);
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-2ffe7ae9-2cf7-41e9-944b-2065585cde31-0.orc", /*file_size=*/1318, /*row_count=*/7,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool.get()),
         /*max_key=*/
         BinaryRowGenerator::GenerateRow(
-            {"Whether I shall turn out to be the hero of my own life.", 0}, pool.get()),
+            {std::string("Whether I shall turn out to be the hero of my own life."), 0},
+            pool.get()),
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats(
-            {"Alex", 0}, {"Whether I shall turn out to be the hero of my own life.", 0}, {0, 0},
+            {std::string("Alex"), 0},
+            {std::string("Whether I shall turn out to be the hero of my own life."), 0}, {0, 0},
             pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0}, {"Whether I shall!", 10, 0}, {0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0},
+                                          {std::string("Whether I shall!"), 10, 0}, {0, 0, 0},
                                           pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -486,7 +497,8 @@ TEST(DataSplitTest, TestDeserializeVersion3AppendWithSnapshot1) {
         "data-de4e972f-5cc8-49b1-844e-374191534c68-0.orc", /*file_size=*/575, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Bob", 10, 0, 12.1}, {"Tony", 10, 0, 14.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 14.1}, {0, 0, 0, 0},
                                           pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -526,7 +538,8 @@ TEST(DataSplitTest, TestDeserializeVersion3AppendWithSnapshot1WithStatsDenseStor
         "data-c2613568-0412-4cd9-a0c4-1eae8e4ca89b-0.orc", /*file_size=*/575, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Bob", 10, 0}, {"Tony", 10, 0}, {0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 0}, {std::string("Tony"), 10, 0},
+                                          {0, 0, 0}, pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1731412938891ll, 0),
@@ -564,7 +577,8 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot1) {
         "data-4e30d6c0-f109-4300-a010-4ba03047dd9d-0.orc", /*file_size=*/575, /*row_count=*/3,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Bob", 10, 0, 12.1}, {"Tony", 10, 0, 14.1}, {0, 0, 0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 14.1}, {0, 0, 0, 0},
                                           pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -603,8 +617,9 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot3) {
         "data-db2b44c0-0d73-449d-82a0-4075bd2cb6e3-0.orc", /*file_size=*/541, /*row_count=*/1,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Lucy", 20, 1, 14.1}, {"Lucy", 20, 1, 14.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Lucy"), 20, 1, 14.1},
+                                          {std::string("Lucy"), 20, 1, 14.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1721643142472ll, 0),
@@ -617,8 +632,9 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot3) {
         "data-b913a160-a4d1-4084-af2a-18333c35668e-0.orc", /*file_size=*/506, /*row_count=*/1,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Paul", 20, 1, NullType()}, {"Paul", 20, 1, NullType()},
-                                          {0, 0, 0, 1}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Paul"), 20, 1, NullType()},
+                                          {std::string("Paul"), 20, 1, NullType()}, {0, 0, 0, 1},
+                                          pool.get()),
         /*min_sequence_number=*/1, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1721643267404ll, 0),
@@ -674,8 +690,9 @@ TEST(DataSplitTest, TestDeserializeAppendWithSnapshot5) {
         "data-b9e7c41f-66e8-4dad-b25a-e6e1963becc4-0.orc", /*file_size=*/640, /*row_count=*/8,
         /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
         /*key_stats=*/SimpleStats::EmptyStats(),
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 17.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 17.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/7, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1721643834472ll, 0),
@@ -712,16 +729,19 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot2) {
 
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-980e82b4-2345-4976-bc1d-ea989fcdbffa-0.orc", /*file_size=*/1397, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()), /*max_key=*/
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
         BinaryRowGenerator::GenerateRow(
-            {"Two roads diverged in a wood, and I took the one less traveled by, And "
-             "that has made all the difference.",
+            {std::string("Two roads diverged in a wood, and I took the one less traveled by, And "
+                         "that has made all the difference."),
              1},
             pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Two roads diverh", 1}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1},
+                                          {std::string("Two roads diverh"), 1}, {0, 0},
                                           pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.0}, {"Two roads diverh", 10, 1, 11.1},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
+                                          {std::string("Two roads diverh"), 10, 1, 11.1},
                                           {0, 0, 0, 0}, pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -763,13 +783,15 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfSingleFile) {
 
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-6871b960-edd9-40fc-9859-aaca9ea205cf-0.orc", /*file_size=*/887, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({"Tony", 0}, pool.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool.get()), /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0}, {0, 0},
-                                          pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 17.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
+                                          {0, 0}, pool.get()), /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 17.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946453ll, 0),
@@ -812,16 +834,19 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfMultiFiles) {
 
     auto file_meta1 = std::make_shared<DataFileMeta>(
         "data-980e82b4-2345-4976-bc1d-ea989fcdbffa-0.orc", /*file_size=*/1397, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()), /*max_key=*/
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
         BinaryRowGenerator::GenerateRow(
-            {"Two roads diverged in a wood, and I took the one less traveled by, And "
-             "that has made all the difference.",
+            {std::string("Two roads diverged in a wood, and I took the one less traveled by, And "
+                         "that has made all the difference."),
              1},
             pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Two roads diverh", 1}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1},
+                                          {std::string("Two roads diverh"), 1}, {0, 0},
                                           pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.0}, {"Two roads diverh", 10, 1, 11.1},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
+                                          {std::string("Two roads diverh"), 10, 1, 11.1},
                                           {0, 0, 0, 0}, pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -833,13 +858,17 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfMultiFiles) {
 
     auto file_meta2 = std::make_shared<DataFileMeta>(
         "data-1c7a85f1-55bd-424f-b503-34a33be0fb96-0.orc", /*file_size=*/1148, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Lily", 1}, pool.get()), /*max_key=*/
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Lily"), 1}, pool.get()), /*max_key=*/
         BinaryRowGenerator::GenerateRow(
-            {"Whether I shall turn out to be the hero of my own life.", 1}, pool.get()),
+            {std::string("Whether I shall turn out to be the hero of my own life."), 1},
+            pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Lily", 1}, {"Whether I shall!", 1}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Lily"), 1},
+                                          {std::string("Whether I shall!"), 1}, {0, 0},
                                           pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Lily", 10, 1, 19.1}, {"Whether I shall!", 10, 1, 20.1},
+        BinaryRowGenerator::GenerateStats({std::string("Lily"), 10, 1, 19.1},
+                                          {std::string("Whether I shall!"), 10, 1, 20.1},
                                           {0, 0, 0, 0}, pool.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/4, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -851,13 +880,15 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot6OfMultiFiles) {
 
     auto file_meta3 = std::make_shared<DataFileMeta>(
         "data-8cdb8b8d-5830-4b3b-aa94-8a30c449277a-0.orc", /*file_size=*/810, /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Alice", 1}, {0, 0},
-                                          pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 19.1}, {"Alice", 10, 1, 19.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("Alice"), 1},
+                                          {0, 0}, pool.get()), /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 19.1},
+                                          {std::string("Alice"), 10, 1, 19.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/4, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/3, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725563103281ll, 0),
@@ -906,13 +937,17 @@ TEST(DataSplitTest, TestDeserializePkWithSnapshot8) {
 
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-79413425-25fd-426f-a8a3-618d57f0e9a9-0.orc", /*file_size=*/1295, /*row_count=*/3,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()), /*max_key=*/
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
         BinaryRowGenerator::GenerateRow(
-            {"Whether I shall turn out to be the hero of my own life.", 1}, pool.get()),
+            {std::string("Whether I shall turn out to be the hero of my own life."), 1},
+            pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Whether I shall!", 1}, {0, 0},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1},
+                                          {std::string("Whether I shall!"), 1}, {0, 0},
                                           pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.0}, {"Whether I shall!", 10, 1, 21.1},
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
+                                          {std::string("Whether I shall!"), 10, 1, 21.1},
                                           {0, 0, 0, 0}, pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/5, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -961,9 +996,10 @@ TEST(DataSplitTest, TestDeserializePk10WithSnapshot6) {
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({22}, {82}, {0}, pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({1, 1, 22, 23, 24, 25, 26, "Alex"},
-                                          {1, 1, 82, 83, 84, 85, 86, "Whether I shall!"},
-                                          {0, 0, 0, 0, 0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats(
+            {1, 1, 22, 23, 24, 25, 26, std::string("Alex")},
+            {1, 1, 82, 83, 84, 85, 86, std::string("Whether I shall!")}, {0, 0, 0, 0, 0, 0, 0, 0},
+            pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/6, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1730544332215ll, 0),
@@ -978,8 +1014,8 @@ TEST(DataSplitTest, TestDeserializePk10WithSnapshot6) {
         /*key_stats=*/
         BinaryRowGenerator::GenerateStats({52}, {52}, {0}, pool.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({1, "Alex", 52, 514, 518, 516, 1, 519},
-                                          {1, "Alex", 52, 514, 518, 516, 1, 519},
+        BinaryRowGenerator::GenerateStats({1, std::string("Alex"), 52, 514, 518, 516, 1, 519},
+                                          {1, std::string("Alex"), 52, 514, 518, 516, 1, 519},
                                           {0, 0, 0, 0, 0, 0, 0, 0}, pool.get()),
         /*min_sequence_number=*/7, /*max_sequence_number=*/7, /*schema_id=*/1,
         /*level=*/4, /*extra_files=*/std::vector<std::optional<std::string>>(),
@@ -1013,13 +1049,15 @@ TEST(DataSplitTest, TestPartialMergedRowCount) {
     auto pool = GetDefaultPool();
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-0.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({"David", 1}, pool.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool.get()), /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"David", 1}, {0, 0},
-                                          pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.0}, {"David", 10, 1, 11.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("David"), 1},
+                                          {0, 0}, pool.get()), /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.0},
+                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562946338ll, 0),
@@ -1029,13 +1067,15 @@ TEST(DataSplitTest, TestPartialMergedRowCount) {
         /*write_cols=*/std::nullopt);
     auto file_meta2 = std::make_shared<DataFileMeta>(
         "data-1.orc", /*file_size=*/100, /*row_count=*/2,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Bob", 1}, pool.get()), /*max_key=*/
-        BinaryRowGenerator::GenerateRow({"David", 1}, pool.get()),
+        /*min_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("Bob"), 1}, pool.get()), /*max_key=*/
+        BinaryRowGenerator::GenerateRow({std::string("David"), 1}, pool.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Bob", 1}, {"David", 1}, {0, 0},
-                                          pool.get()), /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Bob", 10, 1, 11.0}, {"David", 10, 1, 11.1},
-                                          {0, 0, 0, 0}, pool.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 1}, {std::string("David"), 1},
+                                          {0, 0}, pool.get()), /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 1, 11.0},
+                                          {std::string("David"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool.get()),
         /*min_sequence_number=*/2, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1725562947338ll, 0),

@@ -109,7 +109,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsSingleFile) {
 
     auto entry = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({1, "a"}, {5, "z"}, {0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, std::string("a")}, {5, std::string("z")}, {0, 1},
+                                          pool_.get()),
         /*value_stats_cols=*/std::nullopt, /*write_cols=*/std::nullopt);
 
     ASSERT_OK_AND_ASSIGN(auto result_stats, DataEvolutionFileStoreScan::EvolutionStats(
@@ -160,7 +161,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsMultipleFiles) {
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({1, "a", 10}, {3, "c", 30}, {0, 1, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, std::string("a"), 10}, {3, std::string("c"), 30},
+                                          {0, 1, 0}, pool_.get()),
         /*value_stats_cols=*/std::nullopt, /*write_cols=*/std::nullopt);
     auto entry1 = CreateManifestEntry(
         /*schema_id=*/1, /*stats=*/
@@ -217,11 +219,13 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithSchemaEvolution) {
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({1, "a"}, {3, "c"}, {0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, std::string("a")}, {3, std::string("c")}, {0, 1},
+                                          pool_.get()),
         /*value_stats_cols=*/std::nullopt, /*write_cols=*/std::nullopt);
     auto entry1 = CreateManifestEntry(
         /*schema_id=*/1, /*stats=*/
-        BinaryRowGenerator::GenerateStats({2, "b", 20}, {4, "d", 40}, {1, 0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({2, std::string("b"), 20}, {4, std::string("d"), 40},
+                                          {1, 0, 1}, pool_.get()),
         /*value_stats_cols=*/std::nullopt, /*write_cols=*/std::nullopt);
 
     ASSERT_OK_AND_ASSIGN(auto result_stats, DataEvolutionFileStoreScan::EvolutionStats(
@@ -274,7 +278,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithWriteColsNotEqualTo
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({1, "a"}, {3, "c"}, {0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, std::string("a")}, {3, std::string("c")}, {0, 1},
+                                          pool_.get()),
         /*value_stats_cols=*/std::vector<std::string>({"f0", "f1"}),
         /*write_cols=*/std::vector<std::string>({"f0", "f1", "f2"}));
     auto entry1 = CreateManifestEntry(
@@ -339,7 +344,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithSchemaEvolutionRena
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({"a", 10}, {"c", 15}, {0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("a"), 10}, {std::string("c"), 15}, {0, 1},
+                                          pool_.get()),
         /*value_stats_cols=*/std::vector<std::string>({"f1", "f2"}),
         /*write_cols=*/std::vector<std::string>({"f1", "f2"}));
     auto entry1 = CreateManifestEntry(
@@ -349,7 +355,9 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithSchemaEvolutionRena
         /*write_cols=*/std::vector<std::string>({"f2", "f0"}));
     auto entry2 = CreateManifestEntry(
         /*schema_id=*/1, /*stats=*/
-        BinaryRowGenerator::GenerateStats({"bb", "cd"}, {"dd", "xy"}, {1, 3}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("bb"), std::string("cd")},
+                                          {std::string("dd"), std::string("xy")}, {1, 3},
+                                          pool_.get()),
         /*value_stats_cols=*/std::vector<std::string>({"f5", "f1"}),
         /*write_cols=*/std::vector<std::string>({"f3", "f1", "f5"}));
 
@@ -414,8 +422,9 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithSchemaEvolutionUpda
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({10, "a", 11, "b"}, {20, "c", 22, "d"}, {0, 1, 2, 3},
-                                          pool_.get()),
+        BinaryRowGenerator::GenerateStats({10, std::string("a"), 11, std::string("b")},
+                                          {20, std::string("c"), 22, std::string("d")},
+                                          {0, 1, 2, 3}, pool_.get()),
         /*value_stats_cols=*/std::nullopt, /*write_cols=*/std::nullopt);
     auto entry1 = CreateManifestEntry(
         /*schema_id=*/1, /*stats=*/
@@ -472,7 +481,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithBlob) {
 
     auto entry0 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({10, "aa"}, {55, "zz"}, {2, 3}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({10, std::string("aa")}, {55, std::string("zz")}, {2, 3},
+                                          pool_.get()),
         /*value_stats_cols=*/std::nullopt,
         /*write_cols=*/std::optional<std::vector<std::string>>({"f0", "f1"}),
         /*sequence_number=*/1l);
@@ -493,7 +503,8 @@ TEST_F(DataEvolutionFileStoreScanTest, TestEvolutionStatsWithBlob) {
 
     auto entry1 = CreateManifestEntry(
         /*schema_id=*/0, /*stats=*/
-        BinaryRowGenerator::GenerateStats({1, "a"}, {5, "z"}, {0, 1}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({1, std::string("a")}, {5, std::string("z")}, {0, 1},
+                                          pool_.get()),
         /*value_stats_cols=*/std::nullopt,
         /*write_cols=*/std::optional<std::vector<std::string>>({"f0", "f1"}),
         /*sequence_number=*/2l);

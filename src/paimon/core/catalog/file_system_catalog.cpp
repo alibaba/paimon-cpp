@@ -92,6 +92,14 @@ Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const 
     return latest_schema != std::nullopt;
 }
 
+std::string FileSystemCatalog::GetDatabaseLocation(const std::string& db_name) const {
+    return NewDatabasePath(warehouse_, db_name);
+}
+
+std::string FileSystemCatalog::GetTableLocation(const Identifier& identifier) const {
+    return NewDataTablePath(warehouse_, identifier);
+}
+
 Status FileSystemCatalog::CreateTable(const Identifier& identifier, ArrowSchema* c_schema,
                                       const std::vector<std::string>& partition_keys,
                                       const std::vector<std::string>& primary_keys,

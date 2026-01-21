@@ -108,6 +108,22 @@ class PAIMON_EXPORT Catalog {
     /// @return A result containing true if the table exists, false otherwise, or an error status.
     virtual Result<bool> TableExists(const Identifier& identifier) const = 0;
 
+    /// Returns the expected location of a specified database.
+    ///
+    /// @note This does not check whether the database actually exists.
+    ///
+    /// @param db_name The name of the database to get the location for.
+    /// @return A string representing the expected location of the database.
+    virtual std::string GetDatabaseLocation(const std::string& db_name) const = 0;
+
+    /// Returns the expected location of a specified table.
+    ///
+    /// @note This does not check whether the table actually exists.
+    ///
+    /// @param identifier The table identifier containing database and table name.
+    /// @return A string representing the expected location of the table.
+    virtual std::string GetTableLocation(const Identifier& identifier) const = 0;
+
     /// Loads the latest schema of a specified table.
     ///
     /// @note System tables will not be supported.

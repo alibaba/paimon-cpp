@@ -137,6 +137,9 @@ class PAIMON_EXPORT ReadContextBuilder {
 
     ~ReadContextBuilder();
 
+    ReadContextBuilder(ReadContextBuilder&&) noexcept;
+    ReadContextBuilder& operator=(ReadContextBuilder&&) noexcept;
+
     /// Set the schema fields to read from the table.
     ///
     /// If not set, all fields from the table schema will be read. This is useful for

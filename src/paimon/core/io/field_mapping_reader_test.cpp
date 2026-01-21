@@ -18,6 +18,7 @@
 
 #include <map>
 #include <ostream>
+#include <string>
 #include <utility>
 #include <variant>
 
@@ -227,7 +228,7 @@ TEST_F(FieldMappingReaderTest, TestGenerateSinglePartitionArray) {
                                                         /*non_exist_field_info=*/std::nullopt);
     auto partition = BinaryRowGenerator::GenerateRow(
         {false, static_cast<int8_t>(1), static_cast<int16_t>(2), static_cast<int32_t>(3),
-         static_cast<int64_t>(4), static_cast<float>(5.1), 6.21, "7",
+         static_cast<int64_t>(4), static_cast<float>(5.1), 6.21, std::string("7"),
          std::make_shared<Bytes>("8", pool_.get()), 100},
         pool_.get());
     auto mapping_reader = std::make_unique<FieldMappingReader>(

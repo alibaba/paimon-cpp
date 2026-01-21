@@ -1280,10 +1280,20 @@ TEST_F(FileStoreCommitImplTest, TestCollectChanges) {
     auto commit_impl = std::dynamic_pointer_cast<FileStoreCommitImpl>(
         std::shared_ptr<FileStoreCommit>(std::move(commit)));
     std::vector<ManifestEntry> append_table_files;
+    std::vector<ManifestEntry> append_changelog_files;
+    std::vector<ManifestEntry> compact_table_files;
+    std::vector<ManifestEntry> compact_changelog_files;
     std::vector<IndexManifestEntry> append_table_index_files;
-    ASSERT_OK(commit_impl->CollectChanges(msgs, &append_table_files, &append_table_index_files));
+    std::vector<IndexManifestEntry> compact_table_index_files;
+    ASSERT_OK(commit_impl->CollectChanges(msgs, &append_table_files, &append_changelog_files,
+                                          &compact_table_files, &compact_changelog_files,
+                                          &append_table_index_files, &compact_table_index_files));
     ASSERT_EQ(append_table_files.size(), 3u);
+    ASSERT_EQ(append_changelog_files.size(), 0u);
+    ASSERT_EQ(compact_table_files.size(), 0u);
+    ASSERT_EQ(compact_changelog_files.size(), 0u);
     ASSERT_EQ(append_table_index_files.size(), 0u);
+    ASSERT_EQ(compact_table_index_files.size(), 0u);
     ASSERT_EQ(append_table_files[0].Kind(), FileKind::Add());
     ASSERT_EQ(append_table_files[0].Bucket(), 0);
     ASSERT_EQ(append_table_files[0].TotalBuckets(), 10);

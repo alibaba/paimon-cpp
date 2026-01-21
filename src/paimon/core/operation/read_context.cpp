@@ -105,6 +105,9 @@ ReadContextBuilder::ReadContextBuilder(const std::string& path)
 
 ReadContextBuilder::~ReadContextBuilder() = default;
 
+ReadContextBuilder::ReadContextBuilder(ReadContextBuilder&&) noexcept = default;
+ReadContextBuilder& ReadContextBuilder::operator=(ReadContextBuilder&&) noexcept = default;
+
 ReadContextBuilder& ReadContextBuilder::AddOption(const std::string& key,
                                                   const std::string& value) {
     impl_->options_[key] = value;
