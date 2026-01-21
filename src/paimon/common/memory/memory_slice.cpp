@@ -29,7 +29,8 @@ std::shared_ptr<MemorySlice> MemorySlice::Wrap(const std::shared_ptr<MemorySegme
     return std::make_shared<MemorySlice>(segment, 0, segment->Size());
 }
 
-MemorySlice::MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length)
+MemorySlice::MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset,
+                         int32_t length)
     : segment_(segment), offset_(offset), length_(length) {}
 
 std::shared_ptr<MemorySlice> MemorySlice::Slice(int32_t index, int32_t length) {
