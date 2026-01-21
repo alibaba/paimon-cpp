@@ -49,7 +49,7 @@ class SstFileReader {
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,
                   const std::shared_ptr<BlockHandle>& index_block_handle,
-                  const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+                  const std::shared_ptr<BloomFilter>& bloom_filter,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
                       comparator);

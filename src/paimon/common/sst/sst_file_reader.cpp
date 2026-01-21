@@ -24,6 +24,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     int64_t file_len,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator) {
+    // read footer
     auto segment = block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,
                                          BlockFooter::ENCODED_LENGTH, true);
     if (!segment.get()) {
@@ -35,22 +36,29 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     if (!footer.get()) {
         return Status::Invalid("Read footer error");
     }
+
+    // read bloom filter directly now
+    auto bloom_filter_handle = footer->GetBloomFilterHandle();
+    std::shared_ptr<paimon::BloomFilter> bloom_filter = nullptr;
+    if (bloom_filter_handle->ExpectedEntries() || bloom_filter_handle->Size() ||
+        bloom_filter_handle->Offset()) {
+        bloom_filter = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
+                                                     bloom_filter_handle->Size());
+        PAIMON_RETURN_NOT_OK(bloom_filter->SetMemorySegment(block_cache->GetBlock(
+            bloom_filter_handle->Offset(), bloom_filter_handle->Size(), true)));
+    }
+
     return std::make_shared<SstFileReader>(pool, block_cache, footer->GetIndexBlockHandle(),
-                                           footer->GetBloomFilterHandle(), comparator);
+                                           bloom_filter, comparator);
 }
 
 SstFileReader::SstFileReader(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
     const std::shared_ptr<BlockHandle>& index_block_handle,
-    const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+    const std::shared_ptr<BloomFilter>& bloom_filter,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator)
-    : pool_(pool), block_cache_(block_cache), comparator_(comparator) {
-    bloom_filter_ = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
-                                                  bloom_filter_handle->Size());
-    bloom_filter_->SetMemorySegment(
-        block_cache->GetBlock(bloom_filter_handle->Offset(), bloom_filter_handle->Size(), true));
-
+    : pool_(pool), block_cache_(block_cache), bloom_filter_(bloom_filter), comparator_(comparator) {
     index_block_reader_ = ReadBlock(index_block_handle, true);
 }
 
