@@ -25,6 +25,7 @@
 
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
+#include "paimon/special_field_id.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
 
@@ -166,7 +167,9 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @param read_field_ids Vector of field ids to read from the table.
     /// @return Reference to this builder for method chaining.
     /// @note Currently supports top-level field selection. Future versions may support
-    ///       nested field selection using ArrowSchema for more granular projection
+    ///       nested field selection using ArrowSchema for more granular projection,
+    ///       If SetReadFieldIds() call and SetReadSchema() are natually are mutually 
+    ///       exclusive. Calling both will ignore the read schema set by SetReadSchema(). 
     ReadContextBuilder& SetReadFieldIds(const std::vector<int32_t>& read_field_ids);
 
     /// Set a configuration options map to set some option entries which are not defined in the
