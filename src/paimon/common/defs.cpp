@@ -81,4 +81,9 @@ const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
+const char Options::CACHE_BUFFER_SIZE_LIMIT[] = "cache.buffer-size-limit";
+const char Options::CACHE_RANGE_SIZE_LIMIT[] = "cache.range-size-limit";
+const char Options::CACHE_HOLE_SIZE_LIMIT[] = "cache.hole-size-limit";
+const char Options::CACHE_PRE_BUFFER_RANGE_COUNT[] = "cache.pre-buffer-range-count";
+
 }  // namespace paimon

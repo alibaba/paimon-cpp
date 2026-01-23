@@ -85,14 +85,14 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange
         //   - distance (hole/gap) between consecutive ranges is too large.
         if ((current_range_end - coalesced_start > range_size_limit) ||
             (current_range_start > coalesced_end + hole_size_limit)) {
-            coalesced.emplace_back({coalesced_start, coalesced_end - coalesced_start});
+            coalesced.emplace_back(coalesced_start, coalesced_end - coalesced_start);
             coalesced_start = current_range_start;
         }
 
         // Update the prev_range_end with the current range.
         coalesced_end = current_range_end;
     }
-    coalesced.emplace_back({coalesced_start, coalesced_end - coalesced_start});
+    coalesced.emplace_back(coalesced_start, coalesced_end - coalesced_start);
     assert(coalesced.front().offset == ranges.front().offset);
     assert(coalesced.back().offset + coalesced.back().length ==
            ranges.back().offset + ranges.back().length);
