@@ -140,8 +140,8 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange>&& ranges) {
     }
     pending_ranges_ = pending_ranges;
     is_cached_ = std::vector<std::atomic<bool>>(pending_ranges_.size());
-    for (size_t i = 0; i < is_cached_.size(); ++i) {
-        is_cached_[i].store(false);
+    for (auto& is_cached : is_cached_) {
+        is_cached.store(false);
     }
     is_initialized_ = true;
     return Status::OK();
