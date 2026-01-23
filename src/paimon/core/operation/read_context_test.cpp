@@ -33,6 +33,7 @@ TEST(ReadContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetMemoryPool());
     ASSERT_TRUE(ctx->GetExecutor());
     ASSERT_TRUE(ctx->GetReadSchema().empty());
+    ASSERT_TRUE(ctx->GetReadFieldIds().empty());
     ASSERT_TRUE(ctx->GetOptions().empty());
     ASSERT_FALSE(ctx->GetPredicate());
     ASSERT_FALSE(ctx->EnablePredicateFilter());
@@ -50,6 +51,7 @@ TEST(ReadContextTest, TestSetContent) {
     ReadContextBuilder builder("table_root_path");
     builder.AddOption("key", "value");
     builder.SetReadSchema({"f1", "f2"});
+    builder.SetReadFieldIds({0, 1});
     auto predicate =
         PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f1", FieldType::INT);
     builder.SetPredicate(predicate);
@@ -70,6 +72,7 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_TRUE(ctx->GetMemoryPool());
     ASSERT_TRUE(ctx->GetExecutor());
     ASSERT_EQ(ctx->GetReadSchema(), std::vector<std::string>({"f1", "f2"}));
+    ASSERT_EQ(ctx->GetReadFieldIds(), std::vector<int32_t>({0, 1}));
     ASSERT_EQ(*predicate, *(ctx->GetPredicate()));
     ASSERT_TRUE(ctx->EnablePredicateFilter());
     ASSERT_TRUE(ctx->EnablePrefetch());
