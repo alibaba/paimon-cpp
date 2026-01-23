@@ -19,6 +19,7 @@
 #include "paimon/common/utils/byte_range_combiner.h"
 
 #include <algorithm>
+#include <cassert>
 
 #include "fmt/format.h"
 

@@ -132,7 +132,7 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange> ranges) {
                                               config_.GetRangeSizeLimit()));
     for (const auto& pending_ranges : pending_ranges) {
         if (pending_ranges.length > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-            return Status::Invalid("range length should be larger than uint32_t max");
+            return Status::Invalid("range length should not be larger than uint32_t max");
         }
     }
     pending_ranges_ = pending_ranges;
