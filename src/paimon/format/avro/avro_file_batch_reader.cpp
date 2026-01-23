@@ -18,24 +18,30 @@
 
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include "arrow/c/bridge.h"
-#include "avro/Generic.hh"
-#include "avro/GenericDatum.hh"
 #include "fmt/format.h"
+#include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/format/avro/avro_input_stream_impl.h"
 #include "paimon/format/avro/avro_schema_converter.h"
 #include "paimon/reader/batch_reader.h"
 
 namespace paimon::avro {
 
-AvroFileBatchReader::AvroFileBatchReader(
-    std::unique_ptr<::avro::DataFileReader<::avro::GenericDatum>>&& reader,
-    std::unique_ptr<AvroRecordConverter>&& record_converter, int32_t batch_size)
-    : reader_(std::move(reader)),
-      record_converter_(std::move(record_converter)),
-      batch_size_(batch_size) {}
+AvroFileBatchReader::AvroFileBatchReader(const std::shared_ptr<InputStream>& input_stream,
+                                         const std::shared_ptr<::arrow::DataType>& file_data_type,
+                                         std::unique_ptr<::avro::DataFileReaderBase>&& reader,
+                                         std::unique_ptr<arrow::ArrayBuilder>&& array_builder,
+                                         int32_t batch_size,
+                                         const std::shared_ptr<MemoryPool>& pool)
+    : pool_(pool),
+      input_stream_(input_stream),
+      file_data_type_(file_data_type),
+      reader_(std::move(reader)),
+      array_builder_(std::move(array_builder)),
+      batch_size_(batch_size),
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 AvroFileBatchReader::~AvroFileBatchReader() {
     DoClose();
@@ -49,44 +55,67 @@ void AvroFileBatchReader::DoClose() {
 }
 
 Result<std::unique_ptr<AvroFileBatchReader>> AvroFileBatchReader::Create(
-    std::unique_ptr<::avro::DataFileReader<::avro::GenericDatum>>&& reader, int32_t batch_size,
+    const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
     const std::shared_ptr<MemoryPool>& pool) {
     if (batch_size <= 0) {
         return Status::Invalid(
             fmt::format("invalid batch size {}, must be larger than 0", batch_size));
     }
-    const auto& avro_read_schema = reader->readerSchema();
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::arrow::DataType> arrow_data_type,
-                           AvroSchemaConverter::AvroSchemaToArrowDataType(avro_read_schema));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<AvroRecordConverter> record_converter,
-                           AvroRecordConverter::Create(arrow_data_type, pool));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::avro::DataFileReaderBase> reader,
+                           CreateDataFileReader(input_stream, pool));
+    const auto& avro_file_schema = reader->dataSchema();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::arrow::DataType> file_data_type,
+                           AvroSchemaConverter::AvroSchemaToArrowDataType(avro_file_schema));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
+                                      arrow::MakeBuilder(file_data_type));
     return std::unique_ptr<AvroFileBatchReader>(
-        new AvroFileBatchReader(std::move(reader), std::move(record_converter), batch_size));
+        new AvroFileBatchReader(input_stream, file_data_type, std::move(reader),
+                                std::move(array_builder), batch_size, pool));
+}
+
+Result<std::unique_ptr<::avro::DataFileReaderBase>> AvroFileBatchReader::CreateDataFileReader(
+    const std::shared_ptr<InputStream>& input_stream, const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_RETURN_NOT_OK(input_stream->Seek(0, SeekOrigin::FS_SEEK_SET));
+    try {
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::avro::InputStream> in,
+                               AvroInputStreamImpl::Create(input_stream, BUFFER_SIZE, pool));
+        auto reader = std::make_unique<::avro::DataFileReaderBase>(std::move(in));
+        reader->init();
+        return reader;
+    } catch (const ::avro::Exception& e) {
+        return Status::Invalid(fmt::format("build avro reader failed. {}", e.what()));
+    } catch (const std::exception& e) {
+        return Status::Invalid(fmt::format("build avro reader failed. {}", e.what()));
+    } catch (...) {
+        return Status::Invalid("build avro reader failed. unknown error");
+    }
 }
 
 Result<BatchReader::ReadBatch> AvroFileBatchReader::NextBatch() {
-    std::vector<::avro::GenericDatum> datums;
-    datums.reserve(batch_size_);
+    if (next_row_to_read_ == std::numeric_limits<uint64_t>::max()) {
+        next_row_to_read_ = 0;
+    }
     try {
-        for (int32_t i = 0; i < batch_size_; i++) {
-            ::avro::GenericDatum datum(reader_->readerSchema());
-            if (!reader_->read(datum)) {
-                // reach eof
+        while (array_builder_->length() < batch_size_) {
+            if (!reader_->hasMore()) {
                 break;
             }
-            if (datum.type() != ::avro::AVRO_RECORD) {
-                return Status::Invalid(
-                    fmt::format("avro reader next batch failed. invalid datum type: {}",
-                                ::avro::toString(datum.type())));
-            }
-            datums.emplace_back(datum);
+            reader_->decr();
+            PAIMON_RETURN_NOT_OK(AvroDirectDecoder::DecodeAvroToBuilder(
+                reader_->dataSchema().root(), read_fields_projection_, reader_->decoder(),
+                array_builder_.get(), decode_context_));
         }
-        if (datums.empty()) {
+        previous_first_row_ = next_row_to_read_;
+        next_row_to_read_ += array_builder_->length();
+        if (array_builder_->length() == 0) {
             return BatchReader::MakeEofBatch();
         }
-        // TODO(jinli.zjw) when support SetReadSchema(), may need convert file timestamp (milli) to
-        // target read type timestamp(second)
-        return record_converter_->NextBatch(datums);
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
+                                          array_builder_->Finish());
+        std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
+        std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
+        return make_pair(std::move(c_array), std::move(c_schema));
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro reader next batch failed. {}", e.what()));
     } catch (const std::exception& e) {
@@ -99,28 +128,50 @@ Result<BatchReader::ReadBatch> AvroFileBatchReader::NextBatch() {
 Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                           const std::shared_ptr<Predicate>& predicate,
                                           const std::optional<RoaringBitmap32>& selection_bitmap) {
-    assert(false);
-    return Status::NotImplemented("avro reader not support set read schema");
+    if (!read_schema) {
+        return Status::Invalid("SetReadSchema failed: read schema cannot be nullptr");
+    }
+    // TODO(menglingda.mld): support predicate
+    if (selection_bitmap) {
+        // TODO(menglingda.mld): support bitmap
+    }
+    previous_first_row_ = std::numeric_limits<uint64_t>::max();
+    next_row_to_read_ = std::numeric_limits<uint64_t>::max();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_read_schema,
+                                      arrow::ImportSchema(read_schema));
+    std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
+    PAIMON_ASSIGN_OR_RAISE(read_fields_projection_,
+                           CalculateReadFieldsProjection(file_data_type_, read_data_type));
+    array_builder_->Reset();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(array_builder_, arrow::MakeBuilder(read_data_type));
+    return Status::OK();
+}
+
+Result<std::set<size_t>> AvroFileBatchReader::CalculateReadFieldsProjection(
+    const std::shared_ptr<::arrow::DataType>& file_data_type,
+    const std::shared_ptr<::arrow::DataType>& read_data_type) {
+    if (file_data_type->id() != arrow::Type::STRUCT ||
+        read_data_type->id() != arrow::Type::STRUCT) {
+        return Status::Invalid(
+            fmt::format("Expected struct data type, file data type: {}, read data type: {}",
+                        file_data_type->ToString(), read_data_type->ToString()));
+    }
+    const auto& file_struct_type = std::static_pointer_cast<arrow::StructType>(file_data_type);
+    const auto& read_struct_type = std::static_pointer_cast<arrow::StructType>(read_data_type);
+    std::set<size_t> projection;
+    for (const auto& field : read_struct_type->fields()) {
+        auto field_index = file_struct_type->GetFieldIndex(field->name());
+        assert(field_index != -1);
+        projection.insert(field_index);
+    }
+    return projection;
 }
 
 Result<std::unique_ptr<::ArrowSchema>> AvroFileBatchReader::GetFileSchema() const {
     assert(reader_);
-    try {
-        const auto& avro_file_schema = reader_->dataSchema();
-        bool nullable = false;
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<arrow::DataType> arrow_file_type,
-            AvroSchemaConverter::GetArrowType(avro_file_schema.root(), &nullable));
-        auto c_schema = std::make_unique<::ArrowSchema>();
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*arrow_file_type, c_schema.get()));
-        return c_schema;
-    } catch (const ::avro::Exception& e) {
-        return Status::Invalid(fmt::format("get file schema failed. {}", e.what()));
-    } catch (const std::exception& e) {
-        return Status::Invalid(fmt::format("get file schema batch failed. {}", e.what()));
-    } catch (...) {
-        return Status::Invalid("get file schema failed. unknown error");
-    }
+    auto c_schema = std::make_unique<::ArrowSchema>();
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*file_data_type_, c_schema.get()));
+    return c_schema;
 }
 
 }  // namespace paimon::avro

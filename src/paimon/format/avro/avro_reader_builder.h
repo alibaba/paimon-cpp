@@ -42,19 +42,7 @@ class AvroReaderBuilder : public ReaderBuilder {
 
     Result<std::unique_ptr<FileBatchReader>> Build(
         const std::shared_ptr<InputStream>& path) const override {
-        try {
-            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::avro::InputStream> in,
-                                   AvroInputStreamImpl::Create(path, BUFFER_SIZE, pool_));
-            auto data_file_reader =
-                std::make_unique<::avro::DataFileReader<::avro::GenericDatum>>(std::move(in));
-            return AvroFileBatchReader::Create(std::move(data_file_reader), batch_size_, pool_);
-        } catch (const ::avro::Exception& e) {
-            return Status::Invalid(fmt::format("build avro reader failed. {}", e.what()));
-        } catch (const std::exception& e) {
-            return Status::Invalid(fmt::format("build avro reader failed. {}", e.what()));
-        } catch (...) {
-            return Status::Invalid("build avro reader failed. unknown error");
-        }
+        return AvroFileBatchReader::Create(path, batch_size_, pool_);
     }
 
     Result<std::unique_ptr<FileBatchReader>> Build(const std::string& path) const override {
@@ -62,8 +50,6 @@ class AvroReaderBuilder : public ReaderBuilder {
     }
 
  private:
-    static constexpr size_t BUFFER_SIZE = 1024 * 1024;  // 1M
-
     const int32_t batch_size_;
     std::shared_ptr<MemoryPool> pool_;
     const std::map<std::string, std::string> options_;

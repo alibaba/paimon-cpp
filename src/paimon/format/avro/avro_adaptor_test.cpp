@@ -27,7 +27,6 @@
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/utils/manifest_meta_reader.h"
-#include "paimon/format/avro/avro_record_converter.h"
 #include "paimon/format/avro/avro_schema_converter.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
@@ -62,17 +61,6 @@ TEST(AvroAdaptorTest, Simple) {
     ASSERT_OK_AND_ASSIGN(std::vector<::avro::GenericDatum> datums,
                          adaptor.ConvertArrayToGenericDatums(array, avro_schema));
     ASSERT_EQ(4, datums.size());
-    ASSERT_OK_AND_ASSIGN(auto record_converter,
-                         AvroRecordConverter::Create(data_type, GetDefaultPool()));
-    auto read_batch_result = record_converter->NextBatch(datums);
-    ASSERT_OK(read_batch_result);
-    auto [c_array, c_schema] = std::move(read_batch_result).value();
-
-    auto arrow_array = arrow::ImportArray(c_array.get(), c_schema.get()).ValueOrDie();
-    auto arrow_pool = GetArrowPool(GetDefaultPool());
-    ASSERT_OK_AND_ASSIGN(arrow_array, ManifestMetaReader::AlignArrayWithSchema(
-                                          arrow_array, data_type, arrow_pool.get()));
-    ASSERT_TRUE(array->Equals(arrow_array));
 }
 
 }  // namespace paimon::avro::test

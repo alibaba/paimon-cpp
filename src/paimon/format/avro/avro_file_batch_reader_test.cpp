@@ -215,30 +215,27 @@ TEST_P(AvroFileBatchReaderTest, TestReadTimestampTypes) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(path));
     ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(in));
 
-    // check file schema
-    ASSERT_OK_AND_ASSIGN(auto c_file_schema, batch_reader->GetFileSchema());
-    auto result_file_schema = arrow::ImportSchema(c_file_schema.get()).ValueOr(nullptr);
-    ASSERT_TRUE(result_file_schema);
     auto timezone = DateTimeUtils::GetLocalTimezoneName();
-    arrow::FieldVector fields = {
-        arrow::field("ts_sec", arrow::timestamp(arrow::TimeUnit::MILLI)),
+    arrow::FieldVector read_fields = {
+        arrow::field("ts_sec", arrow::timestamp(arrow::TimeUnit::SECOND)),
         arrow::field("ts_milli", arrow::timestamp(arrow::TimeUnit::MILLI)),
         arrow::field("ts_micro", arrow::timestamp(arrow::TimeUnit::MICRO)),
-        arrow::field("ts_tz_sec", arrow::timestamp(arrow::TimeUnit::MILLI, timezone)),
+        arrow::field("ts_tz_sec", arrow::timestamp(arrow::TimeUnit::SECOND, timezone)),
         arrow::field("ts_tz_milli", arrow::timestamp(arrow::TimeUnit::MILLI, timezone)),
         arrow::field("ts_tz_micro", arrow::timestamp(arrow::TimeUnit::MICRO, timezone)),
     };
-    auto expected_file_schema = arrow::schema(fields);
-    ASSERT_TRUE(result_file_schema->Equals(expected_file_schema)) << result_file_schema->ToString();
+    auto read_schema = arrow::schema(read_fields);
+    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
+    EXPECT_OK(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                          /*selection_bitmap=*/std::nullopt));
 
     // check array
     ASSERT_OK_AND_ASSIGN(auto result_array,
                          ::paimon::test::ReadResultCollector::CollectResult(batch_reader.get()));
-    // TODO(jinli.zjw) after support SetReadSchema, need change ts_sec/ts_tz_sec type from milli
-    // to second
     std::shared_ptr<arrow::ChunkedArray> expected_array;
     auto array_status =
-        arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow::struct_(fields), {R"([
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow::struct_(read_fields), {R"([
         ["1970-01-01T00:00:01","1970-01-01T00:00:00.001","1970-01-01T00:00:00.000001","1970-01-01T00:00:02","1970-01-01T00:00:00.002","1970-01-01T00:00:00.000002"],
         [null,"1970-01-01T00:00:00.003",null,null,"1970-01-01T00:00:00.004",null],
         ["1970-01-01T00:00:05",null,"1970-01-01T00:00:00.000005","1970-01-01T00:00:06",null,"1970-01-01T00:00:00.000006"]

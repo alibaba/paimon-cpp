@@ -32,24 +32,32 @@ class AvroSchemaConverter {
     AvroSchemaConverter() = delete;
     ~AvroSchemaConverter() = delete;
 
+    // TODO(menglingda.mld): avro添加field id
     static Result<::avro::ValidSchema> ArrowSchemaToAvroSchema(
-        const std::shared_ptr<arrow::Schema>& arrow_schema);
+        const std::shared_ptr<arrow::Schema>& arrow_schema,
+        const std::string& row_name = "org.apache.paimon.avro.generated.record");
 
     static Result<std::shared_ptr<arrow::DataType>> AvroSchemaToArrowDataType(
         const ::avro::ValidSchema& avro_schema);
 
+ private:
     static Result<std::shared_ptr<arrow::DataType>> GetArrowType(const ::avro::NodePtr& avro_node,
                                                                  bool* nullable);
 
- private:
-    static Result<::avro::Schema> ArrowTypeToAvroSchema(const std::shared_ptr<arrow::Field>& field);
+    static Result<::avro::Schema> ArrowTypeToAvroSchema(const std::shared_ptr<arrow::Field>& field,
+                                                        const std::string& row_name);
 
     static ::avro::Schema NullableSchema(const ::avro::Schema& schema);
+
+    static void AddRecordField(::avro::RecordSchema* record_schema, const std::string& field_name,
+                               const ::avro::Schema& field_schema);
 
     static Result<bool> CheckUnionType(const ::avro::NodePtr& avro_node);
 
     static Result<std::shared_ptr<arrow::Field>> GetArrowField(const std::string& name,
                                                                const ::avro::NodePtr& avro_node);
+
+    static bool HasMapLogicalType(const ::avro::NodePtr& node);
 };
 
 }  // namespace paimon::avro

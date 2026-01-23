@@ -16,6 +16,7 @@
 
 #include "paimon/format/avro/avro_file_format.h"
 
+#include <memory>
 #include <utility>
 
 #include "arrow/c/bridge.h"
