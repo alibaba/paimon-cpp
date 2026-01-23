@@ -287,24 +287,6 @@ struct PAIMON_EXPORT Options {
     /// "global-index.external-path" - Global index root directory, if not set, the global index
     /// files will be stored under the index directory.
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];
-    /// "cache.buffer-size-limit" - The maximum size in bytes of total cache memory buffer for one
-    /// file reader. Default value is 256MB.
-    static const char CACHE_BUFFER_SIZE_LIMIT[];
-    /// "cache.range-size-limit" - The maximum size in bytes of a combined range; if combining two
-    /// consecutive ranges would produce a range of a size greater than this, they are not combined.
-    /// Default value is 16MB.
-    static const char CACHE_RANGE_SIZE_LIMIT[];
-    /// "cache.hole-size-limit" - The maximum distance in bytes between two consecutive ranges;
-    /// beyond this value, ranges are not combined. Default value is 8K.
-    static const char CACHE_HOLE_SIZE_LIMIT[];
-    /// "cache.pre-buffer-range-count" - Number of additional ranges to prefetch ahead of the
-    /// current read position. For example, if set to 2, when reading a range, the cache will also
-    /// prefetch the next 2 configured ranges in advance. This helps hide I/O latency for sequential
-    /// access patterns. Default value is 6.
-    ///
-    /// Eviction policy: When the total cached data exceeds 'cache.buffer-size-limit',
-    /// the oldest cached ranges are evicted first (FIFO) to make room for new data.
-    static const char CACHE_PRE_BUFFER_RANGE_COUNT[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();
