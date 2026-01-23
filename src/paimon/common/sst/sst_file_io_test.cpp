@@ -75,6 +75,9 @@ class SstFileIOTest : public ::testing::Test {
 };
 
 TEST_F(SstFileIOTest, TestSimple) {
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> facory,
+                         BlockCompressionFactory::Create(BlockCompressionType::NONE));
+
     // write content
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs_->Create(index_path_, /*overwrite=*/false));
@@ -84,7 +87,7 @@ TEST_F(SstFileIOTest, TestSimple) {
     auto seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
     auto seg_ptr = std::make_shared<MemorySegment>(seg_for_bf);
     ASSERT_OK(bf->SetMemorySegment(seg_ptr));
-    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50);
+    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, facory);
     std::set<int32_t> value_hash;
     for (size_t i = 1; i <= 5; i++) {
         std::string key = "k" + std::to_string(i);
@@ -137,7 +140,8 @@ TEST_F(SstFileIOTest, TestSimple) {
     }
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    auto reader_ret =
+        SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_, facory);
     ASSERT_OK(reader_ret);
     auto reader = reader_ret.value();
     // not exist key
@@ -164,6 +168,8 @@ TEST_F(SstFileIOTest, TestSimple) {
 }
 
 TEST_F(SstFileIOTest, TestJavaCompatitable) {
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> facory,
+                         BlockCompressionFactory::Create(BlockCompressionType::NONE));
     // key range [1_000_000, 2_000_000], value is equal to the key
     std::string file = GetDataDir() + "/sst/none/79d01717-8380-4504-86e1-387e6c058d0a";
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
@@ -171,7 +177,8 @@ TEST_F(SstFileIOTest, TestJavaCompatitable) {
         std::make_shared<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    auto reader_ret =
+        SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_, facory);
     ASSERT_OK(reader_ret);
     auto reader = reader_ret.value();
     // not exist key

@@ -13,6 +13,9 @@
 # limitations under the License.
 
 set(PAIMON_COMMON_SRCS
+    common/compression/block_compression_factory.cpp
+    common/compression/block_compressor.cpp
+    common/compression/block_decompressor.cpp
     common/data/abstract_binary_writer.cpp
     common/data/binary_array.cpp
     common/data/binary_array_writer.cpp
@@ -434,6 +437,7 @@ if(PAIMON_BUILD_TESTS)
 
     add_paimon_test(common_sst_file_format_test
                     SOURCES
+                    common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared

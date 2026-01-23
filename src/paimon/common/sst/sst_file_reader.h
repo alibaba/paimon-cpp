@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_cache.h"
 #include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
@@ -44,7 +45,8 @@ class SstFileReader {
         int64_t file_len,
         std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                               const std::shared_ptr<MemorySlice>&)>
-            comparator);
+            comparator,
+        const std::shared_ptr<BlockCompressionFactory>& factory);
 
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,
@@ -52,7 +54,8 @@ class SstFileReader {
                   const std::shared_ptr<BloomFilter>& bloom_filter,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
-                      comparator);
+                      comparator,
+                  const std::shared_ptr<BlockCompressionFactory>& factory);
     ~SstFileReader() = default;
 
     std::unique_ptr<SstFileIterator> CreateIterator();
@@ -88,6 +91,7 @@ class SstFileReader {
     std::shared_ptr<BlockReader> index_block_reader_;
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator_;
+    std::shared_ptr<BlockDecompressor> decompressor_;
 };
 
 class SstFileIterator {

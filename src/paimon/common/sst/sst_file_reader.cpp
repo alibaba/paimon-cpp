@@ -23,7 +23,8 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
     int64_t file_len,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator) {
+        comparator,
+    const std::shared_ptr<BlockCompressionFactory>& factory) {
     // read footer
     auto segment = block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,
                                          BlockFooter::ENCODED_LENGTH, true);
@@ -49,7 +50,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     }
 
     return std::make_shared<SstFileReader>(pool, block_cache, footer->GetIndexBlockHandle(),
-                                           bloom_filter, comparator);
+                                           bloom_filter, comparator, factory);
 }
 
 SstFileReader::SstFileReader(
@@ -57,9 +58,11 @@ SstFileReader::SstFileReader(
     const std::shared_ptr<BlockHandle>& index_block_handle,
     const std::shared_ptr<BloomFilter>& bloom_filter,
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator)
+        comparator,
+    const std::shared_ptr<BlockCompressionFactory>& factory)
     : pool_(pool), block_cache_(block_cache), bloom_filter_(bloom_filter), comparator_(comparator) {
     index_block_reader_ = ReadBlock(index_block_handle, true);
+    decompressor_ = factory->GetDecompressor();
 }
 
 std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {

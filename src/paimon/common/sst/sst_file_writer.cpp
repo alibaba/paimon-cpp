@@ -16,7 +16,18 @@
 
 #include "paimon/common/sst/sst_file_writer.h"
 namespace paimon {
-class MemoryPool;
+SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
+                             const std::shared_ptr<MemoryPool>& pool,
+                             const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,
+                             const std::shared_ptr<BlockCompressionFactory>& factory)
+    : out_(out), pool_(pool), bloom_filter_(bloom_filter), block_size_(block_size) {
+    data_block_writer_ =
+        std::make_unique<BlockWriter>(static_cast<int32_t>(block_size * 1.1), pool);
+    index_block_writer_ =
+        std::make_unique<BlockWriter>(BlockHandle::MAX_ENCODED_LENGTH * 1024, pool);
+    compression_type_ = factory->GetCompressionType();
+    compressor_ = factory->GetCompressor();
+}
 
 Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) {
     data_block_writer_->Write(key, value);
@@ -79,16 +90,29 @@ Status SstFileWriter::WriteFooter(const std::shared_ptr<BlockHandle>& index_bloc
 
 Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     std::unique_ptr<BlockWriter>& writer) {
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::MemorySlice> block_data, writer->Finish());
+    auto ret = writer->Finish();
+    if (!ret.ok()) {
+        return ret.status();
+    }
 
-    auto size = block_data->Length();
-    // todo attempt to compress the block
+    auto& block_data = ret.value();
     auto view = block_data->ReadStringView();
+
+    if (compressor_.get()) {
+        auto new_size = compressor_->GetMaxCompressedSize(view.size());
+        auto buffer = std::make_unique<Bytes>(new_size, pool_.get());
+        PAIMON_ASSIGN_OR_RAISE(
+            auto actual_size,
+            compressor_->Compress(view.data(), view.size(), buffer->data(), buffer->size()));
+        view = std::string_view{buffer->data(), static_cast<size_t>(actual_size)};
+    }
+
     auto crc32 = arrow::internal::crc32(0, view.data(), view.size());
-    auto trailer = std::make_shared<BlockTrailer>(0, crc32)->WriteBlockTrailer(pool_.get());
+    auto trailer = std::make_shared<BlockTrailer>(static_cast<int8_t>(compression_type_), crc32)
+                       ->WriteBlockTrailer(pool_.get());
     auto trailer_data = trailer->ReadStringView();
 
-    auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), size);
+    auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), view.size());
 
     // 1. write data
     PAIMON_RETURN_NOT_OK(WriteBytes(view.data(), view.size()));
