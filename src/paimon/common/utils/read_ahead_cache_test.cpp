@@ -29,26 +29,46 @@
 
 namespace paimon::test {
 
-TEST(TestReadAheadCache, TestBasics) {
+// Helper to create a test file, write content, and return a ready ReadAheadCache.
+struct TestCacheEnv {
+    std::string path;
+    std::shared_ptr<paimon::ReadAheadCache> cache;
+    std::shared_ptr<paimon::MemoryPool> pool;
+};
+
+TestCacheEnv CreateTestFileAndCache(const std::string& filename, const std::string& content,
+                                    const paimon::CacheConfig& config,
+                                    const std::vector<paimon::ByteRange>& ranges) {
     auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    const std::string path = dir->Str() + "/data_file";
-    const std::string content = "abcdefghijklmnopqrstuvwxyz";
+    EXPECT_TRUE(dir);
+    std::string path = dir->Str() + "/" + filename;
     std::ofstream file(path, std::ios::binary);
-    ASSERT_TRUE(file.is_open());
+    EXPECT_TRUE(file.is_open());
     file.write(content.data(), content.size());
-    ASSERT_FALSE(file.fail());
+    EXPECT_FALSE(file.fail());
     file.close();
 
-    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", path, {}));
-    ASSERT_OK_AND_ASSIGN(auto in, fs->Open(path));
-
-    CacheConfig config(/*buffer_size_limit=*/256 * 1024 * 1024, /*range_size_limit=*/10,
-                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/6);
+    auto fs_result = FileSystemFactory::Get("local", path, {});
+    EXPECT_TRUE(fs_result.ok());
+    auto fs = std::move(fs_result).value();
+    auto in_result = fs->Open(path);
+    EXPECT_TRUE(in_result.ok());
+    auto in = std::move(in_result).value();
 
     auto pool = GetDefaultPool();
-    ReadAheadCache cache(std::move(in), config, pool);
-    cache.Init({{1, 2}, {3, 2}, {8, 2}, {10, 4}, {14, 0}, {15, 4}, {20, 2}, {25, 0}});
+    auto cache = std::make_shared<ReadAheadCache>(std::move(in), config, pool);
+    EXPECT_OK(cache->Init(ranges));
+    return {path, cache, pool};
+}
+
+TEST(TestReadAheadCache, TestBasics) {
+    CacheConfig config(/*buffer_size_limit=*/256 * 1024 * 1024, /*range_size_limit=*/10,
+                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/6);
+    std::string content = "abcdefghijklmnopqrstuvwxyz";
+    auto env = CreateTestFileAndCache(
+        "data_file", content, config,
+        {{1, 2}, {3, 2}, {8, 2}, {10, 4}, {14, 0}, {15, 4}, {20, 2}, {25, 0}});
+    auto& cache = *env.cache;
 
     auto assert_slice_equal = [](const ByteSlice& slice, const std::string& expected) {
         ASSERT_TRUE(slice.buffer) << expected;
@@ -56,9 +76,6 @@ TEST(TestReadAheadCache, TestBasics) {
     };
 
     ByteSlice slice;
-
-    ASSERT_FALSE(cache.Read({20, 2}).value().buffer);
-    ASSERT_FALSE(cache.Read({1, 2}).value().buffer);
 
     ASSERT_OK_AND_ASSIGN(slice, cache.Read({20, 2}));
     assert_slice_equal(slice, "uv");
@@ -92,6 +109,52 @@ TEST(TestReadAheadCache, TestBasics) {
     ASSERT_FALSE(cache.Read({20, 3}).value().buffer);
     ASSERT_FALSE(cache.Read({0, 3}).value().buffer);
     ASSERT_FALSE(cache.Read({25, 2}).value().buffer);
+}
+
+// Test repeated reads to the same range to ensure cache reuse.
+TEST(TestReadAheadCache, TestRepeatedReadCacheReuse) {
+    CacheConfig config(/*buffer_size_limit=*/64, /*range_size_limit=*/10,
+                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/2);
+    std::string content = "abcdefghijklmnopqrstuvwxyz";
+    auto env = CreateTestFileAndCache("data_file", content, config, {{0, 5}, {7, 5}});
+    auto& cache = *env.cache;
+
+    ByteSlice slice;
+    ASSERT_OK_AND_ASSIGN(slice, cache.Read({0, 5}));
+    ASSERT_TRUE(slice.buffer);
+    std::string first_read(slice.buffer->data() + slice.offset, slice.length);
+    ASSERT_EQ(first_read, "abcde");
+
+    ASSERT_OK_AND_ASSIGN(slice, cache.Read({0, 5}));
+    ASSERT_TRUE(slice.buffer);
+    std::string second_read(slice.buffer->data() + slice.offset, slice.length);
+    ASSERT_EQ(second_read, "abcde");
+    ASSERT_EQ(slice.buffer, slice.buffer);
+}
+
+// Test cache eviction when buffer size is limited.
+TEST(TestReadAheadCache, TestCacheEviction) {
+    CacheConfig config(/*buffer_size_limit=*/10, /*range_size_limit=*/5,
+                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/1);
+    std::string content = "abcdefghijklmnopqrstuvwxyz";
+    auto env = CreateTestFileAndCache("data_file", content, config, {{0, 5}, {8, 5}, {16, 5}});
+    auto& cache = *env.cache;
+
+    ByteSlice slice;
+    ASSERT_OK_AND_ASSIGN(slice, cache.Read({0, 5}));
+    ASSERT_TRUE(slice.buffer);
+    std::string first_read(slice.buffer->data() + slice.offset, slice.length);
+    ASSERT_EQ(first_read, "abcde");
+
+    // Reading another range should evict the first one due to buffer size limit
+    ASSERT_OK_AND_ASSIGN(slice, cache.Read({8, 5}));
+    ASSERT_TRUE(slice.buffer);
+    std::string second_read(slice.buffer->data() + slice.offset, slice.length);
+    ASSERT_EQ(second_read, "ijklm");
+
+    // The first range should now be a cache miss (buffer is nullptr)
+    auto miss = cache.Read({0, 5});
+    ASSERT_FALSE(miss.value().buffer);
 }
 
 }  // namespace paimon::test

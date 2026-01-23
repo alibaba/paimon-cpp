@@ -156,6 +156,7 @@ Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
         return ByteSlice{std::make_shared<Bytes>(0, memory_pool_.get()), 0, 0};
     }
 
+    PreBuffer(range.offset, config_.GetPreBufferRangeCount());
     ByteSlice result{};
     {
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
@@ -169,7 +170,6 @@ Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
             return result;
         }
     }
-    PreBuffer(range.offset, config_.GetPreBufferRangeCount());
     return result;
 }
 
