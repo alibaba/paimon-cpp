@@ -130,8 +130,8 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange> ranges) {
         std::vector<ByteRange> pending_ranges,
         ByteRangeCombiner::CoalesceByteRanges(std::move(ranges), config_.GetHoleSizeLimit(),
                                               config_.GetRangeSizeLimit()));
-    for (const auto& pending_ranges : pending_ranges) {
-        if (pending_ranges.length > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+    for (const auto& pending_range : pending_ranges) {
+        if (pending_range.length > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
             return Status::Invalid("range length should not be larger than uint32_t max");
         }
     }
@@ -180,6 +180,9 @@ ReadAheadCache::Impl::~Impl() {
 }
 
 Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
+    if (PAIMON_UNLIKELY(!is_initialized_)) {
+        return Status::Invalid("Cache should be initialized before read");
+    }
     if (range.length == 0) {
         return ByteSlice{std::make_shared<Bytes>(0, memory_pool_.get()), 0, 0};
     }
