@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache ORC
+// https://github.com/apache/orc/blob/main/c%2B%2B/src/io/Cache.hh
+
 #pragma once
 
 #include <vector>
@@ -29,11 +32,12 @@ struct ByteRangeCombiner {
     const uint64_t hole_size_limit;
     const uint64_t range_size_limit;
 
-    static Result<std::vector<ByteRange>> CoalesceByteRanges(std::vector<ByteRange> ranges,
+    static Result<std::vector<ByteRange>> CoalesceByteRanges(std::vector<ByteRange>&& ranges,
                                                              uint64_t hole_size_limit,
                                                              uint64_t range_size_limit);
 
-    Result<std::vector<ByteRange>> Coalesce(std::vector<ByteRange> ranges) const;
+ private:
+    Result<std::vector<ByteRange>> Coalesce(std::vector<ByteRange>&& ranges) const;
 };
 
 }  // namespace paimon

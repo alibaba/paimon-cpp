@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache ORC
+// https://github.com/apache/orc/blob/main/c%2B%2B/test/TestCache.cc
+
 #include "paimon/common/utils/byte_range_combiner.h"
 
 #include "gtest/gtest.h"
@@ -28,8 +31,10 @@ TEST(ByteRangeCombinerTest, TestBasics) {
     auto check = [](std::vector<ByteRange> ranges, std::vector<ByteRange> expected) -> void {
         const uint64_t hole_size_limit = 9;
         const uint64_t range_size_limit = 99;
-        ASSERT_OK_AND_ASSIGN(auto coalesced, ByteRangeCombiner::CoalesceByteRanges(
-                                                 ranges, hole_size_limit, range_size_limit));
+        auto actual = ranges;
+        ASSERT_OK_AND_ASSIGN(auto coalesced,
+                             ByteRangeCombiner::CoalesceByteRanges(
+                                 std::move(actual), hole_size_limit, range_size_limit));
         ASSERT_EQ(coalesced, expected);
     };
 

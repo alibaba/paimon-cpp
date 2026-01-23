@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache ORC
+// https://github.com/apache/orc/blob/main/c%2B%2B/src/io/Cache.cc
+
 #include "paimon/common/utils/byte_range_combiner.h"
 
 #include <algorithm>
@@ -25,7 +28,7 @@
 
 namespace paimon {
 
-Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange> ranges) const {
+Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange>&& ranges) const {
     if (ranges.empty()) {
         return ranges;
     }
@@ -96,9 +99,8 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange
     return coalesced;
 }
 
-Result<std::vector<ByteRange>> ByteRangeCombiner::CoalesceByteRanges(std::vector<ByteRange> ranges,
-                                                                     uint64_t hole_size_limit,
-                                                                     uint64_t range_size_limit) {
+Result<std::vector<ByteRange>> ByteRangeCombiner::CoalesceByteRanges(
+    std::vector<ByteRange>&& ranges, uint64_t hole_size_limit, uint64_t range_size_limit) {
     if (range_size_limit <= hole_size_limit) {
         return Status::Invalid(
             fmt::format("range size limit {} should be larger than hole size limit {}",

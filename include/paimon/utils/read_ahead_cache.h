@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache ORC
+// https://github.com/apache/orc/blob/main/c%2B%2B/src/io/Cache.hh
+
 #pragma once
 
 #include <cstdint>
@@ -98,6 +101,14 @@ struct PAIMON_EXPORT ByteSlice {
 };
 
 /// A read cache designed to hide IO latencies when reading.
+/// Prefetching strategy: When a range is read, the cache will prefetch up to
+/// `pre_buffer_range_count` additional adjacent ranges ahead of the requested offset. This helps
+/// hide I/O latency for sequential access. Example: If you read range [0, 100), and
+/// pre_buffer_range_count=2, the next two configured ranges will also be prefetched.
+///
+/// Eviction policy: The cache uses a simple FIFO eviction policy based on total cached byte size.
+/// When adding new ranges would exceed `buffer_size_limit`, the oldest cached ranges are evicted
+/// first until there is enough space for the new data.
 class PAIMON_EXPORT ReadAheadCache {
  public:
     /// Construct a read cache with given options
@@ -110,13 +121,20 @@ class PAIMON_EXPORT ReadAheadCache {
     /// @return Status of the operation.
     /// @note This method must be called before any Read() calls. Ranges will be coalesced based
     /// on the cache configuration.
-    Status Init(std::vector<ByteRange> ranges);
+    Status Init(std::vector<ByteRange>&& ranges);
 
     /// Read a range previously provided to Init().
     /// @param range The byte range to read.
     /// @return The byte slice containing the requested data. If the data is not yet cached
     /// (cache miss), the returned `ByteSlice` will have a null buffer (`buffer == nullptr`)
     Result<ByteSlice> Read(const ByteRange& range);
+
+    /// Reset the cache to its initial state, clearing all cached data and configuration.
+    ///
+    /// This method waits for all ongoing asynchronous read operations to complete,
+    /// clears all cached entries, and resets the internal state so that Init() can be called again.
+    /// After calling Reset, the cache can be safely re-initialized with new ranges.
+    void Reset();
 
  private:
     class Impl;

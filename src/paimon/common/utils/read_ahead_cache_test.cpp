@@ -35,7 +35,7 @@ struct TestCacheEnv {
 
 TestCacheEnv CreateTestFileAndCache(const std::string& filename, const std::string& content,
                                     const paimon::CacheConfig& config,
-                                    const std::vector<paimon::ByteRange>& ranges) {
+                                    std::vector<paimon::ByteRange> ranges) {
     auto dir = UniqueTestDirectory::Create();
     EXPECT_TRUE(dir);
     std::string path = dir->Str() + "/" + filename;
@@ -54,7 +54,7 @@ TestCacheEnv CreateTestFileAndCache(const std::string& filename, const std::stri
 
     auto pool = GetDefaultPool();
     auto cache = std::make_shared<ReadAheadCache>(std::move(in), config, pool);
-    EXPECT_OK(cache->Init(ranges));
+    EXPECT_OK(cache->Init(std::move(ranges)));
     return {path, cache, pool};
 }
 

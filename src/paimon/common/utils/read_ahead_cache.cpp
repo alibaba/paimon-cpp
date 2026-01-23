@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+// Adapted from Apache ORC
+// https://github.com/apache/orc/blob/main/c%2B%2B/src/io/Cache.cc
+
 #include "paimon/utils/read_ahead_cache.h"
 
 #include <algorithm>
@@ -61,8 +64,9 @@ class ReadAheadCache::Impl {
          const std::shared_ptr<MemoryPool>& memory_pool);
     ~Impl();
 
-    Status Init(std::vector<ByteRange> ranges);
+    Status Init(std::vector<ByteRange>&& ranges);
     Result<ByteSlice> Read(const ByteRange& range);
+    void Reset();
 
  private:
     std::vector<RangeCacheEntry> MakeCacheEntries(const std::vector<ByteRange>& ranges) const;
@@ -104,8 +108,6 @@ void ReadAheadCache::Impl::Cache(std::vector<ByteRange> ranges) {
         size_t limit = config_.GetBufferSizeLimit();
         while (!entries_.empty() && total_size + new_entries_size > limit) {
             auto iter = entries_.begin();
-
-            iter->future.wait();
             total_size -= entries_.front().range.length;
             entries_.erase(iter);
         }
@@ -119,13 +121,14 @@ void ReadAheadCache::Impl::Cache(std::vector<ByteRange> ranges) {
     }
 }
 
-Status ReadAheadCache::Impl::Init(std::vector<ByteRange> ranges) {
+Status ReadAheadCache::Impl::Init(std::vector<ByteRange>&& ranges) {
     if (is_initialized_) {
         return Status::Invalid("Cache has already been initialized");
     }
     if (config_.GetRangeSizeLimit() > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
         return Status::Invalid("CacheConfig range_size_limit exceeds uint32_t max");
     }
+
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<ByteRange> pending_ranges,
         ByteRangeCombiner::CoalesceByteRanges(std::move(ranges), config_.GetHoleSizeLimit(),
@@ -159,7 +162,7 @@ void ReadAheadCache::Impl::PreBuffer(uint64_t offset, size_t n_extra) {
     std::vector<ByteRange> ranges;
     for (size_t i = start_idx; i < end_idx; ++i) {
         if (!is_cached_[i].exchange(true)) {
-            ranges.push_back(pending_ranges_[i]);
+            ranges.emplace_back(pending_ranges_[i]);
         }
     }
 
@@ -179,14 +182,21 @@ ReadAheadCache::Impl::~Impl() {
     }
 }
 
-Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
-    if (PAIMON_UNLIKELY(!is_initialized_)) {
-        return Status::Invalid("Cache should be initialized before read");
+void ReadAheadCache::Impl::Reset() {
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
+    for (auto& entry : entries_) {
+        entry.future.wait();
     }
+    entries_.clear();
+    is_cached_.clear();
+    pending_ranges_.clear();
+    is_initialized_ = false;
+}
+
+Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
     if (range.length == 0) {
         return ByteSlice{std::make_shared<Bytes>(0, memory_pool_.get()), 0, 0};
     }
-
     PreBuffer(range.offset, config_.GetPreBufferRangeCount());
     ByteSlice result{};
     {
@@ -227,12 +237,16 @@ ReadAheadCache::ReadAheadCache(const std::shared_ptr<InputStream>& stream,
 
 ReadAheadCache::~ReadAheadCache() = default;
 
-Status ReadAheadCache::Init(std::vector<ByteRange> ranges) {
+Status ReadAheadCache::Init(std::vector<ByteRange>&& ranges) {
     return impl_->Init(std::move(ranges));
 }
 
 Result<ByteSlice> ReadAheadCache::Read(const ByteRange& range) {
     return impl_->Read(range);
+}
+
+void ReadAheadCache::Reset() {
+    return impl_->Reset();
 }
 
 }  // namespace paimon
