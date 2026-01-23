@@ -46,7 +46,7 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange
     unique_ranges.reserve(ranges.size());
     for (auto it = ranges.begin(); it != end; ++it) {
         if (unique_ranges.empty() || !unique_ranges.back().Contains(*it)) {
-            unique_ranges.push_back(*it);
+            unique_ranges.emplace_back(*it);
         }
     }
     ranges = std::move(unique_ranges);
@@ -85,14 +85,14 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange
         //   - distance (hole/gap) between consecutive ranges is too large.
         if ((current_range_end - coalesced_start > range_size_limit) ||
             (current_range_start > coalesced_end + hole_size_limit)) {
-            coalesced.push_back({coalesced_start, coalesced_end - coalesced_start});
+            coalesced.emplace_back({coalesced_start, coalesced_end - coalesced_start});
             coalesced_start = current_range_start;
         }
 
         // Update the prev_range_end with the current range.
         coalesced_end = current_range_end;
     }
-    coalesced.push_back({coalesced_start, coalesced_end - coalesced_start});
+    coalesced.emplace_back({coalesced_start, coalesced_end - coalesced_start});
     assert(coalesced.front().offset == ranges.front().offset);
     assert(coalesced.back().offset + coalesced.back().length ==
            ranges.back().offset + ranges.back().length);
