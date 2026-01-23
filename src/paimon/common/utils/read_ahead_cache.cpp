@@ -135,6 +135,7 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange> ranges) {
             return Status::Invalid("range length should be larger than uint32_t max");
         }
     }
+    pending_ranges_ = pending_ranges;
     is_cached_ = std::vector<std::atomic<bool>>(pending_ranges_.size());
     for (size_t i = 0; i < is_cached_.size(); ++i) {
         is_cached_[i].store(false);

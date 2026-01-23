@@ -126,7 +126,6 @@ TEST(TestReadAheadCache, TestRepeatedReadCacheReuse) {
     ASSERT_TRUE(slice.buffer);
     std::string second_read(slice.buffer->data() + slice.offset, slice.length);
     ASSERT_EQ(second_read, "abcde");
-    ASSERT_EQ(slice.buffer, slice.buffer);
 }
 
 // Test cache eviction when buffer size is limited.
