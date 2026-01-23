@@ -81,5 +81,4 @@ const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
-
 }  // namespace paimon
