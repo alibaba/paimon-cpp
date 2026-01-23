@@ -27,6 +27,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/visibility.h"
 
 namespace paimon {
 
@@ -36,13 +37,9 @@ namespace paimon {
 /// ReadAheadCache to balance memory usage, I/O efficiency, and latency hiding.
 class PAIMON_EXPORT CacheConfig {
  public:
-    CacheConfig() = default;
+    CacheConfig();
     CacheConfig(uint64_t buffer_size_limit, uint64_t range_size_limit, uint64_t hole_size_limit,
-                uint32_t pre_buffer_range_count)
-        : buffer_size_limit_(buffer_size_limit),
-          range_size_limit_(range_size_limit),
-          hole_size_limit_(hole_size_limit),
-          pre_buffer_range_count_(pre_buffer_range_count) {}
+                uint32_t pre_buffer_range_count);
 
     /// Returns the maximum total size (in bytes) of cached data.
     uint64_t GetBufferSizeLimit() const {
@@ -111,14 +108,14 @@ class PAIMON_EXPORT ReadAheadCache {
     /// Initialize the cache with given byte ranges to be cached.
     /// @param ranges The byte ranges to be cached.
     /// @return Status of the operation.
-    /// @note This method must be called before any Read() calls. Ranges will be coalesced based on
-    /// the cache configuration.
+    /// @note This method must be called before any Read() calls. Ranges will be coalesced based
+    /// on the cache configuration.
     Status Init(std::vector<ByteRange> ranges);
 
-    /// Read a range previously given to Cache().
+    /// Read a range previously provided to Init().
     /// @param range The byte range to read.
-    /// @return The byte slice containing the requested data. If the data is not yet cached (cache
-    /// miss), the returned `ByteSlice` will have a null buffer (`buffer() == nullptr`)
+    /// @return The byte slice containing the requested data. If the data is not yet cached
+    /// (cache miss), the returned `ByteSlice` will have a null buffer (`buffer == nullptr`)
     Result<ByteSlice> Read(const ByteRange& range);
 
  private:

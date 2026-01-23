@@ -16,7 +16,6 @@
 
 #include "paimon/common/utils/byte_range_combiner.h"
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/utils/read_ahead_cache.h"

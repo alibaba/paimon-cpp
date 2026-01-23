@@ -18,7 +18,6 @@
 
 #include "paimon/utils/read_ahead_cache.h"
 
-#include <cstring>
 #include <fstream>
 #include <vector>
 
@@ -63,7 +62,7 @@ TestCacheEnv CreateTestFileAndCache(const std::string& filename, const std::stri
 
 TEST(TestReadAheadCache, TestBasics) {
     CacheConfig config(/*buffer_size_limit=*/256 * 1024 * 1024, /*range_size_limit=*/10,
-                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/6);
+                       /*hole_size_limit=*/2, /*pre_buffer_range_count=*/6);
     std::string content = "abcdefghijklmnopqrstuvwxyz";
     auto env = CreateTestFileAndCache(
         "data_file", content, config,
@@ -114,7 +113,7 @@ TEST(TestReadAheadCache, TestBasics) {
 // Test repeated reads to the same range to ensure cache reuse.
 TEST(TestReadAheadCache, TestRepeatedReadCacheReuse) {
     CacheConfig config(/*buffer_size_limit=*/64, /*range_size_limit=*/10,
-                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/2);
+                       /*hole_size_limit=*/2, /*pre_buffer_range_count=*/2);
     std::string content = "abcdefghijklmnopqrstuvwxyz";
     auto env = CreateTestFileAndCache("data_file", content, config, {{0, 5}, {7, 5}});
     auto& cache = *env.cache;
@@ -135,7 +134,7 @@ TEST(TestReadAheadCache, TestRepeatedReadCacheReuse) {
 // Test cache eviction when buffer size is limited.
 TEST(TestReadAheadCache, TestCacheEviction) {
     CacheConfig config(/*buffer_size_limit=*/10, /*range_size_limit=*/5,
-                       /*hold_size_limit=*/2, /*pre_buffer_range_count=*/1);
+                       /*hole_size_limit=*/2, /*pre_buffer_range_count=*/1);
     std::string content = "abcdefghijklmnopqrstuvwxyz";
     auto env = CreateTestFileAndCache("data_file", content, config, {{0, 5}, {8, 5}, {16, 5}});
     auto& cache = *env.cache;

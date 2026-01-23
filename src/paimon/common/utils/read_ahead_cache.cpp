@@ -42,6 +42,19 @@ struct RangeCacheEntry {
     }
 };
 
+CacheConfig::CacheConfig(uint64_t buffer_size_limit, uint64_t range_size_limit,
+                         uint64_t hole_size_limit, uint32_t pre_buffer_range_count)
+    : buffer_size_limit_(buffer_size_limit),
+      range_size_limit_(range_size_limit),
+      hole_size_limit_(hole_size_limit),
+      pre_buffer_range_count_(pre_buffer_range_count) {}
+
+CacheConfig::CacheConfig()
+    : CacheConfig(/*buffer_size_limit=*/512 * 1024 * 1024,
+                  /*range_size_limit=*/16 * 1024 * 1024,
+                  /*hole_size_limit=*/8 * 1024,
+                  /*pre_buffer_range_count=*/6) {}
+
 class ReadAheadCache::Impl {
  public:
     Impl(const std::shared_ptr<InputStream>& stream, const CacheConfig& config,
@@ -69,6 +82,7 @@ class ReadAheadCache::Impl {
     std::shared_mutex rw_mutex_;
     std::vector<std::atomic<bool>> is_cached_;
     std::vector<ByteRange> pending_ranges_;
+    bool is_initialized_ = false;
 };
 
 void ReadAheadCache::Impl::Cache(std::vector<ByteRange> ranges) {
@@ -106,13 +120,26 @@ void ReadAheadCache::Impl::Cache(std::vector<ByteRange> ranges) {
 }
 
 Status ReadAheadCache::Impl::Init(std::vector<ByteRange> ranges) {
-    PAIMON_ASSIGN_OR_RAISE(pending_ranges_, ByteRangeCombiner::CoalesceByteRanges(
-                                                std::move(ranges), config_.GetHoleSizeLimit(),
-                                                config_.GetRangeSizeLimit()));
+    if (is_initialized_) {
+        return Status::Invalid("Cache has already been initialized");
+    }
+    if (config_.GetRangeSizeLimit() > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+        return Status::Invalid("CacheConfig range_size_limit exceeds uint32_t max");
+    }
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<ByteRange> pending_ranges,
+        ByteRangeCombiner::CoalesceByteRanges(std::move(ranges), config_.GetHoleSizeLimit(),
+                                              config_.GetRangeSizeLimit()));
+    for (const auto& pending_ranges : pending_ranges) {
+        if (pending_ranges.length > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
+            return Status::Invalid("range length should be larger than uint32_t max");
+        }
+    }
     is_cached_ = std::vector<std::atomic<bool>>(pending_ranges_.size());
     for (size_t i = 0; i < is_cached_.size(); ++i) {
         is_cached_[i].store(false);
     }
+    is_initialized_ = true;
     return Status::OK();
 }
 
