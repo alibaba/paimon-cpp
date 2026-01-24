@@ -74,10 +74,25 @@ class PAIMON_EXPORT MemoryPool {
     ///
     /// Releases a previously allocated memory block back to the pool.
     /// The size must match the size used during allocation.
+    /// The alignment used during allocation is not provided, subclass should store it
+    /// by themselves if needed.
     ///
     /// @param p Pointer to the memory block to deallocate.
     /// @param size Size of the memory block (must match allocation size).
     virtual void Free(void* p, uint64_t size) = 0;
+
+    /// Deallocate memory back to the pool with specified alignment.
+    ///
+    /// Releases a previously allocated memory block back to the pool.
+    /// The size and alignment must match the values used during allocation.
+    /// Subclass can override this method to optimize deallocation based on alignment.
+    ///
+    /// @param p Pointer to the memory block to deallocate.
+    /// @param size Size of the memory block (must match allocation size).
+    /// @param alignment Alignment of the memory block (must match allocation alignment).
+    virtual void Free(void* p, uint64_t size, uint64_t alignment) {
+        Free(p, size);
+    }
 
     /// Get current memory usage.
     ///

@@ -46,8 +46,8 @@ class ArrowMemPoolAdaptor : public arrow::MemoryPool {
         return arrow::Status::OK();
     }
 
-    void Free(uint8_t* buffer, int64_t size, int64_t /*alignment=*/) override {
-        pool_.Free(buffer, size);
+    void Free(uint8_t* buffer, int64_t size, int64_t alignment) override {
+        pool_.Free(buffer, size, alignment);
         stats_.DidFreeBytes(size);
     }
 
