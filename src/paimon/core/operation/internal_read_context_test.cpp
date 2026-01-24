@@ -153,9 +153,9 @@ TEST(InternalReadContext, TestReadWithFieldIdsAndSpecialFields) {
         ReadContextBuilder context_builder(path);
         // here we use field ids instead of field names, and specify special ids for row id,
         // sequence number and index score.
-        context_builder.SetReadFieldIds({3, 0, SPECIAL_FIELD_ID_ROWID,
-                                         SPECIAL_FIELD_ID_SEQUENCENUMBER,
-                                         SPECIAL_FIELD_ID_INDEXSCORE});
+        context_builder.SetReadFieldIds({3, 0, SpecialFieldIds::ROW_ID,
+                                         SpecialFieldIds::SEQUENCE_NUMBER,
+                                         SpecialFieldIds::INDEX_SCORE});
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
         ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));

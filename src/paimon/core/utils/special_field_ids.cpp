@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,16 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <cstdint>
-#include <limits>
+#include "paimon/utils/special_field_ids.h"
 
 namespace paimon {
+const int32_t SpecialFieldIds::CPP_FIELD_ID_END = (std::numeric_limits<int32_t>::max() - 10000);
 
-#define SPECIAL_FIELD_ID_SEQUENCENUMBER (std::numeric_limits<int32_t>::max() - 1)
-#define SPECIAL_FIELD_ID_VALUEKIND (std::numeric_limits<int32_t>::max() - 2)
-#define SPECIAL_FIELD_ID_ROWID (std::numeric_limits<int32_t>::max() - 5)
-#define SPECIAL_FIELD_ID_CPP_FIELD_ID_END (std::numeric_limits<int32_t>::max() - 10000)
-#define SPECIAL_FIELD_ID_INDEXSCORE ((SPECIAL_FIELD_ID_CPP_FIELD_ID_END - 1))
+const int32_t SpecialFieldIds::SEQUENCE_NUMBER = std::numeric_limits<int32_t>::max() - 1;
 
+const int32_t SpecialFieldIds::VALUE_KIND = (std::numeric_limits<int32_t>::max() - 2);
+
+const int32_t SpecialFieldIds::ROW_ID(std::numeric_limits<int32_t>::max() - 5);
+
+const int32_t SpecialFieldIds::INDEX_SCORE = (SpecialFieldIds::CPP_FIELD_ID_END - 1);
 }  // namespace paimon

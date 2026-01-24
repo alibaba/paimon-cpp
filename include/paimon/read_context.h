@@ -25,8 +25,8 @@
 
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
-#include "paimon/special_field_id.h"
 #include "paimon/type_fwd.h"
+#include "paimon/utils/special_field_ids.h"
 #include "paimon/visibility.h"
 
 namespace paimon {

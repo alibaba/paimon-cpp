@@ -265,7 +265,8 @@ set(PAIMON_CORE_SRCS
     core/utils/manifest_meta_reader.cpp
     core/utils/partition_path_utils.cpp
     core/utils/primary_key_table_utils.cpp
-    core/utils/snapshot_manager.cpp)
+    core/utils/snapshot_manager.cpp
+    core/utils/special_field_ids.cpp)
 
 add_paimon_lib(paimon
                SOURCES
