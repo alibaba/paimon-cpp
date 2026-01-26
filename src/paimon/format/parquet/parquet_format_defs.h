@@ -36,9 +36,8 @@ static inline const char PARQUET_COMPRESSION_CODEC_ZLIB_LEVEL[] = "zlib.compress
 static inline const char PARQUET_COMPRESSION_CODEC_BROTLI_LEVEL[] = "compression.brotli.quality";
 
 // read
-static inline const char PARQUET_READ_EXECUTOR_THREAD_COUNT[] =
-    "parquet.read.executor.thread-count";
-static constexpr uint32_t DEFAULT_PARQUET_READ_EXECUTOR_THREAD_COUNT = 3;
+static inline const char PARQUET_READ_USE_THREADS[] = "parquet.read.use-threads";
+static inline const bool DEFAULT_PARQUET_READ_USE_THREADS = true;
 static inline const char PARQUET_READ_CACHE_OPTION_LAZY[] = "parquet.read.cache-option.lazy";
 static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";
