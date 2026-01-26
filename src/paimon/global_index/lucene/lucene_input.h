@@ -24,7 +24,7 @@
 namespace paimon::lucene {
 class LuceneSyncInput : public Lucene::LuceneObject {
  public:
-    LuceneSyncInput(const std::shared_ptr<InputStream>& in_stream) : in_(in_stream) {}
+    explicit LuceneSyncInput(const std::shared_ptr<InputStream>& in_stream) : in_(in_stream) {}
     const std::shared_ptr<InputStream>& GetInput() const {
         return in_;
     }
