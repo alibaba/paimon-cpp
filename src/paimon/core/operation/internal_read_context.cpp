@@ -38,26 +38,48 @@ Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
                              context->GetSpecificFileSystem()));
     // prepare read schema
     std::vector<DataField> read_data_fields;
-    read_data_fields.reserve(context->GetReadSchema().size());
-    for (const auto& name : context->GetReadSchema()) {
-        // if enable row tracking or data evolution, check special fields
-        if (core_options.RowTrackingEnabled() && name == SpecialFields::RowId().Name()) {
-            read_data_fields.push_back(SpecialFields::RowId());
-            continue;
+    if (!context->GetReadFieldIds().empty()) {
+        read_data_fields.reserve(context->GetReadFieldIds().size());
+        for (const auto& field_id : context->GetReadFieldIds()) {
+            // if enable row tracking or data evolution, check special fields
+            if (core_options.RowTrackingEnabled() && field_id == SpecialFields::RowId().Id()) {
+                read_data_fields.push_back(SpecialFields::RowId());
+                continue;
+            }
+            if (core_options.RowTrackingEnabled() &&
+                field_id == SpecialFields::SequenceNumber().Id()) {
+                read_data_fields.push_back(SpecialFields::SequenceNumber());
+                continue;
+            }
+            if (core_options.DataEvolutionEnabled() &&
+                field_id == SpecialFields::IndexScore().Id()) {
+                read_data_fields.push_back(SpecialFields::IndexScore());
+                continue;
+            }
+            PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(field_id));
+            read_data_fields.push_back(field);
         }
-        if (core_options.RowTrackingEnabled() && name == SpecialFields::SequenceNumber().Name()) {
-            read_data_fields.push_back(SpecialFields::SequenceNumber());
-            continue;
+    } else if (!context->GetReadSchema().empty()) {
+        read_data_fields.reserve(context->GetReadSchema().size());
+        for (const auto& name : context->GetReadSchema()) {
+            // if enable row tracking or data evolution, check special fields
+            if (core_options.RowTrackingEnabled() && name == SpecialFields::RowId().Name()) {
+                read_data_fields.push_back(SpecialFields::RowId());
+                continue;
+            }
+            if (core_options.RowTrackingEnabled() &&
+                name == SpecialFields::SequenceNumber().Name()) {
+                read_data_fields.push_back(SpecialFields::SequenceNumber());
+                continue;
+            }
+            if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {
+                read_data_fields.push_back(SpecialFields::IndexScore());
+                continue;
+            }
+            PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(name));
+            read_data_fields.push_back(field);
         }
-        if (core_options.DataEvolutionEnabled() && name == SpecialFields::IndexScore().Name()) {
-            read_data_fields.push_back(SpecialFields::IndexScore());
-            continue;
-        }
-        PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(name));
-        read_data_fields.push_back(field);
-    }
-
-    if (read_data_fields.empty()) {
+    } else {
         // if field names not set, read all fields
         read_data_fields = table_schema->Fields();
     }

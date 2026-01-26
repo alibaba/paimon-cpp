@@ -22,36 +22,35 @@
 
 #include "arrow/type_fwd.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/utils/special_field_ids.h"
 
 namespace paimon {
 
 struct SpecialFields {
     static constexpr char KEY_FIELD_PREFIX[] = "_KEY_";
     static constexpr int32_t KEY_VALUE_SPECIAL_FIELD_COUNT = 2;
-    static constexpr int32_t CPP_FIELD_ID_END = std::numeric_limits<int32_t>::max() - 10000;
 
     static const DataField& SequenceNumber() {
-        static const DataField data_field =
-            DataField(std::numeric_limits<int32_t>::max() - 1,
-                      arrow::field("_SEQUENCE_NUMBER", arrow::int64()));
+        static const DataField data_field = DataField(
+            SpecialFieldIds::SEQUENCE_NUMBER, arrow::field("_SEQUENCE_NUMBER", arrow::int64()));
         return data_field;
     }
 
     static const DataField& ValueKind() {
-        static const DataField data_field = DataField(std::numeric_limits<int32_t>::max() - 2,
-                                                      arrow::field("_VALUE_KIND", arrow::int8()));
+        static const DataField data_field =
+            DataField(SpecialFieldIds::VALUE_KIND, arrow::field("_VALUE_KIND", arrow::int8()));
         return data_field;
     }
 
     static const DataField& RowId() {
-        static const DataField data_field = DataField(std::numeric_limits<int32_t>::max() - 5,
-                                                      arrow::field("_ROW_ID", arrow::int64()));
+        static const DataField data_field =
+            DataField(SpecialFieldIds::ROW_ID, arrow::field("_ROW_ID", arrow::int64()));
         return data_field;
     }
 
     static const DataField& IndexScore() {
         static const DataField data_field =
-            DataField(CPP_FIELD_ID_END - 1, arrow::field("_INDEX_SCORE", arrow::float32()));
+            DataField(SpecialFieldIds::INDEX_SCORE, arrow::field("_INDEX_SCORE", arrow::float32()));
         return data_field;
     }
 

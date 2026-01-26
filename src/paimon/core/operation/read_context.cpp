@@ -27,21 +27,20 @@
 namespace paimon {
 class Predicate;
 
-ReadContext::ReadContext(const std::string& path, const std::string& branch,
-                         const std::vector<std::string>& read_schema,
-                         const std::shared_ptr<Predicate>& predicate, bool enable_predicate_filter,
-                         bool enable_prefetch, uint32_t prefetch_batch_count,
-                         uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
-                         uint32_t row_to_batch_thread_number,
-                         const std::optional<std::string>& table_schema,
-                         const std::shared_ptr<MemoryPool>& memory_pool,
-                         const std::shared_ptr<Executor>& executor,
-                         const std::shared_ptr<FileSystem>& specific_file_system,
-                         const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-                         const std::map<std::string, std::string>& options)
+ReadContext::ReadContext(
+    const std::string& path, const std::string& branch, const std::vector<std::string>& read_schema,
+    const std::vector<int32_t>& read_field_ids, const std::shared_ptr<Predicate>& predicate,
+    bool enable_predicate_filter, bool enable_prefetch, uint32_t prefetch_batch_count,
+    uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
+    uint32_t row_to_batch_thread_number, const std::optional<std::string>& table_schema,
+    const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor,
+    const std::shared_ptr<FileSystem>& specific_file_system,
+    const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
+    const std::map<std::string, std::string>& options)
     : path_(path),
       branch_(branch),
       read_schema_(read_schema),
+      read_field_ids_(read_field_ids),
       predicate_(predicate),
       enable_predicate_filter_(enable_predicate_filter),
       enable_prefetch_(enable_prefetch),
@@ -64,6 +63,7 @@ class ReadContextBuilder::Impl {
     void Reset() {
         branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
         read_field_names_.clear();
+        read_field_ids_.clear();
         fs_scheme_to_identifier_map_.clear();
         options_.clear();
         predicate_.reset();
@@ -83,6 +83,7 @@ class ReadContextBuilder::Impl {
     std::string path_;
     std::string branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
     std::vector<std::string> read_field_names_;
+    std::vector<int32_t> read_field_ids_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
     std::shared_ptr<Predicate> predicate_;
@@ -122,6 +123,12 @@ ReadContextBuilder& ReadContextBuilder::SetOptions(const std::map<std::string, s
 ReadContextBuilder& ReadContextBuilder::SetReadSchema(
     const std::vector<std::string>& read_field_names) {
     impl_->read_field_names_ = read_field_names;
+    return *this;
+}
+
+ReadContextBuilder& ReadContextBuilder::SetReadFieldIds(
+    const std::vector<int32_t>& read_field_ids) {
+    impl_->read_field_ids_ = read_field_ids;
     return *this;
 }
 
@@ -216,12 +223,12 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         return Status::Invalid("row to batch thread number should be greater than 0");
     }
     auto ctx = std::make_unique<ReadContext>(
-        impl_->path_, impl_->branch_, impl_->read_field_names_, impl_->predicate_,
-        impl_->enable_predicate_filter_, impl_->enable_prefetch_, impl_->prefetch_batch_count_,
-        impl_->prefetch_max_parallel_num_, impl_->enable_multi_thread_row_to_batch_,
-        impl_->row_to_batch_thread_number_, impl_->table_schema_, impl_->memory_pool_,
-        impl_->executor_, impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_,
-        impl_->options_);
+        impl_->path_, impl_->branch_, impl_->read_field_names_, impl_->read_field_ids_,
+        impl_->predicate_, impl_->enable_predicate_filter_, impl_->enable_prefetch_,
+        impl_->prefetch_batch_count_, impl_->prefetch_max_parallel_num_,
+        impl_->enable_multi_thread_row_to_batch_, impl_->row_to_batch_thread_number_,
+        impl_->table_schema_, impl_->memory_pool_, impl_->executor_, impl_->specific_file_system_,
+        impl_->fs_scheme_to_identifier_map_, impl_->options_);
     impl_->Reset();
     return ctx;
 }
