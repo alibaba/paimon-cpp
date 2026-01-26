@@ -26,6 +26,7 @@
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
+#include "paimon/utils/special_field_ids.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -43,6 +44,7 @@ class PAIMON_EXPORT ReadContext {
  public:
     ReadContext(const std::string& path, const std::string& branch,
                 const std::vector<std::string>& read_schema,
+                const std::vector<int32_t>& read_field_ids,
                 const std::shared_ptr<Predicate>& predicate, bool enable_predicate_filter,
                 bool enable_prefetch, uint32_t prefetch_batch_count,
                 uint32_t prefetch_max_parallel_num, bool enable_multi_thread_row_to_batch,
@@ -72,6 +74,10 @@ class PAIMON_EXPORT ReadContext {
 
     const std::vector<std::string>& GetReadSchema() const {
         return read_schema_;
+    }
+
+    const std::vector<int32_t>& GetReadFieldIds() const {
+        return read_field_ids_;
     }
 
     const std::shared_ptr<Predicate>& GetPredicate() const {
@@ -113,6 +119,7 @@ class PAIMON_EXPORT ReadContext {
     std::string path_;
     std::string branch_;
     std::vector<std::string> read_schema_;
+    std::vector<int32_t> read_field_ids_;
     std::shared_ptr<Predicate> predicate_;
     bool enable_predicate_filter_;
     bool enable_prefetch_;
@@ -151,6 +158,19 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @note Currently supports top-level field selection. Future versions may support
     ///       nested field selection using ArrowSchema for more granular projection
     ReadContextBuilder& SetReadSchema(const std::vector<std::string>& read_field_names);
+    /// Set the schema fields to read from the table.
+    ///
+    /// If not set, all fields from the table schema will be read. This is useful for
+    /// projection pushdown to reduce I/O and improve performance by reading only
+    /// the required columns.
+    ///
+    /// @param read_field_ids Vector of field ids to read from the table.
+    /// @return Reference to this builder for method chaining.
+    /// @note Currently supports top-level field selection. Future versions may support
+    ///       nested field selection using ArrowSchema for more granular projection,
+    ///       If SetReadFieldIds() call and SetReadSchema() are natually are mutually
+    ///       exclusive. Calling both will ignore the read schema set by SetReadSchema().
+    ReadContextBuilder& SetReadFieldIds(const std::vector<int32_t>& read_field_ids);
 
     /// Set a configuration options map to set some option entries which are not defined in the
     /// table schema or whose values you want to overwrite.

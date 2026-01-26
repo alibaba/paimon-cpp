@@ -63,6 +63,41 @@ TEST(InternalReadContext, TestReadWithSpecifiedSchema) {
     ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
 }
 
+TEST(InternalReadContext, TestReadWithSpecifiedFieldId) {
+    std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    ReadContextBuilder context_builder(path);
+    context_builder.SetReadFieldIds({3, 0});
+    ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+    SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+    ASSERT_OK_AND_ASSIGN(auto internal_context,
+                         InternalReadContext::Create(std::move(read_context), table_schema,
+                                                     table_schema->Options()));
+    std::vector<DataField> read_fields = {DataField(3, arrow::field("f3", arrow::float64())),
+                                          DataField(0, arrow::field("f0", arrow::utf8()))};
+    auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
+}
+
+TEST(InternalReadContext, TestReadWithSpecifiedFieldIdAndSchema) {
+    std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    ReadContextBuilder context_builder(path);
+    // read schema is specified, read fields in schema
+    // will use field ids instead of field names.
+    context_builder.SetReadSchema({"f0"});
+    context_builder.SetReadFieldIds({3, 0});
+    ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+    SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+    ASSERT_OK_AND_ASSIGN(auto internal_context,
+                         InternalReadContext::Create(std::move(read_context), table_schema,
+                                                     table_schema->Options()));
+    std::vector<DataField> read_fields = {DataField(3, arrow::field("f3", arrow::float64())),
+                                          DataField(0, arrow::field("f0", arrow::utf8()))};
+    auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
+}
+
 TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
     {
         // test simple
@@ -108,6 +143,34 @@ TEST(InternalReadContext, TestReadWithRowTrackingAndScoreFields) {
         ASSERT_NOK_WITH_MSG(InternalReadContext::Create(std::move(read_context), table_schema,
                                                         table_schema->Options()),
                             "Get field _INDEX_SCORE failed: not exist in table schema");
+    }
+}
+
+TEST(InternalReadContext, TestReadWithFieldIdsAndSpecialFields) {
+    {
+        // test simple
+        std::string path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+        ReadContextBuilder context_builder(path);
+        // here we use field ids instead of field names, and specify special ids for row id,
+        // sequence number and index score.
+        context_builder.SetReadFieldIds({3, 0, SpecialFieldIds::ROW_ID,
+                                         SpecialFieldIds::SEQUENCE_NUMBER,
+                                         SpecialFieldIds::INDEX_SCORE});
+        ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
+        SchemaManager schema_manager(std::make_shared<LocalFileSystem>(), read_context->GetPath());
+        ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+        auto new_options = table_schema->Options();
+        new_options[Options::ROW_TRACKING_ENABLED] = "true";
+        new_options[Options::DATA_EVOLUTION_ENABLED] = "true";
+        ASSERT_OK_AND_ASSIGN(
+            auto internal_context,
+            InternalReadContext::Create(std::move(read_context), table_schema, new_options));
+        std::vector<DataField> read_fields = {
+            DataField(3, arrow::field("f3", arrow::float64())),
+            DataField(0, arrow::field("f0", arrow::utf8())), SpecialFields::RowId(),
+            SpecialFields::SequenceNumber(), SpecialFields::IndexScore()};
+        auto expected_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+        ASSERT_TRUE(internal_context->GetReadSchema()->Equals(expected_schema));
     }
 }
 

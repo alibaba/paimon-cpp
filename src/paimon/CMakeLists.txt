@@ -49,6 +49,7 @@ set(PAIMON_COMMON_SRCS
     common/fs/file_system.cpp
     common/fs/resolving_file_system.cpp
     common/fs/file_system_factory.cpp
+    common/global_config.cpp
     common/global_index/complete_index_score_batch_reader.cpp
     common/global_index/bitmap_vector_search_global_index_result.cpp
     common/global_index/bitmap_global_index_result.cpp
@@ -123,6 +124,8 @@ set(PAIMON_COMMON_SRCS
     common/utils/delta_varint_compressor.cpp
     common/utils/path_util.cpp
     common/utils/range.cpp
+    common/utils/read_ahead_cache.cpp
+    common/utils/byte_range_combiner.cpp
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
     common/utils/status.cpp
@@ -269,7 +272,8 @@ set(PAIMON_CORE_SRCS
     core/utils/manifest_meta_reader.cpp
     core/utils/partition_path_utils.cpp
     core/utils/primary_key_table_utils.cpp
-    core/utils/snapshot_manager.cpp)
+    core/utils/snapshot_manager.cpp
+    core/utils/special_field_ids.cpp)
 
 add_paimon_lib(paimon
                SOURCES
@@ -412,6 +416,8 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/roaring_bitmap32_test.cpp
                     common/utils/roaring_bitmap64_test.cpp
                     common/utils/range_helper_test.cpp
+                    common/utils/read_ahead_cache_test.cpp
+                    common/utils/byte_range_combiner_test.cpp
                     common/utils/scope_guard_test.cpp
                     common/utils/serialization_utils_test.cpp
                     common/utils/status_test.cpp

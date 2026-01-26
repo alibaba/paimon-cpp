@@ -33,6 +33,7 @@ repos:
         exclude: (^test/test_data/.*|^third_party/.*)
       - id: check-yaml
       - id: check-added-large-files
+        args: ["--maxkb=5120", "--enforce-all"]
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v20.1.8

@@ -44,7 +44,7 @@ class LuminaMemoryPool : public std::pmr::memory_resource {
     }
 
     void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
-        pool_->Free(p, bytes);
+        pool_->Free(p, bytes, alignment);
     }
 
     bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override {
