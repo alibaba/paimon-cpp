@@ -275,6 +275,46 @@ set(EP_COMMON_CMAKE_ARGS
     -DCMAKE_C_FLAGS=${EP_C_FLAGS}
     -DCMAKE_INSTALL_LIBDIR=lib)
 
+macro(build_lucene)
+    message(STATUS "Building lucene from source")
+    set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
+    set(LUCENE_CMAKE_ARGS
+        ${EP_COMMON_CMAKE_ARGS}
+        "-DENABLE_TEST=OFF"
+        "-DCMAKE_C_FLAGS=-pthread"
+        "-DCMAKE_CXX_FLAGS=-pthread"
+        "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
+        "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
+
+    externalproject_add(lucene_ep
+                        ${EP_COMMON_OPTIONS}
+                        URL "https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/rel_3.0.9.tar.gz"
+                        URL_HASH "SHA256=4e69e29d5d79a976498ef71eab70c9c88c7014708be4450a9fda7780fe93584e"
+                        CMAKE_ARGS ${LUCENE_CMAKE_ARGS})
+
+    set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
+    # The include directory must exist before it is referenced by a target.
+    file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
+
+    find_package(Boost REQUIRED COMPONENTS system filesystem thread)
+
+    if(NOT Boost_FOUND)
+        message(FATAL_ERROR "Boost not found for lucene plus plus .")
+    endif()
+
+    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR})
+    add_library(lucene INTERFACE IMPORTED)
+    target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
+    target_compile_options(lucene INTERFACE -pthread)
+    
+    target_link_libraries(lucene INTERFACE
+                          "${LUCENE_PREFIX}/lib/liblucene++.so.0"
+                          ${Boost_LIBRARIES}
+                          pthread
+                          dl)
+    add_dependencies(lucene lucene_ep)
+endmacro()
+
 macro(build_rapidjson)
     message(STATUS "Building RapidJSON from source")
     set(RAPIDJSON_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/rapidjson_ep-install")
@@ -1087,6 +1127,7 @@ macro(build_glog)
     endif()
 endmacro()
 
+build_lucene()
 build_fmt()
 build_rapidjson()
 build_snappy()

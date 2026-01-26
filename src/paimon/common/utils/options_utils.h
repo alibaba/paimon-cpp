@@ -73,6 +73,19 @@ class OptionsUtils {
         return value.value();
     }
 
+    /// Fetch options with specific prefix and remove prefix for key.
+    static std::map<std::string, std::string> FetchOptionsWithPrefix(
+        const std::string& prefix, const std::map<std::string, std::string>& options) {
+        std::map<std::string, std::string> options_with_prefix;
+        int64_t prefix_len = prefix.size();
+        for (const auto& [key, value] : options) {
+            if (StringUtils::StartsWith(key, prefix)) {
+                options_with_prefix[key.substr(prefix_len)] = value;
+            }
+        }
+        return options_with_prefix;
+    }
+
  private:
     template <typename T>
     static std::string GetTypeName() {

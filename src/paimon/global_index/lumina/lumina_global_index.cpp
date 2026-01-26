@@ -61,7 +61,8 @@ Result<std::shared_ptr<GlobalIndexWriter>> LuminaGlobalIndex::CreateWriter(
     }
 
     // check options
-    auto lumina_options = LuminaUtils::FetchLuminaOptions(options_);
+    auto lumina_options =
+        OptionsUtils::FetchOptionsWithPrefix(LuminaDefines::kOptionKeyPrefix, options_);
     PAIMON_ASSIGN_OR_RAISE(uint32_t dimension,
                            OptionsUtils::GetValueFromMap<uint32_t>(
                                lumina_options, std::string(::lumina::core::kDimension)));
@@ -138,7 +139,8 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
     auto lumina_pool = std::make_shared<LuminaMemoryPool>(pool);
     ::lumina::core::MemoryResourceConfig memory_resource(lumina_pool.get());
 
-    auto lumina_options = LuminaUtils::FetchLuminaOptions(options_);
+    auto lumina_options =
+        OptionsUtils::FetchOptionsWithPrefix(LuminaDefines::kOptionKeyPrefix, options_);
     lumina_options[std::string(::lumina::core::kDimension)] = std::to_string(index_info.dimension);
     lumina_options[std::string(::lumina::core::kIndexType)] = index_info.index_type;
 
@@ -330,7 +332,8 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
         return Status::Invalid("dimension for index and search not match");
     }
 
-    auto lumina_options = LuminaUtils::FetchLuminaOptions(vector_search->options);
+    auto lumina_options = OptionsUtils::FetchOptionsWithPrefix(LuminaDefines::kOptionKeyPrefix,
+                                                               vector_search->options);
     auto index_type_iter = lumina_options.find(std::string(::lumina::core::kIndexType));
     if (index_type_iter != lumina_options.end() &&
         index_type_iter->second != index_info_.index_type) {

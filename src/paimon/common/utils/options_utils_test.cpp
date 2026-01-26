@@ -59,4 +59,11 @@ TEST(OptionsUtilsTest, TestGetValueFromMap) {
                          OptionsUtils::GetValueFromMap<int32_t>(key_value_map, "", 999));
     ASSERT_EQ(999, empty);
 }
+
+TEST(OptionsUtilsTest, TestFetchOptionsWithPrefix) {
+    std::map<std::string, std::string> options = {{"key1", "value1"}, {"test.key2", "value2"}};
+    auto new_options = OptionsUtils::FetchOptionsWithPrefix("test.", options);
+    std::map<std::string, std::string> expected = {{"key2", "value2"}};
+    ASSERT_EQ(expected, new_options);
+}
 }  // namespace paimon::test

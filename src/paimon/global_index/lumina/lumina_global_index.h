@@ -74,6 +74,8 @@ class LuminaGlobalIndex : public GlobalIndexer {
                                        int64_t row_count, uint32_t dimension);
 
  private:
+    static constexpr char kOptionKeyPrefix[] = "lumina.";
+
     std::map<std::string, std::string> options_;
 };
 
