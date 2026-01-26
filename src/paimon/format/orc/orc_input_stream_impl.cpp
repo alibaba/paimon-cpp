@@ -78,7 +78,7 @@ std::future<void> OrcInputStreamImpl::readAsync(void* buf, uint64_t length, uint
     auto callback = [this, promise, length, offset](const Status& status) mutable {
         try {
             if (status.ok()) {
-                read_bytes_ += length;
+                read_bytes_.fetch_add(length, std::memory_order_relaxed);
                 promise->set_value();
             } else {
                 promise->set_exception(std::make_exception_ptr(::orc::ParseError(

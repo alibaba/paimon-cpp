@@ -266,7 +266,9 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
         reader_is_working_[i] = false;
     }
     is_shutdown_ = false;
-    cache_->Reset();
+    if (cache_) {
+        cache_->Reset();
+    }
     SetReadStatus(Status::OK());
     return Status::OK();
 }
@@ -274,20 +276,22 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
 void PrefetchFileBatchReaderImpl::Workloop() {
     std::vector<std::future<void>> futures;
     futures.resize(readers_.size());
-    auto read_ranges = readers_[0]->PreBufferRange();
-    if (read_ranges.ok()) {
-        std::vector<ByteRange> ranges;
-        for (const auto& read_range : read_ranges.value()) {
-            ranges.emplace_back(read_range.first, read_range.second);
-        }
-        auto s = cache_->Init(std::move(ranges));
-        if (!s.ok()) {
-            SetReadStatus(s);
+    if (cache_) {
+        auto read_ranges = readers_[0]->PreBufferRange();
+        if (read_ranges.ok()) {
+            std::vector<ByteRange> ranges;
+            for (const auto& read_range : read_ranges.value()) {
+                ranges.emplace_back(read_range.first, read_range.second);
+            }
+            auto s = cache_->Init(std::move(ranges));
+            if (!s.ok()) {
+                SetReadStatus(s);
+                return;
+            }
+        } else {
+            SetReadStatus(read_ranges.status());
             return;
         }
-    } else {
-        SetReadStatus(read_ranges.status());
-        return;
     }
 
     while (true) {

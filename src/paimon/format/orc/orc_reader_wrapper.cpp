@@ -34,9 +34,6 @@ Status OrcReaderWrapper::SeekToRow(uint64_t row_number) {
     try {
         row_reader_->seekToRow(row_number);
         next_row_ = row_number;
-        std::stringstream ss;
-        ss << file_name_ << " seek to row:" << row_number;
-        std::cout << ss.str() << std::endl;
     } catch (const std::exception& e) {
         return Status::Invalid(
             fmt::format("orc file batch reader seek to row {} failed for file {}, with {} error",

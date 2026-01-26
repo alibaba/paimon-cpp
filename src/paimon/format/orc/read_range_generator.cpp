@@ -110,7 +110,7 @@ std::vector<std::pair<uint64_t, uint64_t>> ReadRangeGenerator::DoGenReadRanges(
     };
 
     uint64_t current_row = begin_row_num;
-    int32_t next_range_size = range_size;
+    uint64_t next_range_size = range_size;
     while (current_row < end_row_num) {
         uint64_t curr_stripe_begin = 0;
         for (auto stripe_row_count : reader_meta.rows_per_stripes) {

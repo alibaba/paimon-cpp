@@ -54,11 +54,9 @@ class OrcReaderWrapper {
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<ReadRangeGenerator> range_generator,
             ReadRangeGenerator::Create(reader.get(), natural_read_size, options));
-        auto reader_wrapper = std::unique_ptr<OrcReaderWrapper>(
+        return std::unique_ptr<OrcReaderWrapper>(
             new OrcReaderWrapper(std::move(reader), std::move(range_generator), file_name,
                                  batch_size, arrow_pool, orc_pool));
-        std::cout << "create orc reader wrapper:" << file_name << std::endl;
-        return reader_wrapper;
     }
 
     Status SeekToRow(uint64_t row_number);
