@@ -58,6 +58,8 @@ class OrcInputStreamImpl : public ::orc::InputStream {
                        const std::string& name, uint64_t length, uint64_t natural_read_size);
 
  private:
+    std::atomic<uint64_t> read_bytes_ = {0};
+    std::atomic<uint64_t> pending_request_ = {0};
     std::shared_ptr<paimon::InputStream> input_stream_;
     const std::string uri_name_;
     const uint64_t length_;

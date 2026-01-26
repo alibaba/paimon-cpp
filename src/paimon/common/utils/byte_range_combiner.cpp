@@ -28,7 +28,13 @@
 
 namespace paimon {
 
-Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange>&& ranges) const {
+Result<std::vector<ByteRange>> ByteRangeCombiner::CoalesceByteRanges(
+    std::vector<ByteRange>&& ranges, uint64_t hole_size_limit, uint64_t range_size_limit) {
+    if (range_size_limit <= hole_size_limit) {
+        return Status::Invalid(
+            fmt::format("range size limit {} should be larger than hole size limit {}",
+                        range_size_limit, hole_size_limit));
+    }
     if (ranges.empty()) {
         return ranges;
     }
@@ -97,17 +103,6 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::Coalesce(std::vector<ByteRange
     assert(coalesced.back().offset + coalesced.back().length ==
            ranges.back().offset + ranges.back().length);
     return coalesced;
-}
-
-Result<std::vector<ByteRange>> ByteRangeCombiner::CoalesceByteRanges(
-    std::vector<ByteRange>&& ranges, uint64_t hole_size_limit, uint64_t range_size_limit) {
-    if (range_size_limit <= hole_size_limit) {
-        return Status::Invalid(
-            fmt::format("range size limit {} should be larger than hole size limit {}",
-                        range_size_limit, hole_size_limit));
-    }
-    ByteRangeCombiner combiner{hole_size_limit, range_size_limit};
-    return combiner.Coalesce(std::move(ranges));
 }
 
 }  // namespace paimon

@@ -35,9 +35,6 @@ struct ByteRangeCombiner {
     static Result<std::vector<ByteRange>> CoalesceByteRanges(std::vector<ByteRange>&& ranges,
                                                              uint64_t hole_size_limit,
                                                              uint64_t range_size_limit);
-
- private:
-    Result<std::vector<ByteRange>> Coalesce(std::vector<ByteRange>&& ranges) const;
 };
 
 }  // namespace paimon

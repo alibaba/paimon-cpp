@@ -71,6 +71,26 @@ class PAIMON_EXPORT PrefetchFileBatchReader : public FileBatchReader {
     /// @param read_ranges A vector of pairs, where each pair defines a half-open interval
     /// `[start_row, end_row)`. The `start_row` is inclusive, and the `end_row` is exclusive.
     virtual Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) = 0;
+
+    /// Returns a list of file offset/length ranges that should be prefetched for the current read
+    /// scenario.
+    ///
+    /// This method should analyze the columns selected by the user and return the minimal set of
+    /// physical file ranges (offset, length) that need to be read, avoiding unnecessary IO
+    /// amplification. For example, if only a subset of columns is requested, the implementation
+    /// should only return the byte ranges corresponding to those columns, rather than the entire
+    /// row group or block.
+    ///
+    /// This enables the cache to prefetch only the required data, reducing disk and network load
+    /// and improving performance for columnar formats and selective queries.
+    ///
+    /// By default, returns an empty list (no prefetching). Format-specific implementations should
+    /// override this method to provide accurate offset/length hints for efficient IO.
+    /// @return A vector of pairs, where each pair contains the file offset and length to be
+    /// prefetched.
+    virtual Result<std::vector<std::pair<uint64_t, uint64_t>>> PreBufferRange() {
+        return std::vector<std::pair<uint64_t, uint64_t>>{};
+    }
 };
 
 }  // namespace paimon
