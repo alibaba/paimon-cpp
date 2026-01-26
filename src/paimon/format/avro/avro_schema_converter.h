@@ -32,7 +32,7 @@ class AvroSchemaConverter {
     AvroSchemaConverter() = delete;
     ~AvroSchemaConverter() = delete;
 
-    // TODO(menglingda.mld): avro添加field id
+    // TODO(menglingda.mld): add field id for avro
     static Result<::avro::ValidSchema> ArrowSchemaToAvroSchema(
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         const std::string& row_name = "org.apache.paimon.avro.generated.record");
