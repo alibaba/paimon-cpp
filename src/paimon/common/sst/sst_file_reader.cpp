@@ -168,6 +168,9 @@ Result<std::shared_ptr<paimon::MemorySegment>> SstFileReader::DecompressBlock(
             int uncompressed_length,
             decompressor->Decompress(input_memory->data() + input->Position(), input->Available(),
                                      output_memory->data(), output_memory->size()));
+        if (static_cast<size_t>(uncompressed_length) != output_memory->size()) {
+            return Status::Invalid("Invalid data");
+        }
         return std::make_shared<MemorySegment>(output);
     }
 }
