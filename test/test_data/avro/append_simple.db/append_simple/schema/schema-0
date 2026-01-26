@@ -1,0 +1,48 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "INT"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "STRING"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : {
+      "type" : "ROW",
+      "fields" : [ {
+        "id" : 4,
+        "name" : "f0",
+        "type" : {
+          "type" : "MAP",
+          "key" : "STRING",
+          "value" : "INT"
+        }
+      }, {
+        "id" : 5,
+        "name" : "f1",
+        "type" : {
+          "type" : "ARRAY",
+          "element" : "INT"
+        }
+      } ]
+    }
+  } ],
+  "highestFieldId" : 5,
+  "partitionKeys" : [ ],
+  "primaryKeys" : [ ],
+  "options" : {
+    "bucket" : "-1",
+    "manifest.format" : "avro",
+    "file.format" : "avro"
+  },
+  "timeMillis" : 1767779394352
+}
