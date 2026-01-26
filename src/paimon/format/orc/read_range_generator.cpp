@@ -76,7 +76,9 @@ Result<std::vector<std::pair<uint64_t, uint64_t>>> ReadRangeGenerator::GenReadRa
             return std::vector<std::pair<uint64_t, uint64_t>>();
         }
         ReadRangeGenerator::ReaderMeta reader_meta = GetReaderMeta();
-        uint64_t suggest_row_count = SuggestRowCount(target_column_ids);
+        uint32_t suggest_row_count = static_cast<uint32_t>(
+            std::min(SuggestRowCount(target_column_ids),
+                     static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())));
         auto ranges = DoGenReadRanges(begin_row_num, end_row_num, suggest_row_count, reader_meta);
 
         uint64_t target_read_length = 0;
