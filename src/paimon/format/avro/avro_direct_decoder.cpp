@@ -49,46 +49,46 @@ bool HasMapLogicalType(const ::avro::NodePtr& node) {
 /// Forward declaration for mutual recursion.
 Status DecodeFieldToBuilder(const ::avro::NodePtr& avro_node,
                             const std::optional<std::set<size_t>>& projection,
-                            ::avro::Decoder& decoder, arrow::ArrayBuilder* array_builder,
-                            AvroDirectDecoder::DecodeContext& ctx);
+                            ::avro::Decoder* decoder, arrow::ArrayBuilder* array_builder,
+                            AvroDirectDecoder::DecodeContext* ctx);
 
 /// \brief Skip an Avro value based on its schema without decoding
-Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder) {
+Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder) {
     switch (avro_node->type()) {
         case ::avro::AVRO_NULL:
-            decoder.decodeNull();
+            decoder->decodeNull();
             return Status::OK();
 
         case ::avro::AVRO_BOOL:
-            decoder.decodeBool();
+            decoder->decodeBool();
             return Status::OK();
 
         case ::avro::AVRO_INT:
-            decoder.decodeInt();
+            decoder->decodeInt();
             return Status::OK();
 
         case ::avro::AVRO_LONG:
-            decoder.decodeLong();
+            decoder->decodeLong();
             return Status::OK();
 
         case ::avro::AVRO_FLOAT:
-            decoder.decodeFloat();
+            decoder->decodeFloat();
             return Status::OK();
 
         case ::avro::AVRO_DOUBLE:
-            decoder.decodeDouble();
+            decoder->decodeDouble();
             return Status::OK();
 
         case ::avro::AVRO_STRING:
-            decoder.skipString();
+            decoder->skipString();
             return Status::OK();
 
         case ::avro::AVRO_BYTES:
-            decoder.skipBytes();
+            decoder->skipBytes();
             return Status::OK();
 
         case ::avro::AVRO_FIXED:
-            decoder.skipFixed(avro_node->fixedSize());
+            decoder->skipFixed(avro_node->fixedSize());
             return Status::OK();
 
         case ::avro::AVRO_RECORD: {
@@ -100,18 +100,18 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder)
         }
 
         case ::avro::AVRO_ENUM:
-            decoder.decodeEnum();
+            decoder->decodeEnum();
             return Status::OK();
 
         case ::avro::AVRO_ARRAY: {
             const auto& element_node = avro_node->leafAt(0);
             // skipArray() returns count like arrayStart(), must handle all blocks
-            int64_t block_count = decoder.skipArray();
+            int64_t block_count = decoder->skipArray();
             while (block_count > 0) {
                 for (int64_t i = 0; i < block_count; ++i) {
                     PAIMON_RETURN_NOT_OK(SkipAvroValue(element_node, decoder));
                 }
-                block_count = decoder.arrayNext();
+                block_count = decoder->arrayNext();
             }
             return Status::OK();
         }
@@ -119,19 +119,19 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder)
         case ::avro::AVRO_MAP: {
             const auto& value_node = avro_node->leafAt(1);
             // skipMap() returns count like mapStart(), must handle all blocks
-            int64_t block_count = decoder.skipMap();
+            int64_t block_count = decoder->skipMap();
             while (block_count > 0) {
                 for (int64_t i = 0; i < block_count; ++i) {
-                    decoder.skipString();  // Skip key (always string in Avro maps)
+                    decoder->skipString();  // Skip key (always string in Avro maps)
                     PAIMON_RETURN_NOT_OK(SkipAvroValue(value_node, decoder));
                 }
-                block_count = decoder.mapNext();
+                block_count = decoder->mapNext();
             }
             return Status::OK();
         }
 
         case ::avro::AVRO_UNION: {
-            const size_t branch_index = decoder.decodeUnionIndex();
+            const size_t branch_index = decoder->decodeUnionIndex();
             // Validate branch index
             const size_t num_branches = avro_node->leaves();
             if (branch_index >= num_branches) {
@@ -150,8 +150,8 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder)
 /// Decode Avro record directly to Arrow struct builder.
 Status DecodeStructToBuilder(const ::avro::NodePtr& avro_node,
                              const std::optional<std::set<size_t>>& projection,
-                             ::avro::Decoder& decoder, arrow::ArrayBuilder* array_builder,
-                             AvroDirectDecoder::DecodeContext& ctx) {
+                             ::avro::Decoder* decoder, arrow::ArrayBuilder* array_builder,
+                             AvroDirectDecoder::DecodeContext* ctx) {
     if (avro_node->type() != ::avro::AVRO_RECORD) {
         return Status::Invalid(
             fmt::format("Expected Avro record, got type: {}", ToString(avro_node)));
@@ -179,9 +179,9 @@ Status DecodeStructToBuilder(const ::avro::NodePtr& avro_node,
 }
 
 /// Decode Avro array directly to Arrow list builder.
-Status DecodeListToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder,
+Status DecodeListToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder,
                            arrow::ArrayBuilder* array_builder,
-                           AvroDirectDecoder::DecodeContext& ctx) {
+                           AvroDirectDecoder::DecodeContext* ctx) {
     if (avro_node->type() != ::avro::AVRO_ARRAY) {
         return Status::Invalid(
             fmt::format("Expected Avro array, got type: {}", ToString(avro_node)));
@@ -194,22 +194,22 @@ Status DecodeListToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& de
     const auto& element_node = avro_node->leafAt(0);
 
     // Read array block count
-    int64_t block_count = decoder.arrayStart();
+    int64_t block_count = decoder->arrayStart();
     while (block_count != 0) {
         for (int64_t i = 0; i < block_count; ++i) {
             PAIMON_RETURN_NOT_OK(DecodeFieldToBuilder(element_node, /*projection=*/std::nullopt,
                                                       decoder, value_builder, ctx));
         }
-        block_count = decoder.arrayNext();
+        block_count = decoder->arrayNext();
     }
 
     return Status::OK();
 }
 
 /// Decode Avro map directly to Arrow map builder.
-Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& decoder,
+Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder,
                           arrow::ArrayBuilder* array_builder,
-                          AvroDirectDecoder::DecodeContext& ctx) {
+                          AvroDirectDecoder::DecodeContext* ctx) {
     auto* map_builder = arrow::internal::checked_cast<arrow::MapBuilder*>(array_builder);
 
     if (avro_node->type() == ::avro::AVRO_MAP) {
@@ -222,7 +222,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& dec
         auto* item_builder = map_builder->item_builder();
 
         // Read map block count
-        int64_t block_count = decoder.mapStart();
+        int64_t block_count = decoder->mapStart();
         while (block_count != 0) {
             for (int64_t i = 0; i < block_count; ++i) {
                 PAIMON_RETURN_NOT_OK(DecodeFieldToBuilder(key_node, /*projection=*/std::nullopt,
@@ -230,7 +230,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& dec
                 PAIMON_RETURN_NOT_OK(DecodeFieldToBuilder(value_node, /*projection=*/std::nullopt,
                                                           decoder, item_builder, ctx));
             }
-            block_count = decoder.mapNext();
+            block_count = decoder->mapNext();
         }
         return Status::OK();
     } else if (avro_node->type() == ::avro::AVRO_ARRAY && HasMapLogicalType(avro_node)) {
@@ -249,7 +249,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& dec
         const auto& value_node = record_node->leafAt(1);
 
         // Read array block count
-        int64_t block_count = decoder.arrayStart();
+        int64_t block_count = decoder->arrayStart();
         while (block_count != 0) {
             for (int64_t i = 0; i < block_count; ++i) {
                 PAIMON_RETURN_NOT_OK(DecodeFieldToBuilder(key_node, /*projection=*/std::nullopt,
@@ -257,7 +257,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& dec
                 PAIMON_RETURN_NOT_OK(DecodeFieldToBuilder(value_node, /*projection=*/std::nullopt,
                                                           decoder, item_builder, ctx));
             }
-            block_count = decoder.arrayNext();
+            block_count = decoder->arrayNext();
         }
         return Status::OK();
     } else {
@@ -269,21 +269,21 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder& dec
 /// Decode Avro data directly to Arrow array builder.
 Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                                 const std::optional<std::set<size_t>>& projection,
-                                ::avro::Decoder& decoder, arrow::ArrayBuilder* array_builder,
-                                AvroDirectDecoder::DecodeContext& ctx) {
+                                ::avro::Decoder* decoder, arrow::ArrayBuilder* array_builder,
+                                AvroDirectDecoder::DecodeContext* ctx) {
     auto type = avro_node->type();
     auto logical_type = avro_node->logicalType();
 
     switch (type) {
         case ::avro::AVRO_BOOL: {
             auto* builder = arrow::internal::checked_cast<arrow::BooleanBuilder*>(array_builder);
-            bool value = decoder.decodeBool();
+            bool value = decoder->decodeBool();
             PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value));
             return Status::OK();
         }
 
         case ::avro::AVRO_INT: {
-            int32_t value = decoder.decodeInt();
+            int32_t value = decoder->decodeInt();
             auto arrow_type = array_builder->type();
             switch (arrow_type->id()) {
                 case arrow::Type::INT8: {
@@ -323,7 +323,7 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
         }
 
         case ::avro::AVRO_LONG: {
-            int64_t value = decoder.decodeLong();
+            int64_t value = decoder->decodeLong();
             switch (logical_type.type()) {
                 case ::avro::LogicalType::Type::NONE: {
                     auto* builder =
@@ -357,31 +357,32 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
 
         case ::avro::AVRO_FLOAT: {
             auto* builder = arrow::internal::checked_cast<arrow::FloatBuilder*>(array_builder);
-            float value = decoder.decodeFloat();
+            float value = decoder->decodeFloat();
             PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value));
             return Status::OK();
         }
         case ::avro::AVRO_DOUBLE: {
             auto* builder = arrow::internal::checked_cast<arrow::DoubleBuilder*>(array_builder);
-            double value = decoder.decodeDouble();
+            double value = decoder->decodeDouble();
             PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(value));
             return Status::OK();
         }
         case ::avro::AVRO_STRING: {
             auto* builder = arrow::internal::checked_cast<arrow::StringBuilder*>(array_builder);
-            decoder.decodeString(ctx.string_scratch);
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(ctx.string_scratch));
+            decoder->decodeString(ctx->string_scratch);
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(ctx->string_scratch));
             return Status::OK();
         }
 
         case ::avro::AVRO_BYTES: {
-            decoder.decodeBytes(ctx.bytes_scratch);
+            decoder->decodeBytes(ctx->bytes_scratch);
             switch (logical_type.type()) {
                 case ::avro::LogicalType::Type::NONE: {
                     auto* builder =
                         arrow::internal::checked_cast<arrow::BinaryBuilder*>(array_builder);
-                    PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(
-                        ctx.bytes_scratch.data(), static_cast<int32_t>(ctx.bytes_scratch.size())));
+                    PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                        builder->Append(ctx->bytes_scratch.data(),
+                                        static_cast<int32_t>(ctx->bytes_scratch.size())));
                     return Status::OK();
                 }
                 case ::avro::LogicalType::Type::DECIMAL: {
@@ -389,8 +390,8 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                         arrow::internal::checked_cast<arrow::Decimal128Builder*>(array_builder);
                     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
                         arrow::Decimal128 decimal,
-                        arrow::Decimal128::FromBigEndian(ctx.bytes_scratch.data(),
-                                                         ctx.bytes_scratch.size()));
+                        arrow::Decimal128::FromBigEndian(ctx->bytes_scratch.data(),
+                                                         ctx->bytes_scratch.size()));
                     PAIMON_RETURN_NOT_OK_FROM_ARROW(builder->Append(decimal));
                     return Status::OK();
                 }
@@ -422,10 +423,10 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
 
 Status DecodeFieldToBuilder(const ::avro::NodePtr& avro_node,
                             const std::optional<std::set<size_t>>& projection,
-                            ::avro::Decoder& decoder, arrow::ArrayBuilder* array_builder,
-                            AvroDirectDecoder::DecodeContext& ctx) {
+                            ::avro::Decoder* decoder, arrow::ArrayBuilder* array_builder,
+                            AvroDirectDecoder::DecodeContext* ctx) {
     if (avro_node->type() == ::avro::AVRO_UNION) {
-        const size_t branch_index = decoder.decodeUnionIndex();
+        const size_t branch_index = decoder->decodeUnionIndex();
 
         // Validate branch index
         const size_t num_branches = avro_node->leaves();
@@ -450,9 +451,9 @@ Status DecodeFieldToBuilder(const ::avro::NodePtr& avro_node,
 
 Status AvroDirectDecoder::DecodeAvroToBuilder(const ::avro::NodePtr& avro_node,
                                               const std::optional<std::set<size_t>>& projection,
-                                              ::avro::Decoder& decoder,
+                                              ::avro::Decoder* decoder,
                                               arrow::ArrayBuilder* array_builder,
-                                              DecodeContext& ctx) {
+                                              DecodeContext* ctx) {
     return DecodeFieldToBuilder(avro_node, projection, decoder, array_builder, ctx);
 }
 

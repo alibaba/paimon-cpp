@@ -102,8 +102,8 @@ Result<BatchReader::ReadBatch> AvroFileBatchReader::NextBatch() {
             }
             reader_->decr();
             PAIMON_RETURN_NOT_OK(AvroDirectDecoder::DecodeAvroToBuilder(
-                reader_->dataSchema().root(), read_fields_projection_, reader_->decoder(),
-                array_builder_.get(), decode_context_));
+                reader_->dataSchema().root(), read_fields_projection_, &reader_->decoder(),
+                array_builder_.get(), &decode_context_));
         }
         previous_first_row_ = next_row_to_read_;
         next_row_to_read_ += array_builder_->length();

@@ -56,8 +56,8 @@ class AvroDirectDecoder {
     /// @return Status indicating success, or an error status
     static Status DecodeAvroToBuilder(const ::avro::NodePtr& avro_node,
                                       const std::optional<std::set<size_t>>& projection,
-                                      ::avro::Decoder& decoder, arrow::ArrayBuilder* array_builder,
-                                      DecodeContext& ctx);
+                                      ::avro::Decoder* decoder, arrow::ArrayBuilder* array_builder,
+                                      DecodeContext* ctx);
 };
 
 }  // namespace paimon::avro
