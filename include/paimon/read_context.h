@@ -231,7 +231,7 @@ class PAIMON_EXPORT ReadContextBuilder {
     ///
     /// When enabled, a prefetch cache is used to prebuffer data ranges before they are needed,
     /// which can improve read performance by reducing redundant I/O operations.
-    /// @param enabled Whether to enable prefetch cache (default: false)
+    /// @param enabled Whether to enable prefetch cache (default: true)
     /// @return Reference to this builder for method chaining.
     ReadContextBuilder& EnablePrefetchCache(bool enabled);
 

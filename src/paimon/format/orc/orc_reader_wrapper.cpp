@@ -17,9 +17,7 @@
 #include "paimon/format/orc/orc_reader_wrapper.h"
 
 #include <algorithm>
-#include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 #include <utility>
 
