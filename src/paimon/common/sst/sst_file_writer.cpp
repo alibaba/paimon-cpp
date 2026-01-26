@@ -145,7 +145,7 @@ Status SstFileWriter::WriteBytes(const char* data, size_t size) {
 
 Result<int32_t> SstFileWriter::WriteVarLenInt(char* bytes, int32_t value) {
     if (value < 0) {
-        Status::Invalid("negative value: v=" + std::to_string(value));
+        return Status::Invalid("negative value: v=" + std::to_string(value));
     }
     int i = 0;
     while ((value & ~0x7F) != 0) {
