@@ -43,7 +43,7 @@ TEST_F(OrcReaderWrapperTest, NextRowToRead) {
             ::orc::Type::buildTypeFromString("struct<col1:int,col2:string>");
         std::unique_ptr<::orc::Writer> writer = createWriter(*schema, outStream.get(), options);
         auto col_batch = writer->createRowBatch(3);
-        ::orc::StructVectorBatch* batch = dynamic_cast<::orc::StructVectorBatch*>(col_batch.get());
+        auto batch = dynamic_cast<::orc::StructVectorBatch*>(col_batch.get());
         auto* col1 = dynamic_cast<::orc::LongVectorBatch*>(batch->fields[0]);
         auto* col2 = dynamic_cast<::orc::StringVectorBatch*>(batch->fields[1]);
         batch->numElements = 3;

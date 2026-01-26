@@ -41,7 +41,7 @@ namespace paimon::orc {
 
 class OrcFileBatchReader : public PrefetchFileBatchReader {
  public:
-    ~OrcFileBatchReader() override {}
+    ~OrcFileBatchReader() override = default;
     static Result<std::unique_ptr<OrcFileBatchReader>> Create(
         std::unique_ptr<::orc::InputStream>&& input_stream, const std::shared_ptr<MemoryPool>& pool,
         const std::map<std::string, std::string>& options, int32_t batch_size);
