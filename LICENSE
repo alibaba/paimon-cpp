@@ -239,6 +239,20 @@ This product includes code from Apache Arrow.
 Copyright: 2016-2024 The Apache Software Foundation.
 Home page: https://arrow.apache.org/
 License: https://www.apache.org/licenses/LICENSE-2.0
+--------------------------------------------------------------------------------
+
+This product includes code from Apache ORC.
+
+* Core utilities:
+  * basic utilities in
+    - include/paimon/utils/read_ahead_cache.h
+    - include/paimon/utils/byte_range_combiner.h
+    - src/paimon/common/utils/read_ahead_cache.cpp
+    - src/paimon/common/utils/byte_range_combiner.cpp
+
+Copyright: 2013 and onwards The Apache Software Foundation.
+Home page: https://orc.apache.org/
+License: https://www.apache.org/licenses/LICENSE-2.0
 
 --------------------------------------------------------------------------------
 

@@ -38,12 +38,15 @@ macro(set_urls URLS)
     set(${URLS} ${ARGN})
 endmacro()
 
+set(THIRDPARTY_DIR "${CMAKE_SOURCE_DIR}/third_party")
 # Read toolchain versions from third_party/versions.txt
-file(STRINGS "${CMAKE_SOURCE_DIR}/third_party/versions.txt" TOOLCHAIN_VERSIONS_TXT)
+file(STRINGS "${THIRDPARTY_DIR}/versions.txt" TOOLCHAIN_VERSIONS_TXT)
 foreach(_VERSION_ENTRY ${TOOLCHAIN_VERSIONS_TXT})
     # Exclude comments
-    if(NOT ((_VERSION_ENTRY MATCHES "^[^#][A-Za-z0-9-_]+_VERSION=")
-            OR (_VERSION_ENTRY MATCHES "^[^#][A-Za-z0-9-_]+_CHECKSUM=")))
+    if(NOT
+       ((_VERSION_ENTRY MATCHES "^[^#][A-Za-z0-9-_]+_VERSION=")
+        OR (_VERSION_ENTRY MATCHES "^[^#][A-Za-z0-9-_]+_CHECKSUM=")
+        OR (_VERSION_ENTRY MATCHES "^[^#][A-Za-z0-9-_]+_PKG_NAME=")))
         continue()
     endif()
 
@@ -55,10 +58,16 @@ foreach(_VERSION_ENTRY ${TOOLCHAIN_VERSIONS_TXT})
         continue()
     endif()
 
-    # For debugging
-    message(STATUS "${_VARIABLE_NAME}: ${_VARIABLE_VALUE}")
-
     set(${_VARIABLE_NAME} ${_VARIABLE_VALUE})
+
+    if(_VARIABLE_NAME MATCHES "_PKG_NAME$")
+        # Expand version to package name
+        string(CONFIGURE "${${_VARIABLE_NAME}}" _EXPANDED ESCAPE_QUOTES)
+        set(${_VARIABLE_NAME} "${_EXPANDED}")
+    endif()
+
+    # For debugging
+    message(STATUS "${_VARIABLE_NAME}: ${${_VARIABLE_NAME}}")
 endforeach()
 
 if(DEFINED ENV{PAIMON_THIRDPARTY_MIRROR_URL})
@@ -70,113 +79,169 @@ endif()
 if(DEFINED ENV{PAIMON_ARROW_URL})
     set(ARROW_SOURCE_URL "$ENV{PAIMON_ARROW_URL}")
 else()
-    set_urls(ARROW_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/apache/arrow/releases/download/apache-arrow-${PAIMON_ARROW_BUILD_VERSION}/apache-arrow-${PAIMON_ARROW_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_ARROW_PKG_NAME}")
+        set_urls(ARROW_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_ARROW_PKG_NAME}")
+    else()
+        set_urls(ARROW_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/apache/arrow/releases/download/apache-arrow-${PAIMON_ARROW_BUILD_VERSION}/apache-arrow-${PAIMON_ARROW_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_RAPIDJSON_URL})
     set(RAPIDJSON_SOURCE_URL "$ENV{PAIMON_RAPIDJSON_URL}")
 else()
-    set_urls(RAPIDJSON_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/miloyip/rapidjson/archive/${PAIMON_RAPIDJSON_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_RAPIDJSON_PKG_NAME}")
+        set_urls(RAPIDJSON_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_RAPIDJSON_PKG_NAME}")
+    else()
+        set_urls(RAPIDJSON_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/miloyip/rapidjson/archive/${PAIMON_RAPIDJSON_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_FMT_URL})
     set(FMT_SOURCE_URL "$ENV{PAIMON_FMT_URL}")
 else()
-    set_urls(FMT_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_FMT_PKG_NAME}")
+        set_urls(FMT_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_FMT_PKG_NAME}")
+    else()
+        set_urls(FMT_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/fmtlib/fmt/archive/refs/tags/${PAIMON_FMT_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_GLOG_URL})
     set(GLOG_SOURCE_URL "$ENV{PAIMON_GLOG_URL}")
 else()
-    set_urls(GLOG_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/google/glog/archive/${PAIMON_GLOG_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_GLOG_PKG_NAME}")
+        set_urls(GLOG_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_GLOG_PKG_NAME}")
+    else()
+        set_urls(GLOG_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/glog/archive/${PAIMON_GLOG_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_ZLIB_URL})
     set(ZLIB_SOURCE_URL "$ENV{PAIMON_ZLIB_URL}")
 else()
-    set_urls(ZLIB_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/madler/zlib/releases/download/v${PAIMON_ZLIB_BUILD_VERSION}/zlib-${PAIMON_ZLIB_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_ZLIB_PKG_NAME}")
+        set_urls(ZLIB_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_ZLIB_PKG_NAME}")
+    else()
+        set_urls(ZLIB_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/madler/zlib/releases/download/v${PAIMON_ZLIB_BUILD_VERSION}/zlib-${PAIMON_ZLIB_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_ZSTD_URL})
     set(ZSTD_SOURCE_URL "$ENV{PAIMON_ZSTD_URL}")
 else()
-    set_urls(ZSTD_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/facebook/zstd/releases/download/v${PAIMON_ZSTD_BUILD_VERSION}/zstd-${PAIMON_ZSTD_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_ZSTD_PKG_NAME}")
+        set_urls(ZSTD_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_ZSTD_PKG_NAME}")
+    else()
+        set_urls(ZSTD_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/facebook/zstd/releases/download/v${PAIMON_ZSTD_BUILD_VERSION}/zstd-${PAIMON_ZSTD_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_LZ4_URL})
     set(LZ4_SOURCE_URL "$ENV{PAIMON_LZ4_URL}")
 else()
-    set_urls(LZ4_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/lz4/lz4/archive/${PAIMON_LZ4_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_LZ4_PKG_NAME}")
+        set_urls(LZ4_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LZ4_PKG_NAME}")
+    else()
+        set_urls(LZ4_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/lz4/lz4/archive/${PAIMON_LZ4_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_SNAPPY_URL})
     set(SNAPPY_SOURCE_URL "$ENV{PAIMON_SNAPPY_URL}")
 else()
-    set_urls(SNAPPY_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/google/snappy/archive/${PAIMON_SNAPPY_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_SNAPPY_PKG_NAME}")
+        set_urls(SNAPPY_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_SNAPPY_PKG_NAME}")
+    else()
+        set_urls(SNAPPY_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/snappy/archive/${PAIMON_SNAPPY_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_PROTOBUF_URL})
     set(PROTOBUF_SOURCE_URL "$ENV{PAIMON_PROTOBUF_URL}")
 else()
-    set_urls(PROTOBUF_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/protocolbuffers/protobuf/releases/download/v${PAIMON_PROTOBUF_BUILD_VERSION}/protobuf-all-${PAIMON_PROTOBUF_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_PROTOBUF_PKG_NAME}")
+        set_urls(PROTOBUF_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_PROTOBUF_PKG_NAME}")
+    else()
+        set_urls(PROTOBUF_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/protocolbuffers/protobuf/releases/download/v${PAIMON_PROTOBUF_BUILD_VERSION}/protobuf-all-${PAIMON_PROTOBUF_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_GTEST_URL})
     set(GTEST_SOURCE_URL "$ENV{PAIMON_GTEST_URL}")
 else()
-    set_urls(GTEST_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/google/googletest/archive/release-${PAIMON_GTEST_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_GTEST_PKG_NAME}")
+        set_urls(GTEST_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_GTEST_PKG_NAME}")
+    else()
+        set_urls(GTEST_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/googletest/archive/release-${PAIMON_GTEST_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_TBB_URL})
     set(TBB_SOURCE_URL "$ENV{PAIMON_TBB_URL}")
 else()
-    set_urls(TBB_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/uxlfoundation/oneTBB/archive/refs/tags/${PAIMON_TBB_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_TBB_PKG_NAME}")
+        set_urls(TBB_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_TBB_PKG_NAME}")
+    else()
+        set_urls(TBB_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/uxlfoundation/oneTBB/archive/refs/tags/${PAIMON_TBB_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_ORC_URL})
     set(ORC_SOURCE_URL "$ENV{PAIMON_ORC_URL}")
 else()
-    set_urls(ORC_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/apache/orc/archive/refs/tags/${PAIMON_ORC_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_ORC_PKG_NAME}")
+        set_urls(ORC_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_ORC_PKG_NAME}")
+    else()
+        set_urls(ORC_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/apache/orc/archive/refs/tags/${PAIMON_ORC_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_AVRO_URL})
     set(AVRO_SOURCE_URL "$ENV{PAIMON_AVRO_URL}")
 else()
-    set_urls(AVRO_SOURCE_URL
-             "${THIRDPARTY_MIRROR_URL}https://github.com/apache/avro/archive/${PAIMON_AVRO_BUILD_VERSION}.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_AVRO_PKG_NAME}")
+        set_urls(AVRO_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_AVRO_PKG_NAME}")
+    else()
+        set_urls(AVRO_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/apache/avro/archive/${PAIMON_AVRO_BUILD_VERSION}.tar.gz"
+        )
+    endif()
 endif()
 
 if(DEFINED ENV{PAIMON_JINDOSDK_C_URL})
     set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_URL}")
 else()
-    set_urls(JINDOSDK_C_SOURCE_URL
-             "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux.tar.gz"
-    )
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_JINDOSDK_C_PKG_NAME}")
+        set_urls(JINDOSDK_C_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_JINDOSDK_C_PKG_NAME}")
+    else()
+        set_urls(JINDOSDK_C_SOURCE_URL
+                 "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux.tar.gz"
+        )
+    endif()
 endif()
 
 set(EP_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -188,6 +253,12 @@ if(NOT MSVC_TOOLCHAIN)
     string(APPEND EP_CXX_FLAGS
            " -fPIC -Wno-error -Wno-sign-compare -Wno-ignored-attributes")
     string(APPEND EP_C_FLAGS " -fPIC")
+endif()
+
+if(PAIMON_USE_CXX11_ABI)
+    string(APPEND EP_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
+else()
+    string(APPEND EP_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
 # External projects are still able to override the following declarations.
@@ -649,6 +720,7 @@ macro(build_orc)
         "-DZSTD_HOME=${ORC_ZSTD_ROOT}"
         "-DZLIB_HOME=${ORC_ZLIB_ROOT}"
         "-DPROTOBUF_HOME=${ORC_PROTOBUF_ROOT}"
+        "-DProtobuf_ROOT=${ORC_PROTOBUF_ROOT}"
         -DBUILD_JAVA=OFF
         -DBUILD_CPP_TESTS=OFF
         -DBUILD_TOOLS=OFF

@@ -86,9 +86,12 @@ function(add_paimon_lib LIB_NAME)
         endif()
 
         set_target_properties(${LIB_NAME}_shared
-                              PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_PATH}"
-                                         RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_PATH}"
-                                         PDB_OUTPUT_DIRECTORY "${OUTPUT_PATH}"
+                              PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+                                         "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
+                                         RUNTIME_OUTPUT_DIRECTORY
+                                         "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
+                                         PDB_OUTPUT_DIRECTORY
+                                         "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}"
                                          LINK_FLAGS "${ARG_SHARED_LINK_FLAGS}"
                                          OUTPUT_NAME ${LIB_NAME})
 
@@ -137,7 +140,8 @@ function(add_paimon_lib LIB_NAME)
         set(LIB_NAME_STATIC ${LIB_NAME})
 
         set_target_properties(${LIB_NAME}_static
-                              PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_PATH}"
+                              PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
+                                         "${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}"
                                          OUTPUT_NAME ${LIB_NAME_STATIC})
 
         if(ARG_STATIC_INSTALL_INTERFACE_LIBS)
