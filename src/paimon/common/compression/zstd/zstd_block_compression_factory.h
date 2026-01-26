@@ -28,7 +28,7 @@ namespace paimon {
 /// Implementation of {@link BlockCompressionFactory} for Lz4 codec.
 class ZstdBlockCompressionFactory : public BlockCompressionFactory {
  public:
-    ZstdBlockCompressionFactory(int32_t level = 3) : level_(level) {}
+    explicit ZstdBlockCompressionFactory(int32_t level = 3) : level_(level) {}
 
  public:
     BlockCompressionType GetCompressionType() override {

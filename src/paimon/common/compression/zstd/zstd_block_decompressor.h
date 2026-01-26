@@ -16,8 +16,9 @@
 
 #pragma once
 
+#include <zstd.h>
+
 #include "paimon/common/compression/block_decompressor.h"
-#include "zstd.h"
 
 namespace paimon {
 

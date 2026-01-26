@@ -16,7 +16,8 @@
 
 #pragma once
 
-#include "lz4.h"
+#include <lz4.h>
+
 #include "paimon/common/compression/block_compressor.h"
 
 namespace paimon {
