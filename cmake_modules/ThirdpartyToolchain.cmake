@@ -306,12 +306,9 @@ macro(build_lucene)
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
-    
-    target_link_libraries(lucene INTERFACE
-                          "${LUCENE_PREFIX}/lib/liblucene++.so.0"
-                          ${Boost_LIBRARIES}
-                          pthread
-                          dl)
+
+    target_link_libraries(lucene INTERFACE "${LUCENE_PREFIX}/lib/liblucene++.so.0"
+                                           ${Boost_LIBRARIES} pthread dl)
     add_dependencies(lucene lucene_ep)
 endmacro()
 

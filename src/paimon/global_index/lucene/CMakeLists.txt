@@ -13,11 +13,8 @@
 # limitations under the License.
 
 if(PAIMON_ENABLE_LUCENE)
-    set(PAIMON_LUCENE
-        lucene_global_index.cpp
-        lucene_directory.cpp
-        lucene_global_index_factory.cpp
-    )
+    set(PAIMON_LUCENE lucene_global_index.cpp lucene_directory.cpp
+                      lucene_global_index_factory.cpp)
 
     add_paimon_lib(paimon_lucene_index
                    SOURCES
@@ -41,7 +38,7 @@ if(PAIMON_ENABLE_LUCENE)
         add_paimon_test(lucene_index_test
                         SOURCES
                         lucene_api_test.cpp
-                        lucene_global_index_test.cpp                        
+                        lucene_global_index_test.cpp
                         EXTRA_INCLUDES
                         ${LUCENE_INCLUDE_DIR}
                         STATIC_LINK_LIBS
