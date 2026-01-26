@@ -33,7 +33,7 @@ class PAIMON_EXPORT CRC32C {
  private:
 #if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && (_M_IX86_FP == 2))
     /**
-     * Simd implementaion for crc32c.
+     * Simd implementation for crc32c.
      *
      * @param data data to be calculated
      * @param length length of data
