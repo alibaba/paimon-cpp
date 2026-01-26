@@ -54,7 +54,7 @@ TEST_P(CompressionFactoryTest, TESTCompressThenDecompress) {
     }
 
     ASSERT_OK_AND_ASSIGN(auto factory, BlockCompressionFactory::Create(type));
-    ASSERT_EQ(BlockCompressionType::LZ4, factory->GetCompressionType());
+    ASSERT_EQ(type, factory->GetCompressionType());
 
     // compress
     auto compressor = factory->GetCompressor();
@@ -68,15 +68,23 @@ TEST_P(CompressionFactoryTest, TESTCompressThenDecompress) {
 
     // decompress
     auto decompressor = factory->GetDecompressor();
-    auto origin_len =
-        decompressor->GetOriginalDataSize(compressed_data.data(), compressed_data.size());
-    std::string decompressed_data(origin_len, '\0');
+    std::string decompressed_data(original_len, '\0');
     auto decompressed_size =
         decompressor->Decompress(compressed_data.data(), compressed_data.size(),
                                  decompressed_data.data(), decompressed_data.size());
     ASSERT_OK(decompressed_size);
     ASSERT_GT(decompressed_size.value(), 0);
     ASSERT_EQ(data, decompressed_data);
+
+    std::string read_write_le{4, '\0'};
+    compressor->WriteIntLE(123, read_write_le.data());
+    ASSERT_EQ(123, decompressor->ReadIntLE(read_write_le.data()));
+    compressor->WriteIntLE(100000, read_write_le.data());
+    ASSERT_EQ(100000, decompressor->ReadIntLE(read_write_le.data()));
+    compressor->WriteIntLE(-6555, read_write_le.data());
+    ASSERT_EQ(-6555, decompressor->ReadIntLE(read_write_le.data()));
+    compressor->WriteIntLE(0, read_write_le.data());
+    ASSERT_EQ(0, decompressor->ReadIntLE(read_write_le.data()));
 }
 
 INSTANTIATE_TEST_SUITE_P(BlockCompressionTypeGroup, CompressionFactoryTest,

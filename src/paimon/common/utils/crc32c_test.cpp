@@ -14,15 +14,28 @@
  * limitations under the License.
  */
 
-#include "paimon/common/compression/block_compressor.h"
+#include "paimon/common/utils/crc32c.h"
 
-namespace paimon {
+#include <cstring>
+#include <limits>
+#include <random>
+#include <set>
+#include <utility>
+#include <vector>
 
-void BlockCompressor::WriteIntLE(int32_t val, char* buf) {
-    buf[0] = static_cast<char>(val);
-    buf[1] = static_cast<char>(val >> 8);
-    buf[2] = static_cast<char>(val >> 16);
-    buf[3] = static_cast<char>(val >> 24);
+#include "arrow/util/crc32.h"
+#include "gtest/gtest.h"
+#include "paimon/memory/bytes.h"
+#include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/testharness.h"
+namespace paimon::test {
+
+TEST(CRC32CTest, TestSimple) {
+    char a = 'a';
+    ASSERT_EQ(CRC32C::calculate(&a, 1), 3904355907);
+
+    std::string data = "hello paimon c++";
+    ASSERT_EQ(CRC32C::calculate(data.c_str(), data.size()), 1311805437);
 }
 
-}  // namespace paimon
+}  // namespace paimon::test

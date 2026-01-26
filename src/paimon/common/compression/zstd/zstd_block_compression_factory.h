@@ -32,7 +32,7 @@ class ZstdBlockCompressionFactory : public BlockCompressionFactory {
 
  public:
     BlockCompressionType GetCompressionType() override {
-        return BlockCompressionType::LZ4;
+        return BlockCompressionType::ZSTD;
     }
 
     std::shared_ptr<BlockCompressor> GetCompressor() override {

@@ -31,9 +31,6 @@ class BlockDecompressor {
     virtual ~BlockDecompressor() = default;
 
  public:
-    /** Get original data size for a given buff. */
-    virtual int32_t GetOriginalDataSize(const char* src, int32_t src_length) = 0;
-
     /**
      * Decompress data read from src, and write the decompressed data to dst.
      *

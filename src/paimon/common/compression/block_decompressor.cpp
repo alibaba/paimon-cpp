@@ -26,7 +26,9 @@ int32_t BlockDecompressor::ReadIntLE(const char* buf) {
 Status BlockDecompressor::ValidateLength(int32_t compressed_len, int32_t original_len) {
     if (original_len < 0 || compressed_len < 0 || (original_len == 0 && compressed_len != 0) ||
         (original_len != 0 && compressed_len == 0)) {
-        return Status::IOError("Input is corrupted, invalid length.");
+        return Status::IOError(
+            "Input is corrupted, compressed_len=" + std::to_string(compressed_len) +
+            ", original_len=" + std::to_string(original_len));
     }
     return Status::OK();
 }

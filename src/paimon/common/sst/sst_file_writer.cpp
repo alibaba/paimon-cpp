@@ -15,6 +15,10 @@
  */
 
 #include "paimon/common/sst/sst_file_writer.h"
+
+#include "paimon/common/sst/sst_file_utils.h"
+#include "paimon/common/utils/crc32c.h"
+
 namespace paimon {
 SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
                              const std::shared_ptr<MemoryPool>& pool,
@@ -68,9 +72,7 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     if (!bloom_filter_.get()) {
         return Status::Invalid("bloom_filter_ should be set before writing");
     }
-
     auto data = bloom_filter_->GetBitSet()->ToSlice()->ReadStringView();
-
     auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos().value(), data.size(),
                                                       bloom_filter_->ExpectedEntries());
 
@@ -98,34 +100,59 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     auto& block_data = ret.value();
     auto view = block_data->ReadStringView();
 
+    std::shared_ptr<Bytes> buffer;
+    BlockCompressionType compression_type = BlockCompressionType::NONE;
     if (compressor_.get()) {
         auto new_size = compressor_->GetMaxCompressedSize(view.size());
-        auto buffer = std::make_unique<Bytes>(new_size, pool_.get());
-        PAIMON_ASSIGN_OR_RAISE(
-            auto actual_size,
-            compressor_->Compress(view.data(), view.size(), buffer->data(), buffer->size()));
-        view = std::string_view{buffer->data(), static_cast<size_t>(actual_size)};
+        // 5 bytes for original length
+        buffer = std::make_shared<Bytes>(new_size + 5, pool_.get());
+        PAIMON_ASSIGN_OR_RAISE(auto offset, WriteVarLenInt(buffer->data(), view.size()));
+        PAIMON_ASSIGN_OR_RAISE(auto actual_size, compressor_->Compress(view.data(), view.size(),
+                                                                       buffer->data() + offset,
+                                                                       buffer->size() - offset));
+        actual_size += offset;
+        // Don't use the compressed data if compressed less than 12.5%,
+        if (static_cast<size_t>(actual_size) < view.size() - (view.size() / 8)) {
+            compression_type = compression_type_;
+            view = std::string_view{buffer->data(), static_cast<size_t>(actual_size)};
+        }
     }
 
-    auto crc32 = arrow::internal::crc32(0, view.data(), view.size());
-    auto trailer = std::make_shared<BlockTrailer>(static_cast<int8_t>(compression_type_), crc32)
-                       ->WriteBlockTrailer(pool_.get());
-    auto trailer_data = trailer->ReadStringView();
-
+    auto crc32c = CRC32C::calculate(view.data(), view.size());
+    auto compression_val = static_cast<char>(static_cast<int32_t>(compression_type) & 0xFF);
+    crc32c = CRC32C::calculate(&compression_val, 1, crc32c);
+    auto trailer_memory_slice =
+        std::make_shared<BlockTrailer>(static_cast<int8_t>(compression_type), crc32c)
+            ->WriteBlockTrailer(pool_.get());
     auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), view.size());
 
     // 1. write data
     PAIMON_RETURN_NOT_OK(WriteBytes(view.data(), view.size()));
 
     // 2. write trailer
+    auto trailer_data = trailer_memory_slice->ReadStringView();
     PAIMON_RETURN_NOT_OK(WriteBytes(trailer_data.data(), trailer_data.size()));
 
     writer->Reset();
+
     return block_handle;
 }
 
 Status SstFileWriter::WriteBytes(const char* data, size_t size) {
     PAIMON_RETURN_NOT_OK(out_->Write(data, size));
     return Status::OK();
+}
+
+Result<int32_t> SstFileWriter::WriteVarLenInt(char* bytes, int32_t value) {
+    if (value < 0) {
+        Status::Invalid("negative value: v=" + std::to_string(value));
+    }
+    int i = 0;
+    while ((value & ~0x7F) != 0) {
+        bytes[i++] = (static_cast<char>((value & 0x7F) | 0x80));
+        value >>= 7;
+    }
+    bytes[i++] = static_cast<char>(value);
+    return i;
 }
 }  // namespace paimon

@@ -16,22 +16,31 @@
 
 #pragma once
 
-#include "paimon/common/compression/block_decompressor.h"
-#include "zstd.h"
+#include <cstddef>
+#include <cstdint>
+#if defined(PAIMON_HAVE_SSE4_2)
+#include <nmmintrin.h>
+#endif
+#include "paimon/visibility.h"
 
 namespace paimon {
 
-/// Decode data written with {@link ZstdBlockDecompressor}.
-class ZstdBlockDecompressor : public BlockDecompressor {
+/// CRC32C
+class PAIMON_EXPORT CRC32C {
  public:
-    Result<int32_t> Decompress(const char* src, int32_t src_length, char* dst,
-                               int32_t dst_length) override {
-        int32_t decompressed_size = ZSTD_decompress(dst, dst_length, src, src_length);
-        if (ZSTD_isError(decompressed_size)) {
-            return Status::IOError("Input is corrupted with return code " +
-                                   std::to_string(decompressed_size));
-        }
-        return decompressed_size;
-    }
+    static uint32_t calculate(const char* data, size_t length, uint32_t crc = 0);
+
+ private:
+#if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && (_M_IX86_FP == 2))
+    /**
+     * Simd implementaion for crc32c.
+     *
+     * @param data data to be calculated
+     * @param length length of data
+     * @param crc initial crc value
+     * @return crc32c value
+     */
+    static uint32_t crc32c_hw(const char* data, size_t length, uint32_t crc);
+#endif
 };
 }  // namespace paimon

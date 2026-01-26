@@ -118,6 +118,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/bloom_filter.cpp
     common/utils/bloom_filter64.cpp
     common/utils/bucket_id_calculator.cpp
+    common/utils/crc32c.cpp
     common/utils/decimal_utils.cpp
     common/utils/delta_varint_compressor.cpp
     common/utils/path_util.cpp
@@ -439,6 +440,7 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
+                    common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static

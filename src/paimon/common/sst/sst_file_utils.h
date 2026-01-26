@@ -16,22 +16,30 @@
 
 #pragma once
 
-#include "paimon/common/compression/block_decompressor.h"
-#include "zstd.h"
+#include "arrow/util/crc32.h"
+#include "paimon/common/compression/block_compression_type.h"
+#include "paimon/common/memory/memory_slice.h"
+#include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
 
-/// Decode data written with {@link ZstdBlockDecompressor}.
-class ZstdBlockDecompressor : public BlockDecompressor {
+/// Utils for sst file.
+class SstFileUtils {
  public:
-    Result<int32_t> Decompress(const char* src, int32_t src_length, char* dst,
-                               int32_t dst_length) override {
-        int32_t decompressed_size = ZSTD_decompress(dst, dst_length, src, src_length);
-        if (ZSTD_isError(decompressed_size)) {
-            return Status::IOError("Input is corrupted with return code " +
-                                   std::to_string(decompressed_size));
+    static BlockCompressionType From(int8_t v) {
+        if (v == 1) {
+            return BlockCompressionType::ZSTD;
+        } else if (v == 2) {
+            return BlockCompressionType::LZ4;
         }
-        return decompressed_size;
+        return BlockCompressionType::NONE;
+    }
+
+    static std::string ToHexString(int32_t crc32c) {
+        std::stringstream sstream;
+        sstream << std::hex << crc32c;
+        return sstream.str();
     }
 };
+
 }  // namespace paimon

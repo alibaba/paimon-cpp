@@ -27,14 +27,15 @@ class ZstdBlockCompressor : public BlockCompressor {
     explicit ZstdBlockCompressor(int32_t level) : level_(level) {}
 
     int32_t GetMaxCompressedSize(int32_t src_size) override {
-        return BlockCompressor::HEADER_LENGTH + ZSTD_compressBound(src_size);
+        return ZSTD_compressBound(src_size);
     }
 
     Result<int32_t> Compress(const char* src, int32_t src_length, char* dst,
                              int32_t dst_length) override {
         size_t const compressed_size = ZSTD_compress(dst, dst_length, src, src_length, level_);
         if (ZSTD_isError(compressed_size)) {
-            return Status::IOError("Compression failed with code " + std::to_string(compressed_size));
+            return Status::IOError("Compression failed with code " +
+                                   std::to_string(compressed_size));
         }
         return compressed_size;
     }

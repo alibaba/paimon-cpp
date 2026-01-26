@@ -31,9 +31,11 @@ class Lz4BlockCompressor : public BlockCompressor {
     Result<int32_t> Compress(const char* src, int32_t src_length, char* dst,
                              int32_t dst_length) override {
         int32_t compressed_size =
-            LZ4_compress_default(src, dst + BlockCompressor::HEADER_LENGTH, src_length, dst_length);
+            LZ4_compress_default(src, dst + BlockCompressor::HEADER_LENGTH, src_length,
+                                 dst_length - BlockCompressor::HEADER_LENGTH);
         if (compressed_size < 0) {
-            return Status::IOError("Compression failed with code " + std::to_string(compressed_size));
+            return Status::IOError("Compression failed with code " +
+                                   std::to_string(compressed_size));
         }
         WriteIntLE(compressed_size, dst);
         WriteIntLE(src_length, dst + 4);

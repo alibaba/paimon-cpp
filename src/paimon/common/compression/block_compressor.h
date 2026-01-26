@@ -23,7 +23,7 @@ namespace paimon {
 /// A compressor which compresses a whole byte array each time.
 class BlockCompressor {
  public:
-    static void WriteIntLE(uint32_t val, char* buf);
+    static void WriteIntLE(int32_t val, char* buf);
 
  public:
     virtual ~BlockCompressor() = default;

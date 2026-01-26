@@ -24,10 +24,6 @@ namespace paimon {
 /// Decode data written with {@link Lz4BlockCompressor}.
 class Lz4BlockDecompressor : public BlockDecompressor {
  public:
-    int32_t GetOriginalDataSize(const char* src, int32_t src_length) override {
-        return ReadIntLE(src + 4);
-    }
-
     Result<int32_t> Decompress(const char* src, int32_t src_length, char* dst,
                                int32_t dst_length) override {
         auto compressed_len = ReadIntLE(src);
@@ -35,7 +31,10 @@ class Lz4BlockDecompressor : public BlockDecompressor {
         PAIMON_RETURN_NOT_OK(ValidateLength(compressed_len, original_len));
 
         if (dst_length < original_len) {
-            return Status::IOError("Buffer length too small");
+            return Status::IOError(
+                "Buffer length too small, compressed_len=" + std::to_string(compressed_len) +
+                ", original_len=" + std::to_string(original_len) +
+                ", but dst_length=" + std::to_string(dst_length));
         }
 
         if (src_length - HEADER_LENGTH < compressed_len) {

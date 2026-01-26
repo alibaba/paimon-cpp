@@ -18,7 +18,6 @@
 
 #include <memory>
 
-#include "arrow/util/crc32.h"
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
@@ -65,6 +64,8 @@ class SstFileWriter {
     Result<std::shared_ptr<BlockHandle>> FlushBlockWriter(std::unique_ptr<BlockWriter>& writer);
 
     Status WriteBytes(const char* data, size_t size);
+
+    Result<int32_t> WriteVarLenInt(char* bytes, int32_t value);
 
     // api for testing
     BlockWriter* IndexWriter() const {

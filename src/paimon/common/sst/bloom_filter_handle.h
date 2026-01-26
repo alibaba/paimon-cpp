@@ -44,6 +44,12 @@ class BloomFilterHandle {
         return expected_entries_;
     }
 
+    std::string ToString() const {
+        return "BloomFilterHandle{offset=" + std::to_string(offset_) +
+               ", size=" + std::to_string(size_) +
+               ", expected_entries=" + std::to_string(expected_entries_) + "}";
+    }
+
  public:
     static constexpr int32_t MAX_ENCODED_LENGTH = 9 + 5;
 
