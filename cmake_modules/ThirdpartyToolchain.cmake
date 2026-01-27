@@ -314,7 +314,7 @@ macro(build_lucene)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
 
-    target_link_libraries(lucene INTERFACE "${LUCENE_PREFIX}/lib/liblucene++.so.0"
+    target_link_libraries(lucene INTERFACE "${LUCENE_PREFIX}/lib/liblucene++.so.3.0.9"
                           boost_date_time
                           boost_filesystem
                           boost_regex
