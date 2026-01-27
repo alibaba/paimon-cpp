@@ -462,7 +462,7 @@ macro(build_boost)
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
                                      INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
-    add_library(boost_system STATIC IMPORTED) 
+    add_library(boost_system STATIC IMPORTED)
     set_target_properties(boost_system
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_system.a
