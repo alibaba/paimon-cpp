@@ -405,6 +405,14 @@ macro(build_boost)
     file(MAKE_DIRECTORY ${BOOST_INCLUDE_DIR})
     file(MAKE_DIRECTORY ${BOOST_LIBRARY_DIR})
 
+    set(BOOST_BYPRODUCTS
+        ${BOOST_LIBRARY_DIR}/libboost_date_time.a
+        ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
+        ${BOOST_LIBRARY_DIR}/libboost_system.a        
+        ${BOOST_LIBRARY_DIR}/libboost_regex.a
+        ${BOOST_LIBRARY_DIR}/libboost_thread.a
+        ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
+    )
     ExternalProject_Add(
         boost_ep
         GIT_REPOSITORY https://github.com/boostorg/boost.git
@@ -416,6 +424,7 @@ macro(build_boost)
         BUILD_IN_SOURCE TRUE
         BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2 --prefix=${BOOST_INSTALL} --libdir=${BOOST_LIBRARY_DIR} link=static runtime-link=shared threading=multi variant=release cxxflags=-fPIC install
         INSTALL_COMMAND ""
+        BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}  
         LOG_DOWNLOAD ON
         LOG_CONFIGURE ON
         LOG_BUILD ON
