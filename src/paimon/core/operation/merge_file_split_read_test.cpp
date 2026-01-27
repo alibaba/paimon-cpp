@@ -1163,7 +1163,7 @@ TEST_P(MergeFileSplitReadTest, TestIOException) {
 
     bool run_complete = false;
     auto io_hook = IOHook::GetInstance();
-    for (size_t i = 0; i < 200; i++) {
+    for (size_t i = 0; i < 300; i++) {
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
         auto batch_reader = CreateReader(internal_context, PrepareDataSplit());

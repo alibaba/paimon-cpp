@@ -161,7 +161,9 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     }
 
     // load schema
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(context->GetOptions()));
+    PAIMON_ASSIGN_OR_RAISE(
+        CoreOptions tmp_options,
+        CoreOptions::FromMap(context->GetOptions(), context->GetSpecificFileSystem()));
     SchemaManager schema_manager(tmp_options.GetFileSystem(), context->GetPath());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());
@@ -179,7 +181,8 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
     for (const auto& [key, value] : context->GetOptions()) {
         options[key] = value;
     }
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
+                           CoreOptions::FromMap(options, context->GetSpecificFileSystem()));
     // validate options
     if (core_options.GetBucket() == -1) {
         if (!table_schema->PrimaryKeys().empty()) {

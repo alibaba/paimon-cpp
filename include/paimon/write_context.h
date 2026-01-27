@@ -44,6 +44,7 @@ class PAIMON_EXPORT WriteContext {
                  const std::vector<std::string>& write_schema,
                  const std::shared_ptr<MemoryPool>& memory_pool,
                  const std::shared_ptr<Executor>& executor,
+                 const std::shared_ptr<FileSystem>& specific_file_system,
                  const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                  const std::map<std::string, std::string>& options);
 
@@ -97,6 +98,10 @@ class PAIMON_EXPORT WriteContext {
         return executor_;
     }
 
+    std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
+        return specific_file_system_;
+    }
+
  private:
     std::string root_path_;
     std::string commit_user_;
@@ -108,6 +113,7 @@ class PAIMON_EXPORT WriteContext {
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
 };
@@ -175,12 +181,30 @@ class PAIMON_EXPORT WriteContextBuilder {
     /// @return Reference to this builder for method chaining.
     WriteContextBuilder& WithWriteSchema(const std::vector<std::string>& write_schema);
 
-    /// Set the file system scheme to identifier mapping for custom file system configurations.
-    /// This allows using different file system implementations for different URI schemes.
+    /// Sets a custom file system instance to be used for all file operations in this write context.
+    /// This bypasses the global file system registry and uses the provided implementation directly.
     ///
-    /// @param fs_scheme_to_identifier_map Map from URI scheme to file system identifier.
+    /// @param file_system The file system to use.
     /// @return Reference to this builder for method chaining.
-    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`).
+    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
+    WriteContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
+
+    /// Sets a mapping from URI schemes (e.g., "file", "oss") to registered file system
+    /// identifiers. This allows selecting different pre-registered file system implementations
+    /// based on the URI scheme at runtime.
+    ///
+    /// @param fs_scheme_to_identifier_map Map from URI scheme (like "oss") to the corresponding
+    /// file system identifier.
+    /// @return Reference to this builder for method chaining.
+    /// @note
+    ///   - This method is intended for environments where multiple file systems are pre-registered.
+    ///   - The specified identifiers must correspond to file systems that have been registered at
+    ///   compile time or initialization.
+    ///   - Cannot be used together with `WithFileSystem()`.
+    ///   - If not set, use default file system (configured in `Options::FILE_SYSTEM`).
+    /// Example:
+    ///   builder.WithFileSystemSchemeToIdentifierMap({{"oss", "jindo"}, {"file", "local"}});
+    ///
     WriteContextBuilder& WithFileSystemSchemeToIdentifierMap(
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map);
 

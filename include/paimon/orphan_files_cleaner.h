@@ -41,6 +41,7 @@ class PAIMON_EXPORT CleanContext {
     CleanContext(const std::string& root_path, const std::map<std::string, std::string>& options,
                  int64_t older_than_ms, const std::shared_ptr<MemoryPool>& pool,
                  const std::shared_ptr<Executor>& executor,
+                 const std::shared_ptr<FileSystem>& specific_file_system,
                  std::function<bool(const std::string&)> should_be_retained);
     ~CleanContext();
 
@@ -64,6 +65,10 @@ class PAIMON_EXPORT CleanContext {
         return executor_;
     }
 
+    std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
+        return specific_file_system_;
+    }
+
     std::function<bool(const std::string&)> GetFileRetainCondition() const {
         return should_be_retained_;
     }
@@ -74,6 +79,7 @@ class PAIMON_EXPORT CleanContext {
     int64_t older_than_ms_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::function<bool(const std::string&)> should_be_retained_;
 };
 
@@ -123,6 +129,14 @@ class PAIMON_EXPORT CleanContextBuilder {
     /// @param executor The executor to use.
     /// @return Reference to this builder for method chaining.
     CleanContextBuilder& WithExecutor(const std::shared_ptr<Executor>& executor);
+
+    /// Sets a custom file system instance to be used for all file operations in this clean context.
+    /// This bypasses the global file system registry and uses the provided implementation directly.
+    ///
+    /// @param file_system The file system to use.
+    /// @return Reference to this builder for method chaining.
+    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
+    CleanContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
 
     /// Build and return a `CleanContext` instance with input validation.
     /// @return Result containing the constructed `CleanContext` or an error status.

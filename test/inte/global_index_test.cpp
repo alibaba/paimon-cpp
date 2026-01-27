@@ -37,10 +37,16 @@
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {
+// string: FileFormat, bool: UseSpecificFileSystem
+using ParamType = std::tuple<std::string, bool>;
 /// This is a sdk end-to-end test for global index.
-class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInterface<std::string> {
+class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInterface<ParamType> {
     void SetUp() override {
+        file_format_ = std::get<0>(GetParam());
         dir_ = UniqueTestDirectory::Create("local");
+        if (std::get<1>(GetParam())) {
+            fs_ = dir_->GetFileSystem();
+        }
         int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
         std::srand(seed);
     }
@@ -54,7 +60,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         ::ArrowSchema c_schema;
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
 
-        ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir_->Str(), {}));
+        ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir_->Str(), {}, fs_));
         ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
         ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema, partition_keys,
                                        /*primary_keys=*/{}, options,
@@ -63,7 +69,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
 
     void CreateTable(const std::vector<std::string>& partition_keys) const {
         std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                      {Options::FILE_FORMAT, GetParam()},
+                                                      {Options::FILE_FORMAT, file_format_},
                                                       {Options::FILE_SYSTEM, "local"},
                                                       {Options::ROW_TRACKING_ENABLED, "true"},
                                                       {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -81,6 +87,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         // write
         WriteContextBuilder write_builder(table_path, "commit_user_1");
         write_builder.WithWriteSchema(write_cols);
+        write_builder.WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto file_store_write,
                                FileStoreWrite::Create(std::move(write_context)));
@@ -107,6 +114,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
                   const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
         // commit
         CommitContextBuilder commit_builder(table_path, "commit_user_1");
+        commit_builder.WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<CommitContext> commit_context,
                                commit_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreCommit> file_store_commit,
@@ -119,6 +127,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         const std::vector<std::map<std::string, std::string>>& partition_filters) const {
         ScanContextBuilder scan_context_builder(table_path);
         scan_context_builder.SetPartitionFilter(partition_filters);
+        scan_context_builder.WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
@@ -135,7 +144,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
                                                           table_path, index_field_name, index_type,
                                                           std::make_shared<IndexedSplitImpl>(
                                                               split, std::vector<Range>({range})),
-                                                          options, pool_));
+                                                          options, pool_, fs_));
         return Commit(table_path, {index_commit_msg});
     }
 
@@ -148,7 +157,8 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         scan_context_builder.SetPredicate(predicate)
             .SetVectorSearch(vector_search)
             .SetOptions(options)
-            .SetGlobalIndexResult(index_result);
+            .SetGlobalIndexResult(index_result)
+            .WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(auto scan_context, scan_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_scan, TableScan::Create(std::move(scan_context)));
         PAIMON_ASSIGN_OR_RAISE(auto result_plan, table_scan->CreatePlan());
@@ -183,7 +193,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
                     const std::shared_ptr<Plan>& result_plan) const {
         auto splits = result_plan->Splits();
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate);
+        read_context_builder.SetReadSchema(read_schema).SetPredicate(predicate).WithFileSystem(fs_);
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                                read_context_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto table_read, TableRead::Create(std::move(read_context)));
@@ -208,6 +218,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
     }
 
  private:
+    std::string file_format_;
     std::unique_ptr<UniqueTestDirectory> dir_;
     arrow::FieldVector fields_ = {
         arrow::field("f0", arrow::utf8()),
@@ -216,6 +227,7 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
         arrow::field("f3", arrow::float64()),
     };
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+    std::shared_ptr<FileSystem> fs_ = nullptr;
 };
 
 #ifdef PAIMON_ENABLE_LUMINA
@@ -231,7 +243,7 @@ TEST_P(GlobalIndexTest, TestWriteLuminaIndex) {
                                                          {"lumina.search.parallel_number", "10"}};
 
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -422,16 +434,16 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
 #endif
 
 TEST_P(GlobalIndexTest, TestScanIndex) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
 
-    std::string table_path = paimon::test::GetDataDir() + "/" + GetParam() +
+    std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
@@ -612,17 +624,17 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
 
-    std::string table_path = paimon::test::GetDataDir() + "/" + GetParam() +
+    std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 2 has f0 index
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/2l,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
@@ -667,17 +679,17 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
 
-    std::string table_path = paimon::test::GetDataDir() + "/" + GetParam() +
+    std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
     // snapshot 1 has no index
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/1l,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_TRUE(ranges.empty());
 
@@ -699,16 +711,16 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
 
-    std::string table_path = paimon::test::GetDataDir() + "/" + GetParam() +
+    std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     {
@@ -760,20 +772,19 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
 
     // only f1=10 has index
     std::string table_path =
-        paimon::test::GetDataDir() + "/" + GetParam() +
+        paimon::test::GetDataDir() + "/" + file_format_ +
         "/append_with_global_index_with_partition.db/append_with_global_index_with_partition";
     auto check_result =
         [&](const std::optional<std::vector<std::map<std::string, std::string>>>& partitions) {
             ASSERT_OK_AND_ASSIGN(auto global_index_scan,
                                  GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                         partitions, /*options=*/{},
-                                                         /*file_system=*/nullptr, pool_));
+                                                         partitions, /*options=*/{}, fs_, pool_));
             ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
             ASSERT_EQ(ranges, std::vector<Range>({Range(0, 4)}));
             ASSERT_OK_AND_ASSIGN(auto range_scanner,
@@ -825,7 +836,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
 }
 
 TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
     auto factory_creator = FactoryCreator::GetInstance();
@@ -834,12 +845,12 @@ TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
         factory_creator->Register("bitmap-global", (new BitmapGlobalIndexFactory));
     });
 
-    std::string table_path = paimon::test::GetDataDir() + "/" + GetParam() +
+    std::string table_path = paimon::test::GetDataDir() + "/" + file_format_ +
                              "/append_with_global_index.db/append_with_global_index";
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
     auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
     ASSERT_TRUE(scanner_impl);
@@ -880,10 +891,10 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndex) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap",
                          /*options=*/{}, Range(0, 7)));
 
-    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                 /*partitions=*/std::nullopt, /*options=*/{},
-                                                 /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 7)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 7)));
@@ -907,7 +918,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
                                                          {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -962,8 +973,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         std::vector<std::map<std::string, std::string>> partitions = {partition};
         ASSERT_OK_AND_ASSIGN(auto global_index_scan,
                              GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                     partitions, lumina_options,
-                                                     /*file_system=*/nullptr, pool_));
+                                                     partitions, lumina_options, fs_, pool_));
         ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
         ASSERT_EQ(ranges, std::vector<Range>({expected_range}));
 
@@ -1052,10 +1062,10 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
     }
     {
         // test invalid range input
-        ASSERT_OK_AND_ASSIGN(auto global_index_scan,
-                             GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                                     /*partitions=*/std::nullopt, lumina_options,
-                                                     /*file_system=*/nullptr, pool_));
+        ASSERT_OK_AND_ASSIGN(
+            auto global_index_scan,
+            GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                    /*partitions=*/std::nullopt, lumina_options, fs_, pool_));
         ASSERT_NOK_WITH_MSG(global_index_scan->CreateRangeScan(Range(0, 8)),
                             "input range contain multiple partitions, fail to create range scan");
     }
@@ -1065,7 +1075,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
             GlobalIndexScan::Create(
                 table_path, /*snapshot_id=*/std::nullopt,
                 /*partitions=*/std::vector<std::map<std::string, std::string>>(), lumina_options,
-                /*file_system=*/nullptr, pool_),
+                fs_, pool_),
             "invalid input partition, supposed to be null or at least one partition");
     }
 }
@@ -1081,7 +1091,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithScore) {
                                                          {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -1307,7 +1317,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithVectorSearch) {
 
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -1776,7 +1786,7 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
                                                          {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -1817,11 +1827,10 @@ TEST_P(GlobalIndexTest, TestInvalidGetRowRangeListWithIndexRangeMismatchViaDiffe
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{{{"f2", "20"}}}, "f1", "lumina",
                          /*options=*/lumina_options, Range(4, 8)));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/lumina_options,
-                                /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt,
+                                                 /*options=*/lumina_options, fs_, pool_));
     ASSERT_NOK_WITH_MSG(global_index_scan->GetRowRangeList(),
                         "Inconsistent row ranges among index types");
 }
@@ -1941,7 +1950,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
                                                          {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -1974,11 +1983,10 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "lumina",
                          /*options=*/lumina_options, Range(0, 8)));
 
-    ASSERT_OK_AND_ASSIGN(
-        auto global_index_scan,
-        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
-                                /*partitions=*/std::nullopt, /*options=*/lumina_options,
-                                /*file_system=*/nullptr, pool_));
+    ASSERT_OK_AND_ASSIGN(auto global_index_scan,
+                         GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                                 /*partitions=*/std::nullopt,
+                                                 /*options=*/lumina_options, fs_, pool_));
     ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
     ASSERT_EQ(ranges, std::vector<Range>({Range(0, 8)}));
     ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 8)));
@@ -2016,7 +2024,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
                                                          {"lumina.search.parallel_number", "10"}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -2080,7 +2088,7 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithExternalPath) {
 }
 
 TEST_P(GlobalIndexTest, TestIOException) {
-    if (GetParam() == "lance") {
+    if (file_format_ == "lance") {
         return;
     }
     arrow::FieldVector fields = {
@@ -2098,7 +2106,7 @@ TEST_P(GlobalIndexTest, TestIOException) {
                          .ValueOrDie();
 
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
-                                                  {Options::FILE_FORMAT, GetParam()},
+                                                  {Options::FILE_FORMAT, file_format_},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::ROW_TRACKING_ENABLED, "true"},
                                                   {Options::DATA_EVOLUTION_ENABLED, "true"}};
@@ -2172,14 +2180,17 @@ TEST_P(GlobalIndexTest, TestIOException) {
 }
 #endif
 
-std::vector<std::string> GetTestValuesForGlobalIndexTest() {
-    std::vector<std::string> values;
-    values.emplace_back("parquet");
+std::vector<ParamType> GetTestValuesForGlobalIndexTest() {
+    std::vector<ParamType> values;
+    values.emplace_back("parquet", false);
+    values.emplace_back("parquet", true);
 #ifdef PAIMON_ENABLE_ORC
-    values.emplace_back("orc");
+    values.emplace_back("orc", false);
+    values.emplace_back("orc", true);
 #endif
 #ifdef PAIMON_ENABLE_LANCE
-    values.emplace_back("lance");
+    values.emplace_back("lance", false);
+    values.emplace_back("lance", true);
 #endif
     return values;
 }

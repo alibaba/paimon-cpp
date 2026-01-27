@@ -33,7 +33,6 @@
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "arrow/util/range.h"
-#include "arrow/util/thread_pool.h"
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -265,21 +264,15 @@ Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperti
 Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowReaderProperties(
     const std::shared_ptr<arrow::MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size) {
-    PAIMON_ASSIGN_OR_RAISE(
-        uint32_t executor_thread_count,
-        OptionsUtils::GetValueFromMap<uint32_t>(options, PARQUET_READ_EXECUTOR_THREAD_COUNT,
-                                                DEFAULT_PARQUET_READ_EXECUTOR_THREAD_COUNT));
+    PAIMON_ASSIGN_OR_RAISE(bool use_threads,
+                           OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_USE_THREADS,
+                                                               DEFAULT_PARQUET_READ_USE_THREADS));
 
     ::parquet::ArrowReaderProperties arrow_reader_props;
     // TODO(jinli.zjw): set more ArrowReaderProperties (compare with java)
     arrow_reader_props.set_pre_buffer(true);
     arrow_reader_props.set_batch_size(static_cast<int64_t>(batch_size));
-    if (executor_thread_count != 0) {
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::SetCpuThreadPoolCapacity(executor_thread_count));
-        arrow_reader_props.set_use_threads(true);
-    } else {
-        arrow_reader_props.set_use_threads(false);
-    }
+    arrow_reader_props.set_use_threads(use_threads);
     PAIMON_ASSIGN_OR_RAISE(bool cache_lazy, OptionsUtils::GetValueFromMap<bool>(
                                                 options, PARQUET_READ_CACHE_OPTION_LAZY, false));
     PAIMON_ASSIGN_OR_RAISE(

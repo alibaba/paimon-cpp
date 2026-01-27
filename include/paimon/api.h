@@ -24,6 +24,7 @@
 #include "paimon/file_store_commit.h"        // IWYU pragma: export
 #include "paimon/file_store_write.h"         // IWYU pragma: export
 #include "paimon/fs/file_system_factory.h"   // IWYU pragma: export
+#include "paimon/global_config.h"            // IWYU pragma: export
 #include "paimon/memory/memory_pool.h"       // IWYU pragma: export
 #include "paimon/predicate/predicate.h"      // IWYU pragma: export
 #include "paimon/read_context.h"             // IWYU pragma: export

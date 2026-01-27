@@ -152,7 +152,8 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     const std::string& table_path, const std::string& field_name, const std::string& index_type,
     const std::shared_ptr<IndexedSplit>& indexed_split,
     const std::map<std::string, std::string>& options,
-    const std::shared_ptr<MemoryPool>& memory_pool) {
+    const std::shared_ptr<MemoryPool>& memory_pool,
+    const std::shared_ptr<FileSystem>& file_system) {
     auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(indexed_split->GetDataSplit());
     if (!data_split) {
         return Status::Invalid("split cannot be casted to data split");
@@ -165,7 +166,7 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     std::shared_ptr<MemoryPool> pool = memory_pool ? memory_pool : GetDefaultPool();
 
     // load schema
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options, file_system));
     SchemaManager schema_manager(tmp_options.GetFileSystem(), table_path);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());
@@ -178,7 +179,8 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
     for (const auto& [key, value] : options) {
         final_options[key] = value;
     }
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(final_options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
+                           CoreOptions::FromMap(final_options, file_system));
 
     // create index file manager
     PAIMON_ASSIGN_OR_RAISE(

@@ -45,7 +45,8 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         bool is_streaming_mode, bool ignore_num_bucket_check,
         const std::optional<int32_t>& write_id,
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool) {
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<FileSystem>& file_system) {
         // Each writer should have its unique prefix, so files from the same writer can be consumed
         // by the same compaction reader to keep the input order.
         std::optional<int32_t> id = write_id;
@@ -59,8 +60,9 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         auto options_map = options.ToMap();
         options_map[Options::DATA_FILE_PREFIX] =
             fmt::format("{}-u-{}-s-{}-w-", options.DataFilePrefix(), commit_user, id.value());
-        PAIMON_ASSIGN_OR_RAISE(CoreOptions new_options,
-                               CoreOptions::FromMap(options_map, fs_scheme_to_identifier_map));
+        PAIMON_ASSIGN_OR_RAISE(
+            CoreOptions new_options,
+            CoreOptions::FromMap(options_map, file_system, fs_scheme_to_identifier_map));
         // prepare FileStorePathFactory
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
                                new_options.CreateExternalPaths());

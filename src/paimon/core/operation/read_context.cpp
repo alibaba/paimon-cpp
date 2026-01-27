@@ -36,7 +36,8 @@ ReadContext::ReadContext(
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<FileSystem>& specific_file_system,
     const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-    const std::map<std::string, std::string>& options)
+    const std::map<std::string, std::string>& options, bool enable_prefetch_cache,
+    const CacheConfig& cache_config)
     : path_(path),
       branch_(branch),
       read_schema_(read_schema),
@@ -53,7 +54,9 @@ ReadContext::ReadContext(
       executor_(executor),
       specific_file_system_(specific_file_system),
       fs_scheme_to_identifier_map_(fs_scheme_to_identifier_map),
-      options_(options) {}
+      options_(options),
+      enable_prefetch_cache_(enable_prefetch_cache),
+      cache_config_(cache_config) {}
 
 ReadContext::~ReadContext() = default;
 
@@ -69,6 +72,7 @@ class ReadContextBuilder::Impl {
         predicate_.reset();
         enable_predicate_filter_ = false;
         enable_prefetch_ = false;
+        enable_prefetch_cache_ = true;
         prefetch_batch_count_ = 600;
         prefetch_max_parallel_num_ = 3;
         enable_multi_thread_row_to_batch_ = false;
@@ -77,6 +81,7 @@ class ReadContextBuilder::Impl {
         memory_pool_ = GetDefaultPool();
         executor_.reset();
         specific_file_system_.reset();
+        cache_config_ = CacheConfig();
     }
 
  private:
@@ -97,6 +102,8 @@ class ReadContextBuilder::Impl {
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<FileSystem> specific_file_system_;
+    bool enable_prefetch_cache_ = true;
+    CacheConfig cache_config_;
 };
 
 ReadContextBuilder::ReadContextBuilder(const std::string& path)
@@ -200,6 +207,16 @@ ReadContextBuilder& ReadContextBuilder::WithFileSystem(
     return *this;
 }
 
+ReadContextBuilder& ReadContextBuilder::EnablePrefetchCache(bool enabled) {
+    impl_->enable_prefetch_cache_ = enabled;
+    return *this;
+}
+
+ReadContextBuilder& ReadContextBuilder::WithCacheConfig(const CacheConfig& cache_config) {
+    impl_->cache_config_ = cache_config;
+    return *this;
+}
+
 Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->path_, PathUtil::NormalizePath(impl_->path_));
     if (impl_->path_.empty()) {
@@ -228,7 +245,8 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         impl_->prefetch_batch_count_, impl_->prefetch_max_parallel_num_,
         impl_->enable_multi_thread_row_to_batch_, impl_->row_to_batch_thread_number_,
         impl_->table_schema_, impl_->memory_pool_, impl_->executor_, impl_->specific_file_system_,
-        impl_->fs_scheme_to_identifier_map_, impl_->options_);
+        impl_->fs_scheme_to_identifier_map_, impl_->options_, impl_->enable_prefetch_cache_,
+        impl_->cache_config_);
     impl_->Reset();
     return ctx;
 }

@@ -39,6 +39,7 @@ class PAIMON_EXPORT CommitContext {
                   bool ignore_empty_commit, bool use_rest_catalog_commit,
                   const std::shared_ptr<MemoryPool>& memory_pool,
                   const std::shared_ptr<Executor>& executor,
+                  const std::shared_ptr<FileSystem>& specific_file_system,
                   const std::map<std::string, std::string>& options);
     ~CommitContext();
 
@@ -66,6 +67,10 @@ class PAIMON_EXPORT CommitContext {
         return executor_;
     }
 
+    std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
+        return specific_file_system_;
+    }
+
     const std::map<std::string, std::string>& GetOptions() const {
         return options_;
     }
@@ -77,6 +82,7 @@ class PAIMON_EXPORT CommitContext {
     bool use_rest_catalog_commit_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
 };
 
@@ -128,6 +134,15 @@ class PAIMON_EXPORT CommitContextBuilder {
     /// @param executor Shared pointer to the executor instance.
     /// @return Reference to this builder for method chaining.
     CommitContextBuilder& WithExecutor(const std::shared_ptr<Executor>& executor);
+
+    /// Sets a custom file system instance to be used for all file operations in this commit
+    /// context.
+    /// This bypasses the global file system registry and uses the provided implementation directly.
+    ///
+    /// @param file_system The file system to use.
+    /// @return Reference to this builder for method chaining.
+    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
+    CommitContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
 
     /// Build and return a `CommitContext` instance with input validation.
     /// @return Result containing the constructed `CommitContext` or an error status.

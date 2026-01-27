@@ -2801,6 +2801,7 @@ std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() 
     std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc", false);
+    values.emplace_back("orc", true);
 #endif
     return values;
 }

@@ -44,13 +44,16 @@ class PAIMON_EXPORT GlobalIndexWriteTask {
     /// @param options      Index-specific configuration (e.g., false positive rate for bloom
     /// filters).
     /// @param pool         Memory pool for temporary allocations during index construction.
-    //                      If `nullptr`, the system's default memory pool will be used.
+    ///                     If `nullptr`, the system's default memory pool will be used.
+    /// @param file_system  Specifies the file system for file operations.
+    ///                     If `nullptr`, use default file system.
     /// @return A `Result` containing a shared pointer to the `CommitMessage` with index metadata,
     ///         or an error if indexing fails (e.g., unsupported type, I/O error).
     static Result<std::shared_ptr<CommitMessage>> WriteIndex(
         const std::string& table_path, const std::string& field_name, const std::string& index_type,
         const std::shared_ptr<IndexedSplit>& indexed_split,
-        const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
+        const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<FileSystem>& file_system = nullptr);
 };
 
 }  // namespace paimon

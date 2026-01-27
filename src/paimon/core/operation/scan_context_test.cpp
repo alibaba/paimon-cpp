@@ -21,6 +21,7 @@
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
+#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -38,6 +39,7 @@ TEST(ScanContextTest, TestSimple) {
     ASSERT_FALSE(ctx->GetScanFilters()->GetVectorSearch());
     ASSERT_TRUE(ctx->GetScanFilters()->GetPartitionFilters().empty());
     ASSERT_FALSE(ctx->GetGlobalIndexResult());
+    ASSERT_FALSE(ctx->GetSpecificFileSystem());
 }
 
 TEST(ScanContextTest, TestSetFilter) {
@@ -59,6 +61,8 @@ TEST(ScanContextTest, TestSetFilter) {
     builder.SetLimit(1000);
     builder.AddOption("key", "value");
     builder.WithStreamingMode(true);
+    auto fs = std::make_shared<MockFileSystem>();
+    builder.WithFileSystem(fs);
     ASSERT_OK_AND_ASSIGN(auto ctx, builder.Finish());
     ASSERT_EQ(ctx->GetPath(), "table_root_path");
     ASSERT_TRUE(ctx->IsStreamingMode());
@@ -75,6 +79,7 @@ TEST(ScanContextTest, TestSetFilter) {
     ASSERT_EQ("{1,2,4,5}", ctx->GetGlobalIndexResult()->ToString());
     std::map<std::string, std::string> expected_options = {{"key", "value"}};
     ASSERT_EQ(expected_options, ctx->GetOptions());
+    ASSERT_EQ(fs, ctx->GetSpecificFileSystem());
 }
 
 }  // namespace paimon::test

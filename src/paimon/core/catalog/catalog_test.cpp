@@ -18,6 +18,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/defs.h"
+#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -27,6 +28,15 @@ TEST(CatalogTest, Create) {
     options[Options::FILE_SYSTEM] = "local";
     options[Options::FILE_FORMAT] = "orc";
     ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create("path", options));
+}
+
+TEST(CatalogTest, CreateWithSpecificFileSystem) {
+    std::map<std::string, std::string> options;
+    const std::string path = "path";
+    const auto fs = std::make_shared<MockFileSystem>();
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(path, options, fs));
+    ASSERT_EQ(path, catalog->GetRootPath());
+    ASSERT_EQ(fs, catalog->GetFileSystem());
 }
 
 }  // namespace paimon::test
