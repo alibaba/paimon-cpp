@@ -409,9 +409,9 @@ macro(build_boost)
     file(MAKE_DIRECTORY ${BOOST_INCLUDE_DIR})
     file(MAKE_DIRECTORY ${BOOST_LIBRARY_DIR})
 
-    set(Boost_INCLUDE_DIR ${BOOST_INCLUDE_DIR})
-    set(Boost_LIBRARY_DIR ${BOOST_LIBRARY_DIR})
-    set(Boost_NO_SYSTEM_PATHS ON)
+    set(Boost_INCLUDE_DIR ${BOOST_INCLUDE_DIR} CACHE PATH "Boost include directory" FORCE)
+    set(Boost_LIBRARY_DIR ${BOOST_LIBRARY_DIR} CACHE PATH "Boost library directory" FORCE)
+    set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Only use user-specified Boost paths" FORCE)
 
     set(BOOST_BYPRODUCTS
         ${BOOST_LIBRARY_DIR}/libboost_date_time.a
