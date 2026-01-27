@@ -416,23 +416,26 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_system.a
         ${BOOST_LIBRARY_DIR}/libboost_regex.a
         ${BOOST_LIBRARY_DIR}/libboost_thread.a
-        ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
-    )
+        ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
     externalproject_add(boost_ep
                         GIT_REPOSITORY https://github.com/boostorg/boost.git
                         GIT_TAG boost-${PAIMON_BOOST_BUILD_VERSION}
                         GIT_SHALLOW FALSE
                         GIT_PROGRESS TRUE
                         GIT_SUBMODULES_RECURSE TRUE
-                        CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh --with-libraries=date_time,filesystem,regex,thread,iostreams
+                        CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
+                                          --with-libraries=date_time,filesystem,regex,thread,iostreams
                         BUILD_IN_SOURCE TRUE
-                        BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2 --prefix=${BOOST_INSTALL} --libdir=${BOOST_LIBRARY_DIR} link=static runtime-link=shared threading=multi variant=release cxxflags=-fPIC install
+                        BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2
+                                      --prefix=${BOOST_INSTALL}
+                                      --libdir=${BOOST_LIBRARY_DIR} link=static
+                                      runtime-link=shared threading=multi variant=release
+                                      cxxflags=-fPIC install
                         INSTALL_COMMAND ""
-                        BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}  
+                        BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
                         LOG_DOWNLOAD ON
                         LOG_CONFIGURE ON
-                        LOG_BUILD ON
-    )
+                        LOG_BUILD ON)
 
     add_library(boost_date_time STATIC IMPORTED)
     set_target_properties(boost_date_time
@@ -444,7 +447,7 @@ macro(build_boost)
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
                                      INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
-    add_library(boost_regex STATIC IMPORTED)    
+    add_library(boost_regex STATIC IMPORTED)
     set_target_properties(boost_regex
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_regex.a
@@ -454,12 +457,12 @@ macro(build_boost)
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_thread.a
                                      INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
-    add_library(boost_iostreams STATIC IMPORTED)    
+    add_library(boost_iostreams STATIC IMPORTED)
     set_target_properties(boost_iostreams
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
                                      INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
-    add_library(boost_system STATIC IMPORTED)    
+    add_library(boost_system STATIC IMPORTED) 
     set_target_properties(boost_system
                           PROPERTIES IMPORTED_LOCATION
                                      ${BOOST_LIBRARY_DIR}/libboost_system.a
@@ -471,7 +474,6 @@ macro(build_boost)
     add_dependencies(boost_thread boost_ep)
     add_dependencies(boost_iostreams boost_ep)
     add_dependencies(boost_system boost_ep)
-    
 endmacro(build_boost)
 
 macro(build_snappy)
@@ -1218,7 +1220,6 @@ macro(build_glog)
         target_link_libraries(glog INTERFACE ${LIBUNWIND_LIBRARY})
     endif()
 endmacro()
-
 
 build_fmt()
 build_rapidjson()
