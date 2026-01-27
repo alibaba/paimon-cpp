@@ -315,7 +315,6 @@ macro(build_lucene)
     set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
-    
     include_directories(SYSTEM ${LUCENE_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
