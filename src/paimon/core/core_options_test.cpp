@@ -88,6 +88,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.LegacyPartitionNameEnabled());
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
+    ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -146,6 +147,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::PARTITION_GENERATE_LEGACY_NAME, "false"},
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
+        {Options::SCAN_TAG_NAME, "test-tag"},
     };
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
@@ -216,6 +218,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_FALSE(core_options.GlobalIndexEnabled());
     ASSERT_TRUE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
+    ASSERT_EQ("test-tag", core_options.GetScanTagName().value());
+    ASSERT_EQ(StartupMode::FromSnapshot(), core_options.GetStartupMode());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {

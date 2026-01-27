@@ -304,6 +304,8 @@ struct CoreOptions::Impl {
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
     std::optional<std::string> global_index_external_path;
+
+    std::optional<std::string> scan_tag_name;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -476,6 +478,12 @@ Result<CoreOptions> CoreOptions::FromMap(
     if (!global_index_external_path.empty()) {
         impl->global_index_external_path = global_index_external_path;
     }
+    // Parse scan.tag-name
+    std::string scan_tag_name;
+    PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_TAG_NAME, &scan_tag_name));
+    if (!scan_tag_name.empty()) {
+        impl->scan_tag_name = scan_tag_name;
+    }
 
     return options;
 }
@@ -561,7 +569,7 @@ const std::string& CoreOptions::GetManifestCompression() const {
 
 StartupMode CoreOptions::GetStartupMode() const {
     if (impl_->startup_mode == StartupMode::Default()) {
-        if (GetScanSnapshotId() != std::nullopt) {
+        if (GetScanSnapshotId() != std::nullopt || GetScanTagName() != std::nullopt) {
             return StartupMode::FromSnapshot();
         }
         return StartupMode::LatestFull();
@@ -770,6 +778,10 @@ Result<std::optional<std::string>> CoreOptions::CreateGlobalIndexExternalPath() 
         return Status::Invalid(fmt::format("scheme is null, path is {}", tmp_path));
     }
     return std::optional<std::string>(path.ToString());
+}
+
+std::optional<std::string> CoreOptions::GetScanTagName() const {
+    return impl_->scan_tag_name;
 }
 
 }  // namespace paimon
