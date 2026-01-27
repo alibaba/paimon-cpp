@@ -25,7 +25,7 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/executor/future.h"
-#include "paimon/common/fs/cache_input_stream.h"
+#include "paimon/common/io/cache_input_stream.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"

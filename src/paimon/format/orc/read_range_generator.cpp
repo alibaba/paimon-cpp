@@ -67,7 +67,7 @@ Result<std::unique_ptr<ReadRangeGenerator>> ReadRangeGenerator::Create(
 }
 
 Result<std::vector<std::pair<uint64_t, uint64_t>>> ReadRangeGenerator::GenReadRanges(
-    std::vector<uint64_t> target_column_ids, uint64_t begin_row_num, uint64_t end_row_num,
+    const std::vector<uint64_t>& target_column_ids, uint64_t begin_row_num, uint64_t end_row_num,
     bool* need_prefetch) const {
     try {
         *need_prefetch = false;
