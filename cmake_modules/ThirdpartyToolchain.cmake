@@ -298,11 +298,13 @@ macro(build_lucene)
         "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
         "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
 
+    set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.so.0")
     externalproject_add(lucene_ep
                         ${EP_COMMON_OPTIONS}
                         URL ${LUCENE_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_LUCENE_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${LUCENE_CMAKE_ARGS}
+                        BUILD_BYPRODUCTS ${LUCENE_LIB}
                         DEPENDS boost_date_time boost_filesystem boost_regex boost_thread boost_iostreams boost_system)
 
     set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
@@ -314,7 +316,7 @@ macro(build_lucene)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
 
-    target_link_libraries(lucene INTERFACE "${LUCENE_PREFIX}/lib/liblucene++.so.3.0.9"
+    target_link_libraries(lucene INTERFACE "${LUCENE_LIB}"
                           boost_date_time
                           boost_filesystem
                           boost_regex
