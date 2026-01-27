@@ -55,8 +55,10 @@ class LuceneDirectory : public Lucene::Directory {
  private:
     int32_t input_buffer_size_;
     std::string path_;
-    ///  @note use `file_name_to_offset_and_length_` and `paimon_input_` to get actual file length
-    ///  and offset for lucene index input for `Lucene::Directory`
+    /// @note All files are concatenated into a single physical file for the Paimon global index.
+    ///       Use `file_name_to_offset_and_length_` and `paimon_input_` to obtain the actual
+    ///       offset and length of each logical file within the merged file, which are used
+    ///       to create Lucene index inputs for `Lucene::Directory`.
     std::map<std::string, std::pair<int64_t, int64_t>> file_name_to_offset_and_length_;
     std::shared_ptr<InputStream> paimon_input_;
 };

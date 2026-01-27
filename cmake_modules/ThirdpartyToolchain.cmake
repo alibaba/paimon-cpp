@@ -112,6 +112,18 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_LUCENE_URL})
+    set(LUCENE_SOURCE_URL "$ENV{PAIMON_LUCENE_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_LUCENE_PKG_NAME}")
+        set_urls(LUCENE_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LUCENE_PKG_NAME}")
+    else()
+        set_urls(LUCENE_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/${PAIMON_LUCENE_PKG_NAME}"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_GLOG_URL})
     set(GLOG_SOURCE_URL "$ENV{PAIMON_GLOG_URL}")
 else()
@@ -288,27 +300,29 @@ macro(build_lucene)
 
     externalproject_add(lucene_ep
                         ${EP_COMMON_OPTIONS}
-                        URL "https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/rel_3.0.9.tar.gz"
-                        URL_HASH "SHA256=4e69e29d5d79a976498ef71eab70c9c88c7014708be4450a9fda7780fe93584e"
-                        CMAKE_ARGS ${LUCENE_CMAKE_ARGS})
+                        URL ${LUCENE_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_LUCENE_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${LUCENE_CMAKE_ARGS}
+                        DEPENDS boost_date_time boost_filesystem boost_regex boost_thread boost_iostreams boost_system)
 
     set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
-
-    find_package(Boost REQUIRED COMPONENTS system filesystem thread)
-
-    if(NOT Boost_FOUND)
-        message(FATAL_ERROR "Boost not found for lucene plus plus .")
-    endif()
-
+    
     include_directories(SYSTEM ${LUCENE_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
 
     target_link_libraries(lucene INTERFACE "${LUCENE_PREFIX}/lib/liblucene++.so.0"
-                                           ${Boost_LIBRARIES} pthread dl)
+                          boost_date_time
+                          boost_filesystem
+                          boost_regex
+                          boost_thread
+                          boost_iostreams
+                          boost_system
+                          pthread
+                          dl)
     add_dependencies(lucene lucene_ep)
 endmacro()
 
@@ -378,6 +392,72 @@ macro(build_fmt)
     target_include_directories(fmt INTERFACE ${FMT_INCLUDE_DIR})
     add_dependencies(fmt fmt_ep)
 endmacro(build_fmt)
+
+macro(build_boost)
+    message(STATUS "Building boost from source")
+    set(BOOST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/boost_ep-prefix")
+    set(BOOST_INSTALL "${CMAKE_CURRENT_BINARY_DIR}/boost_ep-install")
+    set(BOOST_INCLUDE_DIR "${BOOST_INSTALL}/include")
+    set(BOOST_LIBRARY_DIR ${BOOST_INSTALL}/lib)
+    
+    file(MAKE_DIRECTORY ${BOOST_INCLUDE_DIR})
+    file(MAKE_DIRECTORY ${BOOST_LIBRARY_DIR})
+
+    ExternalProject_Add(
+        boost_ep
+        GIT_REPOSITORY https://github.com/boostorg/boost.git
+        GIT_TAG boost-${PAIMON_BOOST_BUILD_VERSION}
+        GIT_SHALLOW FALSE
+        GIT_PROGRESS TRUE
+        GIT_SUBMODULES_RECURSE TRUE
+        CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh --with-libraries=date_time,filesystem,regex,thread,iostreams
+        BUILD_IN_SOURCE TRUE
+        BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2 --prefix=${BOOST_INSTALL} --libdir=${BOOST_LIBRARY_DIR} link=static runtime-link=shared threading=multi variant=release cxxflags=-fPIC install
+        INSTALL_COMMAND ""
+        LOG_DOWNLOAD ON
+        LOG_CONFIGURE ON
+        LOG_BUILD ON
+    )
+
+    add_library(boost_date_time STATIC IMPORTED)
+    set_target_properties(boost_date_time PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_date_time.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}
+                          )
+    add_library(boost_filesystem STATIC IMPORTED)
+    set_target_properties(boost_filesystem PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}
+                          )
+    add_library(boost_regex STATIC IMPORTED)    
+    set_target_properties(boost_regex PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_regex.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}                          
+                          )
+    add_library(boost_thread STATIC IMPORTED)
+    set_target_properties(boost_thread PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_thread.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}
+                          )
+    add_library(boost_iostreams STATIC IMPORTED)    
+    set_target_properties(boost_iostreams PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}                          
+                          )
+    add_library(boost_system STATIC IMPORTED)    
+    set_target_properties(boost_system PROPERTIES
+                          IMPORTED_LOCATION ${BOOST_LIBRARY_DIR}/libboost_system.a
+                          INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR}                          
+                          )
+
+    add_dependencies(boost_date_time boost_ep)
+    add_dependencies(boost_filesystem boost_ep)
+    add_dependencies(boost_regex boost_ep)
+    add_dependencies(boost_thread boost_ep)
+    add_dependencies(boost_iostreams boost_ep)
+    add_dependencies(boost_system boost_ep)
+    
+endmacro(build_boost)
 
 macro(build_snappy)
     message(STATUS "Building snappy from source")
@@ -1124,7 +1204,7 @@ macro(build_glog)
     endif()
 endmacro()
 
-build_lucene()
+
 build_fmt()
 build_rapidjson()
 build_snappy()
@@ -1145,4 +1225,8 @@ endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()
     build_jindosdk_nextarch()
+endif()
+if (PAIMON_ENABLE_LUCENE)
+    build_boost()
+    build_lucene()
 endif()

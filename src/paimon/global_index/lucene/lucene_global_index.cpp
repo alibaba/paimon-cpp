@@ -104,7 +104,8 @@ Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create
         // create a local tmp path
         std::string tmp_path = PathUtil::JoinPath(std::filesystem::temp_directory_path().string(),
                                                   "paimon-lucene-" + uuid);
-        auto lucene_dir = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(tmp_path));
+        auto lucene_dir = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(tmp_path),
+                                                    Lucene::NoLockFactory::getNoLockFactory());
         // TODO(xinyu.lxy): support other tokenizer
         // open lucene index writer
         Lucene::IndexWriterPtr writer = Lucene::newLucene<Lucene::IndexWriter>(
@@ -120,11 +121,9 @@ Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create
         auto row_id_field = Lucene::newLucene<Lucene::Field>(
             kRowIdFieldWstring, kEmptyWstring, Lucene::Field::STORE_YES,
             Lucene::Field::INDEX_NOT_ANALYZED_NO_NORMS);
-        bool omit_term_freq_and_positions = false;
         PAIMON_ASSIGN_OR_RAISE(
-            omit_term_freq_and_positions,
-            OptionsUtils::GetValueFromMap(options, kLuceneWriteOmitTermFreqAndPositions,
-                                          omit_term_freq_and_positions));
+            bool omit_term_freq_and_positions,
+            OptionsUtils::GetValueFromMap(options, kLuceneWriteOmitTermFreqAndPositions, false));
         field->setOmitTermFreqAndPositions(omit_term_freq_and_positions);
         row_id_field->setOmitTermFreqAndPositions(true);
         doc->add(field);
@@ -146,7 +145,6 @@ LuceneGlobalIndexWriter::LuceneGlobalIndexWriter(
     const std::string& field_name, const std::shared_ptr<arrow::DataType>& arrow_type,
     LuceneWriteContext&& write_context, const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool)
-
     : pool_(pool),
       field_name_(field_name),
       arrow_type_(arrow_type),
@@ -298,10 +296,9 @@ Result<std::shared_ptr<LuceneGlobalIndexReader>> LuceneGlobalIndexReader::Create
                 PAIMON_RETURN_NOT_OK(data_input_stream.Seek(pos));
             }
         }
-        int32_t read_buffer_size = kDefaultReadBufferSize;
         PAIMON_ASSIGN_OR_RAISE(
-            read_buffer_size,
-            OptionsUtils::GetValueFromMap(options, kLuceneReadBufferSize, read_buffer_size));
+            int32_t read_buffer_size,
+            OptionsUtils::GetValueFromMap(options, kLuceneReadBufferSize, kDefaultReadBufferSize));
         Lucene::DirectoryPtr lucene_dir = Lucene::newLucene<LuceneDirectory>(
             PathUtil::GetParentDirPath(io_meta.file_path), file_name_to_offset_and_length,
             paimon_input, read_buffer_size);
@@ -322,7 +319,7 @@ Result<std::shared_ptr<LuceneGlobalIndexReader>> LuceneGlobalIndexReader::Create
 std::vector<std::wstring> LuceneGlobalIndexReader::TokenizeQuery(const std::string& query) {
     // TODO(xinyu.lxy): support jieba analyzer
     std::vector<std::string> terms =
-        StringUtils::Split(query, /*sep_str=*/" ", /*ignore_empty*/ true);
+        StringUtils::Split(query, /*sep_str=*/" ", /*ignore_empty=*/true);
     std::vector<std::wstring> wterms;
     wterms.reserve(terms.size());
     for (const auto& term : terms) {

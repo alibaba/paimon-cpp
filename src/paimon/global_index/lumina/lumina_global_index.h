@@ -74,8 +74,6 @@ class LuminaGlobalIndex : public GlobalIndexer {
                                        int64_t row_count, uint32_t dimension);
 
  private:
-    static constexpr char kOptionKeyPrefix[] = "lumina.";
-
     std::map<std::string, std::string> options_;
 };
 
@@ -94,8 +92,6 @@ class LuminaIndexWriter : public GlobalIndexWriter {
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
-    static constexpr char kIdentifier[] = "lumina";
-
     int64_t count_ = 0;
     std::shared_ptr<LuminaMemoryPool> pool_;
     std::string field_name_;

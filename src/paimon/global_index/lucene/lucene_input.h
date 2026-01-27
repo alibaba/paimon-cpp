@@ -17,7 +17,6 @@
 #include <iostream>
 
 #include "lucene++/BufferedIndexInput.h"
-#include "lucene++/_SimpleFSDirectory.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/lucene/lucene_utils.h"
 

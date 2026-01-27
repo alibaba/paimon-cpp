@@ -23,6 +23,7 @@ if(PAIMON_ENABLE_LUCENE)
                    ${LUCENE_INCLUDE_DIR}
                    DEPENDENCIES
                    paimon_shared
+                   lucene
                    STATIC_LINK_LIBS
                    lucene
                    arrow
@@ -38,6 +39,7 @@ if(PAIMON_ENABLE_LUCENE)
         add_paimon_test(lucene_index_test
                         SOURCES
                         lucene_api_test.cpp
+                        lucene_directory_test.cpp
                         lucene_global_index_test.cpp
                         EXTRA_INCLUDES
                         ${LUCENE_INCLUDE_DIR}

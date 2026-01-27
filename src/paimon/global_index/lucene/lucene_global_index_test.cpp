@@ -210,6 +210,13 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                  /*limit=*/10, "*order*", FullTextSearch::SearchType::WILDCARD)));
         CheckResult(result, {3l});
     }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD)));
+        CheckResult(result, {3l});
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(ReadBufferSize, LuceneGlobalIndexTest,

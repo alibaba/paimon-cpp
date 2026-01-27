@@ -36,13 +36,6 @@ RUN apt update && \
     git \
     htop \
     libboost-all-dev \
-    libboost-filesystem-dev \
-    libboost-system-dev \
-    libboost-regex-dev \
-    libboost-thread-dev \
-    libboost-date-time-dev \
-    libboost-chrono-dev \
-    libboost-atomic-dev \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \

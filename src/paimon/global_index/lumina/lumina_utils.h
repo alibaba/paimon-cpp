@@ -86,6 +86,7 @@ class LuminaDefines {
     LuminaDefines() = delete;
     ~LuminaDefines() = delete;
     static constexpr char kOptionKeyPrefix[] = "lumina.";
+    static constexpr char kIdentifier[] = "lumina";
 };
 
 }  // namespace paimon::lumina

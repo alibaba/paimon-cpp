@@ -83,6 +83,7 @@ Lucene::IndexOutputPtr LuceneDirectory::createOutput(const Lucene::String& name)
 }
 
 Lucene::IndexInputPtr LuceneDirectory::openInput(const Lucene::String& name) {
+    ensureOpen();
     auto file_iter = file_name_to_offset_and_length_.find(LuceneUtils::WstringToString(name));
     if (file_iter == file_name_to_offset_and_length_.end()) {
         throw Lucene::IOException(L"file not exist in openInput");
