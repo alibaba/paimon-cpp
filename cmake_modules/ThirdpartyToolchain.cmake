@@ -326,7 +326,7 @@ macro(build_lucene)
                         ${BOOST_EXTRA_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
-    target_compile_options(lucene INTERFACE -pthread -Wno-deprecated-declarations)
+    target_compile_options(lucene INTERFACE -pthread)
 
     target_link_libraries(lucene
                           INTERFACE "${LUCENE_LIB}"
