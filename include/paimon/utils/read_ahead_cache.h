@@ -42,11 +42,16 @@ class PAIMON_EXPORT CacheConfig {
  public:
     CacheConfig();
     CacheConfig(uint64_t buffer_size_limit, uint64_t range_size_limit, uint64_t hole_size_limit,
-                uint32_t pre_buffer_range_count);
+                uint64_t pre_buffer_limit);
 
     /// Returns the maximum total size (in bytes) of cached data.
     uint64_t GetBufferSizeLimit() const {
         return buffer_size_limit_;
+    }
+
+    /// Sets the maximum total size (in bytes) of cached data.
+    void SetBufferSizeLimit(uint64_t buffer_size_limit) {
+        buffer_size_limit_ = buffer_size_limit;
     }
 
     /// Returns the maximum allowed size (in bytes) for a single cached range.
@@ -54,21 +59,36 @@ class PAIMON_EXPORT CacheConfig {
         return range_size_limit_;
     }
 
+    /// Sets the maximum allowed size (in bytes) for a single cached range.
+    void SetRangeSizeLimit(uint64_t range_size_limit) {
+        range_size_limit_ = range_size_limit;
+    }
+
     /// Returns the maximum gap size (in bytes) considered mergeable between adjacent ranges.
     uint64_t GetHoleSizeLimit() const {
         return hole_size_limit_;
     }
 
-    /// Returns the number of ranges to pre-buffer ahead of the current read position.
-    uint32_t GetPreBufferRangeCount() const {
-        return pre_buffer_range_count_;
+    /// Sets the maximum gap size (in bytes) considered mergeable between adjacent ranges.
+    void SetHoleSizeLimit(uint64_t hole_size_limit) {
+        hole_size_limit_ = hole_size_limit;
+    }
+
+    /// Returns the maximum size to pre-buffer ahead of the current read position.
+    uint64_t GetPreBufferLimit() const {
+        return pre_buffer_limit_;
+    }
+
+    /// Sets the maximum size to pre-buffer ahead of the current read position.
+    void SetPreBufferLimit(uint64_t pre_buffer_limit) {
+        pre_buffer_limit_ = pre_buffer_limit;
     }
 
  private:
     uint64_t buffer_size_limit_;
     uint64_t range_size_limit_;
     uint64_t hole_size_limit_;
-    uint32_t pre_buffer_range_count_;
+    uint64_t pre_buffer_limit_;
 };
 
 /// A byte range with offset and length.

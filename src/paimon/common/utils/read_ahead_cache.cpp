@@ -46,17 +46,17 @@ struct RangeCacheEntry {
 };
 
 CacheConfig::CacheConfig(uint64_t buffer_size_limit, uint64_t range_size_limit,
-                         uint64_t hole_size_limit, uint32_t pre_buffer_range_count)
+                         uint64_t hole_size_limit, uint64_t pre_buffer_limit)
     : buffer_size_limit_(buffer_size_limit),
       range_size_limit_(range_size_limit),
       hole_size_limit_(hole_size_limit),
-      pre_buffer_range_count_(pre_buffer_range_count) {}
+      pre_buffer_limit_(pre_buffer_limit) {}
 
 CacheConfig::CacheConfig()
     : CacheConfig(/*buffer_size_limit=*/512 * 1024 * 1024,
                   /*range_size_limit=*/16 * 1024 * 1024,
                   /*hole_size_limit=*/8 * 1024,
-                  /*pre_buffer_range_count=*/6) {}
+                  /*pre_buffer_limit=*/128 * 1024 * 1024) {}
 
 class ReadAheadCache::Impl {
  public:
@@ -70,7 +70,7 @@ class ReadAheadCache::Impl {
 
  private:
     std::vector<RangeCacheEntry> MakeCacheEntries(const std::vector<ByteRange>& ranges) const;
-    void PreBuffer(uint64_t offset, size_t n_extra);
+    void PreBuffer(uint64_t offset);
 
     /// Cache the given ranges in the background.
     ///
@@ -147,7 +147,7 @@ Status ReadAheadCache::Impl::Init(std::vector<ByteRange>&& ranges) {
     return Status::OK();
 }
 
-void ReadAheadCache::Impl::PreBuffer(uint64_t offset, size_t n_extra) {
+void ReadAheadCache::Impl::PreBuffer(uint64_t offset) {
     auto it = std::lower_bound(pending_ranges_.begin(), pending_ranges_.end(), offset,
                                [](const ByteRange& range, uint64_t offset) {
                                    return range.offset + range.length <= offset;
@@ -157,13 +157,18 @@ void ReadAheadCache::Impl::PreBuffer(uint64_t offset, size_t n_extra) {
     }
 
     size_t start_idx = std::distance(pending_ranges_.begin(), it);
-    size_t end_idx = std::min(pending_ranges_.size(), start_idx + 1 + n_extra);
-
     std::vector<ByteRange> ranges;
-    for (size_t i = start_idx; i < end_idx; ++i) {
-        if (!is_cached_[i].exchange(true)) {
-            ranges.emplace_back(pending_ranges_[i]);
+    size_t total_bytes = 0;
+    for (size_t i = start_idx; i < pending_ranges_.size(); ++i) {
+        size_t range_size = pending_ranges_[i].length;
+        total_bytes += range_size;
+        if (total_bytes > config_.GetPreBufferLimit()) {
+            break;
         }
+        if (is_cached_[i].exchange(true)) {
+            continue;
+        }
+        ranges.emplace_back(pending_ranges_[i]);
     }
 
     if (!ranges.empty()) {
@@ -197,7 +202,7 @@ Result<ByteSlice> ReadAheadCache::Impl::Read(const ByteRange& range) {
     if (range.length == 0) {
         return ByteSlice{std::make_shared<Bytes>(0, memory_pool_.get()), 0, 0};
     }
-    PreBuffer(range.offset, config_.GetPreBufferRangeCount());
+    PreBuffer(range.offset);
     ByteSlice result{};
     {
         std::shared_lock<std::shared_mutex> lock(rw_mutex_);
