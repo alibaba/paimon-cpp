@@ -296,6 +296,11 @@ macro(build_lucene)
         "-DCMAKE_C_FLAGS=-pthread"
         "-DCMAKE_CXX_FLAGS=-pthread"
         "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
+        "-DBoost_INCLUDE_DIR=${BOOST_INCLUDE_DIR}"
+        "-DBoost_LIBRARY_DIR=${BOOST_LIBRARY_DIR}"
+        "-DBOOST_ROOT=${BOOST_INSTALL}"
+        "-DBoost_CHRONO_FOUND=TRUE"
+        "-DBoost_THREAD_FOUND=TRUE"
         "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
 
     set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.so.0")
@@ -310,12 +315,15 @@ macro(build_lucene)
                                 boost_regex
                                 boost_thread
                                 boost_iostreams
-                                boost_system)
+                                boost_system
+                                boost_chrono
+                                boost_atomic
+                        )
 
     set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
-    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR})
+    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR} ${BOOST_EXTRA_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
@@ -328,6 +336,8 @@ macro(build_lucene)
                                     boost_thread
                                     boost_iostreams
                                     boost_system
+                                    boost_chrono
+                                    boost_atomic                          
                                     pthread
                                     dl)
     add_dependencies(lucene lucene_ep)
@@ -409,17 +419,16 @@ macro(build_boost)
     file(MAKE_DIRECTORY ${BOOST_INCLUDE_DIR})
     file(MAKE_DIRECTORY ${BOOST_LIBRARY_DIR})
 
-    set(Boost_INCLUDE_DIR ${BOOST_INCLUDE_DIR} CACHE PATH "Boost include directory" FORCE)
-    set(Boost_LIBRARY_DIR ${BOOST_LIBRARY_DIR} CACHE PATH "Boost library directory" FORCE)
-    set(Boost_NO_SYSTEM_PATHS ON CACHE BOOL "Only use user-specified Boost paths" FORCE)
-
     set(BOOST_BYPRODUCTS
         ${BOOST_LIBRARY_DIR}/libboost_date_time.a
         ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
         ${BOOST_LIBRARY_DIR}/libboost_system.a
         ${BOOST_LIBRARY_DIR}/libboost_regex.a
         ${BOOST_LIBRARY_DIR}/libboost_thread.a
+        ${BOOST_LIBRARY_DIR}/libboost_atomic.a        
+        ${BOOST_LIBRARY_DIR}/libboost_chrono.a
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
+
     externalproject_add(boost_ep
                         GIT_REPOSITORY https://github.com/boostorg/boost.git
                         GIT_TAG boost-${PAIMON_BOOST_BUILD_VERSION}
@@ -427,19 +436,33 @@ macro(build_boost)
                         GIT_PROGRESS TRUE
                         GIT_SUBMODULES_RECURSE TRUE
                         CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
-                                          --with-libraries=date_time,filesystem,regex,thread,iostreams
+                        --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic
                         BUILD_IN_SOURCE TRUE
                         BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2
                                       --prefix=${BOOST_INSTALL}
                                       --libdir=${BOOST_LIBRARY_DIR} link=static
                                       runtime-link=shared threading=multi variant=release
-                                      cxxflags=-fPIC install
-                        INSTALL_COMMAND ""
+                                      cxxflags=-fPIC
+                                      install
+                        INSTALL_COMMAND bash -c
+                                        "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
                         LOG_DOWNLOAD ON
                         LOG_CONFIGURE ON
                         LOG_BUILD ON)
 
+    include_directories(SYSTEM ${BOOST_INCLUDE_DIR})
+
+    add_library(boost_atomic STATIC IMPORTED)
+    set_target_properties(boost_atomic
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_atomic.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_chrono STATIC IMPORTED)
+    set_target_properties(boost_chrono
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_chrono.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
     add_library(boost_date_time STATIC IMPORTED)
     set_target_properties(boost_date_time
                           PROPERTIES IMPORTED_LOCATION
@@ -471,6 +494,8 @@ macro(build_boost)
                                      ${BOOST_LIBRARY_DIR}/libboost_system.a
                                      INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
 
+    add_dependencies(boost_atomic boost_ep)
+    add_dependencies(boost_chrono boost_ep)
     add_dependencies(boost_date_time boost_ep)
     add_dependencies(boost_filesystem boost_ep)
     add_dependencies(boost_regex boost_ep)
