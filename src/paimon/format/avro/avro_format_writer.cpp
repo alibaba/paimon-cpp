@@ -69,7 +69,7 @@ Result<std::unique_ptr<AvroFormatWriter>> AvroFormatWriter::Create(
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro format writer create failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro format writer create failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro format writer create failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro format writer create failed: unknown exception");
     }
@@ -81,7 +81,7 @@ Status AvroFormatWriter::Flush() {
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer flush failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer flush failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer flush failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer flush failed: unknown exception");
     }
@@ -96,7 +96,7 @@ Status AvroFormatWriter::Finish() {
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer close failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer close failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer close failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer close failed: unknown exception");
     }
@@ -120,7 +120,7 @@ Status AvroFormatWriter::AddBatch(ArrowArray* batch) {
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer add batch failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer add batch failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer add batch failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer add batch failed: unknown exception");
     }

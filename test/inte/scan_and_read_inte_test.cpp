@@ -2712,6 +2712,10 @@ std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() 
     values.emplace_back("orc", false);
     values.emplace_back("orc", true);
 #endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro", false);
+    values.emplace_back("avro", true);
+#endif
     return values;
 }
 
