@@ -50,12 +50,14 @@ CleanContext::CleanContext(const std::string& root_path,
                            const std::map<std::string, std::string>& options, int64_t older_than_ms,
                            const std::shared_ptr<MemoryPool>& pool,
                            const std::shared_ptr<Executor>& executor,
+                           const std::shared_ptr<FileSystem>& specific_file_system,
                            std::function<bool(const std::string&)> should_be_retained)
     : root_path_(root_path),
       options_(options),
       older_than_ms_(older_than_ms),
       memory_pool_(pool),
       executor_(executor),
+      specific_file_system_(specific_file_system),
       should_be_retained_(should_be_retained) {}
 
 CleanContext::~CleanContext() = default;
@@ -70,6 +72,7 @@ class CleanContextBuilder::Impl {
             DateTimeUtils::GetCurrentUTCTimeUs() / 1000 - FILE_MODIFICATION_THRESHOLD_MS;
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
+        specific_file_system_.reset();
         should_be_retained_ = nullptr;
     }
 
@@ -80,6 +83,7 @@ class CleanContextBuilder::Impl {
         DateTimeUtils::GetCurrentUTCTimeUs() / 1000 - FILE_MODIFICATION_THRESHOLD_MS;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
+    std::shared_ptr<FileSystem> specific_file_system_ = nullptr;
     std::function<bool(const std::string&)> should_be_retained_ = nullptr;
 };
 
@@ -117,6 +121,12 @@ CleanContextBuilder& CleanContextBuilder::WithExecutor(const std::shared_ptr<Exe
     return *this;
 }
 
+CleanContextBuilder& CleanContextBuilder::WithFileSystem(
+    const std::shared_ptr<FileSystem>& file_system) {
+    impl_->specific_file_system_ = file_system;
+    return *this;
+}
+
 CleanContextBuilder& CleanContextBuilder::WithFileRetainCondition(
     std::function<bool(const std::string&)> should_be_retained) {
     impl_->should_be_retained_ = should_be_retained;
@@ -128,9 +138,9 @@ Result<std::unique_ptr<CleanContext>> CleanContextBuilder::Finish() {
     if (impl_->root_path_.empty()) {
         return Status::Invalid("root path is empty");
     }
-    auto ctx = std::make_unique<CleanContext>(impl_->root_path_, impl_->options_,
-                                              impl_->older_than_ms_, impl_->memory_pool_,
-                                              impl_->executor_, impl_->should_be_retained_);
+    auto ctx = std::make_unique<CleanContext>(
+        impl_->root_path_, impl_->options_, impl_->older_than_ms_, impl_->memory_pool_,
+        impl_->executor_, impl_->specific_file_system_, impl_->should_be_retained_);
     impl_->Reset();
     return ctx;
 }
@@ -149,7 +159,8 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
     if (ctx->GetOlderThanMs() < 0) {
         return Status::Invalid("older than time needs to be greater than or equal to 0.");
     }
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(ctx->GetOptions()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options,
+                           CoreOptions::FromMap(ctx->GetOptions(), ctx->GetSpecificFileSystem()));
     SchemaManager schema_manager(tmp_options.GetFileSystem(), ctx->GetRootPath());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> table_schema,
                            schema_manager.Latest());
@@ -164,7 +175,8 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
     for (const auto& [key, value] : ctx->GetOptions()) {
         opts[key] = value;
     }
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(ctx->GetOptions()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
+                           CoreOptions::FromMap(ctx->GetOptions(), ctx->GetSpecificFileSystem()));
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,

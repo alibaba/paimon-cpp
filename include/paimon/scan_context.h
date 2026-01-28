@@ -48,6 +48,7 @@ class PAIMON_EXPORT ScanContext {
                 const std::shared_ptr<GlobalIndexResult>& global_index_result,
                 const std::shared_ptr<MemoryPool>& memory_pool,
                 const std::shared_ptr<Executor>& executor,
+                const std::shared_ptr<FileSystem>& specific_file_system,
                 const std::map<std::string, std::string>& options);
 
     ~ScanContext();
@@ -82,6 +83,10 @@ class PAIMON_EXPORT ScanContext {
         return global_index_result_;
     }
 
+    std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
+        return specific_file_system_;
+    }
+
  private:
     std::string path_;
     bool is_streaming_mode_;
@@ -90,6 +95,7 @@ class PAIMON_EXPORT ScanContext {
     std::shared_ptr<GlobalIndexResult> global_index_result_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
 };
 
@@ -174,6 +180,12 @@ class PAIMON_EXPORT ScanContextBuilder {
     /// @return Reference to this builder for method chaining.
     /// @note if not set, executor is default executor
     ScanContextBuilder& WithExecutor(const std::shared_ptr<Executor>& executor);
+    /// Sets a custom file system instance to be used for all file operations in this scan context.
+    /// This bypasses the global file system registry and uses the provided implementation directly.
+    /// @param file_system The file system to use.
+    /// @return Reference to this builder for method chaining.
+    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
+    ScanContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
 
     /// Build and return a `ScanContext` instance with input validation.
     /// @return Result containing the constructed `ScanContext` or an error status.

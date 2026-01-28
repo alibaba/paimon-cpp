@@ -151,6 +151,14 @@ Result<std::optional<std::shared_ptr<TableSchema>>> FileSystemCatalog::TableSche
     return schema_manager.Latest();
 }
 
+std::string FileSystemCatalog::GetRootPath() const {
+    return warehouse_;
+}
+
+std::shared_ptr<FileSystem> FileSystemCatalog::GetFileSystem() const {
+    return fs_;
+}
+
 bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
     return db_name == SYSTEM_DATABASE_NAME;
 }

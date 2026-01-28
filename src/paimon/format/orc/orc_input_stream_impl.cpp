@@ -60,6 +60,7 @@ void OrcInputStreamImpl::read(void* buf, uint64_t length, uint64_t offset) {
     if (metrics_) {
         metrics_->IOCount.fetch_add(1);
     }
+
     Result<int32_t> read_bytes = input_stream_->Read(static_cast<char*>(buf), length, offset);
     if (!read_bytes.ok()) {
         throw ::orc::ParseError("read failed, status: " + read_bytes.status().ToString());
@@ -72,8 +73,28 @@ void OrcInputStreamImpl::read(void* buf, uint64_t length, uint64_t offset) {
 }
 
 std::future<void> OrcInputStreamImpl::readAsync(void* buf, uint64_t length, uint64_t offset) {
-    // TODO(liancheng.lsz)
-    throw ::orc::NotImplementedYet("do not support read async for now");
+    auto promise = std::make_shared<std::promise<void>>();
+    auto future = promise->get_future();
+    auto callback = [this, promise, length, offset](const Status& status) mutable {
+        try {
+            if (status.ok()) {
+                read_bytes_.fetch_add(length, std::memory_order_relaxed);
+                promise->set_value();
+            } else {
+                promise->set_exception(std::make_exception_ptr(::orc::ParseError(
+                    "Async read failed at offset " + std::to_string(offset) + ", length " +
+                    std::to_string(length) + ": " + status.ToString())));
+            }
+        } catch (...) {
+            promise->set_exception(std::current_exception());
+        }
+        --pending_request_;
+    };
+
+    ++pending_request_;
+    input_stream_->ReadAsync(static_cast<char*>(buf), length, offset, std::move(callback));
+
+    return future;
 }
 
 const std::string& OrcInputStreamImpl::getName() const {

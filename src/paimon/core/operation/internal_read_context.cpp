@@ -32,10 +32,9 @@ namespace paimon {
 Result<std::unique_ptr<InternalReadContext>> InternalReadContext::Create(
     const std::shared_ptr<ReadContext>& context, const std::shared_ptr<TableSchema>& table_schema,
     const std::map<std::string, std::string>& options) {
-    PAIMON_ASSIGN_OR_RAISE(
-        CoreOptions core_options,
-        CoreOptions::FromMap(options, context->GetFileSystemSchemeToIdentifierMap(),
-                             context->GetSpecificFileSystem()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
+                           CoreOptions::FromMap(options, context->GetSpecificFileSystem(),
+                                                context->GetFileSystemSchemeToIdentifierMap()));
     // prepare read schema
     std::vector<DataField> read_data_fields;
     if (!context->GetReadFieldIds().empty()) {

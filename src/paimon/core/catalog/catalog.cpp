@@ -28,9 +28,10 @@ const char Catalog::SYSTEM_TABLE_SPLITTER[] = "$";
 const char Catalog::DB_SUFFIX[] = ".db";
 const char Catalog::DB_LOCATION_PROP[] = "location";
 
-Result<std::unique_ptr<Catalog>> Catalog::Create(
-    const std::string& root_path, const std::map<std::string, std::string>& options) {
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options));
+Result<std::unique_ptr<Catalog>> Catalog::Create(const std::string& root_path,
+                                                 const std::map<std::string, std::string>& options,
+                                                 const std::shared_ptr<FileSystem>& file_system) {
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options, file_system));
     return std::make_unique<FileSystemCatalog>(core_options.GetFileSystem(), root_path);
 }
 

@@ -30,6 +30,7 @@ CommitContext::CommitContext(const std::string& root_path, const std::string& co
                              bool ignore_empty_commit, bool use_rest_catalog_commit,
                              const std::shared_ptr<MemoryPool>& memory_pool,
                              const std::shared_ptr<Executor>& executor,
+                             const std::shared_ptr<FileSystem>& specific_file_system,
                              const std::map<std::string, std::string>& options)
     : root_path_(root_path),
       commit_user_(commit_user),
@@ -37,6 +38,7 @@ CommitContext::CommitContext(const std::string& root_path, const std::string& co
       use_rest_catalog_commit_(use_rest_catalog_commit),
       memory_pool_(memory_pool),
       executor_(executor),
+      specific_file_system_(specific_file_system),
       options_(options) {}
 
 CommitContext::~CommitContext() = default;
@@ -50,6 +52,7 @@ class CommitContextBuilder::Impl {
         use_rest_catalog_commit_ = false;
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
+        specific_file_system_.reset();
         options_.clear();
     }
 
@@ -60,6 +63,7 @@ class CommitContextBuilder::Impl {
     bool use_rest_catalog_commit_ = false;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
 };
 
@@ -106,6 +110,12 @@ CommitContextBuilder& CommitContextBuilder::WithExecutor(
     return *this;
 }
 
+CommitContextBuilder& CommitContextBuilder::WithFileSystem(
+    const std::shared_ptr<FileSystem>& file_system) {
+    impl_->specific_file_system_ = file_system;
+    return *this;
+}
+
 Result<std::unique_ptr<CommitContext>> CommitContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->root_path_, PathUtil::NormalizePath(impl_->root_path_));
     if (impl_->root_path_.empty()) {
@@ -113,7 +123,8 @@ Result<std::unique_ptr<CommitContext>> CommitContextBuilder::Finish() {
     }
     auto ctx = std::make_unique<CommitContext>(
         impl_->root_path_, impl_->commit_user_, impl_->ignore_empty_commit_,
-        impl_->use_rest_catalog_commit_, impl_->memory_pool_, impl_->executor_, impl_->options_);
+        impl_->use_rest_catalog_commit_, impl_->memory_pool_, impl_->executor_,
+        impl_->specific_file_system_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

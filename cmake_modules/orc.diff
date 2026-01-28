@@ -30,6 +30,20 @@ index a914e5f26..efe1d4933 100644
    };
 
    // Specializations for char
+diff --git a/c++/include/orc/Reader.hh b/c++/include/orc/Reader.hh
+index b015b6491..585e50ec5 100644
+--- a/c++/include/orc/Reader.hh
++++ b/c++/include/orc/Reader.hh
+@@ -659,6 +659,9 @@ namespace orc {
+     virtual void preBuffer(const std::vector<uint32_t>& stripes,
+                            const std::list<uint64_t>& includeTypes) = 0;
+
++    virtual std::vector<std::pair<uint64_t, uint64_t>> preBufferRange(
++        const std::vector<uint32_t>& stripes, const std::list<uint64_t>& includeTypes) = 0;
++
+     /**
+      * Release cached entries whose right boundary is less than or equal to the given boundary.
+      * @param boundary the boundary value to release cache entries
 diff --git a/c++/src/ColumnReader.cc b/c++/src/ColumnReader.cc
 index af434c37c..08393259c 100644
 --- a/c++/src/ColumnReader.cc
@@ -328,6 +342,86 @@ index ed7fee737..a8ee8a67c 100644
      reserve(newSize);
      if (newSize > currentSize_) {
        memset(buf_ + currentSize_, 0, newSize - currentSize_);
+diff --git a/c++/src/Reader.cc b/c++/src/Reader.cc
+index c93c62f6c..2a821b622 100644
+--- a/c++/src/Reader.cc
++++ b/c++/src/Reader.cc
+@@ -1531,8 +1531,8 @@ namespace orc {
+     }
+   }
+
+-  void ReaderImpl::preBuffer(const std::vector<uint32_t>& stripes,
+-                             const std::list<uint64_t>& includeTypes) {
++  std::vector<std::pair<uint64_t, uint64_t>> ReaderImpl::preBufferRange(
++      const std::vector<uint32_t>& stripes, const std::list<uint64_t>& includeTypes) {
+     std::vector<uint32_t> newStripes;
+     for (auto stripe : stripes) {
+       if (stripe < static_cast<uint32_t>(footer_->stripes_size())) newStripes.push_back(stripe);
+@@ -1544,7 +1544,7 @@ namespace orc {
+     }
+
+     if (newStripes.empty() || newIncludeTypes.empty()) {
+-      return;
++      return {};
+     }
+
+     orc::RowReaderOptions rowReaderOptions;
+@@ -1553,7 +1553,7 @@ namespace orc {
+     std::vector<bool> selectedColumns;
+     columnSelector.updateSelected(selectedColumns, rowReaderOptions);
+
+-    std::vector<ReadRange> ranges;
++    std::vector<std::pair<uint64_t, uint64_t>> ranges;
+     ranges.reserve(newIncludeTypes.size());
+     for (auto stripe : newStripes) {
+       // get stripe information
+@@ -1598,17 +1598,23 @@ namespace orc {
+
+         offset += stream.length();
+       }
++    }
++    return ranges;
++  }
+
+-      {
+-        std::lock_guard<std::mutex> lock(contents_->readCacheMutex);
+-
+-        if (!contents_->readCache) {
+-          contents_->readCache = std::make_shared<ReadRangeCache>(
+-              getStream(), options_.getCacheOptions(), contents_->pool, contents_->readerMetrics);
+-        }
+-        contents_->readCache->cache(std::move(ranges));
+-      }
++  void ReaderImpl::preBuffer(const std::vector<uint32_t>& stripes,
++                             const std::list<uint64_t>& includeTypes) {
++    auto ranges = preBufferRange(stripes, includeTypes);
++    std::vector<ReadRange> read_ranges;
++    for (const auto& range : ranges) {
++      read_ranges.emplace_back(range.first, range.second);
++    }
++    std::lock_guard<std::mutex> lock(contents_->readCacheMutex);
++    if (!contents_->readCache) {
++      contents_->readCache = std::make_shared<ReadRangeCache>(
++          getStream(), options_.getCacheOptions(), contents_->pool, contents_->readerMetrics);
+     }
++    contents_->readCache->cache(std::move(read_ranges));
+   }
+
+   RowReader::~RowReader() {
+diff --git a/c++/src/Reader.hh b/c++/src/Reader.hh
+index 39ca73967..13da45a49 100644
+--- a/c++/src/Reader.hh
++++ b/c++/src/Reader.hh
+@@ -387,6 +387,9 @@ namespace orc {
+     std::map<uint32_t, BloomFilterIndex> getBloomFilters(
+         uint32_t stripeIndex, const std::set<uint32_t>& included) const override;
+
++    std::vector<std::pair<uint64_t, uint64_t>> preBufferRange(
++        const std::vector<uint32_t>& stripes, const std::list<uint64_t>& includeTypes) override;
++
+     void preBuffer(const std::vector<uint32_t>& stripes,
+                    const std::list<uint64_t>& includeTypes) override;
+     void releaseBuffer(uint64_t boundary) override;
 diff --git a/cmake_modules/ThirdpartyToolchain.cmake b/cmake_modules/ThirdpartyToolchain.cmake
 index 9b2c829c7..434841224 100644
 --- a/cmake_modules/ThirdpartyToolchain.cmake

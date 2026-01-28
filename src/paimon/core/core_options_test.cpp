@@ -300,14 +300,14 @@ TEST(CoreOptionsTest, TestFileSystem) {
     {
         auto mock_fs = std::make_shared<MockFileSystem>();
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
-                             CoreOptions::FromMap({}, /*fs_scheme_to_identifier_map=*/{},
+                             CoreOptions::FromMap({},
                                                   /*specified_file_system=*/mock_fs));
         auto fs = core_options.GetFileSystem();
         ASSERT_TRUE(std::dynamic_pointer_cast<MockFileSystem>(fs));
     }
     {
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
-                             CoreOptions::FromMap({}, /*fs_scheme_to_identifier_map=*/{},
+                             CoreOptions::FromMap({},
                                                   /*specified_file_system=*/nullptr));
         auto fs = core_options.GetFileSystem();
         auto typed_fs = std::dynamic_pointer_cast<ResolvingFileSystem>(fs);
@@ -319,8 +319,8 @@ TEST(CoreOptionsTest, TestFileSystem) {
         ASSERT_OK_AND_ASSIGN(
             CoreOptions core_options,
             CoreOptions::FromMap(
-                {}, /*fs_scheme_to_identifier_map=*/{{"hdfs", "mock_fs"}, {"oss", "local"}},
-                /*specified_file_system=*/nullptr));
+                {}, /*specified_file_system=*/nullptr,
+                /*fs_scheme_to_identifier_map=*/{{"hdfs", "mock_fs"}, {"oss", "local"}}));
         auto fs = core_options.GetFileSystem();
         auto typed_fs = std::dynamic_pointer_cast<ResolvingFileSystem>(fs);
         ASSERT_TRUE(typed_fs);

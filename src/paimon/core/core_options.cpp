@@ -309,8 +309,8 @@ struct CoreOptions::Impl {
 // Parse configurations from a map and return a populated CoreOptions object
 Result<CoreOptions> CoreOptions::FromMap(
     const std::map<std::string, std::string>& options_map,
-    const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-    const std::shared_ptr<FileSystem>& specified_file_system) {
+    const std::shared_ptr<FileSystem>& specified_file_system,
+    const std::map<std::string, std::string>& fs_scheme_to_identifier_map) {
     CoreOptions options;
     auto& impl = options.impl_;
     impl->raw_options = options_map;

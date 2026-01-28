@@ -25,12 +25,14 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/executor/future.h"
+#include "paimon/common/io/cache_input_stream.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/format/reader_builder.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/utils/read_ahead_cache.h"
 
 namespace arrow {
 class Schema;
@@ -42,7 +44,9 @@ Result<std::unique_ptr<PrefetchFileBatchReaderImpl>> PrefetchFileBatchReaderImpl
     const std::string& data_file_path, const ReaderBuilder* reader_builder,
     const std::shared_ptr<FileSystem>& fs, uint32_t prefetch_max_parallel_num, int32_t batch_size,
     uint32_t prefetch_batch_count, bool enable_adaptive_prefetch_strategy,
-    const std::shared_ptr<Executor>& executor, bool initialize_read_ranges) {
+    const std::shared_ptr<Executor>& executor, bool initialize_read_ranges,
+    bool enable_prefetch_cache, const CacheConfig& cache_config,
+    const std::shared_ptr<MemoryPool>& pool) {
     if (prefetch_max_parallel_num == 0) {
         return Status::Invalid("prefetch max parallel num should be greater than 0.");
     }
@@ -62,14 +66,22 @@ Result<std::unique_ptr<PrefetchFileBatchReaderImpl>> PrefetchFileBatchReaderImpl
         return Status::Invalid("executor should not be nullptr.");
     }
 
+    std::shared_ptr<ReadAheadCache> cache;
+    if (enable_prefetch_cache) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream, fs->Open(data_file_path));
+        cache = std::make_shared<ReadAheadCache>(input_stream, cache_config, pool);
+    }
     std::vector<std::future<Result<std::unique_ptr<FileBatchReader>>>> futures;
     for (uint32_t i = 0; i < prefetch_max_parallel_num; i++) {
-        futures.push_back(Via(
-            executor.get(),
-            [&fs, &data_file_path, &reader_builder]() -> Result<std::unique_ptr<FileBatchReader>> {
-                PAIMON_ASSIGN_OR_RAISE(auto input_stream, fs->Open(data_file_path));
-                return reader_builder->Build(std::move(input_stream));
-            }));
+        futures.push_back(Via(executor.get(),
+                              [&fs, &data_file_path, &reader_builder,
+                               &cache]() -> Result<std::unique_ptr<FileBatchReader>> {
+                                  PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream,
+                                                         fs->Open(data_file_path));
+                                  auto cache_input_stream = std::make_shared<CacheInputStream>(
+                                      std::move(input_stream), cache);
+                                  return reader_builder->Build(cache_input_stream);
+                              }));
     }
     std::vector<std::shared_ptr<PrefetchFileBatchReader>> readers;
     for (auto& file_batch_reader : CollectAll(futures)) {
@@ -90,8 +102,9 @@ Result<std::unique_ptr<PrefetchFileBatchReaderImpl>> PrefetchFileBatchReaderImpl
     }
     uint32_t prefetch_queue_capacity = prefetch_batch_count / readers.size();
 
-    auto reader = std::unique_ptr<PrefetchFileBatchReaderImpl>(new PrefetchFileBatchReaderImpl(
-        readers, batch_size, prefetch_queue_capacity, enable_adaptive_prefetch_strategy, executor));
+    auto reader = std::unique_ptr<PrefetchFileBatchReaderImpl>(
+        new PrefetchFileBatchReaderImpl(readers, batch_size, prefetch_queue_capacity,
+                                        enable_adaptive_prefetch_strategy, executor, cache));
     if (initialize_read_ranges) {
         // normally initialize read ranges should be false, as set read schema will refresh read
         // ranges, and set read schema will always be called before read.
@@ -103,10 +116,11 @@ Result<std::unique_ptr<PrefetchFileBatchReaderImpl>> PrefetchFileBatchReaderImpl
 PrefetchFileBatchReaderImpl::PrefetchFileBatchReaderImpl(
     const std::vector<std::shared_ptr<PrefetchFileBatchReader>>& readers, int32_t batch_size,
     uint32_t prefetch_queue_capacity, bool enable_adaptive_prefetch_strategy,
-    const std::shared_ptr<Executor>& executor)
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<ReadAheadCache>& cache)
     : readers_(std::move(readers)),
       batch_size_(batch_size),
       executor_(executor),
+      cache_(cache),
       prefetch_queue_capacity_(prefetch_queue_capacity),
       enable_adaptive_prefetch_strategy_(enable_adaptive_prefetch_strategy) {
     for (size_t i = 0; i < readers_.size(); i++) {
@@ -153,6 +167,7 @@ Status PrefetchFileBatchReaderImpl::RefreshReadRanges() {
     need_prefetch_ = need_prefetch;
     PAIMON_RETURN_NOT_OK(SetReadRanges(FilterReadRanges(read_ranges, selection_bitmap_)));
     read_ranges_freshed_ = true;
+
     return Status::OK();
 }
 
@@ -251,6 +266,9 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
         reader_is_working_[i] = false;
     }
     is_shutdown_ = false;
+    if (cache_) {
+        cache_->Reset();
+    }
     SetReadStatus(Status::OK());
     return Status::OK();
 }
@@ -258,6 +276,24 @@ Status PrefetchFileBatchReaderImpl::CleanUp() {
 void PrefetchFileBatchReaderImpl::Workloop() {
     std::vector<std::future<void>> futures;
     futures.resize(readers_.size());
+    if (cache_) {
+        auto read_ranges = readers_[0]->PreBufferRange();
+        if (read_ranges.ok()) {
+            std::vector<ByteRange> ranges;
+            for (const auto& read_range : read_ranges.value()) {
+                ranges.emplace_back(read_range.first, read_range.second);
+            }
+            auto s = cache_->Init(std::move(ranges));
+            if (!s.ok()) {
+                SetReadStatus(s);
+                return;
+            }
+        } else {
+            SetReadStatus(read_ranges.status());
+            return;
+        }
+    }
+
     while (true) {
         if (!GetReadStatus().ok()) {
             break;
@@ -429,6 +465,7 @@ Result<BatchReader::ReadBatchWithBitmap> PrefetchFileBatchReaderImpl::NextBatchW
         background_thread_ =
             std::make_unique<std::thread>(&PrefetchFileBatchReaderImpl::Workloop, this);
     }
+
     while (true) {
         PAIMON_RETURN_NOT_OK(GetReadStatus());
         if (is_shutdown_) {

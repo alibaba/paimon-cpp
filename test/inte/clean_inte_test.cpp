@@ -306,7 +306,7 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshot) {
     CommitContextBuilder commit_context_builder(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .WithFileSystem(file_system_)
                              .AddOption(Options::SNAPSHOT_NUM_RETAINED_MAX, "2")
                              .AddOption(Options::SNAPSHOT_NUM_RETAINED_MIN, "1")
                              .AddOption(Options::SNAPSHOT_TIME_RETAINED, "1ms")
@@ -459,7 +459,7 @@ TEST_F(CleanInteTest, TestDropPartitionAndExpireSnapshotWithIOException) {
         ASSERT_OK_AND_ASSIGN(
             std::unique_ptr<CommitContext> commit_context,
             commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                .AddOption(Options::FILE_SYSTEM, "local")
+                .WithFileSystem(file_system_)
                 .AddOption(Options::SNAPSHOT_NUM_RETAINED_MAX, "2")
                 .AddOption(Options::SNAPSHOT_NUM_RETAINED_MIN, "1")
                 .AddOption(Options::SNAPSHOT_TIME_RETAINED, "1ms")
@@ -620,7 +620,7 @@ TEST_F(CleanInteTest, TestOrphanFilesClean) {
     CommitContextBuilder commit_context_builder(table_path, commit_user);
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .WithFileSystem(file_system_)
                              .IgnoreEmptyCommit(false)
                              .Finish());
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
@@ -665,9 +665,8 @@ TEST_F(CleanInteTest, TestOrphanFilesClean) {
 
     {
         CleanContextBuilder clean_context_builder(table_path);
-        ASSERT_OK_AND_ASSIGN(
-            std::unique_ptr<CleanContext> clean_context,
-            clean_context_builder.AddOption(Options::FILE_SYSTEM, "local").Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<CleanContext> clean_context,
+                             clean_context_builder.WithFileSystem(file_system_).Finish());
         ASSERT_OK_AND_ASSIGN(auto cleaner, OrphanFilesCleaner::Create(std::move(clean_context)));
         ASSERT_OK_AND_ASSIGN(std::set<std::string> cleaned_paths, cleaner->Clean());
         ASSERT_TRUE(cleaned_paths.empty());
@@ -675,7 +674,7 @@ TEST_F(CleanInteTest, TestOrphanFilesClean) {
     {
         CleanContextBuilder clean_context_builder(table_path);
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<CleanContext> clean_context,
-                             clean_context_builder.AddOption(Options::FILE_SYSTEM, "local")
+                             clean_context_builder.WithFileSystem(file_system_)
                                  .WithOlderThanMs(std::numeric_limits<int64_t>::max())
                                  .Finish());
         ASSERT_OK_AND_ASSIGN(auto cleaner, OrphanFilesCleaner::Create(std::move(clean_context)));
@@ -739,7 +738,7 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithFileRetainCondition) {
     CommitContextBuilder commit_context_builder(table_path, commit_user);
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .WithFileSystem(file_system_)
                              .IgnoreEmptyCommit(false)
                              .Finish());
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
@@ -784,7 +783,7 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithFileRetainCondition) {
 
     CleanContextBuilder clean_context_builder(table_path);
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CleanContext> clean_context,
-                         clean_context_builder.AddOption(Options::FILE_SYSTEM, "local")
+                         clean_context_builder.WithFileSystem(file_system_)
                              .WithOlderThanMs(std::numeric_limits<int64_t>::max())
                              .WithFileRetainCondition([](const std::string& file_name) -> bool {
                                  if (file_name == "data-orphan2.orc") {
@@ -852,7 +851,7 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithIOException) {
     CommitContextBuilder commit_context_builder(root_path, commit_user);
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          commit_context_builder.AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "local")
+                             .WithFileSystem(file_system_)
                              .AddOption(Options::BUCKET, "2")
                              .IgnoreEmptyCommit(false)
                              .Finish());
@@ -905,9 +904,8 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithIOException) {
         write_orphan_files(root_path);
         {
             CleanContextBuilder clean_context_builder(root_path);
-            ASSERT_OK_AND_ASSIGN(
-                std::unique_ptr<CleanContext> clean_context,
-                clean_context_builder.AddOption(Options::FILE_SYSTEM, "local").Finish());
+            ASSERT_OK_AND_ASSIGN(std::unique_ptr<CleanContext> clean_context,
+                                 clean_context_builder.WithFileSystem(file_system_).Finish());
             ASSERT_OK_AND_ASSIGN(auto cleaner,
                                  OrphanFilesCleaner::Create(std::move(clean_context)));
             io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
@@ -923,7 +921,7 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithIOException) {
         {
             CleanContextBuilder clean_context_builder(root_path);
             ASSERT_OK_AND_ASSIGN(std::unique_ptr<CleanContext> clean_context,
-                                 clean_context_builder.AddOption(Options::FILE_SYSTEM, "local")
+                                 clean_context_builder.WithFileSystem(file_system_)
                                      .WithOlderThanMs(std::numeric_limits<int64_t>::max())
                                      .Finish());
 
