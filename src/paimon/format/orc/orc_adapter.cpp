@@ -481,7 +481,7 @@ class UnPooledStringDictionaryBuilder : public EmptyBuilder {
         dict_builder->IncreaseLength(dict_offset.size() - 1);
         std::shared_ptr<arrow::Array> dictionary;
         ARROW_RETURN_NOT_OK(dict_builder->Finish(&dictionary));
-        dictionary_.reset(new OrcStringDictionary(dictionary->data(), orc_dictionary));
+        dictionary_ = std::make_shared<OrcStringDictionary>(dictionary->data(), orc_dictionary);
         return arrow::Status::OK();
     }
 
