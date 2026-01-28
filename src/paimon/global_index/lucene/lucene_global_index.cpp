@@ -212,16 +212,19 @@ Result<std::string> LuceneGlobalIndexWriter::FlushIndexToFinal() const {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
                                file_writer_->NewOutputStream(index_file_name));
         DataOutputStream data_output_stream(out);
-        data_output_stream.WriteValue<int32_t>(kVersion);
-        data_output_stream.WriteValue<int32_t>(static_cast<int32_t>(tmp_file_names.size()));
+        PAIMON_RETURN_NOT_OK(data_output_stream.WriteValue<int32_t>(kVersion));
+        PAIMON_RETURN_NOT_OK(
+            data_output_stream.WriteValue<int32_t>(static_cast<int32_t>(tmp_file_names.size())));
         // read all data from index files and write to target output
         auto buffer = std::make_shared<Bytes>(kDefaultReadBufferSize, pool_.get());
         for (const auto& wfile_name : tmp_file_names) {
             auto file_name = LuceneUtils::WstringToString(wfile_name);
-            data_output_stream.WriteValue<int32_t>(static_cast<int32_t>(file_name.size()));
-            data_output_stream.WriteBytes(std::make_shared<Bytes>(file_name, pool_.get()));
+            PAIMON_RETURN_NOT_OK(
+                data_output_stream.WriteValue<int32_t>(static_cast<int32_t>(file_name.size())));
+            PAIMON_RETURN_NOT_OK(
+                data_output_stream.WriteBytes(std::make_shared<Bytes>(file_name, pool_.get())));
             int64_t file_length = write_context_.lucene_dir->fileLength(wfile_name);
-            data_output_stream.WriteValue<int64_t>(file_length);
+            PAIMON_RETURN_NOT_OK(data_output_stream.WriteValue<int64_t>(file_length));
 
             Lucene::IndexInputPtr input = write_context_.lucene_dir->openInput(wfile_name);
             int64_t total_write_size = 0;

@@ -317,16 +317,16 @@ macro(build_lucene)
                                 boost_iostreams
                                 boost_system
                                 boost_chrono
-                                boost_atomic
-                        )
+                                boost_atomic)
 
     set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
-    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR} ${BOOST_EXTRA_INCLUDE_DIR})
+    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR}
+                        ${BOOST_EXTRA_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
     target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
-    target_compile_options(lucene INTERFACE -pthread)
+    target_compile_options(lucene INTERFACE -pthread -Wno-deprecated-declarations)
 
     target_link_libraries(lucene
                           INTERFACE "${LUCENE_LIB}"
@@ -337,7 +337,7 @@ macro(build_lucene)
                                     boost_iostreams
                                     boost_system
                                     boost_chrono
-                                    boost_atomic                          
+                                    boost_atomic
                                     pthread
                                     dl)
     add_dependencies(lucene lucene_ep)
@@ -425,7 +425,7 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_system.a
         ${BOOST_LIBRARY_DIR}/libboost_regex.a
         ${BOOST_LIBRARY_DIR}/libboost_thread.a
-        ${BOOST_LIBRARY_DIR}/libboost_atomic.a        
+        ${BOOST_LIBRARY_DIR}/libboost_atomic.a
         ${BOOST_LIBRARY_DIR}/libboost_chrono.a
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
 
@@ -436,14 +436,13 @@ macro(build_boost)
                         GIT_PROGRESS TRUE
                         GIT_SUBMODULES_RECURSE TRUE
                         CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
-                        --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic
+                                          --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic
                         BUILD_IN_SOURCE TRUE
                         BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2
                                       --prefix=${BOOST_INSTALL}
                                       --libdir=${BOOST_LIBRARY_DIR} link=static
                                       runtime-link=shared threading=multi variant=release
-                                      cxxflags=-fPIC
-                                      install
+                                      cxxflags=-fPIC install
                         INSTALL_COMMAND bash -c
                                         "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
