@@ -18,6 +18,7 @@
 
 #include <zstd.h>
 
+#include "fmt/format.h"
 #include "paimon/common/compression/block_compressor.h"
 
 namespace paimon {
@@ -35,8 +36,7 @@ class ZstdBlockCompressor : public BlockCompressor {
                              int32_t dst_length) override {
         size_t const compressed_size = ZSTD_compress(dst, dst_length, src, src_length, level_);
         if (ZSTD_isError(compressed_size)) {
-            return Status::IOError("Compression failed with code " +
-                                   std::to_string(compressed_size));
+            return Status::IOError(fmt::format("Compression failed with code {}", compressed_size));
         }
         return compressed_size;
     }

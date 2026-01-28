@@ -20,7 +20,7 @@
 
 namespace paimon {
 
-std::unique_ptr<BlockFooter> BlockFooter::ReadBlockFooter(
+Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(
     std::shared_ptr<MemorySliceInput>& input) {
     auto offset = input->ReadLong();
     auto size = input->ReadInt();
@@ -35,7 +35,8 @@ std::unique_ptr<BlockFooter> BlockFooter::ReadBlockFooter(
 
     auto magic = input->ReadInt();
     if (magic != MAGIC_NUMBER) {
-        return nullptr;
+        return Status::IOError(
+            fmt::format("Expected magic number {}, but got {}", MAGIC_NUMBER, magic));
     }
     return std::make_unique<BlockFooter>(index_block_handle, bloom_filter_handle);
 }

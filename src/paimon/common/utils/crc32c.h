@@ -31,7 +31,7 @@ class PAIMON_EXPORT CRC32C {
     static uint32_t calculate(const char* data, size_t length, uint32_t crc = 0);
 
  private:
-#if defined(__SSE2__) || defined(_M_X64) || (defined(_M_IX86_FP) && (_M_IX86_FP == 2))
+#if defined(PAIMON_HAVE_SSE4_2)
     /**
      * Simd implementation for crc32c.
      *

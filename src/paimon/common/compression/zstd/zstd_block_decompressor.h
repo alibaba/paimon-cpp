@@ -18,6 +18,7 @@
 
 #include <zstd.h>
 
+#include "fmt/format.h"
 #include "paimon/common/compression/block_decompressor.h"
 
 namespace paimon {
@@ -29,8 +30,8 @@ class ZstdBlockDecompressor : public BlockDecompressor {
                                int32_t dst_length) override {
         int32_t decompressed_size = ZSTD_decompress(dst, dst_length, src, src_length);
         if (ZSTD_isError(decompressed_size)) {
-            return Status::IOError("Input is corrupted with return code " +
-                                   std::to_string(decompressed_size));
+            return Status::IOError(
+                fmt::format("Input is corrupted with return code {}", decompressed_size));
         }
         return decompressed_size;
     }

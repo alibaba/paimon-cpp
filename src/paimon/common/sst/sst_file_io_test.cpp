@@ -81,7 +81,7 @@ TEST_P(SstFileIOTest, TestSimple) {
     auto param = GetParam();
     auto index_path = dir_->Str() + "/sst_file_test.data";
 
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> facory,
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> factory,
                          BlockCompressionFactory::Create(param.type));
 
     // write content
@@ -93,7 +93,7 @@ TEST_P(SstFileIOTest, TestSimple) {
     auto seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
     auto seg_ptr = std::make_shared<MemorySegment>(seg_for_bf);
     ASSERT_OK(bf->SetMemorySegment(seg_ptr));
-    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, facory);
+    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, factory);
     std::set<int32_t> value_hash;
     // k1-k5
     for (size_t i = 1; i <= 5; i++) {

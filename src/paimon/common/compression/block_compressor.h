@@ -29,7 +29,11 @@ class BlockCompressor {
     virtual ~BlockCompressor() = default;
 
  public:
-    /** Get the max compressed size for a given original size. */
+    /**
+     * Get the max compressed size for a given original size.
+     * @param src_size The original size
+     * @return The max compressed size
+     */
     virtual int32_t GetMaxCompressedSize(int32_t src_size) = 0;
 
     /**
@@ -41,6 +45,7 @@ class BlockCompressor {
      * @param dst_length The max length of data
      * @return Length of compressed data
      */
+    /// Compress data read from src, and write the compressed data to dst.
     virtual Result<int32_t> Compress(const char* src, int32_t src_length, char* dst,
                                      int32_t dst_length) = 0;
 

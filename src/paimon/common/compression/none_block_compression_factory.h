@@ -19,16 +19,14 @@
 #include <memory>
 
 #include "paimon/common/compression/block_compression_factory.h"
-#include "paimon/common/compression/zstd/zstd_block_compressor.h"
-#include "paimon/common/compression/zstd/zstd_block_decompressor.h"
 #include "paimon/result.h"
 
 namespace paimon {
 
-/// Implementation of {@link BlockCompressionFactory} for Lz4 codec.
+/// Implementation of {@link BlockCompressionFactory} for none.
 class NoneBlockCompressionFactory : public BlockCompressionFactory {
  public:
-    BlockCompressionType GetCompressionType() override {
+    BlockCompressionType GetCompressionType() const override {
         return BlockCompressionType::NONE;
     }
 

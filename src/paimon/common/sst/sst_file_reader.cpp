@@ -17,6 +17,7 @@
 
 #include "paimon/common/sst/sst_file_utils.h"
 #include "paimon/common/utils/crc32c.h"
+#include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
 
@@ -26,7 +27,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
-    PAIMON_ASSIGN_OR_RAISE(auto file_len, in->Length());
+    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     auto block_cache =
         std::make_shared<BlockCache>(file_path, in, pool, std::make_unique<CacheManager>());
 
@@ -38,10 +39,8 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     }
     auto slice = MemorySlice::Wrap(segment);
     auto input = slice->ToInput();
-    auto footer = BlockFooter::ReadBlockFooter(input);
-    if (!footer.get()) {
-        return Status::Invalid("Read footer error");
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::BlockFooter> footer,
+                           BlockFooter::ReadBlockFooter(input));
 
     // read bloom filter directly now
     auto bloom_filter_handle = footer->GetBloomFilterHandle();
@@ -63,7 +62,8 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     auto trailer = BlockTrailer::ReadBlockTrailer(trailer_input);
     auto block_data =
         block_cache->GetBlock(index_block_handle->Offset(), index_block_handle->Size(), true);
-    PAIMON_ASSIGN_OR_RAISE(auto uncompressed_data, DecompressBlock(block_data, trailer, pool));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<paimon::MemorySegment> uncompressed_data,
+                           DecompressBlock(block_data, trailer, pool));
     auto reader = BlockReader::Create(MemorySlice::Wrap(uncompressed_data), comparator);
 
     return std::make_shared<SstFileReader>(pool, block_cache, bloom_filter, reader, comparator);
@@ -134,13 +134,14 @@ Result<std::shared_ptr<BlockReader>> SstFileReader::ReadBlock(
     auto trailer_input = MemorySlice::Wrap(trailer_data)->ToInput();
     auto trailer = BlockTrailer::ReadBlockTrailer(trailer_input);
     auto block_data = block_cache_->GetBlock(handle->Offset(), handle->Size(), index);
-    PAIMON_ASSIGN_OR_RAISE(auto uncompressed_data, DecompressBlock(block_data, trailer, pool_));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<paimon::MemorySegment> uncompressed_data,
+                           DecompressBlock(block_data, trailer, pool_));
     return BlockReader::Create(MemorySlice::Wrap(uncompressed_data), comparator_);
 }
 
 Result<std::shared_ptr<paimon::MemorySegment>> SstFileReader::DecompressBlock(
     const std::shared_ptr<paimon::MemorySegment>& compressed_data,
-    std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool) {
+    const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool) {
     auto input_memory = compressed_data->GetHeapMemory();
 
     // check crc32c

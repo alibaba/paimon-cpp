@@ -44,10 +44,9 @@ class BlockDecompressor {
                                        int32_t dst_length) = 0;
 
  public:
-    /**
-     * We put two integers before each compressed block, the first integer represents the compressed
-     * length of the block, and the second one represents the original length of the block.
-     */
+    /// We put two integers before each compressed block, the first integer represents the
+    /// compressed length of the block, and the second one represents the original length of the
+    /// block.
     static constexpr int32_t HEADER_LENGTH = 8;
 };
 }  // namespace paimon

@@ -36,7 +36,7 @@ class BlockCompressionFactory {
     virtual ~BlockCompressionFactory() = default;
 
  public:
-    virtual BlockCompressionType GetCompressionType() = 0;
+    virtual BlockCompressionType GetCompressionType() const = 0;
 
     virtual std::shared_ptr<BlockCompressor> GetCompressor() = 0;
 

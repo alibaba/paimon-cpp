@@ -18,6 +18,7 @@
 
 #include <lz4.h>
 
+#include "fmt/format.h"
 #include "paimon/common/compression/block_decompressor.h"
 
 namespace paimon {
@@ -33,9 +34,8 @@ class Lz4BlockDecompressor : public BlockDecompressor {
 
         if (dst_length < original_len) {
             return Status::IOError(
-                "Buffer length too small, compressed_len=" + std::to_string(compressed_len) +
-                ", original_len=" + std::to_string(original_len) +
-                ", but dst_length=" + std::to_string(dst_length));
+                fmt::format("Buffer length too small, compressed_len= {}, original_len={}",
+                            compressed_len, original_len));
         }
 
         if (src_length - HEADER_LENGTH < compressed_len) {
@@ -45,8 +45,8 @@ class Lz4BlockDecompressor : public BlockDecompressor {
         int32_t decompressed_size =
             LZ4_decompress_safe(src + HEADER_LENGTH, dst, src_length - HEADER_LENGTH, dst_length);
         if (decompressed_size != original_len) {
-            return Status::IOError("Input is corrupted, expected " + std::to_string(original_len) +
-                                   " but got " + std::to_string(decompressed_size));
+            return Status::IOError(fmt::format("Input is corrupted, expected {}, but got {}",
+                                               original_len, decompressed_size));
         }
         return decompressed_size;
     }

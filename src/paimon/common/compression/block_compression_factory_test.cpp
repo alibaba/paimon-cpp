@@ -21,17 +21,9 @@
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/array/array_base.h"
-#include "arrow/array/builder_binary.h"
-#include "arrow/array/builder_nested.h"
-#include "arrow/array/builder_primitive.h"
-#include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/predicate/literal.h"
-#include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/read_result_collector.h"

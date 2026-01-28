@@ -25,10 +25,10 @@
 
 namespace paimon {
 
-/// Implementation of {@link BlockCompressionFactory} for Lz4 codec.
+/// Implementation of {@link BlockCompressionFactory} for lz4 codec.
 class Lz4BlockCompressionFactory : public BlockCompressionFactory {
  public:
-    BlockCompressionType GetCompressionType() override {
+    BlockCompressionType GetCompressionType() const override {
         return BlockCompressionType::LZ4;
     }
 

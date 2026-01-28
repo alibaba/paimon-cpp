@@ -27,7 +27,7 @@ uint32_t CRC32C::calculate(const char* data, size_t length, uint32_t crc) {
 #endif
 }
 
-#if defined(__SSE4_2__) || (defined(__x86_64__) && defined(__SSE4_2__))
+#if defined(PAIMON_HAVE_SSE4_2)
 uint32_t CRC32C::crc32c_hw(const char* data, size_t length, uint32_t crc) {
     crc = ~crc;
 

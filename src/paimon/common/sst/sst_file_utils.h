@@ -15,11 +15,10 @@
  */
 
 #pragma once
+#include <sstream>
 
-#include "arrow/util/crc32.h"
 #include "paimon/common/compression/block_compression_type.h"
 #include "paimon/common/memory/memory_slice.h"
-#include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
 

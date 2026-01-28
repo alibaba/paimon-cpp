@@ -18,6 +18,7 @@
 
 #include "paimon/common/sst/sst_file_utils.h"
 #include "paimon/common/utils/crc32c.h"
+#include "paimon/common/utils/murmurhash_utils.h"
 
 namespace paimon {
 SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
@@ -92,13 +93,9 @@ Status SstFileWriter::WriteFooter(const std::shared_ptr<BlockHandle>& index_bloc
 
 Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     std::unique_ptr<BlockWriter>& writer) {
-    auto ret = writer->Finish();
-    if (!ret.ok()) {
-        return ret.status();
-    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::MemorySlice> memory_slice, writer->Finish());
 
-    auto& block_data = ret.value();
-    auto view = block_data->ReadStringView();
+    auto view = memory_slice->ReadStringView();
 
     std::shared_ptr<Bytes> buffer;
     BlockCompressionType compression_type = BlockCompressionType::NONE;
@@ -106,10 +103,10 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
         auto new_size = compressor_->GetMaxCompressedSize(view.size());
         // 5 bytes for original length
         buffer = std::make_shared<Bytes>(new_size + 5, pool_.get());
-        PAIMON_ASSIGN_OR_RAISE(auto offset, WriteVarLenInt(buffer->data(), view.size()));
-        PAIMON_ASSIGN_OR_RAISE(auto actual_size, compressor_->Compress(view.data(), view.size(),
-                                                                       buffer->data() + offset,
-                                                                       buffer->size() - offset));
+        PAIMON_ASSIGN_OR_RAISE(int32_t offset, WriteVarLenInt(buffer->data(), view.size()));
+        PAIMON_ASSIGN_OR_RAISE(int32_t actual_size, compressor_->Compress(view.data(), view.size(),
+                                                                          buffer->data() + offset,
+                                                                          buffer->size() - offset));
         actual_size += offset;
         // Don't use the compressed data if compressed less than 12.5%,
         if (static_cast<size_t>(actual_size) < view.size() - (view.size() / 8)) {
