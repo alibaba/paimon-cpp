@@ -386,8 +386,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuceneGlobalIndexReader::
 
         // prepare BitmapVectorSearchGlobalIndexResult
         std::map<int64_t, float> id_to_score;
-        for (int32_t i = 0; i < results->scoreDocs.size(); ++i) {
-            Lucene::ScoreDocPtr score_doc = results->scoreDocs[i];
+        for (auto score_doc : results->scoreDocs) {
             Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
             std::string row_id_str =
                 LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));

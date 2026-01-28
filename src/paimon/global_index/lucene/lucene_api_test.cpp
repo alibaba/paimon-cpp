@@ -76,8 +76,7 @@ TEST(LuceneInterfaceTest, TestSimple) {
 
         std::vector<int32_t> resule_doc_id_vec;
         std::vector<std::wstring> result_doc_id_content_vec;
-        for (int32_t i = 0; i < results->scoreDocs.size(); ++i) {
-            Lucene::ScoreDocPtr score_doc = results->scoreDocs[i];
+        for (auto score_doc : results->scoreDocc) {
             Lucene::DocumentPtr result_doc = searcher->doc(score_doc->doc);
             resule_doc_id_vec.push_back(score_doc->doc);
             result_doc_id_content_vec.push_back(result_doc->get(L"id"));

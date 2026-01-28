@@ -325,7 +325,7 @@ macro(build_lucene)
     include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR}
                         ${BOOST_EXTRA_INCLUDE_DIR})
     add_library(lucene INTERFACE IMPORTED)
-    target_include_directories(lucene INTERFACE "${LUCENE_INCLUDE_DIR}")
+    target_include_directories(lucene SYSTEM INTERFACE "${LUCENE_INCLUDE_DIR}")
     target_compile_options(lucene INTERFACE -pthread)
 
     target_link_libraries(lucene

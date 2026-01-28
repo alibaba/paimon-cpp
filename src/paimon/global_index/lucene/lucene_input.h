@@ -36,7 +36,6 @@ class LuceneIndexInput : public Lucene::BufferedIndexInput {
  public:
     LuceneIndexInput(const boost::shared_ptr<LuceneSyncInput>& in_stream, int32_t buffer_size)
         : Lucene::BufferedIndexInput(buffer_size),
-          is_clone_(false),
           input_buffer_size_(buffer_size),
           in_stream_(in_stream) {}
 
@@ -84,7 +83,7 @@ class LuceneIndexInput : public Lucene::BufferedIndexInput {
     }
 
  private:
-    bool is_clone_;
+    bool is_clone_ = false;
     int32_t input_buffer_size_;
     boost::shared_ptr<LuceneSyncInput> in_stream_;
 };
