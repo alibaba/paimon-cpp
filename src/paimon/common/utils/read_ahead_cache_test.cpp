@@ -60,7 +60,7 @@ TestCacheEnv CreateTestFileAndCache(const std::string& filename, const std::stri
 
 TEST(TestReadAheadCache, TestBasics) {
     CacheConfig config(/*buffer_size_limit=*/256 * 1024 * 1024, /*range_size_limit=*/10,
-                       /*hole_size_limit=*/2, /*pre_buffer_size=*/128 * 1024 * 1024);
+                       /*hole_size_limit=*/2, /*pre_buffer_limit=*/128 * 1024 * 1024);
     std::string content = "abcdefghijklmnopqrstuvwxyz";
     auto env = CreateTestFileAndCache(
         "data_file", content, config,
