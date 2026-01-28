@@ -32,7 +32,7 @@ Result<std::shared_ptr<BlockCompressionFactory>> BlockCompressionFactory::Create
         case BlockCompressionType::ZSTD:
             return std::make_shared<ZstdBlockCompressionFactory>(ZSTD_COMPRESSION_LEVEL);
         default:
-            // TODO: LZO support planned
+            // TODO(liangzi): LZO support
             return Status::Invalid("Unsupported compression type: " +
                                    std::to_string(static_cast<int8_t>(compression)));
     }
