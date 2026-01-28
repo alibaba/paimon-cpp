@@ -44,9 +44,9 @@ class AvroOutputStreamImpl : public ::avro::OutputStream {
         return byte_count_;
     }
 
- private:
     void FlushBuffer();
 
+ private:
     std::shared_ptr<MemoryPool> pool_;
     const size_t buffer_size_;
     uint8_t* const buffer_;

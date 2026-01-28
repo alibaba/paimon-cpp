@@ -27,11 +27,10 @@ const char AvroFileFormatFactory::IDENTIFIER[] = "avro";
 
 Result<std::unique_ptr<FileFormat>> AvroFileFormatFactory::Create(
     const std::map<std::string, std::string>& options) const {
-    RegisterLogicalTypes();
     return std::make_unique<AvroFileFormat>(options);
 }
 
-void AvroFileFormatFactory::RegisterLogicalTypes() {
+static __attribute__((constructor)) void AvroFileFormatFactoryRegisterLogicalTypes() {
     ::avro::CustomLogicalTypeRegistry::instance().registerType(
         "map", [](const std::string&) { return std::make_shared<MapLogicalType>(); });
 }

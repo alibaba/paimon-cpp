@@ -39,7 +39,6 @@ AvroOutputStreamImpl::AvroOutputStreamImpl(const std::shared_ptr<paimon::OutputS
       byte_count_(0) {}
 
 AvroOutputStreamImpl::~AvroOutputStreamImpl() {
-    FlushBuffer();
     pool_->Free(buffer_, buffer_size_);
 }
 

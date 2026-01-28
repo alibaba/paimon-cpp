@@ -178,8 +178,7 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
             if (fields.size() != 2) {
                 return Status::TypeError("invalid avro logical map struct fields size");
             }
-            auto key_field = fields[0];
-            key_field = key_field->WithNullable(false);
+            auto key_field = fields[0]->WithNullable(false);
             auto value_field = fields[1];
             if (key_field->name() != "key" || value_field->name() != "value") {
                 return Status::TypeError("invalid avro logical map struct field names");
@@ -187,7 +186,8 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
             return std::make_shared<arrow::MapType>(std::move(key_field), std::move(value_field));
         }
         default:
-            return Status::Invalid("not support logical type: ", AvroUtils::ToString(logical_type));
+            return Status::Invalid("invalid avro logical type: ",
+                                   AvroUtils::ToString(logical_type));
     }
 
     size_t subtype_count = avro_node->leaves();

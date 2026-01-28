@@ -856,7 +856,7 @@ Result<std::shared_ptr<arrow::ArrayBuilder>> MakeArrowBuilder(
     arrow::MemoryPool* pool) {
     if (column_vector_batch->numElements == 0) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::ArrayBuilder> builder,
-                                          arrow::MakeBuilder(type));
+                                          arrow::MakeBuilder(type, pool));
         return builder;
     }
     arrow::Type::type kind = type->id();

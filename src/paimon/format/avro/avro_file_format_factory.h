@@ -41,9 +41,6 @@ class AvroFileFormatFactory : public FileFormatFactory {
 
     Result<std::unique_ptr<FileFormat>> Create(
         const std::map<std::string, std::string>& options) const override;
-
- private:
-    static void RegisterLogicalTypes();
 };
 
 }  // namespace paimon::avro
