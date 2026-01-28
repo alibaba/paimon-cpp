@@ -62,9 +62,9 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return Status::Invalid("executor is null pointer");
     }
 
-    PAIMON_ASSIGN_OR_RAISE(
-        CoreOptions tmp_options,
-        CoreOptions::FromMap(ctx->GetOptions(), ctx->GetFileSystemSchemeToIdentifierMap()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options,
+                           CoreOptions::FromMap(ctx->GetOptions(), ctx->GetSpecificFileSystem(),
+                                                ctx->GetFileSystemSchemeToIdentifierMap()));
     std::string branch = ctx->GetBranch();
     auto schema_manager =
         std::make_shared<SchemaManager>(tmp_options.GetFileSystem(), ctx->GetRootPath(), branch);
@@ -79,7 +79,8 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         opts[key] = value;
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
-                           CoreOptions::FromMap(opts, ctx->GetFileSystemSchemeToIdentifierMap()));
+                           CoreOptions::FromMap(opts, ctx->GetSpecificFileSystem(),
+                                                ctx->GetFileSystemSchemeToIdentifierMap()));
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> partition_schema,
                            FieldMapping::GetPartitionSchema(arrow_schema, schema->PartitionKeys()));
@@ -134,8 +135,8 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
                 snapshot_manager, schema_manager, ctx->GetCommitUser(), ctx->GetRootPath(), schema,
                 arrow_schema, partition_schema, options, ctx->IsStreamingMode(),
                 ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
-                ctx->GetFileSystemSchemeToIdentifierMap(), ctx->GetExecutor(),
-                ctx->GetMemoryPool());
+                ctx->GetFileSystemSchemeToIdentifierMap(), ctx->GetExecutor(), ctx->GetMemoryPool(),
+                ctx->GetSpecificFileSystem());
         }
         if (options.GetBucket() <= 0) {
             return Status::Invalid(

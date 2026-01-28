@@ -56,12 +56,15 @@ class PAIMON_EXPORT FileMetaUtils {
     ///                         tables. Use empty map for non-partitioned tables.
     /// @param options Set a configuration options map to set some option entries which are not
     ///                defined in the table schema or whose values you want to overwrite.
+    /// @param file_system  Specifies the file system for file operations.
+    ///                     If `nullptr`, use default file system.
     /// @return Result containing a unique pointer to the generated `CommitMessage`,
     ///         or an error status if the migration cannot be performed.
     static Result<std::unique_ptr<CommitMessage>> GenerateCommitMessage(
         const std::vector<std::string>& src_data_files, const std::string& dst_table_path,
         const std::map<std::string, std::string>& partition_values,
-        const std::map<std::string, std::string>& options);
+        const std::map<std::string, std::string>& options,
+        const std::shared_ptr<FileSystem>& file_system = nullptr);
 };
 
 }  // namespace paimon

@@ -38,17 +38,16 @@
 #include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/format/orc/predicate_converter.h"
+
 namespace paimon::orc {
-OrcFileBatchReader::OrcFileBatchReader(const std::string& file_name, int32_t batch_size,
-                                       std::unique_ptr<::orc::ReaderMetrics>&& reader_metrics,
-                                       std::unique_ptr<::orc::Reader>&& reader,
+
+OrcFileBatchReader::OrcFileBatchReader(std::unique_ptr<::orc::ReaderMetrics>&& reader_metrics,
+                                       std::unique_ptr<OrcReaderWrapper>&& reader,
                                        const std::map<std::string, std::string>& options,
-                                       std::unique_ptr<arrow::MemoryPool>&& arrow_pool,
+                                       const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
                                        const std::shared_ptr<::orc::MemoryPool>& orc_pool)
-    : file_name_(file_name),
-      batch_size_(batch_size),
-      options_(options),
-      arrow_pool_(std::move(arrow_pool)),
+    : options_(options),
+      arrow_pool_(arrow_pool),
       orc_pool_(orc_pool),
       reader_metrics_(std::move(reader_metrics)),
       reader_(std::move(reader)),
@@ -64,7 +63,9 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
         if (pool == nullptr) {
             return Status::Invalid("memory pool is nullptr");
         }
+        uint64_t natural_read_size = input_stream->getNaturalReadSize();
         auto orc_pool = std::make_shared<OrcMemoryPool>(pool);
+        std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool);
         reader_options.setMemoryPool(*orc_pool);
 
         std::unique_ptr<::orc::ReaderMetrics> reader_metrics;
@@ -81,9 +82,13 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
         }
         std::unique_ptr<::orc::Reader> reader =
             ::orc::createReader(std::move(input_stream), reader_options);
-        auto orc_file_batch_reader = std::unique_ptr<OrcFileBatchReader>(
-            new OrcFileBatchReader(file_name, batch_size, std::move(reader_metrics),
-                                   std::move(reader), options, GetArrowPool(pool), orc_pool));
+
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<OrcReaderWrapper> reader_wrapper,
+            OrcReaderWrapper::Create(std::move(reader), file_name, batch_size, natural_read_size,
+                                     options, arrow_pool, orc_pool));
+        auto orc_file_batch_reader = std::unique_ptr<OrcFileBatchReader>(new OrcFileBatchReader(
+            std::move(reader_metrics), std::move(reader_wrapper), options, arrow_pool, orc_pool));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
                                orc_file_batch_reader->GetFileSchema());
         PAIMON_RETURN_NOT_OK(orc_file_batch_reader->SetReadSchema(
@@ -100,7 +105,7 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
 
 Result<std::unique_ptr<::ArrowSchema>> OrcFileBatchReader::GetFileSchema() const {
     assert(reader_);
-    const auto& orc_file_type = reader_->getType();
+    const auto& orc_file_type = reader_->GetOrcType();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> arrow_file_type,
                            OrcAdapter::GetArrowType(&orc_file_type));
     auto c_schema = std::make_unique<::ArrowSchema>();
@@ -130,57 +135,31 @@ Status OrcFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
         }
     }
     PAIMON_ASSIGN_OR_RAISE(auto orc_target_type, OrcAdapter::GetOrcType(*arrow_schema));
-    const auto& orc_src_type = reader_->getType();
+    const auto& orc_src_type = reader_->GetOrcType();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::orc::SearchArgument> search_arg,
                            PredicateConverter::Convert(orc_src_type, predicate));
-    target_type_ = arrow::struct_(arrow_schema->fields());
-    PAIMON_ASSIGN_OR_RAISE(::orc::RowReaderOptions row_reader_options,
-                           CreateRowReaderOptions(&orc_src_type, orc_target_type.get(),
-                                                  std::move(search_arg), options_));
-    try {
-        row_reader_ = reader_->createRowReader(row_reader_options);
-    } catch (const std::exception& e) {
-        return Status::Invalid(
-            fmt::format("orc file batch reader create row reader failed for file {}, with {} error",
-                        file_name_, e.what()));
-    } catch (...) {
-        return Status::UnknownError(fmt::format(
-            "orc file batch reader create row reader failed for file {}, with unknown error",
-            file_name_));
-    }
+    auto target_type = arrow::struct_(arrow_schema->fields());
+    std::vector<uint64_t> target_column_ids;
+    PAIMON_ASSIGN_OR_RAISE(
+        ::orc::RowReaderOptions row_reader_options,
+        CreateRowReaderOptions(&orc_src_type, orc_target_type.get(), std::move(search_arg),
+                               options_, &target_column_ids));
+
+    target_column_ids_ = target_column_ids;
+    PAIMON_RETURN_NOT_OK(reader_->SetReadSchema(target_type, row_reader_options));
     return Status::OK();
 }
 
+Status OrcFileBatchReader::SeekToRow(uint64_t row_number) {
+    return reader_->SeekToRow(row_number);
+}
+
+Result<std::vector<std::pair<uint64_t, uint64_t>>> OrcFileBatchReader::PreBufferRange() {
+    return reader_->PreBufferRange(target_column_ids_);
+}
+
 Result<BatchReader::ReadBatch> OrcFileBatchReader::NextBatch() {
-    if (has_error_) {
-        return Status::Invalid(fmt::format(
-            "Since an error has occurred, next batch has been prohibited. file '{}'", file_name_));
-    }
-    std::unique_ptr<ArrowArray> c_array = std::make_unique<ArrowArray>();
-    std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
-    try {
-        auto orc_batch = row_reader_->createRowBatch(batch_size_);
-        bool eof = !row_reader_->next(*orc_batch);
-        if (eof) {
-            return BatchReader::MakeEofBatch();
-        }
-        ScopeGuard guard([this]() { has_error_ = true; });
-        assert(orc_batch->numElements > 0);
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<arrow::Array> array,
-            OrcAdapter::AppendBatch(target_type_, orc_batch.get(), arrow_pool_.get()));
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
-        guard.Release();
-    } catch (const std::exception& e) {
-        return Status::Invalid(
-            fmt::format("orc file batch reader get next batch failed for file {}, with {} error",
-                        file_name_, e.what()));
-    } catch (...) {
-        return Status::UnknownError(fmt::format(
-            "orc file batch reader get next batch failed for file {}, with unknown error",
-            file_name_));
-    }
-    return make_pair(std::move(c_array), std::move(c_schema));
+    return reader_->Next();
 }
 
 std::shared_ptr<Metrics> OrcFileBatchReader::GetReaderMetrics() const {
@@ -192,11 +171,9 @@ std::shared_ptr<Metrics> OrcFileBatchReader::GetReaderMetrics() const {
     return metrics_;
 }
 
-Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
+Result<std::list<std::string>> OrcFileBatchReader::GetAndCheckIncludedFields(
     const ::orc::Type* src_type, const ::orc::Type* target_type,
-    std::unique_ptr<::orc::SearchArgument>&& search_arg,
-    const std::map<std::string, std::string>& options) {
-    ::orc::RowReaderOptions row_reader_options;
+    std::vector<uint64_t>* target_column_ids) {
     std::list<std::string> include_fields;
     std::unordered_map<std::string, const ::orc::Type*> src_type_map;
     for (uint64_t i = 0; i < src_type->getSubtypeCount(); i++) {
@@ -217,14 +194,32 @@ Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
                             target_type->toString(), src_type->toString(), field_name));
         }
         int64_t target_field_col_id = iter->second->getColumnId();
+        GetSubColumnIds(iter->second, target_column_ids);
         if (prev_target_field_col_id >= target_field_col_id) {
             return Status::Invalid(
-                "The column id of the target field should be monotonically increasing in format "
-                "reader");
+                "The column id of the target field should be monotonically increasing in "
+                "format reader");
         }
         prev_target_field_col_id = target_field_col_id;
         include_fields.push_back(field_name);
     }
+    return include_fields;
+}
+
+void OrcFileBatchReader::GetSubColumnIds(const ::orc::Type* type, std::vector<uint64_t>* col_ids) {
+    col_ids->push_back(type->getColumnId());
+    for (uint64_t i = 0; i < type->getSubtypeCount(); i++) {
+        GetSubColumnIds(type->getSubtype(i), col_ids);
+    }
+}
+
+Result<::orc::RowReaderOptions> OrcFileBatchReader::CreateRowReaderOptions(
+    const ::orc::Type* src_type, const ::orc::Type* target_type,
+    std::unique_ptr<::orc::SearchArgument>&& search_arg,
+    const std::map<std::string, std::string>& options, std::vector<uint64_t>* target_column_ids) {
+    PAIMON_ASSIGN_OR_RAISE(std::list<std::string> include_fields,
+                           GetAndCheckIncludedFields(src_type, target_type, target_column_ids));
+    ::orc::RowReaderOptions row_reader_options;
     row_reader_options.include(include_fields);
     // In order to avoid issue like https://github.com/alibaba/paimon-cpp/issues/42, we explicitly
     // set GMT timezone.

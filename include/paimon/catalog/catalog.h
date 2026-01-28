@@ -46,9 +46,13 @@ class PAIMON_EXPORT Catalog {
     ///
     /// @param root_path Path to the root directory where the catalog is located.
     /// @param options Configuration options for catalog initialization.
+    /// @param file_system Specifies the file system for file operations.
+    ///                    If not set, use default file system (configured in
+    ///                    `Options::FILE_SYSTEM`)
     /// @return A result containing a unique pointer to a `Catalog` instance, or an error status.
     static Result<std::unique_ptr<Catalog>> Create(
-        const std::string& root_path, const std::map<std::string, std::string>& options);
+        const std::string& root_path, const std::map<std::string, std::string>& options,
+        const std::shared_ptr<FileSystem>& file_system = nullptr);
 
     virtual ~Catalog() = default;
 
@@ -123,6 +127,16 @@ class PAIMON_EXPORT Catalog {
     /// @param identifier The table identifier containing database and table name.
     /// @return A string representing the expected location of the table.
     virtual std::string GetTableLocation(const Identifier& identifier) const = 0;
+
+    /// Returns the root path of the catalog.
+    ///
+    /// @return A string representing the root path of the catalog.
+    virtual std::string GetRootPath() const = 0;
+
+    /// Returns the file system used by the catalog.
+    ///
+    /// @return A shared pointer to the file system instance.
+    virtual std::shared_ptr<FileSystem> GetFileSystem() const = 0;
 
     /// Loads the latest schema of a specified table.
     ///

@@ -26,9 +26,7 @@ namespace {
 Result<std::shared_ptr<TableSchema>> LoadSchema(const std::string& root_path,
                                                 const std::map<std::string, std::string>& options,
                                                 const std::shared_ptr<FileSystem>& file_system) {
-    PAIMON_ASSIGN_OR_RAISE(
-        CoreOptions tmp_options,
-        CoreOptions::FromMap(options, /*fs_scheme_to_identifier_map=*/{}, file_system));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options, file_system));
     SchemaManager schema_manager(tmp_options.GetFileSystem(), root_path);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_table_schema,
                            schema_manager.Latest());
@@ -45,7 +43,7 @@ Result<CoreOptions> MergeOptions(const std::shared_ptr<TableSchema>& table_schem
     for (const auto& [key, value] : options) {
         final_options[key] = value;
     }
-    return CoreOptions::FromMap(final_options, /*fs_scheme_to_identifier_map=*/{}, file_system);
+    return CoreOptions::FromMap(final_options, file_system);
 }
 
 Result<Snapshot> LoadSnapshot(const std::string& root_path,

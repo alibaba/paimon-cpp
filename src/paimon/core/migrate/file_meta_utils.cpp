@@ -105,10 +105,11 @@ Status ValidateNonObjectPath(const std::vector<std::string>& files) {
 Result<std::unique_ptr<CommitMessage>> FileMetaUtils::GenerateCommitMessage(
     const std::vector<std::string>& src_data_files, const std::string& dst_table_path,
     const std::map<std::string, std::string>& partition_values,
-    const std::map<std::string, std::string>& options) {
+    const std::map<std::string, std::string>& options,
+    const std::shared_ptr<FileSystem>& file_system) {
     auto memory_pool = GetDefaultPool();
     // load table schema
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options, CoreOptions::FromMap(options, file_system));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> table_schema,
                            LoadTableSchema(tmp_options.GetFileSystem(), dst_table_path));
     if (!table_schema->PrimaryKeys().empty() || table_schema->NumBuckets() != -1) {
@@ -119,7 +120,8 @@ Result<std::unique_ptr<CommitMessage>> FileMetaUtils::GenerateCommitMessage(
     for (const auto& [key, value] : options) {
         table_options[key] = value;
     }
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(table_options));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options,
+                           CoreOptions::FromMap(table_options, file_system));
 
     std::shared_ptr<FileSystem> fs = core_options.GetFileSystem();
     std::shared_ptr<FileFormat> format = core_options.GetWriteFileFormat();

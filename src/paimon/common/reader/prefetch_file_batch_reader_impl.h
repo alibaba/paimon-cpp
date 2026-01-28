@@ -38,6 +38,7 @@
 #include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/utils/read_ahead_cache.h"
 #include "paimon/utils/roaring_bitmap32.h"
 
 struct ArrowSchema;
@@ -56,7 +57,9 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
         const std::string& data_file_path, const ReaderBuilder* reader_builder,
         const std::shared_ptr<FileSystem>& fs, uint32_t prefetch_max_parallel_num,
         int32_t batch_size, uint32_t prefetch_batch_count, bool enable_adaptive_prefetch_strategy,
-        const std::shared_ptr<Executor>& executor, bool initialize_read_ranges);
+        const std::shared_ptr<Executor>& executor, bool initialize_read_ranges,
+        bool enable_prefetch_cache, const CacheConfig& cache_config,
+        const std::shared_ptr<MemoryPool>& pool);
 
     ~PrefetchFileBatchReaderImpl() override;
 
@@ -108,7 +111,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     PrefetchFileBatchReaderImpl(
         const std::vector<std::shared_ptr<PrefetchFileBatchReader>>& readers, int32_t batch_size,
         uint32_t prefetch_queue_capacity, bool enable_adaptive_prefetch_strategy,
-        const std::shared_ptr<Executor>& executor);
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<ReadAheadCache>& cache);
 
     Status CleanUp();
     void Workloop();
@@ -147,6 +150,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     std::mutex working_mutex_;
     std::condition_variable cv_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<ReadAheadCache> cache_;
 
     mutable std::shared_mutex rw_mutex_;
     std::unique_ptr<std::thread> background_thread_;

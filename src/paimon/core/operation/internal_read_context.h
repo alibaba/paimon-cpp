@@ -90,6 +90,14 @@ class InternalReadContext {
         return read_context_->GetExecutor();
     }
 
+    bool EnablePrefetchCache() const {
+        return read_context_->EnablePrefetchCache();
+    }
+
+    const CacheConfig& GetCacheConfig() const {
+        return read_context_->GetCacheConfig();
+    }
+
  private:
     InternalReadContext(const std::shared_ptr<ReadContext>& read_context,
                         const std::shared_ptr<TableSchema>& table_schema,

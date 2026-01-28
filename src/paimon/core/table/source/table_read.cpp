@@ -55,10 +55,9 @@ Result<std::unique_ptr<InternalReadContext>> CreateInternalReadContext(
         PAIMON_ASSIGN_OR_RAISE(table_schema,
                                TableSchema::CreateFromJson(specific_table_schema.value()));
     } else {
-        PAIMON_ASSIGN_OR_RAISE(
-            CoreOptions tmp_core_options,
-            CoreOptions::FromMap(tmp_options, context->GetFileSystemSchemeToIdentifierMap(),
-                                 context->GetSpecificFileSystem()));
+        PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_core_options,
+                               CoreOptions::FromMap(tmp_options, context->GetSpecificFileSystem(),
+                                                    context->GetFileSystemSchemeToIdentifierMap()));
         SchemaManager schema_manager(tmp_core_options.GetFileSystem(), context->GetPath(), branch);
         PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                                schema_manager.Latest());
