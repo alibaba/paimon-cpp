@@ -29,22 +29,11 @@
 #include "avro/Types.hh"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/format/avro/avro_utils.h"
 
 namespace paimon::avro {
 
 namespace {
-
-std::string ToString(const ::avro::NodePtr& node) {
-    std::stringstream ss;
-    ss << *node;
-    return ss.str();
-}
-
-bool HasMapLogicalType(const ::avro::NodePtr& node) {
-    return node->logicalType().type() == ::avro::LogicalType::CUSTOM &&
-           node->logicalType().customLogicalType() != nullptr &&
-           node->logicalType().customLogicalType()->name() == "map";
-}
 
 /// Forward declaration for mutual recursion.
 Status DecodeFieldToBuilder(const ::avro::NodePtr& avro_node,
@@ -142,8 +131,8 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder)
         }
 
         default:
-            return Status::Invalid(
-                fmt::format("Unsupported Avro type for skipping: {}", ToString(avro_node)));
+            return Status::Invalid(fmt::format("Unsupported Avro type for skipping: {}",
+                                               AvroUtils::ToString(avro_node)));
     }
 }
 
@@ -154,7 +143,7 @@ Status DecodeStructToBuilder(const ::avro::NodePtr& avro_node,
                              AvroDirectDecoder::DecodeContext* ctx) {
     if (avro_node->type() != ::avro::AVRO_RECORD) {
         return Status::Invalid(
-            fmt::format("Expected Avro record, got type: {}", ToString(avro_node)));
+            fmt::format("Expected Avro record, got type: {}", AvroUtils::ToString(avro_node)));
     }
 
     auto* struct_builder = arrow::internal::checked_cast<arrow::StructBuilder*>(array_builder);
@@ -184,7 +173,7 @@ Status DecodeListToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* de
                            AvroDirectDecoder::DecodeContext* ctx) {
     if (avro_node->type() != ::avro::AVRO_ARRAY) {
         return Status::Invalid(
-            fmt::format("Expected Avro array, got type: {}", ToString(avro_node)));
+            fmt::format("Expected Avro array, got type: {}", AvroUtils::ToString(avro_node)));
     }
 
     auto* list_builder = arrow::internal::checked_cast<arrow::ListBuilder*>(array_builder);
@@ -233,7 +222,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* dec
             block_count = decoder->mapNext();
         }
         return Status::OK();
-    } else if (avro_node->type() == ::avro::AVRO_ARRAY && HasMapLogicalType(avro_node)) {
+    } else if (avro_node->type() == ::avro::AVRO_ARRAY && AvroUtils::HasMapLogicalType(avro_node)) {
         // Handle array-based map: list<struct<key, value>>
         PAIMON_RETURN_NOT_OK_FROM_ARROW(map_builder->Append());
         auto* key_builder = map_builder->key_builder();
@@ -243,7 +232,7 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* dec
         if (record_node->type() != ::avro::AVRO_RECORD || record_node->leaves() != 2) {
             return Status::Invalid(
                 fmt::format("Array-based map must contain records with exactly 2 fields, got: {}",
-                            ToString(record_node)));
+                            AvroUtils::ToString(record_node)));
         }
         const auto& key_node = record_node->leafAt(0);
         const auto& value_node = record_node->leafAt(1);
@@ -261,8 +250,9 @@ Status DecodeMapToBuilder(const ::avro::NodePtr& avro_node, ::avro::Decoder* dec
         }
         return Status::OK();
     } else {
-        return Status::Invalid(fmt::format(
-            "Expected Avro map or array with map logical type, got: {}", ToString(avro_node)));
+        return Status::Invalid(
+            fmt::format("Expected Avro map or array with map logical type, got: {}",
+                        AvroUtils::ToString(avro_node)));
     }
 }
 
@@ -307,8 +297,8 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                 case arrow::Type::DATE32: {
                     if (logical_type.type() != ::avro::LogicalType::Type::DATE) {
                         return Status::TypeError(
-                            fmt::format("Unexpected avro type [{}] with arrow type [{}].",
-                                        toString(type), arrow_type->ToString()));
+                            fmt::format("Unexpected avro type [{}] with arrow type [{}].", type,
+                                        arrow_type->ToString()));
                     }
                     auto* builder =
                         arrow::internal::checked_cast<arrow::Date32Builder*>(array_builder);
@@ -317,8 +307,8 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                 }
                 default:
                     return Status::TypeError(
-                        fmt::format("Unexpected avro type [{}] with arrow type [{}].",
-                                    toString(type), arrow_type->ToString()));
+                        fmt::format("Unexpected avro type [{}] with arrow type [{}].", type,
+                                    arrow_type->ToString()));
             }
         }
 
@@ -350,8 +340,8 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                 }
                 default:
                     return Status::TypeError(
-                        fmt::format("Unexpected avro type [{}] with arrow type [{}].",
-                                    toString(type), array_builder->type()->ToString()));
+                        fmt::format("Unexpected avro type [{}] with arrow type [{}].", type,
+                                    array_builder->type()->ToString()));
             }
         }
 
@@ -397,8 +387,8 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
                 }
                 default:
                     return Status::TypeError(
-                        fmt::format("Unexpected avro type [{}] with arrow type [{}].",
-                                    toString(type), array_builder->type()->ToString()));
+                        fmt::format("Unexpected avro type [{}] with arrow type [{}].", type,
+                                    array_builder->type()->ToString()));
             }
         }
 
@@ -406,7 +396,7 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
             return DecodeStructToBuilder(avro_node, projection, decoder, array_builder, ctx);
         }
         case ::avro::AVRO_ARRAY: {
-            if (HasMapLogicalType(avro_node)) {
+            if (AvroUtils::HasMapLogicalType(avro_node)) {
                 return DecodeMapToBuilder(avro_node, decoder, array_builder, ctx);
             } else {
                 return DecodeListToBuilder(avro_node, decoder, array_builder, ctx);
@@ -416,8 +406,7 @@ Status DecodeAvroValueToBuilder(const ::avro::NodePtr& avro_node,
             return DecodeMapToBuilder(avro_node, decoder, array_builder, ctx);
         }
         default:
-            return Status::Invalid(
-                fmt::format("Unsupported avro type: {}", ::avro::toString(type)));
+            return Status::Invalid(fmt::format("Unsupported avro type: {}", type));
     }
 }
 

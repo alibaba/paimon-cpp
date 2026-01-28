@@ -31,6 +31,7 @@
 #include "fmt/format.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/format/avro/avro_file_format_factory.h"
+#include "paimon/format/avro/avro_utils.h"
 #include "paimon/macros.h"
 #include "paimon/status.h"
 namespace paimon::avro {
@@ -155,7 +156,7 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
             return arrow::timestamp(arrow::TimeUnit::NANO, timezone);
         }
         case ::avro::LogicalType::Type::CUSTOM: {
-            if (!HasMapLogicalType(avro_node)) {
+            if (!AvroUtils::HasMapLogicalType(avro_node)) {
                 return Status::TypeError("invalid avro logical map type");
             }
             if (type != ::avro::AVRO_ARRAY) {
@@ -186,9 +187,7 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
             return std::make_shared<arrow::MapType>(std::move(key_field), std::move(value_field));
         }
         default:
-            std::stringstream logical_type_str;
-            logical_type.printJson(logical_type_str);
-            return Status::NotImplemented("not support logical type: ", logical_type_str.str());
+            return Status::Invalid("not support logical type: ", AvroUtils::ToString(logical_type));
     }
 
     size_t subtype_count = avro_node->leaves();
@@ -376,20 +375,17 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
 }
 
 Result<::avro::ValidSchema> AvroSchemaConverter::ArrowSchemaToAvroSchema(
-    const std::shared_ptr<arrow::Schema>& arrow_schema, const std::string& row_name) {
-    ::avro::RecordSchema record_schema(row_name);
+    const std::shared_ptr<arrow::Schema>& arrow_schema) {
+    // top level row name of avro record, the same as java paimon
+    static const std::string kTopLevelRowName = "org.apache.paimon.avro.generated.record";
+    ::avro::RecordSchema record_schema(kTopLevelRowName);
     for (const auto& field : arrow_schema->fields()) {
-        PAIMON_ASSIGN_OR_RAISE(::avro::Schema field_schema,
-                               ArrowTypeToAvroSchema(field, row_name + "_" + field->name()));
+        PAIMON_ASSIGN_OR_RAISE(
+            ::avro::Schema field_schema,
+            ArrowTypeToAvroSchema(field, kTopLevelRowName + "_" + field->name()));
         AddRecordField(&record_schema, field->name(), field_schema);
     }
     return ::avro::ValidSchema(record_schema);
-}
-
-bool AvroSchemaConverter::HasMapLogicalType(const ::avro::NodePtr& node) {
-    return node->logicalType().type() == ::avro::LogicalType::CUSTOM &&
-           node->logicalType().customLogicalType() != nullptr &&
-           node->logicalType().customLogicalType()->name() == "map";
 }
 
 }  // namespace paimon::avro

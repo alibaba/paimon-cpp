@@ -78,11 +78,12 @@ void AvroOutputStreamImpl::FlushBuffer() {
 }
 
 void AvroOutputStreamImpl::flush() {
-    // ::avro::OutputStream's flush do nothing, because in the avro-cpp impl, calling flush() too
-    // frequently generates many small I/O operations, affecting write performance.
-    //
-    // And In avro-java impl, there is an option to control flush frequency.
+    // In avro-java impl, there is an option to control flush frequency.
     // See: https://github.com/apache/avro/commit/35750393891c40f0ceb925a852162ec764bcae6c
+    //
+    // However, in the avro-cpp impl, there is no such option. Calling flush() too frequently
+    // generates many small I/O operations, affecting write performance, so we make
+    // ::avro::OutputStream's flush() do nothing
 }
 
 }  // namespace paimon::avro

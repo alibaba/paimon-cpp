@@ -175,7 +175,7 @@ Status SingleFileWriter<T, R>::Write(T record) {
         }
     } else {
         ArrowArray array;
-        ArrowArrayInit(&array);
+        ArrowArrayMarkReleased(&array);  // reset array
         ScopeGuard inner_guard([&array]() { ArrowArrayRelease(&array); });
         PAIMON_RETURN_NOT_OK(converter_(std::move(record), &array));
         record_count = array.length;

@@ -16,14 +16,41 @@
 
 #pragma once
 
-#include "arrow/c/helpers.h"
+#include <vector>
+
+#include "arrow/api.h"
+#include "fmt/format.h"
+#include "paimon/result.h"
 
 namespace paimon {
-inline void ArrowArrayInit(struct ArrowArray* array) {
-    ArrowArrayMarkReleased(array);
-}
 
-inline void ArrowSchemaInit(struct ArrowSchema* schema) {
-    ArrowSchemaMarkReleased(schema);
-}
+class ArrowUtils {
+ public:
+    ArrowUtils() = delete;
+    ~ArrowUtils() = delete;
+
+    static Result<std::shared_ptr<arrow::Schema>> DataTypeToSchema(
+        const std::shared_ptr<::arrow::DataType>& data_type) {
+        if (data_type->id() != arrow::Type::STRUCT) {
+            return Status::Invalid(fmt::format("Expected struct data type, actual data type: {}",
+                                               data_type->ToString()));
+        }
+        const auto& struct_type = std::static_pointer_cast<arrow::StructType>(data_type);
+        return std::make_shared<arrow::Schema>(struct_type->fields());
+    }
+
+    static std::vector<int32_t> CreateProjection(
+        const std::shared_ptr<::arrow::Schema>& file_schema,
+        const arrow::FieldVector& read_fields) {
+        std::vector<int32_t> target_to_src_mapping;
+        target_to_src_mapping.reserve(read_fields.size());
+        for (const auto& field : read_fields) {
+            auto src_field_idx = file_schema->GetFieldIndex(field->name());
+            assert(src_field_idx >= 0);
+            target_to_src_mapping.push_back(src_field_idx);
+        }
+        return target_to_src_mapping;
+    }
+};
+
 }  // namespace paimon

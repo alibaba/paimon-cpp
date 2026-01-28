@@ -22,6 +22,8 @@
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
+#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/avro/avro_input_stream_impl.h"
 #include "paimon/format/avro/avro_schema_converter.h"
@@ -33,9 +35,11 @@ AvroFileBatchReader::AvroFileBatchReader(const std::shared_ptr<InputStream>& inp
                                          const std::shared_ptr<::arrow::DataType>& file_data_type,
                                          std::unique_ptr<::avro::DataFileReaderBase>&& reader,
                                          std::unique_ptr<arrow::ArrayBuilder>&& array_builder,
+                                         std::unique_ptr<arrow::MemoryPool>&& arrow_pool,
                                          int32_t batch_size,
                                          const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
+      arrow_pool_(std::move(arrow_pool)),
       input_stream_(input_stream),
       file_data_type_(file_data_type),
       reader_(std::move(reader)),
@@ -66,11 +70,12 @@ Result<std::unique_ptr<AvroFileBatchReader>> AvroFileBatchReader::Create(
     const auto& avro_file_schema = reader->dataSchema();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::arrow::DataType> file_data_type,
                            AvroSchemaConverter::AvroSchemaToArrowDataType(avro_file_schema));
+    auto arrow_pool = GetArrowPool(pool);
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
-                                      arrow::MakeBuilder(file_data_type));
+                                      arrow::MakeBuilder(file_data_type, arrow_pool.get()));
     return std::unique_ptr<AvroFileBatchReader>(
         new AvroFileBatchReader(input_stream, file_data_type, std::move(reader),
-                                std::move(array_builder), batch_size, pool));
+                                std::move(array_builder), std::move(arrow_pool), batch_size, pool));
 }
 
 Result<std::unique_ptr<::avro::DataFileReaderBase>> AvroFileBatchReader::CreateDataFileReader(
@@ -139,32 +144,31 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_read_schema,
                                       arrow::ImportSchema(read_schema));
-    std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> file_schema,
+                           ArrowUtils::DataTypeToSchema(file_data_type_));
     PAIMON_ASSIGN_OR_RAISE(read_fields_projection_,
-                           CalculateReadFieldsProjection(file_data_type_, read_data_type));
+                           CalculateReadFieldsProjection(file_schema, arrow_read_schema->fields()));
     array_builder_->Reset();
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(array_builder_, arrow::MakeBuilder(read_data_type));
+    std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(array_builder_,
+                                      arrow::MakeBuilder(read_data_type, arrow_pool_.get()));
     return Status::OK();
 }
 
 Result<std::set<size_t>> AvroFileBatchReader::CalculateReadFieldsProjection(
-    const std::shared_ptr<::arrow::DataType>& file_data_type,
-    const std::shared_ptr<::arrow::DataType>& read_data_type) {
-    if (file_data_type->id() != arrow::Type::STRUCT ||
-        read_data_type->id() != arrow::Type::STRUCT) {
-        return Status::Invalid(
-            fmt::format("Expected struct data type, file data type: {}, read data type: {}",
-                        file_data_type->ToString(), read_data_type->ToString()));
+    const std::shared_ptr<::arrow::Schema>& file_schema, const arrow::FieldVector& read_fields) {
+    std::set<size_t> projection_set;
+    auto projection = ArrowUtils::CreateProjection(file_schema, read_fields);
+    int32_t prev_index = -1;
+    for (auto& index : projection) {
+        if (index <= prev_index) {
+            return Status::Invalid(
+                "SetReadSchema failed: read schema fields order is different from file schema");
+        }
+        prev_index = index;
+        projection_set.insert(index);
     }
-    const auto& file_struct_type = std::static_pointer_cast<arrow::StructType>(file_data_type);
-    const auto& read_struct_type = std::static_pointer_cast<arrow::StructType>(read_data_type);
-    std::set<size_t> projection;
-    for (const auto& field : read_struct_type->fields()) {
-        auto field_index = file_struct_type->GetFieldIndex(field->name());
-        assert(field_index != -1);
-        projection.insert(field_index);
-    }
-    return projection;
+    return projection_set;
 }
 
 Result<std::unique_ptr<::ArrowSchema>> AvroFileBatchReader::GetFileSchema() const {

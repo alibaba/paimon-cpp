@@ -34,8 +34,7 @@ class AvroSchemaConverter {
 
     // TODO(menglingda.mld): add field id for avro
     static Result<::avro::ValidSchema> ArrowSchemaToAvroSchema(
-        const std::shared_ptr<arrow::Schema>& arrow_schema,
-        const std::string& row_name = "org.apache.paimon.avro.generated.record");
+        const std::shared_ptr<arrow::Schema>& arrow_schema);
 
     static Result<std::shared_ptr<arrow::DataType>> AvroSchemaToArrowDataType(
         const ::avro::ValidSchema& avro_schema);
@@ -56,8 +55,6 @@ class AvroSchemaConverter {
 
     static Result<std::shared_ptr<arrow::Field>> GetArrowField(const std::string& name,
                                                                const ::avro::NodePtr& avro_node);
-
-    static bool HasMapLogicalType(const ::avro::NodePtr& node);
 };
 
 }  // namespace paimon::avro
