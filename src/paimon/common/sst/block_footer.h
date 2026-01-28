@@ -30,7 +30,8 @@ namespace paimon {
 /// Footer of a block.
 class BlockFooter {
  public:
-    static std::unique_ptr<BlockFooter> ReadBlockFooter(std::shared_ptr<MemorySliceInput>& input);
+    static Result<std::unique_ptr<BlockFooter>> ReadBlockFooter(
+        std::shared_ptr<MemorySliceInput>& input);
 
  public:
     BlockFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
@@ -49,7 +50,7 @@ class BlockFooter {
     std::shared_ptr<MemorySlice> WriteBlockFooter(MemoryPool* pool);
 
  public:
-    // 20 bytes for bloom filter, 12 bytes for index block handle, 4 bytes for magic number
+    // 20 bytes for bloom filter handle, 12 bytes for index block handle, 4 bytes for magic number
     static constexpr int32_t ENCODED_LENGTH = 36;
     static constexpr int32_t MAGIC_NUMBER = 1481571681;
 
