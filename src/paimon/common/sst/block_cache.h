@@ -29,7 +29,7 @@ namespace paimon {
 
 class BlockCache {
  public:
-    BlockCache(std::string& file_path, const std::shared_ptr<InputStream>& in,
+    BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
                const std::shared_ptr<MemoryPool>& pool,
                std::unique_ptr<CacheManager>&& cache_manager)
         : file_path_(file_path), in_(in), pool_(pool), cache_manager_(std::move(cache_manager)) {}

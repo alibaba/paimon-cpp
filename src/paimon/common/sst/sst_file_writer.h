@@ -18,7 +18,7 @@
 
 #include <memory>
 
-#include "arrow/util/crc32.h"
+#include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
 #include "paimon/common/sst/block_trailer.h"
@@ -42,13 +42,8 @@ class MemoryPool;
 class SstFileWriter {
  public:
     SstFileWriter(const std::shared_ptr<OutputStream>& out, const std::shared_ptr<MemoryPool>& pool,
-                  const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size)
-        : out_(out), pool_(pool), bloom_filter_(bloom_filter), block_size_(block_size) {
-        data_block_writer_ =
-            std::make_unique<BlockWriter>(static_cast<int32_t>(block_size * 1.1), pool);
-        index_block_writer_ =
-            std::make_unique<BlockWriter>(BlockHandle::MAX_ENCODED_LENGTH * 1024, pool);
-    }
+                  const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,
+                  const std::shared_ptr<BlockCompressionFactory>& factory);
 
     ~SstFileWriter() = default;
 
@@ -70,6 +65,8 @@ class SstFileWriter {
 
     Status WriteBytes(const char* data, size_t size);
 
+    Result<int32_t> WriteVarLenInt(char* bytes, int32_t value);
+
     // api for testing
     BlockWriter* IndexWriter() const {
         return index_block_writer_.get();
@@ -81,6 +78,9 @@ class SstFileWriter {
     const std::shared_ptr<MemoryPool> pool_;
 
     std::shared_ptr<BloomFilter> bloom_filter_;
+
+    BlockCompressionType compression_type_;
+    std::shared_ptr<BlockCompressor> compressor_;
 
     std::shared_ptr<Bytes> last_key_;
 

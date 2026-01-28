@@ -42,12 +42,16 @@ class Predicate;
 }  // namespace paimon
 
 namespace paimon::test {
-class SstFileIOTest : public ::testing::Test {
+struct SstFileParam {
+    std::string file_path;
+    BlockCompressionType type;
+};
+
+class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
  public:
     void SetUp() override {
         dir_ = paimon::test::UniqueTestDirectory::Create();
         fs_ = dir_->GetFileSystem();
-        index_path_ = dir_->Str() + "/sst_file_test.data";
         pool_ = GetDefaultPool();
         comparator_ = [](const std::shared_ptr<MemorySlice>& a,
                          const std::shared_ptr<MemorySlice>& b) -> int32_t {
@@ -67,25 +71,31 @@ class SstFileIOTest : public ::testing::Test {
  protected:
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<paimon::FileSystem> fs_;
-    std::string index_path_;
     std::shared_ptr<paimon::MemoryPool> pool_;
 
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator_;
 };
 
-TEST_F(SstFileIOTest, TestSimple) {
+TEST_P(SstFileIOTest, TestSimple) {
+    auto param = GetParam();
+    auto index_path = dir_->Str() + "/sst_file_test.data";
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> factory,
+                         BlockCompressionFactory::Create(param.type));
+
     // write content
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
-                         fs_->Create(index_path_, /*overwrite=*/false));
+                         fs_->Create(index_path, /*overwrite=*/false));
 
     // write data
     auto bf = BloomFilter::Create(30, 0.01);
     auto seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
     auto seg_ptr = std::make_shared<MemorySegment>(seg_for_bf);
     ASSERT_OK(bf->SetMemorySegment(seg_ptr));
-    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50);
+    auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, factory);
     std::set<int32_t> value_hash;
+    // k1-k5
     for (size_t i = 1; i <= 5; i++) {
         std::string key = "k" + std::to_string(i);
         std::string value = std::to_string(i);
@@ -94,6 +104,7 @@ TEST_F(SstFileIOTest, TestSimple) {
         auto bytes = std::make_shared<Bytes>(key, pool_.get());
         value_hash.insert(MurmurHashUtils::HashBytes(bytes));
     }
+    // k910-k920
     for (size_t i = 10; i <= 20; i++) {
         std::string key = "k9" + std::to_string(i);
         std::string value = "looooooooooong-值-" + std::to_string(i);
@@ -117,11 +128,8 @@ TEST_F(SstFileIOTest, TestSimple) {
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());
 
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(index_path_));
-    auto block_cache =
-        std::make_shared<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
-
     // bloom filter test
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(index_path));
     auto entries = bloom_filter_handle->ExpectedEntries();
     auto offset = bloom_filter_handle->Offset();
     auto size = bloom_filter_handle->Size();
@@ -137,7 +145,7 @@ TEST_F(SstFileIOTest, TestSimple) {
     }
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    auto reader_ret = SstFileReader::Create(pool_, fs_, index_path, comparator_);
     ASSERT_OK(reader_ret);
     auto reader = reader_ret.value();
     // not exist key
@@ -163,15 +171,17 @@ TEST_F(SstFileIOTest, TestSimple) {
     ASSERT_EQ("looooooooooong-值-15", string15);
 }
 
-TEST_F(SstFileIOTest, TestJavaCompatitable) {
+TEST_P(SstFileIOTest, TestJavaCompatibility) {
+    auto param = GetParam();
+
     // key range [1_000_000, 2_000_000], value is equal to the key
-    std::string file = GetDataDir() + "/sst/none/79d01717-8380-4504-86e1-387e6c058d0a";
+    std::string file = GetDataDir() + "/sst/" + param.file_path;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
     auto block_cache =
-        std::make_shared<BlockCache>(index_path_, in, pool_, std::make_unique<CacheManager>());
+        std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, block_cache, in->Length().value(), comparator_);
+    auto reader_ret = SstFileReader::Create(pool_, fs_, file, comparator_);
     ASSERT_OK(reader_ret);
     auto reader = reader_ret.value();
     // not exist key
@@ -194,6 +204,20 @@ TEST_F(SstFileIOTest, TestJavaCompatitable) {
     ASSERT_TRUE(v1314521);
     std::string string1314521{v1314521->data(), v1314521->size()};
     ASSERT_EQ("1314521", string1314521);
+
+    std::string k1999999 = "1999999";
+    auto v1999999 = reader->Lookup(std::make_shared<Bytes>(k1999999, pool_.get()));
+    ASSERT_TRUE(v1999999);
+    std::string string1999999{v1999999->data(), v1999999->size()};
+    ASSERT_EQ("1999999", string1999999);
 }
+
+INSTANTIATE_TEST_SUITE_P(Group, SstFileIOTest,
+                         ::testing::Values(SstFileParam{"none/79d01717-8380-4504-86e1-387e6c058d0a",
+                                                        BlockCompressionType::NONE},
+                                           SstFileParam{"zstd/83d05c53-2353-4160-b756-d50dd851b474",
+                                                        BlockCompressionType::ZSTD},
+                                           SstFileParam{"lz4/10540951-41d3-4216-aa2c-b15dfd25eb75",
+                                                        BlockCompressionType::LZ4}));
 
 }  // namespace paimon::test
