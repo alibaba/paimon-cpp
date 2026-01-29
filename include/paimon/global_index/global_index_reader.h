@@ -38,12 +38,16 @@ namespace paimon {
 class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<GlobalIndexResult>> {
  public:
     /// VisitVectorSearch performs approximate vector similarity search.
-    /// @note `VisitVectorSearch` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
-    /// thread-safe.
     /// @warning `VisitVectorSearch` may return error status when it is incorrectly invoked (e.g.,
     /// BitmapGlobalIndexReader call `VisitVectorSearch`).
     virtual Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) = 0;
+
+    /// @return true if the reader is thread-safe; false otherwise.
+    virtual bool IsThreadSafe() const = 0;
+
+    /// @return An identifier representing the index type. (e.g., "bitmap", "lumina").
+    virtual std::string GetIndexType() const = 0;
 };
 
 }  // namespace paimon

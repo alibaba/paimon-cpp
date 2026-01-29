@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "paimon/common/file_index/bitmap/bitmap_file_index.h"
+#include "paimon/common/global_index/wrap/file_index_reader_wrapper.h"
 #include "paimon/global_index/global_indexer.h"
 
 namespace paimon {
@@ -44,6 +45,24 @@ class BitmapGlobalIndex : public GlobalIndexer {
 
  private:
     std::shared_ptr<BitmapFileIndex> index_;
+};
+
+class BitmapGlobalIndexReader : public FileIndexReaderWrapper {
+ public:
+    BitmapGlobalIndexReader(const std::shared_ptr<FileIndexReader>& reader,
+                            const std::function<Result<std::shared_ptr<GlobalIndexResult>>(
+                                const std::shared_ptr<FileIndexResult>&)>& transform)
+        : FileIndexReaderWrapper(reader, transform) {}
+
+    static inline const char kIdentifier[] = "bitmap";
+
+    bool IsThreadSafe() const override {
+        return false;
+    }
+
+    std::string GetIndexType() const override {
+        return kIdentifier;
+    }
 };
 
 }  // namespace paimon

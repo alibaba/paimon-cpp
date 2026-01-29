@@ -167,6 +167,14 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search);
 
+    bool IsThreadSafe() const override {
+        return false;
+    }
+
+    std::string GetIndexType() const override {
+        return kIdentifier;
+    }
+
  private:
     LuceneGlobalIndexReader(const std::wstring& wfield_name, int64_t range_end,
                             const Lucene::IndexSearcherPtr& searcher)

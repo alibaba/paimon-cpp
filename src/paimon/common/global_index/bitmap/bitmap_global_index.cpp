@@ -49,7 +49,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
         -> Result<std::shared_ptr<GlobalIndexResult>> {
         return ToGlobalIndexResult(range_end, result);
     };
-    return std::make_shared<FileIndexReaderWrapper>(reader, transform);
+    return std::make_shared<BitmapGlobalIndexReader>(reader, transform);
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndex::ToGlobalIndexResult(
