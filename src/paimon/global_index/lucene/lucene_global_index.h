@@ -105,70 +105,57 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNull() override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEqual(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotEqual(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessThan(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessOrEqual(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterThan(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterOrEqual(
         const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIn(
         const std::vector<Literal>& literals) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitStartsWith(const Literal& prefix) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEndsWith(const Literal& suffix) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override {
         return CreateAllResult();
-        ;
     }
 
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
