@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 #pragma once
-#include <iostream>
 
 #include "lucene++/BufferedIndexInput.h"
 #include "paimon/fs/file_system.h"

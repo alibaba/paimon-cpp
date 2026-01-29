@@ -104,58 +104,71 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNull() override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessOrEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterOrEqual(
         const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitStartsWith(const Literal& prefix) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEndsWith(const Literal& suffix) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return CreateAllResult();
+        ;
     }
 
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
@@ -173,6 +186,10 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         : range_end_(range_end), wfield_name_(wfield_name), searcher_(searcher) {}
 
     static std::vector<std::wstring> TokenizeQuery(const std::string& query);
+
+    std::shared_ptr<GlobalIndexResult> CreateAllResult() const {
+        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+    }
 
  private:
     int64_t range_end_;
