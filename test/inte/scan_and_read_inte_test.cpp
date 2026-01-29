@@ -2582,8 +2582,8 @@ TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
 
         // read
         ReadContextBuilder read_context_builder(table_path);
-        read_context_builder->AddOption("test.enable-adaptive-prefetch-strategy", "false");
-            read_context_builder->EnablePrefetch(true).SetPrefetchBatchCount(3);
+        read_context_builder.AddOption("test.enable-adaptive-prefetch-strategy", "false");
+        read_context_builder.EnablePrefetch(true).SetPrefetchBatchCount(3);
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
                              read_context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
