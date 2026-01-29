@@ -88,7 +88,7 @@ class LuceneGlobalIndexWriter : public GlobalIndexWriter {
 
  private:
     std::shared_ptr<MemoryPool> pool_;
-    int64_t row_id_ = 0;
+    int32_t row_id_ = 0;
     std::string field_name_;
     std::shared_ptr<arrow::DataType> arrow_type_;
     LuceneWriteContext write_context_;

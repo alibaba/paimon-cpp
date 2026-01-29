@@ -266,7 +266,7 @@ Result<std::vector<GlobalIndexIOMeta>> LuceneGlobalIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_.get());
     GlobalIndexIOMeta meta(file_writer_->ToPath(index_file_name), file_size,
-                           /*range_end=*/row_id_ - 1,
+                           /*range_end=*/static_cast<int64_t>(row_id_) - 1,
                            /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
@@ -395,7 +395,8 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuceneGlobalIndexReader::
                 return Status::Invalid(fmt::format("parse row id str {} to int failed"),
                                        row_id_str);
             }
-            id_to_score[row_id.value()] = static_cast<float>(score_doc->score);
+            id_to_score[static_cast<int64_t>(row_id.value())] =
+                static_cast<float>(score_doc->score);
         }
         RoaringBitmap64 bitmap;
         std::vector<float> scores;
