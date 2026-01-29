@@ -54,6 +54,8 @@ class FileSystemCatalog : public Catalog {
     std::string GetDatabaseLocation(const std::string& db_name) const override;
     std::string GetTableLocation(const Identifier& identifier) const override;
     Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const override;
+    std::string GetRootPath() const override;
+    std::shared_ptr<FileSystem> GetFileSystem() const override;
 
  private:
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);

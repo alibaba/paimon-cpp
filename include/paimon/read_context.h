@@ -26,6 +26,7 @@
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"
+#include "paimon/utils/read_ahead_cache.h"
 #include "paimon/utils/special_field_ids.h"
 #include "paimon/visibility.h"
 
@@ -53,7 +54,8 @@ class PAIMON_EXPORT ReadContext {
                 const std::shared_ptr<Executor>& executor,
                 const std::shared_ptr<FileSystem>& specific_file_system,
                 const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-                const std::map<std::string, std::string>& options);
+                const std::map<std::string, std::string>& options, bool enable_prefetch_cache,
+                const CacheConfig& cache_config);
     ~ReadContext();
 
     const std::string& GetPath() const {
@@ -115,6 +117,14 @@ class PAIMON_EXPORT ReadContext {
         return specific_file_system_;
     }
 
+    bool EnablePrefetchCache() const {
+        return enable_prefetch_cache_;
+    }
+
+    const CacheConfig& GetCacheConfig() const {
+        return cache_config_;
+    }
+
  private:
     std::string path_;
     std::string branch_;
@@ -133,6 +143,8 @@ class PAIMON_EXPORT ReadContext {
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
+    bool enable_prefetch_cache_;
+    CacheConfig cache_config_;
 };
 
 /// `ReadContextBuilder` used to build a `ReadContext`, has input validation.
@@ -214,6 +226,20 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @param enabled Whether to enable prefetching (default: false)
     /// @return Reference to this builder for method chaining.
     ReadContextBuilder& EnablePrefetch(bool enabled);
+
+    /// Enable or disable prefetch cache for read operations.
+    ///
+    /// When enabled, a prefetch cache is used to prebuffer data ranges before they are needed,
+    /// which can improve read performance by reducing redundant I/O operations.
+    /// @param enabled Whether to enable prefetch cache (default: true)
+    /// @return Reference to this builder for method chaining.
+    ReadContextBuilder& EnablePrefetchCache(bool enabled);
+
+    /// Set the cache configuration for prefetch read operations.
+    ///
+    /// @param config The cache configuration to use.
+    /// @return Reference to this builder for method chaining.
+    ReadContextBuilder& WithCacheConfig(const CacheConfig& config);
 
     /// Set the total number of batches to prefetch across all files.
     ///
@@ -308,6 +334,10 @@ class PAIMON_EXPORT ReadContextBuilder {
 
     /// Sets a custom file system instance to be used for all file operations in this read context.
     /// This bypasses the global file system registry and uses the provided implementation directly.
+    ///
+    /// @param file_system The file system to use.
+    /// @return Reference to this builder for method chaining.
+    /// @note If not set, use default file system (configured in `Options::FILE_SYSTEM`)
     ReadContextBuilder& WithFileSystem(const std::shared_ptr<FileSystem>& file_system);
 
     /// Build and return a `ReadContext` instance with input validation.

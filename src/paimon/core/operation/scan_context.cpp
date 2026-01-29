@@ -32,6 +32,7 @@ ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
                          const std::shared_ptr<GlobalIndexResult>& global_index_result,
                          const std::shared_ptr<MemoryPool>& memory_pool,
                          const std::shared_ptr<Executor>& executor,
+                         const std::shared_ptr<FileSystem>& specific_file_system,
                          const std::map<std::string, std::string>& options)
     : path_(path),
       is_streaming_mode_(is_streaming_mode),
@@ -40,6 +41,7 @@ ScanContext::ScanContext(const std::string& path, bool is_streaming_mode,
       global_index_result_(global_index_result),
       memory_pool_(memory_pool),
       executor_(executor),
+      specific_file_system_(specific_file_system),
       options_(options) {}
 
 ScanContext::~ScanContext() = default;
@@ -58,6 +60,7 @@ class ScanContextBuilder::Impl {
         global_index_result_.reset();
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
+        specific_file_system_.reset();
         options_.clear();
     }
 
@@ -72,6 +75,7 @@ class ScanContextBuilder::Impl {
     std::shared_ptr<GlobalIndexResult> global_index_result_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
 };
 
@@ -141,6 +145,12 @@ ScanContextBuilder& ScanContextBuilder::WithExecutor(const std::shared_ptr<Execu
     return *this;
 }
 
+ScanContextBuilder& ScanContextBuilder::WithFileSystem(
+    const std::shared_ptr<FileSystem>& file_system) {
+    impl_->specific_file_system_ = file_system;
+    return *this;
+}
+
 Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->path_, PathUtil::NormalizePath(impl_->path_));
     if (impl_->path_.empty()) {
@@ -150,7 +160,8 @@ Result<std::unique_ptr<ScanContext>> ScanContextBuilder::Finish() {
         impl_->path_, impl_->is_streaming_mode_, impl_->limit_,
         std::make_shared<ScanFilter>(impl_->predicates_, impl_->partition_filters_,
                                      impl_->bucket_filter_, impl_->vector_search_),
-        impl_->global_index_result_, impl_->memory_pool_, impl_->executor_, impl_->options_);
+        impl_->global_index_result_, impl_->memory_pool_, impl_->executor_,
+        impl_->specific_file_system_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

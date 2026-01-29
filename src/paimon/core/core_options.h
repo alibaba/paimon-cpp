@@ -43,8 +43,8 @@ class PAIMON_EXPORT CoreOptions {
  public:
     static Result<CoreOptions> FromMap(
         const std::map<std::string, std::string>& options_map,
-        const std::map<std::string, std::string>& fs_scheme_to_identifier_map = {},
-        const std::shared_ptr<FileSystem>& specified_file_system = nullptr);
+        const std::shared_ptr<FileSystem>& specified_file_system = nullptr,
+        const std::map<std::string, std::string>& fs_scheme_to_identifier_map = {});
 
     CoreOptions();
     CoreOptions(const CoreOptions&);

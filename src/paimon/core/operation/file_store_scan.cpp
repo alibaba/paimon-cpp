@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <future>
 #include <list>
+#include <numeric>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -35,6 +36,7 @@
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/utils/field_mapping.h"
@@ -72,10 +74,12 @@ FileStoreScan::RawPlan::GroupFiles FileStoreScan::RawPlan::GroupByPartFiles(
 
 Result<std::vector<PartitionEntry>> FileStoreScan::ReadPartitionEntries() const {
     std::optional<Snapshot> snapshot;
-    std::vector<ManifestFileMeta> manifest_file_metas;
-    PAIMON_RETURN_NOT_OK(ReadManifests(&snapshot, &manifest_file_metas));
+    std::vector<ManifestFileMeta> all_manifest_file_metas;
+    std::vector<ManifestFileMeta> filtered_manifest_file_metas;
+    PAIMON_RETURN_NOT_OK(
+        ReadManifests(&snapshot, &all_manifest_file_metas, &filtered_manifest_file_metas));
     std::vector<ManifestEntry> manifest_entries;
-    PAIMON_RETURN_NOT_OK(ReadFileEntries(manifest_file_metas, &manifest_entries));
+    PAIMON_RETURN_NOT_OK(ReadFileEntries(filtered_manifest_file_metas, &manifest_entries));
     std::unordered_map<BinaryRow, PartitionEntry> partitions;
     PAIMON_RETURN_NOT_OK(PartitionEntry::Merge(manifest_entries, &partitions));
 
@@ -90,13 +94,16 @@ Result<std::vector<PartitionEntry>> FileStoreScan::ReadPartitionEntries() const 
 }
 
 Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() const {
+    const auto started = std::chrono::high_resolution_clock::now();
     std::optional<Snapshot> snapshot;
-    std::vector<ManifestFileMeta> manifest_file_metas;
-    PAIMON_RETURN_NOT_OK(ReadManifests(&snapshot, &manifest_file_metas));
-    manifest_file_metas = PostFilterManifests(std::move(manifest_file_metas));
+    std::vector<ManifestFileMeta> all_manifest_file_metas;
+    std::vector<ManifestFileMeta> filtered_manifest_file_metas;
+    PAIMON_RETURN_NOT_OK(
+        ReadManifests(&snapshot, &all_manifest_file_metas, &filtered_manifest_file_metas));
+    filtered_manifest_file_metas = PostFilterManifests(std::move(filtered_manifest_file_metas));
 
     std::vector<ManifestEntry> manifest_entries;
-    PAIMON_RETURN_NOT_OK(ReadManifestEntries(manifest_file_metas, &manifest_entries));
+    PAIMON_RETURN_NOT_OK(ReadManifestEntries(filtered_manifest_file_metas, &manifest_entries));
     PAIMON_ASSIGN_OR_RAISE(manifest_entries,
                            PostFilterManifestEntries(std::move(manifest_entries)));
 
@@ -121,29 +128,46 @@ Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() cons
             }
         }
     }
+    const int64_t all_data_files = std::accumulate(
+        all_manifest_file_metas.begin(), all_manifest_file_metas.end(), int64_t{0},
+        [](const int64_t sum, const ManifestFileMeta& manifest_file_meta) {
+            return sum + manifest_file_meta.NumAddedFiles() - manifest_file_meta.NumDeletedFiles();
+        });
+    metrics_->SetCounter(ScanMetrics::LAST_SCAN_DURATION,
+                         std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::high_resolution_clock::now() - started)
+                             .count());
+    metrics_->SetCounter(ScanMetrics::LAST_SCANNED_SNAPSHOT_ID,
+                         snapshot.has_value() ? snapshot.value().Id() : int64_t{0});
+    metrics_->SetCounter(ScanMetrics::LAST_SCANNED_MANIFESTS, filtered_manifest_file_metas.size());
+    metrics_->SetCounter(ScanMetrics::LAST_SCAN_SKIPPED_TABLE_FILES,
+                         all_data_files - manifest_entries.size());
+    metrics_->SetCounter(ScanMetrics::LAST_SCAN_RESULTED_TABLE_FILES, manifest_entries.size());
     return std::make_shared<FileStoreScan::RawPlan>(scan_mode_, snapshot,
                                                     std::move(manifest_entries));
 }
 
 Status FileStoreScan::ReadManifests(std::optional<Snapshot>* snapshot_ptr,
-                                    std::vector<ManifestFileMeta>* manifests_ptr) const {
+                                    std::vector<ManifestFileMeta>* all_manifests_ptr,
+                                    std::vector<ManifestFileMeta>* filter_manifests_ptr) const {
     auto& snapshot = *snapshot_ptr;
-    auto& manifests = *manifests_ptr;
+    auto& all_manifests = *all_manifests_ptr;
+    auto& filtered_manifests = *filter_manifests_ptr;
     if (specified_snapshot_ != std::nullopt) {
         snapshot = specified_snapshot_;
     } else {
         PAIMON_ASSIGN_OR_RAISE(snapshot, snapshot_manager_->LatestSnapshot());
     }
     if (snapshot == std::nullopt) {
-        manifests = std::vector<ManifestFileMeta>();
+        all_manifests = std::vector<ManifestFileMeta>();
+        filtered_manifests = std::vector<ManifestFileMeta>();
         return Status::OK();
     }
-    std::vector<ManifestFileMeta> unfiltered_manifest_metas;
-    PAIMON_RETURN_NOT_OK(ReadManifestsWithSnapshot(snapshot.value(), &unfiltered_manifest_metas));
-    for (const auto& meta : unfiltered_manifest_metas) {
+    PAIMON_RETURN_NOT_OK(ReadManifestsWithSnapshot(snapshot.value(), &all_manifests));
+    for (const auto& meta : all_manifests) {
         PAIMON_ASSIGN_OR_RAISE(bool filter_meta_result, FilterManifestFileMeta(meta));
         if (filter_meta_result) {
-            manifests.push_back(meta);
+            filtered_manifests.push_back(meta);
         }
     }
     return Status::OK();

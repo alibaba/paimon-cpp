@@ -16,6 +16,8 @@ if(PAIMON_ENABLE_ORC)
 
     set(PAIMON_ORC_FILE_FORMAT
         predicate_converter.cpp
+        orc_reader_wrapper.cpp
+        read_range_generator.cpp
         orc_file_format_factory.cpp
         orc_file_batch_reader.cpp
         orc_input_stream_impl.cpp
@@ -51,6 +53,8 @@ if(PAIMON_ENABLE_ORC)
                         complex_predicate_test.cpp
                         predicate_converter_test.cpp
                         predicate_pushdown_test.cpp
+                        read_range_generator_test.cpp
+                        orc_reader_wrapper_test.cpp
                         orc_input_output_stream_test.cpp
                         orc_adapter_test.cpp
                         orc_stats_extractor_test.cpp

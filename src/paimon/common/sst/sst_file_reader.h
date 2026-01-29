@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_cache.h"
 #include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
@@ -40,16 +41,16 @@ class SstFileIterator;
 class SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<BlockCache>& block_cache,
-        int64_t file_len,
+        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<paimon::FileSystem>& fs,
+        const std::string& file_path,
         std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                               const std::shared_ptr<MemorySlice>&)>
             comparator);
 
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,
-                  const std::shared_ptr<BlockHandle>& index_block_handle,
                   const std::shared_ptr<BloomFilter>& bloom_filter,
+                  const std::shared_ptr<paimon::BlockReader>& index_block_reader,
                   std::function<int32_t(const std::shared_ptr<MemorySlice>&,
                                         const std::shared_ptr<MemorySlice>&)>
                       comparator);
@@ -65,21 +66,29 @@ class SstFileReader {
      */
     std::shared_ptr<Bytes> Lookup(std::shared_ptr<Bytes> key);
 
-    std::unique_ptr<BlockIterator> GetNextBlock(std::unique_ptr<BlockIterator>& index_iterator);
+    Result<std::unique_ptr<BlockIterator>> GetNextBlock(
+        std::unique_ptr<BlockIterator>& index_iterator);
 
     /**
      * @param handle The block handle.
      * @param index Whether read the block as an index.
      * @return The reader of the target block.
      */
-    std::shared_ptr<BlockReader> ReadBlock(std::shared_ptr<BlockHandle>&& handle, bool index);
+    Result<std::shared_ptr<BlockReader>> ReadBlock(std::shared_ptr<BlockHandle>&& handle,
+                                                   bool index);
 
     /**
      * @param handle The block handle.
      * @param index Whether read the block as an index.
      * @return The reader of the target block.
      */
-    std::shared_ptr<BlockReader> ReadBlock(const std::shared_ptr<BlockHandle>& handle, bool index);
+    Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
+                                                   bool index);
+
+ private:
+    static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
+        const std::shared_ptr<paimon::MemorySegment>& compressed_data,
+        const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
@@ -99,7 +108,7 @@ class SstFileIterator {
      * Seek to the position of the record whose key is exactly equal to or greater than the
      * specified key.
      */
-    void SeekTo(std::shared_ptr<Bytes>& key);
+    Status SeekTo(std::shared_ptr<Bytes>& key);
 
  private:
     SstFileReader* reader_;

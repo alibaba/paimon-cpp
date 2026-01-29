@@ -33,7 +33,9 @@ WriteContext::WriteContext(const std::string& root_path, const std::string& comm
                            const std::string& branch, const std::vector<std::string>& write_schema,
                            const std::shared_ptr<MemoryPool>& memory_pool,
                            const std::shared_ptr<Executor>& executor,
+                           const std::shared_ptr<FileSystem>& specific_file_system,
                            const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
+
                            const std::map<std::string, std::string>& options)
     : root_path_(root_path),
       commit_user_(commit_user),
@@ -45,6 +47,7 @@ WriteContext::WriteContext(const std::string& root_path, const std::string& comm
       write_schema_(write_schema),
       memory_pool_(memory_pool),
       executor_(executor),
+      specific_file_system_(specific_file_system),
       fs_scheme_to_identifier_map_(fs_scheme_to_identifier_map),
       options_(options) {}
 
@@ -64,6 +67,7 @@ class WriteContextBuilder::Impl {
         branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
         write_schema_.clear();
         fs_scheme_to_identifier_map_.clear();
+        specific_file_system_.reset();
         options_.clear();
     }
 
@@ -79,6 +83,7 @@ class WriteContextBuilder::Impl {
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
+    std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
 };
 
@@ -146,6 +151,12 @@ WriteContextBuilder& WriteContextBuilder::WithFileSystemSchemeToIdentifierMap(
     return *this;
 }
 
+WriteContextBuilder& WriteContextBuilder::WithFileSystem(
+    const std::shared_ptr<FileSystem>& file_system) {
+    impl_->specific_file_system_ = file_system;
+    return *this;
+}
+
 Result<std::unique_ptr<WriteContext>> WriteContextBuilder::Finish() {
     PAIMON_ASSIGN_OR_RAISE(impl_->root_path_, PathUtil::NormalizePath(impl_->root_path_));
     if (impl_->root_path_.empty()) {
@@ -155,7 +166,7 @@ Result<std::unique_ptr<WriteContext>> WriteContextBuilder::Finish() {
         impl_->root_path_, impl_->commit_user_, impl_->is_streaming_mode_,
         impl_->ignore_num_bucket_check_, impl_->ignore_previous_files_, impl_->write_id_,
         impl_->branch_, impl_->write_schema_, impl_->memory_pool_, impl_->executor_,
-        impl_->fs_scheme_to_identifier_map_, impl_->options_);
+        impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_, impl_->options_);
     impl_->Reset();
     return ctx;
 }

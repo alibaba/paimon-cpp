@@ -26,25 +26,35 @@ namespace paimon::orc {
 
 class OrcMemoryPool : public ::orc::MemoryPool {
  public:
+    using SizeType = uint64_t;
     explicit OrcMemoryPool(const std::shared_ptr<paimon::MemoryPool>& pool) : pool_(pool) {}
-    char* malloc(uint64_t size) override {
-        char* ret = reinterpret_cast<char*>(pool_->Malloc(size));
-        alloc_map_.Insert(reinterpret_cast<size_t>(ret), size);
-        return ret;
+    char* malloc(SizeType size) override {
+        if (size == 0) {
+            return ZERO_SIZE_AREA;
+        }
+        if (size > std::numeric_limits<SizeType>::max() - HEADER_SIZE) {
+            return nullptr;
+        }
+        if (void* ret = pool_->Malloc(size + HEADER_SIZE)) {
+            *reinterpret_cast<SizeType*>(ret) = size;
+            return reinterpret_cast<char*>(ret) + HEADER_SIZE;
+        }
+        return nullptr;
     }
     void free(char* p) override {
-        std::optional<size_t> size = alloc_map_.Find(reinterpret_cast<size_t>(p));
-        if (size) {
-            pool_->Free(p, size.value());
-            alloc_map_.Erase(reinterpret_cast<size_t>(p));
-        } else {
-            assert(false);
-            pool_->Free(p, /*size=*/0);
+        if (p == nullptr || p == ZERO_SIZE_AREA) {
+            return;
         }
+        char* raw = p - HEADER_SIZE;
+        SizeType size = *reinterpret_cast<SizeType*>(raw);
+        pool_->Free(raw, size + HEADER_SIZE);
     }
 
  private:
-    ConcurrentHashMap<size_t, uint64_t> alloc_map_;
+    static constexpr size_t ALIGNMENT = 64;
+    static constexpr size_t HEADER_SIZE = (sizeof(SizeType) + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+    alignas(ALIGNMENT) inline static char ZERO_SIZE_AREA[1];
+
     std::shared_ptr<paimon::MemoryPool> pool_;
 };
 

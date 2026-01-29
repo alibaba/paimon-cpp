@@ -56,7 +56,8 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
         return Status::Invalid("executor is null pointer");
     }
 
-    PAIMON_ASSIGN_OR_RAISE(auto tmp_options, CoreOptions::FromMap(ctx->GetOptions()));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions tmp_options,
+                           CoreOptions::FromMap(ctx->GetOptions(), ctx->GetSpecificFileSystem()));
     const std::string& root_path = ctx->GetRootPath();
     auto schema_manager = std::make_shared<SchemaManager>(tmp_options.GetFileSystem(), root_path);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> table_schema,
@@ -75,7 +76,8 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     }
     std::shared_ptr<arrow::Schema> arrow_schema =
         DataField::ConvertDataFieldsToArrowSchema(schema->Fields());
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(opts));
+    PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
+                           CoreOptions::FromMap(opts, ctx->GetSpecificFileSystem()));
     assert(options.GetFileSystem());
     assert(options.GetWriteFileFormat());
     PAIMON_ASSIGN_OR_RAISE(bool is_object_store, FileSystem::IsObjectStore(root_path));
