@@ -2566,12 +2566,8 @@ TEST_P(ScanAndReadInteTest, TestCastTimestampType) {
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
-TEST_P(ScanAndReadInteTest, TestAvroWithAppendTable) {
-    auto [file_format, enable_prefetch] = GetParam();
-    if (file_format != "avro") {
-        return;
-    }
-
+#ifdef PAIMON_ENABLE_AVRO
+TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path = GetDataDir() + "/avro/append_multiple.db/append_multiple";
         // scan
@@ -2586,6 +2582,8 @@ TEST_P(ScanAndReadInteTest, TestAvroWithAppendTable) {
 
         // read
         ReadContextBuilder read_context_builder(table_path);
+        read_context_builder->AddOption("test.enable-adaptive-prefetch-strategy", "false");
+            read_context_builder->EnablePrefetch(true).SetPrefetchBatchCount(3);
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
                              read_context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
@@ -2638,12 +2636,7 @@ TEST_P(ScanAndReadInteTest, TestAvroWithAppendTable) {
 ])");
 }
 
-TEST_P(ScanAndReadInteTest, TestAvroWithPkTable) {
-    auto [file_format, enable_prefetch] = GetParam();
-    if (file_format != "avro") {
-        return;
-    }
-
+TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path =
             GetDataDir() + "/avro/pk_with_multiple_type.db/pk_with_multiple_type";
@@ -2705,16 +2698,13 @@ TEST_P(ScanAndReadInteTest, TestAvroWithPkTable) {
 [0, true, 10, 1, 1, 1000, 1.5, 2.5, "Tony", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]]
 ])");
 }
+#endif
 
 std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() {
     std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc", false);
     values.emplace_back("orc", true);
-#endif
-#ifdef PAIMON_ENABLE_AVRO
-    values.emplace_back("avro", false);
-    values.emplace_back("avro", true);
 #endif
     return values;
 }
