@@ -31,6 +31,7 @@
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
@@ -143,7 +144,27 @@ TEST_F(KeyValueFileStoreScanTest, TestMaxSequenceNumber) {
                              CreateFileStoreScan(table_path, scan_filter,
                                                  /*table_schema_id=*/0, /*snapshot_id=*/2));
 
+        const auto started = std::chrono::high_resolution_clock::now();
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileStoreScan::RawPlan> raw_plan, scan->CreatePlan());
+        std::shared_ptr<Metrics> metrics = scan->GetScanMetrics();
+        ASSERT_TRUE(metrics);
+        ASSERT_OK_AND_ASSIGN(uint64_t last_scan_duration,
+                             metrics->GetCounter(ScanMetrics::LAST_SCAN_DURATION));
+        ASSERT_LE(last_scan_duration, std::chrono::duration_cast<std::chrono::milliseconds>(
+                                          std::chrono::high_resolution_clock::now() - started)
+                                          .count());
+        ASSERT_OK_AND_ASSIGN(uint64_t last_scanned_snapshot_id,
+                             metrics->GetCounter(ScanMetrics::LAST_SCANNED_SNAPSHOT_ID));
+        ASSERT_EQ(last_scanned_snapshot_id, 2u);
+        ASSERT_OK_AND_ASSIGN(uint64_t last_scanned_manifests,
+                             metrics->GetCounter(ScanMetrics::LAST_SCANNED_MANIFESTS));
+        ASSERT_EQ(last_scanned_manifests, 2u);
+        ASSERT_OK_AND_ASSIGN(uint64_t last_scan_skipped_table_files,
+                             metrics->GetCounter(ScanMetrics::LAST_SCAN_SKIPPED_TABLE_FILES));
+        ASSERT_EQ(last_scan_skipped_table_files, 1u);
+        ASSERT_OK_AND_ASSIGN(uint64_t last_scan_resulted_table_files,
+                             metrics->GetCounter(ScanMetrics::LAST_SCAN_RESULTED_TABLE_FILES));
+        ASSERT_EQ(last_scan_resulted_table_files, 1u);
         int64_t max_sequence_num = GetMaxSequenceNumberOfRawPlan(raw_plan);
         ASSERT_EQ(max_sequence_num, 1);
         // test multiple scan

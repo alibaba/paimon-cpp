@@ -112,6 +112,18 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_LUCENE_URL})
+    set(LUCENE_SOURCE_URL "$ENV{PAIMON_LUCENE_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_LUCENE_PKG_NAME}")
+        set_urls(LUCENE_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LUCENE_PKG_NAME}")
+    else()
+        set_urls(LUCENE_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/${PAIMON_LUCENE_PKG_NAME}"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_GLOG_URL})
     set(GLOG_SOURCE_URL "$ENV{PAIMON_GLOG_URL}")
 else()
@@ -275,6 +287,62 @@ set(EP_COMMON_CMAKE_ARGS
     -DCMAKE_C_FLAGS=${EP_C_FLAGS}
     -DCMAKE_INSTALL_LIBDIR=lib)
 
+macro(build_lucene)
+    message(STATUS "Building lucene from source")
+    set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
+    set(LUCENE_CMAKE_ARGS
+        ${EP_COMMON_CMAKE_ARGS}
+        "-DENABLE_TEST=OFF"
+        "-DCMAKE_C_FLAGS=-pthread"
+        "-DCMAKE_CXX_FLAGS=-pthread"
+        "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
+        "-DBoost_INCLUDE_DIR=${BOOST_INCLUDE_DIR}"
+        "-DBoost_LIBRARY_DIR=${BOOST_LIBRARY_DIR}"
+        "-DBOOST_ROOT=${BOOST_INSTALL}"
+        "-DBoost_CHRONO_FOUND=TRUE"
+        "-DBoost_THREAD_FOUND=TRUE"
+        "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
+
+    set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.so.0")
+    externalproject_add(lucene_ep
+                        ${EP_COMMON_OPTIONS}
+                        URL ${LUCENE_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_LUCENE_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${LUCENE_CMAKE_ARGS}
+                        BUILD_BYPRODUCTS ${LUCENE_LIB}
+                        DEPENDS boost_date_time
+                                boost_filesystem
+                                boost_regex
+                                boost_thread
+                                boost_iostreams
+                                boost_system
+                                boost_chrono
+                                boost_atomic)
+
+    set(LUCENE_INCLUDE_DIR "${LUCENE_PREFIX}/include")
+    # The include directory must exist before it is referenced by a target.
+    file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
+    include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR}
+                        ${BOOST_EXTRA_INCLUDE_DIR})
+    add_library(lucene INTERFACE IMPORTED)
+    target_include_directories(lucene SYSTEM INTERFACE "${LUCENE_INCLUDE_DIR}")
+    target_compile_options(lucene INTERFACE -pthread)
+
+    target_link_libraries(lucene
+                          INTERFACE "${LUCENE_LIB}"
+                                    boost_date_time
+                                    boost_filesystem
+                                    boost_regex
+                                    boost_thread
+                                    boost_iostreams
+                                    boost_system
+                                    boost_chrono
+                                    boost_atomic
+                                    pthread
+                                    dl)
+    add_dependencies(lucene lucene_ep)
+endmacro()
+
 macro(build_rapidjson)
     message(STATUS "Building RapidJSON from source")
     set(RAPIDJSON_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/rapidjson_ep-install")
@@ -341,6 +409,99 @@ macro(build_fmt)
     target_include_directories(fmt INTERFACE ${FMT_INCLUDE_DIR})
     add_dependencies(fmt fmt_ep)
 endmacro(build_fmt)
+
+macro(build_boost)
+    message(STATUS "Building boost from source")
+    set(BOOST_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/boost_ep-prefix")
+    set(BOOST_INSTALL "${CMAKE_CURRENT_BINARY_DIR}/boost_ep-install")
+    set(BOOST_INCLUDE_DIR "${BOOST_INSTALL}/include")
+    set(BOOST_LIBRARY_DIR ${BOOST_INSTALL}/lib)
+    file(MAKE_DIRECTORY ${BOOST_INCLUDE_DIR})
+    file(MAKE_DIRECTORY ${BOOST_LIBRARY_DIR})
+
+    set(BOOST_BYPRODUCTS
+        ${BOOST_LIBRARY_DIR}/libboost_date_time.a
+        ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
+        ${BOOST_LIBRARY_DIR}/libboost_system.a
+        ${BOOST_LIBRARY_DIR}/libboost_regex.a
+        ${BOOST_LIBRARY_DIR}/libboost_thread.a
+        ${BOOST_LIBRARY_DIR}/libboost_atomic.a
+        ${BOOST_LIBRARY_DIR}/libboost_chrono.a
+        ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
+
+    externalproject_add(boost_ep
+                        GIT_REPOSITORY https://github.com/boostorg/boost.git
+                        GIT_TAG boost-${PAIMON_BOOST_BUILD_VERSION}
+                        GIT_SHALLOW FALSE
+                        GIT_PROGRESS TRUE
+                        GIT_SUBMODULES_RECURSE TRUE
+                        CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
+                                          --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic
+                        BUILD_IN_SOURCE TRUE
+                        BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2
+                                      --prefix=${BOOST_INSTALL}
+                                      --libdir=${BOOST_LIBRARY_DIR} link=static
+                                      runtime-link=shared threading=multi variant=release
+                                      cxxflags=-fPIC install
+                        INSTALL_COMMAND bash -c
+                                        "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
+                        BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
+                        LOG_DOWNLOAD ON
+                        LOG_CONFIGURE ON
+                        LOG_BUILD ON)
+
+    include_directories(SYSTEM ${BOOST_INCLUDE_DIR})
+
+    add_library(boost_atomic STATIC IMPORTED)
+    set_target_properties(boost_atomic
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_atomic.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_chrono STATIC IMPORTED)
+    set_target_properties(boost_chrono
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_chrono.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_date_time STATIC IMPORTED)
+    set_target_properties(boost_date_time
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_date_time.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_filesystem STATIC IMPORTED)
+    set_target_properties(boost_filesystem
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_filesystem.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_regex STATIC IMPORTED)
+    set_target_properties(boost_regex
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_regex.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_thread STATIC IMPORTED)
+    set_target_properties(boost_thread
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_thread.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_iostreams STATIC IMPORTED)
+    set_target_properties(boost_iostreams
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_iostreams.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+    add_library(boost_system STATIC IMPORTED)
+    set_target_properties(boost_system
+                          PROPERTIES IMPORTED_LOCATION
+                                     ${BOOST_LIBRARY_DIR}/libboost_system.a
+                                     INTERFACE_INCLUDE_DIRECTORIES ${BOOST_INCLUDE_DIR})
+
+    add_dependencies(boost_atomic boost_ep)
+    add_dependencies(boost_chrono boost_ep)
+    add_dependencies(boost_date_time boost_ep)
+    add_dependencies(boost_filesystem boost_ep)
+    add_dependencies(boost_regex boost_ep)
+    add_dependencies(boost_thread boost_ep)
+    add_dependencies(boost_iostreams boost_ep)
+    add_dependencies(boost_system boost_ep)
+endmacro(build_boost)
 
 macro(build_snappy)
     message(STATUS "Building snappy from source")
@@ -1107,4 +1268,8 @@ endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()
     build_jindosdk_nextarch()
+endif()
+if(PAIMON_ENABLE_LUCENE)
+    build_boost()
+    build_lucene()
 endif()

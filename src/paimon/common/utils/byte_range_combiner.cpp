@@ -38,6 +38,23 @@ Result<std::vector<ByteRange>> ByteRangeCombiner::CoalesceByteRanges(
     if (ranges.empty()) {
         return ranges;
     }
+
+    std::vector<ByteRange> adjusted_ranges;
+    for (const auto& range : ranges) {
+        uint64_t range_start = range.offset;
+        uint64_t range_end = range.offset + range.length;
+
+        while (range_end - range_start > range_size_limit) {
+            adjusted_ranges.emplace_back(range_start, range_size_limit);
+            range_start += range_size_limit;
+        }
+
+        if (range_end > range_start) {
+            adjusted_ranges.emplace_back(range_start, range_end - range_start);
+        }
+    }
+    ranges = std::move(adjusted_ranges);
+
     // Remove zero-sized ranges
     auto end = std::remove_if(ranges.begin(), ranges.end(),
                               [](const ByteRange& range) { return range.length == 0; });

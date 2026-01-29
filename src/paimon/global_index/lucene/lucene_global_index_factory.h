@@ -13,16 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "paimon/global_index/lumina/lumina_utils.h"
 
-#include <future>
+#pragma once
 
-#include "paimon/testing/utils/testharness.h"
-namespace paimon::lumina::test {
-TEST(LuminaUtilsTest, TestSimple) {
-    std::map<std::string, std::string> options = {{"key1", "value1"}, {"lumina.key2", "value2"}};
-    auto lumina_options = LuminaUtils::FetchLuminaOptions(options);
-    std::map<std::string, std::string> expected = {{"key2", "value2"}};
-    ASSERT_EQ(expected, lumina_options);
-}
-}  // namespace paimon::lumina::test
+#include <map>
+#include <memory>
+#include <string>
+
+#include "paimon/global_index/global_indexer.h"
+#include "paimon/global_index/global_indexer_factory.h"
+namespace paimon::lucene {
+/// Factory for creating lucene global indexers.
+class LuceneGlobalIndexFactory : public GlobalIndexerFactory {
+ public:
+    static const char IDENTIFIER[];
+
+    const char* Identifier() const override {
+        return IDENTIFIER;
+    }
+
+    Result<std::unique_ptr<GlobalIndexer>> Create(
+        const std::map<std::string, std::string>& options) const override;
+};
+
+}  // namespace paimon::lucene

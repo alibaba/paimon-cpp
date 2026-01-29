@@ -1,4 +1,4 @@
-# Copyright 2024-present Alibaba Inc.
+# Copyright 2026-present Alibaba Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,43 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(PAIMON_ENABLE_LUMINA)
-    set(PAIMON_LUMINA_INDEX lumina_global_index.cpp lumina_global_index_factory.cpp)
+if(PAIMON_ENABLE_LUCENE)
+    set(PAIMON_LUCENE lucene_global_index.cpp lucene_directory.cpp
+                      lucene_global_index_factory.cpp)
 
-    add_paimon_lib(paimon_lumina_index
+    add_paimon_lib(paimon_lucene_index
                    SOURCES
-                   ${PAIMON_LUMINA_INDEX}
+                   ${PAIMON_LUCENE}
+                   EXTRA_INCLUDES
+                   ${LUCENE_INCLUDE_DIR}
                    DEPENDENCIES
                    paimon_shared
+                   lucene
                    STATIC_LINK_LIBS
+                   lucene
                    arrow
-                   glog
                    fmt
                    dl
                    Threads::Threads
                    SHARED_LINK_LIBS
-                   lumina::interface
                    paimon_shared
                    SHARED_LINK_FLAGS
                    ${PAIMON_VERSION_SCRIPT_FLAGS})
 
     if(PAIMON_BUILD_TESTS)
-        add_paimon_test(lumina_index_test
+        add_paimon_test(lucene_index_test
                         SOURCES
-                        lumina_api_test.cpp
-                        lumina_file_io_test.cpp
-                        lumina_global_index_test.cpp
+                        lucene_api_test.cpp
+                        lucene_directory_test.cpp
+                        lucene_global_index_test.cpp
                         EXTRA_INCLUDES
-                        ${LUMINA_INCLUDE_DIR}
+                        ${LUCENE_INCLUDE_DIR}
                         STATIC_LINK_LIBS
                         paimon_shared
                         test_utils_static
                         "-Wl,--whole-archive"
                         paimon_local_file_system_static
-                        paimon_lumina_index_static
+                        paimon_lucene_index_static
                         "-Wl,--no-whole-archive"
-                        lumina::interface
                         ${GTEST_LINK_TOOLCHAIN})
     endif()
-
 endif()
