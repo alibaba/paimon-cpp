@@ -123,7 +123,7 @@ std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionF
 
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const {
-    if (!context_->EnablePredicateFilter()) {
+    if (!context_->EnablePredicateFilter() || predicate == nullptr) {
         return std::move(reader);
     }
     return PredicateBatchReader::Create(std::move(reader), predicate, pool_);
