@@ -2619,9 +2619,8 @@ TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), result_json)
                 .ValueOrDie());
         ASSERT_TRUE(expected);
-        auto copied_array = arrow::Concatenate(read_result->chunks()).ValueOrDie();
         ASSERT_TRUE(expected->Equals(read_result))
-            << "read_result: " << copied_array->ToString() << "expected: " << expected->ToString();
+            << "read_result: " << read_result->ToString() << "expected: " << expected->ToString();
     };
 
     read_data(1, R"([

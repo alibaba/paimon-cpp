@@ -21,8 +21,6 @@
 #include <vector>
 
 #include "arrow/api.h"
-#include "arrow/array/array_base.h"
-#include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
@@ -135,11 +133,11 @@ TEST_P(AvroFileFormatTest, TestComplexTypes) {
         arrow::field("f11", arrow::list(arrow::int32())),
         arrow::field("f12", arrow::map(arrow::utf8(), arrow::utf8())),
         arrow::field("f13", arrow::map(arrow::int32(), arrow::utf8())),
-        arrow::field("f14", arrow::map(arrow::struct_({field("f0", arrow::int32())}),
+        arrow::field("f14", arrow::map(arrow::struct_({arrow::field("f0", arrow::int32())}),
                                        arrow::map(arrow::int32(), arrow::utf8()))),
-        arrow::field("f15",
-                     arrow::struct_({field("sub1", arrow::int64()), field("sub2", arrow::float64()),
-                                     field("sub3", arrow::boolean())})),
+        arrow::field("f15", arrow::struct_({arrow::field("sub1", arrow::int64()),
+                                            arrow::field("sub2", arrow::float64()),
+                                            arrow::field("sub3", arrow::boolean())})),
     };
     auto schema = arrow::schema(fields);
     auto data_type = arrow::struct_(fields);
@@ -213,25 +211,28 @@ TEST_P(AvroFileFormatTest, TestNestedMap) {
             arrow::map(
                 arrow::int32(),
                 arrow::struct_(
-                    {field("f5.a",
-                           arrow::struct_(
-                               {field("f5.a.0", arrow::utf8()), field("f5.sub2", arrow::int32()),
-                                field("f5.a.1", arrow::timestamp(arrow::TimeUnit::MICRO))})),
-                     field("f5.b", arrow::list(arrow::utf8())),
-                     field("f5.c", arrow::map(arrow::utf8(), arrow::int32()))}))),
+                    {arrow::field(
+                         "f5.a",
+                         arrow::struct_(
+                             {arrow::field("f5.a.0", arrow::utf8()),
+                              arrow::field("f5.sub2", arrow::int32()),
+                              arrow::field("f5.a.1", arrow::timestamp(arrow::TimeUnit::MICRO))})),
+                     arrow::field("f5.b", arrow::list(arrow::utf8())),
+                     arrow::field("f5.c", arrow::map(arrow::utf8(), arrow::int32()))}))),
         arrow::field(
             "f6", arrow::map(arrow::utf8(), arrow::map(arrow::utf8(), arrow::list(arrow::utf8())))),
         arrow::field("f7", arrow::map(arrow::int32(), arrow::boolean())),
-        arrow::field("f8", arrow::map(arrow::int64(), arrow::decimal(2, 2))),
+        arrow::field("f8", arrow::map(arrow::int64(), arrow::decimal128(2, 2))),
         arrow::field("f9", arrow::map(arrow::date32(), arrow::float32())),
         arrow::field("f10", arrow::map(arrow::binary(), arrow::float64())),
         arrow::field("f11", arrow::map(arrow::int32(), arrow::list(arrow::int64()))),
         arrow::field(
-            "f12", arrow::map(arrow::utf8(),
-                              arrow::list(arrow::struct_(
-                                  {field("name", arrow::utf8()),
-                                   field("scores", arrow::list(arrow::float32())),
-                                   field("info", arrow::map(arrow::float32(), arrow::utf8()))}))))};
+            "f12",
+            arrow::map(arrow::utf8(),
+                       arrow::list(arrow::struct_(
+                           {arrow::field("name", arrow::utf8()),
+                            arrow::field("scores", arrow::list(arrow::float32())),
+                            arrow::field("info", arrow::map(arrow::float32(), arrow::utf8()))}))))};
 
     auto schema = arrow::schema(fields);
     auto data_type = arrow::struct_(fields);
@@ -319,25 +320,28 @@ TEST_P(AvroFileFormatTest, TestReadRow) {
             arrow::map(
                 arrow::int32(),
                 arrow::struct_(
-                    {field("f5.a",
-                           arrow::struct_(
-                               {field("f5.a.0", arrow::utf8()), field("f5.sub2", arrow::int32()),
-                                field("f5.a.1", arrow::timestamp(arrow::TimeUnit::MICRO))})),
-                     field("f5.b", arrow::list(arrow::utf8())),
-                     field("f5.c", arrow::map(arrow::utf8(), arrow::int32()))}))),
+                    {arrow::field(
+                         "f5.a",
+                         arrow::struct_(
+                             {arrow::field("f5.a.0", arrow::utf8()),
+                              arrow::field("f5.sub2", arrow::int32()),
+                              arrow::field("f5.a.1", arrow::timestamp(arrow::TimeUnit::MICRO))})),
+                     arrow::field("f5.b", arrow::list(arrow::utf8())),
+                     arrow::field("f5.c", arrow::map(arrow::utf8(), arrow::int32()))}))),
         arrow::field(
             "f6", arrow::map(arrow::utf8(), arrow::map(arrow::utf8(), arrow::list(arrow::utf8())))),
         arrow::field("f7", arrow::map(arrow::int32(), arrow::boolean())),
-        arrow::field("f8", arrow::map(arrow::int64(), arrow::decimal(2, 2))),
+        arrow::field("f8", arrow::map(arrow::int64(), arrow::decimal128(2, 2))),
         arrow::field("f9", arrow::map(arrow::date32(), arrow::float32())),
         arrow::field("f10", arrow::map(arrow::binary(), arrow::float64())),
         arrow::field("f11", arrow::map(arrow::int32(), arrow::list(arrow::int64()))),
         arrow::field(
-            "f12", arrow::map(arrow::utf8(),
-                              arrow::list(arrow::struct_(
-                                  {field("name", arrow::utf8()),
-                                   field("scores", arrow::list(arrow::float32())),
-                                   field("info", arrow::map(arrow::float32(), arrow::utf8()))}))))};
+            "f12",
+            arrow::map(arrow::utf8(),
+                       arrow::list(arrow::struct_(
+                           {arrow::field("name", arrow::utf8()),
+                            arrow::field("scores", arrow::list(arrow::float32())),
+                            arrow::field("info", arrow::map(arrow::float32(), arrow::utf8()))}))))};
 
     auto schema = arrow::schema(fields);
     auto data_type = arrow::struct_(fields);

@@ -50,7 +50,7 @@ class AvroStatsExtractor : public FormatStatsExtractor {
         const std::shared_ptr<FileSystem>& file_system, const std::string& path,
         const std::shared_ptr<MemoryPool>& pool) override {
         assert(false);
-        return paimon::Status::Invalid("avro format do not support ExtractWithFileInfo");
+        return Status::Invalid("Avro format does not support ExtractWithFileInfo.");
     }
 
  private:

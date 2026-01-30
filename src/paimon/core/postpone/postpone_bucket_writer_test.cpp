@@ -98,12 +98,10 @@ class PostponeBucketWriterTest : public ::testing::Test,
         ASSERT_OK_AND_ASSIGN(auto reader_builder,
                              file_format->CreateReaderBuilder(/*batch_size=*/10));
         ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(input_stream));
-        // if (file_format_str == "avro") {
         auto c_schema = std::make_unique<::ArrowSchema>();
         ASSERT_TRUE(arrow::ExportType(*file_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                               /*selection_bitmap=*/std::nullopt));
-        // }
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(batch_reader.get()));
         ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString() << "\n != \n"

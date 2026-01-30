@@ -19,11 +19,8 @@
 #include <vector>
 
 #include "arrow/api.h"
-#include "arrow/array/array_base.h"
-#include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
-#include "arrow/c/helpers.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
@@ -32,11 +29,13 @@
 #include "paimon/core/stats/simple_stats_converter.h"
 #include "paimon/format/avro/avro_file_format.h"
 #include "paimon/format/avro/avro_format_writer.h"
+#include "paimon/format/file_format_factory.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
+
 namespace paimon::avro::test {
 
 class AvroStatsExtractorTest : public ::testing::Test {
@@ -50,9 +49,10 @@ class AvroStatsExtractorTest : public ::testing::Test {
         ::ArrowSchema c_schema;
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
 
-        AvroFileFormat format({{"file.format", "avro"}, {"manifest.format", "avro"}});
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileFormat> file_format,
+                             FileFormatFactory::Get("avro", {}));
         ASSERT_OK_AND_ASSIGN(auto writer_builder,
-                             format.CreateWriterBuilder(&c_schema, /*batch_size=*/1024));
+                             file_format->CreateWriterBuilder(&c_schema, /*batch_size=*/1024));
 
         auto fs = std::make_shared<LocalFileSystem>();
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<OutputStream> output_stream,
@@ -71,13 +71,6 @@ class AvroStatsExtractorTest : public ::testing::Test {
         ASSERT_GT(file_status->GetLen(), 0);
     }
 };
-
-static AvroStatsExtractor MakeExtractor() {
-    std::map<std::string, std::string> opts;
-    opts["file.format"] = "avro";
-    opts["manifest.format"] = "avro";
-    return AvroStatsExtractor(opts);
-}
 
 TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     auto timezone = DateTimeUtils::GetLocalTimezoneName();
@@ -106,10 +99,10 @@ TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     auto schema = std::make_shared<arrow::Schema>(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
-                [1, 11, 111, 1111, 1.1, 1.11, "Hello", "你好", 1234, "2033-05-18 03:33:20.0", "1.22", true, "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0"],
-                [2, 22, 222, 2222, 2.2, 2.22, "World", "世界", -1234, "1899-01-01 00:59:20.001001001", "2.22", false, "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001","1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001"],
-                [null, null, 0, null, null, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-            ])")
+        [1, 11, 111, 1111, 1.1, 1.11, "Hello", "你好", 1234, "2033-05-18 03:33:20.0", "1.22", true, "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0"],
+        [2, 22, 222, 2222, 2.2, 2.22, "World", "世界", -1234, "1899-01-01 00:59:20.001001001", "2.22", false, "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001","1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001"],
+        [null, null, 0, null, null, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+    ])")
             .ValueOrDie());
     auto src_chunk_array = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({array}));
 
@@ -139,10 +132,10 @@ TEST_F(AvroStatsExtractorTest, TestNestedType) {
     auto schema = arrow::schema(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
-                [null, [true, 2]],
-                [[0.1, 0.3], [true, 1]],
-                [[1.1, 1.2], null]
-            ])")
+        [null, [true, 2]],
+        [[0.1, 0.3], [true, 1]],
+        [[1.1, 1.2], null]
+    ])")
             .ValueOrDie());
     auto src_chunk_array = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({array}));
 
@@ -151,7 +144,7 @@ TEST_F(AvroStatsExtractorTest, TestNestedType) {
     std::string file_path = dir->Str() + "/test.avro";
     WriteAvroFile(file_path, src_chunk_array, schema);
 
-    AvroStatsExtractor extractor = MakeExtractor();
+    AvroStatsExtractor extractor({});
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto results, extractor.Extract(fs, file_path, GetDefaultPool()));
 
@@ -194,8 +187,8 @@ TEST_F(AvroStatsExtractorTest, TestNullForAllType) {
     auto schema = std::make_shared<arrow::Schema>(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
-                [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
-            ])")
+        [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
+    ])")
             .ValueOrDie());
     auto src_chunk_array = std::make_shared<arrow::ChunkedArray>(arrow::ArrayVector({src_array}));
 
@@ -204,7 +197,7 @@ TEST_F(AvroStatsExtractorTest, TestNullForAllType) {
     std::string file_path = dir->Str() + "/test.avro";
     WriteAvroFile(file_path, src_chunk_array, schema);
 
-    AvroStatsExtractor extractor = MakeExtractor();
+    AvroStatsExtractor extractor({});
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto column_stats, extractor.Extract(fs, file_path, GetDefaultPool()));
 

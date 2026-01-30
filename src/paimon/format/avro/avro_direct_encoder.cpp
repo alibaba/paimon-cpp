@@ -28,7 +28,9 @@
 #include "arrow/api.h"
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
+#include "fmt/format.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/format/avro/avro_utils.h"
 #include "paimon/result.h"
 
 namespace paimon::avro {
@@ -174,12 +176,11 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                             timestamp *
                             DateTimeUtils::CONVERSION_FACTORS[DateTimeUtils::MILLISECOND]);
                     } else {
-                        std::stringstream logical_type_str;
-                        avro_node->logicalType().printJson(logical_type_str);
-                        return Status::Invalid(fmt::format(
-                            "Unsupported timestamp type with avro logical type {} and arrow time "
-                            "unit {}.",
-                            logical_type_str.str(), DateTimeUtils::GetArrowTimeUnitStr(unit)));
+                        return Status::Invalid(
+                            fmt::format("Unsupported timestamp type with avro logical type {} and "
+                                        "arrow time unit {}.",
+                                        AvroUtils::ToString(avro_node->logicalType()),
+                                        DateTimeUtils::GetArrowTimeUnitStr(unit)));
                     }
                     return Status::OK();
                 }
