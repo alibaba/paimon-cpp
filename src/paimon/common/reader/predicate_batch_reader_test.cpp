@@ -188,4 +188,16 @@ TEST_F(PredicateBatchReaderTest, TestFullAndEmptyCase) {
     }
 }
 
+TEST_F(PredicateBatchReaderTest, TestInvalidInput) {
+    auto data_array = PrepareArray(8);
+    auto reader = std::make_unique<MockFileBatchReader>(data_array, data_type_, /*batch_size=*/10);
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(data_type_, {R"([
+        ["str_1", 1, true], ["str_3", 3, true], ["str_5", 5, true], ["str_7", 7, true]
+    ])"},
+                                                                         &expected_array);
+    ASSERT_NOK_WITH_MSG(PredicateBatchReader::Create(std::move(reader), nullptr, GetDefaultPool()),
+                        "create predicate batch reader failed. predicate is nullptr");
+}
+
 }  // namespace paimon::test
