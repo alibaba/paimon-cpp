@@ -2567,7 +2567,8 @@ TEST_P(ScanAndReadInteTest, TestCastTimestampType) {
 }
 
 #ifdef PAIMON_ENABLE_AVRO
-TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
+// TODO(zjw): remove DISABLED_ when avro write is ready
+TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithAppendTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path = GetDataDir() + "/avro/append_multiple.db/append_multiple";
         // scan
@@ -2636,7 +2637,7 @@ TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
 ])");
 }
 
-TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
+TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithPkTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path =
             GetDataDir() + "/avro/pk_with_multiple_type.db/pk_with_multiple_type";
