@@ -49,8 +49,7 @@ Result<std::unique_ptr<PredicateBatchReader>> PredicateBatchReader::Create(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate,
     const std::shared_ptr<MemoryPool>& pool) {
     if (!predicate) {
-        return Status::Invalid(
-            fmt::format("create predicate batch reader failed. predicate is nullptr"));
+        return Status::Invalid("create predicate batch reader failed. predicate is nullptr");
     }
     auto predicate_filter = std::dynamic_pointer_cast<PredicateFilter>(predicate);
     if (!predicate_filter) {
