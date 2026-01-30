@@ -139,7 +139,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
         }
 
         case ::avro::AVRO_LONG: {
-            // AVRO_LONG can represent: int64, time (microseconds), timestamp (microseconds)
+            // AVRO_LONG can represent: int64, timestamp
             switch (array.type()->id()) {
                 case arrow::Type::INT64: {
                     const auto& int64_array =
@@ -286,10 +286,9 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                 }
                 encoder.arrayEnd();
                 return Status::OK();
-            }
-
-            // Handle MapArray (for Avro maps with non-string keys)
-            if (array.type()->id() == arrow::Type::MAP) {
+            } else if (array.type()->id() == arrow::Type::MAP &&
+                       AvroUtils::HasMapLogicalType(avro_node)) {
+                // Handle MapArray (for Avro maps with non-string keys)
                 if (PAIMON_UNLIKELY(element_node->type() != ::avro::AVRO_RECORD ||
                                     element_node->leaves() != 2)) {
                     return Status::Invalid(
@@ -354,22 +353,17 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
 
                 for (int64_t i = start; i < end; ++i) {
                     encoder.startItem();
+                    const auto& string_array =
+                        arrow::internal::checked_cast<const arrow::StringArray&>(*keys);
+                    std::string_view key_value = string_array.GetView(i);
+                    encoder.encodeString(std::string(key_value));
 
-                    if (keys->type()->id() == arrow::Type::STRING) {
-                        const auto& string_array =
-                            arrow::internal::checked_cast<const arrow::StringArray&>(*keys);
-                        std::string_view key_value = string_array.GetView(i);
-                        encoder.encodeString(std::string(key_value));
-                    }
                     PAIMON_RETURN_NOT_OK(EncodeArrowToAvro(value_node, encoder, *values, i, ctx));
                 }
             }
             encoder.mapEnd();
             return Status::OK();
         }
-
-        case ::avro::AVRO_ENUM:
-            return Status::NotImplemented("ENUM type encoding not yet implemented");
 
         case ::avro::AVRO_UNION:
             // Already handled above
