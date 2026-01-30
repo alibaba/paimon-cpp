@@ -167,7 +167,7 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
             PAIMON_ASSIGN_OR_RAISE(auto* struct_builder,
                                    CastToTypedBuilder<arrow::StructBuilder>(array_builder));
             for (int32_t i = 0; i < struct_builder->num_fields(); i++) {
-                // reserve item builder in map
+                // reserve item builder in struct
                 PAIMON_RETURN_NOT_OK(Reserve(struct_builder->field_builder(i), idx));
             }
             break;

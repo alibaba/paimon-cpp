@@ -1,0 +1,16 @@
+f0:bool f1:tinyint f2:smallint f3:int f4:bigint f5:float f6:double f7:string f8:bytes f9:data f10:decimal(5,2) f11:struct<map<string,int>,array<int>>
+primary key: f2,f7
+partition key: f1
+bucket key: f2
+bucket count: 1
+
+Msgs:
+snapshot-1 (1 data files)
+Add: 0, false, 10, 1, 1, 1000, 1.5, 2.5, "Alice", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]
+Add: 0, false, 10, 1, 1, 1000, 1.5, 2.5, "Bob", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]
+Add: 0, true, 10, 1, 1, 1000, 1.5, 2.5, "Emily", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]
+Add: 0, true, 10, 1, 1, 1000, 1.5, 2.5, "Tony", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]
+
+snapshot-2 (1 data files)
+Delete: 0, true, 10, 1, 1, 1000, 1.5, 2.5, "Emily", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]
+Add: 0, true, 10, 1, 1, 1000, 1.5, 2.5, "Lucy", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]

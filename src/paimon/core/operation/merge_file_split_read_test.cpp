@@ -553,28 +553,6 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyPredicates2) {
     ASSERT_FALSE(result);
 }
 
-TEST_F(MergeFileSplitReadTest, TestCreateProjection) {
-    std::vector<DataField> raw_read_fields = {DataField(1, arrow::field("k1", arrow::int32())),
-                                              DataField(3, arrow::field("p1", arrow::int32())),
-                                              DataField(5, arrow::field("s1", arrow::utf8())),
-                                              DataField(6, arrow::field("v0", arrow::float64())),
-                                              DataField(7, arrow::field("v1", arrow::boolean()))};
-    auto raw_read_schema = DataField::ConvertDataFieldsToArrowSchema(raw_read_fields);
-
-    std::vector<DataField> value_fields = {DataField(0, arrow::field("k0", arrow::int32())),
-                                           DataField(1, arrow::field("k1", arrow::int32())),
-                                           DataField(3, arrow::field("p1", arrow::int32())),
-                                           DataField(5, arrow::field("s1", arrow::utf8())),
-                                           DataField(6, arrow::field("v0", arrow::float64())),
-                                           DataField(7, arrow::field("v1", arrow::boolean())),
-                                           DataField(4, arrow::field("s0", arrow::utf8()))};
-    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(value_fields);
-
-    auto projection = MergeFileSplitRead::CreateProjection(raw_read_schema, value_schema);
-    std::vector<int32_t> expected_projection = {1, 2, 3, 4, 5};
-    ASSERT_EQ(projection, expected_projection);
-}
-
 TEST_P(MergeFileSplitReadTest, TestSimple) {
     std::string path =
         paimon::test::GetDataDir() + "/parquet/pk_table_with_mor.db/pk_table_with_mor";

@@ -30,6 +30,11 @@ Result<std::unique_ptr<FileFormat>> AvroFileFormatFactory::Create(
     return std::make_unique<AvroFileFormat>(options);
 }
 
+static __attribute__((constructor)) void AvroFileFormatFactoryRegisterLogicalTypes() {
+    ::avro::CustomLogicalTypeRegistry::instance().registerType(
+        "map", [](const std::string&) { return std::make_shared<MapLogicalType>(); });
+}
+
 REGISTER_PAIMON_FACTORY(AvroFileFormatFactory);
 
 }  // namespace paimon::avro

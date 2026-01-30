@@ -17,12 +17,14 @@
 #pragma once
 
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
 #include "avro/DataFile.hh"
-#include "paimon/format/avro/avro_record_converter.h"
+#include "paimon/format/avro/avro_direct_decoder.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/metrics.h"
 #include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 
@@ -31,7 +33,7 @@ namespace paimon::avro {
 class AvroFileBatchReader : public FileBatchReader {
  public:
     static Result<std::unique_ptr<AvroFileBatchReader>> Create(
-        std::unique_ptr<::avro::DataFileReader<::avro::GenericDatum>>&& reader, int32_t batch_size,
+        const std::shared_ptr<InputStream>& input_stream, int32_t batch_size,
         const std::shared_ptr<MemoryPool>& pool);
 
     ~AvroFileBatchReader() override;
@@ -44,8 +46,7 @@ class AvroFileBatchReader : public FileBatchReader {
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
     uint64_t GetPreviousBatchFirstRowNumber() const override {
-        assert(false);
-        return -1;
+        return previous_first_row_;
     }
 
     uint64_t GetNumberOfRows() const override {
@@ -54,8 +55,7 @@ class AvroFileBatchReader : public FileBatchReader {
     }
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
-        assert(false);
-        return nullptr;
+        return metrics_;
     }
 
     void Close() override {
@@ -69,14 +69,35 @@ class AvroFileBatchReader : public FileBatchReader {
  private:
     void DoClose();
 
-    AvroFileBatchReader(std::unique_ptr<::avro::DataFileReader<::avro::GenericDatum>>&& reader,
-                        std::unique_ptr<AvroRecordConverter>&& record_converter,
-                        int32_t batch_size);
+    static Result<std::unique_ptr<::avro::DataFileReaderBase>> CreateDataFileReader(
+        const std::shared_ptr<InputStream>& input_stream, const std::shared_ptr<MemoryPool>& pool);
 
-    std::unique_ptr<::avro::DataFileReader<::avro::GenericDatum>> reader_;
-    std::unique_ptr<AvroRecordConverter> record_converter_;
+    static Result<std::set<size_t>> CalculateReadFieldsProjection(
+        const std::shared_ptr<::arrow::Schema>& file_schema, const arrow::FieldVector& read_fields);
+
+    AvroFileBatchReader(const std::shared_ptr<InputStream>& input_stream,
+                        const std::shared_ptr<::arrow::DataType>& file_data_type,
+                        std::unique_ptr<::avro::DataFileReaderBase>&& reader,
+                        std::unique_ptr<arrow::ArrayBuilder>&& array_builder,
+                        std::unique_ptr<arrow::MemoryPool>&& arrow_pool, int32_t batch_size,
+                        const std::shared_ptr<MemoryPool>& pool);
+
+    static constexpr size_t BUFFER_SIZE = 1024 * 1024;  // 1M
+
+    std::shared_ptr<MemoryPool> pool_;
+    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<InputStream> input_stream_;
+    std::shared_ptr<::arrow::DataType> file_data_type_;
+    std::unique_ptr<::avro::DataFileReaderBase> reader_;
+    std::unique_ptr<arrow::ArrayBuilder> array_builder_;
+    std::optional<std::set<size_t>> read_fields_projection_;
+    uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
+    uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     const int32_t batch_size_;
     bool close_ = false;
+    std::shared_ptr<Metrics> metrics_;
+    // Decode context for reusing scratch buffers
+    AvroDirectDecoder::DecodeContext decode_context_;
 };
 
 }  // namespace paimon::avro

@@ -147,7 +147,9 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReade
         // lance do not support stream build with input stream
         return reader_builder->Build(data_file_path);
     }
-    if (context_->EnablePrefetch() && file_format_identifier != "blob") {
+    // TODO(zhanyu.fyh): orc format support prefetch
+    if (context_->EnablePrefetch() && file_format_identifier != "blob" &&
+        file_format_identifier != "avro") {
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<PrefetchFileBatchReaderImpl> prefetch_reader,
             PrefetchFileBatchReaderImpl::Create(

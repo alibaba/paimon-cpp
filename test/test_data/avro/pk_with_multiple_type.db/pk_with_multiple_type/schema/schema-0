@@ -1,0 +1,81 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "BOOLEAN"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "TINYINT"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "SMALLINT NOT NULL"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : "INT"
+  }, {
+    "id" : 4,
+    "name" : "f4",
+    "type" : "BIGINT"
+  }, {
+    "id" : 5,
+    "name" : "f5",
+    "type" : "FLOAT"
+  }, {
+    "id" : 6,
+    "name" : "f6",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 7,
+    "name" : "f7",
+    "type" : "STRING NOT NULL"
+  }, {
+    "id" : 8,
+    "name" : "f8",
+    "type" : "BYTES"
+  }, {
+    "id" : 9,
+    "name" : "f9",
+    "type" : "DATE"
+  }, {
+    "id" : 10,
+    "name" : "f10",
+    "type" : "DECIMAL(5, 2)"
+  }, {
+    "id" : 11,
+    "name" : "f11",
+    "type" : {
+      "type" : "ROW",
+      "fields" : [ {
+        "id" : 12,
+        "name" : "f0",
+        "type" : {
+          "type" : "MAP",
+          "key" : "STRING",
+          "value" : "INT"
+        }
+      }, {
+        "id" : 13,
+        "name" : "f1",
+        "type" : {
+          "type" : "ARRAY",
+          "element" : "INT"
+        }
+      } ]
+    }
+  } ],
+  "highestFieldId" : 13,
+  "partitionKeys" : [ "f1" ],
+  "primaryKeys" : [ "f2", "f7" ],
+  "options" : {
+    "bucket" : "1",
+    "bucket-key" : "f2",
+    "manifest.format" : "avro",
+    "file.format" : "avro"
+  },
+  "timeMillis" : 1768206714821
+}
