@@ -434,7 +434,7 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
 #endif
 
 TEST_P(GlobalIndexTest, TestScanIndex) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
 
@@ -624,7 +624,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
 
@@ -679,7 +679,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
 
@@ -711,7 +711,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshotWithNoIndex) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
 
@@ -772,7 +772,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
 }
 
 TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
 
@@ -836,7 +836,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
 }
 
 TEST_P(GlobalIndexTest, TestScanUnregisteredIndex) {
-    if (file_format_ == "lance") {
+    if (file_format_ == "lance" || file_format_ == "avro") {
         return;
     }
     auto factory_creator = FactoryCreator::GetInstance();
@@ -2191,6 +2191,10 @@ std::vector<ParamType> GetTestValuesForGlobalIndexTest() {
 #ifdef PAIMON_ENABLE_LANCE
     values.emplace_back("lance", false);
     values.emplace_back("lance", true);
+#endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro", false);
+    values.emplace_back("avro", true);
 #endif
     return values;
 }
