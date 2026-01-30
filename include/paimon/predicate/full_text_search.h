@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "paimon/predicate/predicate.h"
+#include "paimon/utils/roaring_bitmap64.h"
 #include "paimon/visibility.h"
-
 namespace paimon {
 /// A configuration structure for full-text search operations.
 struct PAIMON_EXPORT FullTextSearch {

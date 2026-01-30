@@ -42,7 +42,7 @@ class BitmapDocIdSetIterator : public Lucene::DocIdSetIterator {
         if (iter_ == ids_->End()) {
             return Lucene::DocIdSetIterator::NO_MORE_DOCS;
         }
-        int32_t id = static_cast<int32_t>(*iter_);
+        auto id = static_cast<int32_t>(*iter_);
         ++iter_;
         return id;
     }
