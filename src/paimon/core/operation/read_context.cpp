@@ -230,6 +230,9 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         return Status::Invalid(
             "prefetch batch count should be greater than or equal to prefetch max parallel num");
     }
+    if (impl_->enable_predicate_filter_ && impl_->predicate_ == nullptr) {
+        return Status::Invalid("predicate should not be nullptr when predicate filter is enabled");
+    }
     if (!impl_->executor_) {
         // If the user do not set executor, create default executor by prefetch batch count
         uint32_t thread_count = impl_->enable_prefetch_ ? impl_->prefetch_max_parallel_num_ : 1;
