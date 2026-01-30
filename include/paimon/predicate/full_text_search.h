@@ -23,8 +23,8 @@
 #include <vector>
 
 #include "paimon/predicate/predicate.h"
+#include "paimon/utils/roaring_bitmap64.h"
 #include "paimon/visibility.h"
-
 namespace paimon {
 /// A configuration structure for full-text search operations.
 struct PAIMON_EXPORT FullTextSearch {
@@ -44,14 +44,20 @@ struct PAIMON_EXPORT FullTextSearch {
         UNKNOWN = 128
     };
 
-    FullTextSearch(const std::string& _field_name, int32_t _limit, const std::string& _query,
-                   const SearchType& _search_type)
-        : field_name(_field_name), limit(_limit), query(_query), search_type(_search_type) {}
+    FullTextSearch(const std::string& _field_name, std::optional<int32_t> _limit,
+                   const std::string& _query, const SearchType& _search_type,
+                   const std::optional<RoaringBitmap64>& _pre_filter)
+        : field_name(_field_name),
+          limit(_limit),
+          query(_query),
+          search_type(_search_type),
+          pre_filter(_pre_filter) {}
 
     /// Name of the field to search within (must be a full-text indexed field).
     std::string field_name;
-    /// Maximum number of documents to return. Ordered by scores.
-    int32_t limit;
+    /// Maximum number of documents to return. If set, limit ordered by top scores. Otherwise, no
+    /// score return.
+    std::optional<int32_t> limit;
     /// The query string to search for. The interpretation depends on search_type:
     ///
     /// - For MATCH_ALL/MATCH_ANY: keywords are split into terms using the **same analyzer as
@@ -70,5 +76,9 @@ struct PAIMON_EXPORT FullTextSearch {
     std::string query;
     /// Type of search to perform.
     SearchType search_type;
+    /// A pre-filter based on **local row IDs**, implemented by leveraging another global index.
+    /// Only rows whose local row ID is present in `pre_filter` will be included during search.
+    /// If not set, all rows will be included.
+    std::optional<RoaringBitmap64> pre_filter;
 };
 }  // namespace paimon

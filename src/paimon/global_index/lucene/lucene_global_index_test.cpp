@@ -100,16 +100,21 @@ class LuceneGlobalIndexTest : public ::testing::Test,
                                           pool_);
     }
 
-    void CheckResult(const std::shared_ptr<VectorSearchGlobalIndexResult>& result,
+    void CheckResult(const std::shared_ptr<GlobalIndexResult>& result,
                      const std::vector<int64_t>& expected_ids) const {
-        auto typed_result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result);
-        ASSERT_TRUE(typed_result);
-        ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
+        const RoaringBitmap64* bitmap = nullptr;
+        if (auto vector_search_result =
+                std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result)) {
+            ASSERT_OK_AND_ASSIGN(bitmap, vector_search_result->GetBitmap());
+            ASSERT_EQ(vector_search_result->GetScores().size(), expected_ids.size());
+        } else if (auto bitmap_result =
+                       std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
+            ASSERT_OK_AND_ASSIGN(bitmap, bitmap_result->GetBitmap());
+        }
         ASSERT_TRUE(bitmap);
-        ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap64::From(expected_ids))
-            << "result=" << (typed_result->GetBitmap().value())->ToString()
+        ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected_ids))
+            << "result=" << bitmap->ToString()
             << ", expected=" << RoaringBitmap64::From(expected_ids).ToString();
-        ASSERT_EQ(typed_result->scores_.size(), expected_ids.size());
     }
 
  private:
@@ -157,14 +162,117 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
         ASSERT_OK_AND_ASSIGN(auto result,
                              lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                                  "f0",
-                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL)));
+                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/std::nullopt)));
         CheckResult(result, {2l, 1l, 0l});
     }
     {
         ASSERT_OK_AND_ASSIGN(auto result,
                              lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                                  "f0",
-                                 /*limit=*/1, "document", FullTextSearch::SearchType::MATCH_ANY)));
+                                 /*limit=*/1, "document", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {2l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            auto result, lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                             "f0",
+                             /*limit=*/10, "test document", FullTextSearch::SearchType::MATCH_ALL,
+                             /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {2l, 0l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "test new", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {1l, 0l, 2l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "test document", FullTextSearch::SearchType::PHRASE,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "unordered", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {3l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "unorder", FullTextSearch::SearchType::PREFIX,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {3l});
+    }
+    // test wildcard query
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*order*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {3l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {3l});
+    }
+    // test filter
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/RoaringBitmap64::From({0l, 1l}))));
+        CheckResult(result, {0l, 1l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/RoaringBitmap64::From({2l, 100l}))));
+        CheckResult(result, {2l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/RoaringBitmap64::From({20l, 100l}))));
+        CheckResult(result, {});
+    }
+    // test no limit
+    {
+        ASSERT_OK_AND_ASSIGN(
+            auto result,
+            lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                "f0",
+                /*limit=*/std::nullopt, "document", FullTextSearch::SearchType::MATCH_ALL,
+                /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l, 1l, 2l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            auto result,
+            lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                "f0",
+                /*limit=*/std::nullopt, "document", FullTextSearch::SearchType::MATCH_ALL,
+                /*pre_filter=*/RoaringBitmap64::From({2l}))));
         CheckResult(result, {2l});
     }
     {
@@ -172,50 +280,9 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
             auto result,
             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                 "f0",
-                /*limit=*/10, "test document", FullTextSearch::SearchType::MATCH_ALL)));
-        CheckResult(result, {2l, 0l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                                 "f0",
-                                 /*limit=*/10, "test new", FullTextSearch::SearchType::MATCH_ANY)));
-        CheckResult(result, {1l, 0l, 2l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(
-            auto result, lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                             "f0",
-                             /*limit=*/10, "test document", FullTextSearch::SearchType::PHRASE)));
-        CheckResult(result, {0l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(
-            auto result, lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                             "f0",
-                             /*limit=*/10, "unordered", FullTextSearch::SearchType::MATCH_ALL)));
-        CheckResult(result, {3l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                                 "f0",
-                                 /*limit=*/10, "unorder", FullTextSearch::SearchType::PREFIX)));
-        CheckResult(result, {3l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                                 "f0",
-                                 /*limit=*/10, "*order*", FullTextSearch::SearchType::WILDCARD)));
-        CheckResult(result, {3l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto result,
-                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
-                                 "f0",
-                                 /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD)));
-        CheckResult(result, {3l});
+                /*limit=*/std::nullopt, "document test", FullTextSearch::SearchType::MATCH_ALL,
+                /*pre_filter=*/RoaringBitmap64::From({1l, 2l, 3l, 100l}))));
+        CheckResult(result, {2l});
     }
 }
 

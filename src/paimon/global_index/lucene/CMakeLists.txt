@@ -41,6 +41,7 @@ if(PAIMON_ENABLE_LUCENE)
                         lucene_api_test.cpp
                         lucene_directory_test.cpp
                         lucene_global_index_test.cpp
+                        lucene_filter_test.cpp
                         EXTRA_INCLUDES
                         ${LUCENE_INCLUDE_DIR}
                         STATIC_LINK_LIBS

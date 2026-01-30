@@ -22,7 +22,67 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::lucene::test {
-TEST(LuceneInterfaceTest, TestSimple) {
+class LuceneInterfaceTest : public ::testing::Test {
+ public:
+    void SetUp() override {}
+    void TearDown() override {}
+
+    class TestDocIdSetIterator : public Lucene::DocIdSetIterator {
+     public:
+        explicit TestDocIdSetIterator(const std::vector<int32_t>& ids)
+            : Lucene::DocIdSetIterator(), ids_(ids) {}
+
+        int32_t advance(int32_t target) override {
+            int32_t doc_id = nextDoc();
+            while (doc_id < target) {
+                doc_id = nextDoc();
+            }
+            return doc_id;
+        }
+        int32_t docID() override {
+            return ids_[cursor_];
+        }
+        int32_t nextDoc() override {
+            if (cursor_ == ids_.size()) {
+                return Lucene::DocIdSetIterator::NO_MORE_DOCS;
+            }
+            return ids_[cursor_++];
+        }
+
+     private:
+        size_t cursor_ = 0;
+        std::vector<int32_t> ids_;
+    };
+
+    class TestDocIdSet : public Lucene::DocIdSet {
+     public:
+        explicit TestDocIdSet(const std::vector<int32_t>& ids) : DocIdSet(), ids_(ids) {}
+
+        Lucene::DocIdSetIteratorPtr iterator() override {
+            return Lucene::newLucene<TestDocIdSetIterator>(ids_);
+        }
+        bool isCacheable() override {
+            return true;
+        }
+
+     private:
+        std::vector<int32_t> ids_;
+    };
+
+    class TestFilter : public Lucene::Filter {
+     public:
+        explicit TestFilter(const std::vector<int32_t>& ids) : ids_(ids) {}
+
+        Lucene::DocIdSetPtr getDocIdSet(const Lucene::IndexReaderPtr& reader) override {
+            return Lucene::newLucene<TestDocIdSet>(ids_);
+        }
+
+     private:
+        std::vector<int32_t> ids_;
+    };
+};
+
+TEST_F(LuceneInterfaceTest, TestSimple) {
     auto dir = paimon::test::UniqueTestDirectory::Create("local");
     std::string index_path = dir->Str() + "/lucene_test";
     auto lucene_dir = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(index_path),
@@ -68,10 +128,17 @@ TEST(LuceneInterfaceTest, TestSimple) {
     parser->setAllowLeadingWildcard(true);
 
     auto search = [&](const std::wstring& query_str, int32_t limit,
+                      const std::optional<std::vector<int32_t>> selected_id,
                       const std::vector<int32_t>& expected_doc_id_vec,
                       const std::vector<std::wstring>& expected_doc_id_content_vec) {
         Lucene::QueryPtr query = parser->parse(query_str);
-        Lucene::TopDocsPtr results = searcher->search(query, limit);
+        Lucene::TopDocsPtr results;
+        if (selected_id) {
+            Lucene::FilterPtr lucene_filter = Lucene::newLucene<TestFilter>(selected_id.value());
+            results = searcher->search(query, lucene_filter, limit);
+        } else {
+            results = searcher->search(query, limit);
+        }
         ASSERT_EQ(expected_doc_id_vec.size(), results->scoreDocs.size());
 
         std::vector<int32_t> resule_doc_id_vec;
@@ -86,18 +153,29 @@ TEST(LuceneInterfaceTest, TestSimple) {
     };
 
     // result is sorted by tf-idf score
-    search(L"document", /*limit=*/10, std::vector<int32_t>({2, 1, 0}),
+    search(L"document", /*limit=*/10, /*selected_id=*/std::nullopt, std::vector<int32_t>({2, 1, 0}),
            std::vector<std::wstring>({L"2", L"1", L"0"}));
-    search(L"document", /*limit=*/1, std::vector<int32_t>({2}), std::vector<std::wstring>({L"2"}));
-    search(L"test AND document", /*limit=*/10, std::vector<int32_t>({2, 0}),
-           std::vector<std::wstring>({L"2", L"0"}));
-    search(L"test OR new", /*limit=*/10, std::vector<int32_t>({1, 0, 2}),
-           std::vector<std::wstring>({L"1", L"0", L"2"}));
-    search(L"\"test document\"", /*limit=*/10, std::vector<int32_t>({0}),
-           std::vector<std::wstring>({L"0"}));
-    search(L"unordered", /*limit=*/10, std::vector<int32_t>({3}),
+    search(L"document", /*limit=*/1, /*selected_id=*/std::nullopt, std::vector<int32_t>({2}),
+           std::vector<std::wstring>({L"2"}));
+    search(L"test AND document", /*limit=*/10, /*selected_id=*/std::nullopt,
+           std::vector<int32_t>({2, 0}), std::vector<std::wstring>({L"2", L"0"}));
+    search(L"test OR new", /*limit=*/10, /*selected_id=*/std::nullopt,
+           std::vector<int32_t>({1, 0, 2}), std::vector<std::wstring>({L"1", L"0", L"2"}));
+    search(L"\"test document\"", /*limit=*/10, /*selected_id=*/std::nullopt,
+           std::vector<int32_t>({0}), std::vector<std::wstring>({L"0"}));
+    search(L"unordered", /*limit=*/10, /*selected_id=*/std::nullopt, std::vector<int32_t>({3}),
            std::vector<std::wstring>({L"5"}));
-    search(L"*orDer*", /*limit=*/10, std::vector<int32_t>({3}), std::vector<std::wstring>({L"5"}));
+    search(L"*orDer*", /*limit=*/10, /*selected_id=*/std::nullopt, std::vector<int32_t>({3}),
+           std::vector<std::wstring>({L"5"}));
+
+    // test filter
+    search(L"document", /*limit=*/10, /*selected_id=*/std::vector<int32_t>({0, 1}),
+           std::vector<int32_t>({1, 0}), std::vector<std::wstring>({L"1", L"0"}));
+    search(L"document OR unordered", /*limit=*/10,
+           /*selected_id=*/std::vector<int32_t>({0, 1, 3}), std::vector<int32_t>({3, 1, 0}),
+           std::vector<std::wstring>({L"5", L"1", L"0"}));
+    search(L"unordered", /*limit=*/10, /*selected_id=*/std::vector<int32_t>({0}),
+           std::vector<int32_t>(), std::vector<std::wstring>());
 
     reader->close();
     lucene_dir->close();
