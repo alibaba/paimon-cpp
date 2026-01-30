@@ -164,7 +164,7 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
             "LuceneGlobalIndexReader is not supposed to handle vector search query");
     }
 
-    Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitFullTextSearch(
+    Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search);
 
     bool IsThreadSafe() const override {

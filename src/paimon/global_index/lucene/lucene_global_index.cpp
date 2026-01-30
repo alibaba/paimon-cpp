@@ -25,8 +25,10 @@
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/common/utils/uuid.h"
 #include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/lucene/lucene_collector.h"
 #include "paimon/global_index/lucene/lucene_defs.h"
 #include "paimon/global_index/lucene/lucene_directory.h"
+#include "paimon/global_index/lucene/lucene_filter.h"
 #include "paimon/global_index/lucene/lucene_utils.h"
 #include "paimon/io/data_input_stream.h"
 
@@ -331,7 +333,7 @@ std::vector<std::wstring> LuceneGlobalIndexReader::TokenizeQuery(const std::stri
     return wterms;
 }
 
-Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuceneGlobalIndexReader::VisitFullTextSearch(
+Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
     try {
         Lucene::QueryPtr query;
@@ -381,32 +383,45 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuceneGlobalIndexReader::
                     fmt::format("Not support for FullTextSearch SearchType {}",
                                 static_cast<int32_t>(full_text_search->search_type)));
         }
+        Lucene::FilterPtr filter =
+            full_text_search->pre_filter
+                ? Lucene::newLucene<LuceneFilter>(&(full_text_search->pre_filter.value()))
+                : Lucene::FilterPtr();
 
-        Lucene::TopDocsPtr results = searcher_->search(query, full_text_search->limit);
+        if (full_text_search->limit) {
+            Lucene::TopDocsPtr results =
+                searcher_->search(query, filter, full_text_search->limit.value());
 
-        // prepare BitmapVectorSearchGlobalIndexResult
-        std::map<int64_t, float> id_to_score;
-        for (auto score_doc : results->scoreDocs) {
-            Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
-            std::string row_id_str =
-                LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));
-            std::optional<int32_t> row_id = StringUtils::StringToValue<int32_t>(row_id_str);
-            if (!row_id) {
-                return Status::Invalid(fmt::format("parse row id str {} to int failed"),
-                                       row_id_str);
+            // prepare BitmapVectorSearchGlobalIndexResult
+            std::map<int64_t, float> id_to_score;
+            for (auto score_doc : results->scoreDocs) {
+                Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
+                std::string row_id_str =
+                    LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));
+                std::optional<int32_t> row_id = StringUtils::StringToValue<int32_t>(row_id_str);
+                if (!row_id) {
+                    return Status::Invalid(
+                        fmt::format("parse row id str {} to int failed", row_id_str));
+                }
+                id_to_score[static_cast<int64_t>(row_id.value())] =
+                    static_cast<float>(score_doc->score);
             }
-            id_to_score[static_cast<int64_t>(row_id.value())] =
-                static_cast<float>(score_doc->score);
+            RoaringBitmap64 bitmap;
+            std::vector<float> scores;
+            scores.reserve(id_to_score.size());
+            for (const auto& [id, score] : id_to_score) {
+                bitmap.Add(id);
+                scores.push_back(score);
+            }
+            return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                         std::move(scores));
+        } else {
+            // with no limit & no score
+            auto collector = Lucene::newLucene<LuceneCollector>();
+            searcher_->search(query, filter, collector);
+            return std::make_shared<BitmapGlobalIndexResult>(
+                [collector]() -> Result<RoaringBitmap64> { return collector->GetBitmap(); });
         }
-        RoaringBitmap64 bitmap;
-        std::vector<float> scores;
-        scores.reserve(id_to_score.size());
-        for (const auto& [id, score] : id_to_score) {
-            bitmap.Add(id);
-            scores.push_back(score);
-        }
-        return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
-                                                                     std::move(scores));
     } catch (const std::exception& e) {
         return Status::Invalid(fmt::format("visit term query failed, with {} error.", e.what()));
     } catch (...) {
