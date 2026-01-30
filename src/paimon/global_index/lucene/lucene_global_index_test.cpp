@@ -106,7 +106,7 @@ class LuceneGlobalIndexTest : public ::testing::Test,
         if (auto vector_search_result =
                 std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result)) {
             ASSERT_OK_AND_ASSIGN(bitmap, vector_search_result->GetBitmap());
-            ASSERT_EQ(vector_search_result->scores_.size(), expected_ids.size());
+            ASSERT_EQ(vector_search_result->GetScores().size(), expected_ids.size());
         } else if (auto bitmap_result =
                        std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
             ASSERT_OK_AND_ASSIGN(bitmap, bitmap_result->GetBitmap());

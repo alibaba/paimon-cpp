@@ -39,6 +39,6 @@ class LuceneCollector : public Lucene::Collector {
 
  private:
     RoaringBitmap64 bitmap_;
-    int64_t doc_base_;
+    int64_t doc_base_ = 0;
 };
 }  // namespace paimon::lucene

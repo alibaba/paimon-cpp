@@ -139,7 +139,7 @@ TEST_F(LuceneInterfaceTest, TestSimple) {
         } else {
             results = searcher->search(query, limit);
         }
-        // ASSERT_EQ(expected_doc_id_vec.size(), results->scoreDocs.size());
+        ASSERT_EQ(expected_doc_id_vec.size(), results->scoreDocs.size());
 
         std::vector<int32_t> resule_doc_id_vec;
         std::vector<std::wstring> result_doc_id_content_vec;
@@ -169,12 +169,12 @@ TEST_F(LuceneInterfaceTest, TestSimple) {
            std::vector<std::wstring>({L"5"}));
 
     // test filter
-    search(L"document", /*limit=*/10, /*selected_id=*/std::optional<std::vector<int32_t>>({0, 1}),
+    search(L"document", /*limit=*/10, /*selected_id=*/std::vector<int32_t>({0, 1}),
            std::vector<int32_t>({1, 0}), std::vector<std::wstring>({L"1", L"0"}));
     search(L"document OR unordered", /*limit=*/10,
-           /*selected_id=*/std::optional<std::vector<int32_t>>({0, 1, 3}),
-           std::vector<int32_t>({3, 1, 0}), std::vector<std::wstring>({L"5", L"1", L"0"}));
-    search(L"unordered", /*limit=*/10, /*selected_id=*/std::optional<std::vector<int32_t>>({0}),
+           /*selected_id=*/std::vector<int32_t>({0, 1, 3}), std::vector<int32_t>({3, 1, 0}),
+           std::vector<std::wstring>({L"5", L"1", L"0"}));
+    search(L"unordered", /*limit=*/10, /*selected_id=*/std::vector<int32_t>({0}),
            std::vector<int32_t>(), std::vector<std::wstring>());
 
     reader->close();
