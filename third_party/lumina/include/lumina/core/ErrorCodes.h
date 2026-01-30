@@ -45,16 +45,4 @@ enum class ErrorCode : int32_t {
 
 constexpr int32_t ToInt(ErrorCode c) noexcept { return static_cast<int32_t>(c); }
 
-constexpr bool IsRetryable(ErrorCode c) noexcept
-{
-    switch (c) {
-    case ErrorCode::Unavailable:
-    case ErrorCode::Timeout:
-    case ErrorCode::ResourceExhausted:
-        return true;
-    default:
-        return false;
-    }
-}
-
 }} // namespace lumina::core::v1
