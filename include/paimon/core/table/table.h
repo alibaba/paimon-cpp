@@ -38,7 +38,7 @@ class PAIMON_EXPORT Table {
           const std::string& table_name)
         : schema_(schema), database_(database), table_name_(table_name) {}
 
-    virtual ~Table() {}
+    virtual ~Table() = default;
 
     /// A name to identify this table.
     virtual std::string Name() const {
