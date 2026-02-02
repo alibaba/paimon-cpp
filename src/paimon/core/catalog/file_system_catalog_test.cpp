@@ -190,6 +190,17 @@ TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     ASSERT_OK_AND_ASSIGN(auto arrow_schema, table_schema->GetArrowSchema());
     auto loaded_schema = arrow::ImportSchema(arrow_schema.get()).ValueOrDie();
     ASSERT_TRUE(typed_schema.Equals(loaded_schema));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Table> table, catalog.GetTable(Identifier("db1", "tbl1")));
+    ASSERT_OK_AND_ASSIGN(auto arrow_schema_from_get_table, table->LatestSchema()->GetArrowSchema());
+    auto schema_from_get_table =
+        arrow::ImportSchema(arrow_schema_from_get_table.get()).ValueOrDie();
+    ASSERT_TRUE(typed_schema.Equals(schema_from_get_table));
+    ASSERT_EQ(table->FullName(), "db1.tbl1");
+
+    ASSERT_NOK_WITH_MSG(catalog.GetTable(Identifier("db1", "table_xaxa")),
+                        "Identifier{database='db1', table='table_xaxa'} not exist");
+
     ArrowSchemaRelease(&schema);
 }
 

@@ -240,4 +240,20 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     return std::static_pointer_cast<Schema>(*latest_schema);
 }
 
+Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& identifier) const {
+    std::string table_path = GetTableLocation(identifier);
+    PAIMON_ASSIGN_OR_RAISE(bool exist, fs_->Exists(table_path));
+    if (!exist) {
+        return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                           TableSchemaExists(identifier));
+    if (!latest_schema) {
+        return Status::NotExist(
+            fmt::format("load table schema for {} failed", identifier.ToString()));
+    }
+    auto schema = std::static_pointer_cast<Schema>(*latest_schema);
+    return std::make_shared<Table>(schema, identifier.GetDatabaseName(), identifier.GetTableName());
+}
+
 }  // namespace paimon

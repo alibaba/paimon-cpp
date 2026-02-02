@@ -34,22 +34,37 @@ namespace paimon {
 /// A table provides basic abstraction for table type.
 class PAIMON_EXPORT Table {
  public:
+    Table(const std::shared_ptr<Schema>& schema, const std::string& database,
+          const std::string& table_name)
+        : schema_(schema), database_(database), table_name_(table_name) {}
+
+    virtual ~Table() {}
+
     /// A name to identify this table.
-    virtual std::string Name() = 0;
+    virtual std::string Name() const {
+        return database_ + "." + table_name_;
+    }
 
     /// Full name of the table, default is database.tableName.
-    virtual std::string FullName() {
+    virtual std::string FullName() const {
         return Name();
     }
 
     /// UUID of the table, metastore can provide the true UUID of this table, default is the full
     /// name.
-    virtual std::string Uuid() {
+    virtual std::string Uuid() const {
         return FullName();
     }
 
     /// Loads the latest schema of table.
-    virtual std::shared_ptr<Schema> LatestSchema() = 0;
+    virtual std::shared_ptr<Schema> LatestSchema() {
+        return schema_;
+    }
+
+ private:
+    std::shared_ptr<Schema> schema_;
+    std::string database_;
+    std::string table_name_;
 };
 
 }  // namespace paimon
