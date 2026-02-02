@@ -15,6 +15,56 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# ----------------------------------------------------------------------
+# Dependency resolution control
+
+set(PAIMON_THIRDPARTY_DEPENDENCIES
+    Arrow
+    Snappy
+    zstd
+    lz4
+    zlib
+    fmt
+    glog
+    RapidJSON
+    tbb
+    Protobuf
+    avro
+    orc)
+
+message(STATUS "Using ${PAIMON_DEPENDENCY_SOURCE} approach to find dependencies")
+
+if(PAIMON_DEPENDENCY_SOURCE STREQUAL "CONDA")
+    if(MSVC)
+        set(PAIMON_PACKAGE_PREFIX "$ENV{CONDA_PREFIX}/Library")
+    else()
+        set(PAIMON_PACKAGE_PREFIX $ENV{CONDA_PREFIX})
+    endif()
+    set(PAIMON_ACTUAL_DEPENDENCY_SOURCE "SYSTEM")
+    message(STATUS "Using CONDA_PREFIX for PAIMON_PACKAGE_PREFIX: ${PAIMON_PACKAGE_PREFIX}")
+else()
+    set(PAIMON_ACTUAL_DEPENDENCY_SOURCE "${PAIMON_DEPENDENCY_SOURCE}")
+endif()
+
+if(PAIMON_PACKAGE_PREFIX)
+    message(STATUS "Setting (unset) dependency *_ROOT variables: ${PAIMON_PACKAGE_PREFIX}")
+    set(ENV{PKG_CONFIG_PATH} "${PAIMON_PACKAGE_PREFIX}/lib/pkgconfig/")
+endif()
+
+# For each dependency, set dependency source to global default, if unset
+foreach(DEPENDENCY ${PAIMON_THIRDPARTY_DEPENDENCIES})
+    if("${${DEPENDENCY}_SOURCE}" STREQUAL "")
+        set(${DEPENDENCY}_SOURCE ${PAIMON_ACTUAL_DEPENDENCY_SOURCE})
+        # If no ROOT was supplied and we have a global prefix, use it
+        if(NOT ${DEPENDENCY}_ROOT AND PAIMON_PACKAGE_PREFIX)
+            set(${DEPENDENCY}_ROOT ${PAIMON_PACKAGE_PREFIX})
+        endif()
+    endif()
+endforeach()
+
+# ----------------------------------------------------------------------
+# Thirdparty build configuration
+
 set(THIRDPARTY_LOG_OPTIONS
     LOG_CONFIGURE
     1
@@ -286,6 +336,92 @@ set(EP_COMMON_CMAKE_ARGS
     -DCMAKE_CXX_FLAGS=${EP_CXX_FLAGS}
     -DCMAKE_C_FLAGS=${EP_C_FLAGS}
     -DCMAKE_INSTALL_LIBDIR=lib)
+
+# ----------------------------------------------------------------------
+# Dependency resolution macros
+
+macro(build_dependency DEPENDENCY_NAME)
+    if("${DEPENDENCY_NAME}" STREQUAL "Snappy")
+        build_snappy()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "zstd")
+        build_zstd()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "lz4")
+        build_lz4()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "zlib")
+        build_zlib()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "fmt")
+        build_fmt()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "glog")
+        build_glog()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "RapidJSON")
+        build_rapidjson()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
+        build_protobuf()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "avro")
+        build_avro()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "orc")
+        build_orc()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Arrow")
+        build_arrow()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "tbb")
+        build_tbb()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Boost")
+        build_boost()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "lucene")
+        build_lucene()
+    else()
+        message(FATAL_ERROR "Unknown thirdparty dependency to build: ${DEPENDENCY_NAME}")
+    endif()
+endmacro()
+
+macro(resolve_dependency DEPENDENCY_NAME)
+    set(options)
+    set(one_value_args
+        HAVE_ALT
+        REQUIRED_VERSION
+        USE_CONFIG)
+    set(multi_value_args PC_PACKAGE_NAMES)
+    cmake_parse_arguments(ARG
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi_value_args}"
+                          ${ARGN})
+    if(ARG_UNPARSED_ARGUMENTS)
+        message(SEND_ERROR "Error: unrecognized arguments: ${ARG_UNPARSED_ARGUMENTS}")
+    endif()
+
+    if(ARG_HAVE_ALT)
+        set(PACKAGE_NAME "${DEPENDENCY_NAME}Alt")
+    else()
+        set(PACKAGE_NAME ${DEPENDENCY_NAME})
+    endif()
+
+    set(FIND_PACKAGE_ARGUMENTS ${PACKAGE_NAME})
+    if(ARG_REQUIRED_VERSION)
+        list(APPEND FIND_PACKAGE_ARGUMENTS ${ARG_REQUIRED_VERSION})
+    endif()
+    if(ARG_USE_CONFIG)
+        list(APPEND FIND_PACKAGE_ARGUMENTS CONFIG)
+    endif()
+
+    if(${DEPENDENCY_NAME}_SOURCE STREQUAL "AUTO")
+        find_package(${FIND_PACKAGE_ARGUMENTS})
+        if(${PACKAGE_NAME}_FOUND)
+            message(STATUS "Found ${DEPENDENCY_NAME} (system): ${${PACKAGE_NAME}_VERSION}")
+            set(${DEPENDENCY_NAME}_SOURCE "SYSTEM")
+        else()
+            message(STATUS "Building ${DEPENDENCY_NAME} from source")
+            build_dependency(${DEPENDENCY_NAME})
+            set(${DEPENDENCY_NAME}_SOURCE "BUNDLED")
+        endif()
+    elseif(${DEPENDENCY_NAME}_SOURCE STREQUAL "BUNDLED")
+        message(STATUS "Building ${DEPENDENCY_NAME} from source (forced)")
+        build_dependency(${DEPENDENCY_NAME})
+    elseif(${DEPENDENCY_NAME}_SOURCE STREQUAL "SYSTEM")
+        find_package(${FIND_PACKAGE_ARGUMENTS} REQUIRED)
+        message(STATUS "Found ${DEPENDENCY_NAME} (system): ${${PACKAGE_NAME}_VERSION}")
+    endif()
+endmacro()
 
 macro(build_lucene)
     message(STATUS "Building lucene from source")
@@ -1248,24 +1384,41 @@ macro(build_glog)
     endif()
 endmacro()
 
-build_fmt()
-build_rapidjson()
-build_snappy()
-build_zstd()
-build_zlib()
-build_lz4()
-build_arrow()
-build_tbb()
-build_glog()
+# ----------------------------------------------------------------------
+# Resolve all dependencies
+
+resolve_dependency(fmt)
+resolve_dependency(RapidJSON)
+
+resolve_dependency(Snappy
+                   HAVE_ALT TRUE)
+
+resolve_dependency(zstd
+                   HAVE_ALT TRUE
+                   REQUIRED_VERSION 1.4.0)
+
+resolve_dependency(lz4
+                   HAVE_ALT TRUE)
+
+resolve_dependency(zlib)
+
+resolve_dependency(glog
+                   HAVE_ALT TRUE)
+
+resolve_dependency(tbb)
+resolve_dependency(Arrow)
 
 if(PAIMON_ENABLE_AVRO)
-    build_avro()
+    resolve_dependency(avro)
 endif()
+
 if(PAIMON_ENABLE_ORC)
-    build_protobuf()
-    build_orc()
+    resolve_dependency(Protobuf)
+    resolve_dependency(orc)
 endif()
+
 if(PAIMON_ENABLE_JINDO)
+    # Jindo SDK still uses direct build as it's a precompiled package
     build_jindosdk_c()
     build_jindosdk_nextarch()
 endif()

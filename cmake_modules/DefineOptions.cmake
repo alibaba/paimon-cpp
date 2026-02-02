@@ -128,6 +128,53 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     define_option(PAIMON_USE_UBSAN "Enable Undefined Behaviour Sanitizer checks" OFF)
 
     #----------------------------------------------------------------------
+    set_option_category("Thirdparty dependencies")
+
+    if(NOT "$ENV{CONDA_PREFIX}" STREQUAL "")
+        set(PAIMON_DEPENDENCY_SOURCE_DEFAULT "CONDA")
+    else()
+        set(PAIMON_DEPENDENCY_SOURCE_DEFAULT "AUTO")
+    endif()
+
+    define_option_string(PAIMON_DEPENDENCY_SOURCE
+                         "Method to use for acquiring Paimon's build dependencies"
+                         "${PAIMON_DEPENDENCY_SOURCE_DEFAULT}"
+                         "AUTO"
+                         "BUNDLED"
+                         "SYSTEM"
+                         "CONDA"
+                         "VCPKG"
+                         "BREW")
+
+    define_option(PAIMON_VERBOSE_THIRDPARTY_BUILD
+                  "Show output from ExternalProjects rather than just logging to files"
+                  OFF)
+
+    define_option(PAIMON_DEPENDENCY_USE_SHARED
+                  "Link to shared libraries for dependencies where available"
+                  ON)
+
+    define_option(PAIMON_SNAPPY_USE_SHARED
+                  "Rely on Snappy shared libraries where relevant"
+                  ${PAIMON_DEPENDENCY_USE_SHARED})
+
+    define_option(PAIMON_ZSTD_USE_SHARED
+                  "Rely on zstd shared libraries where relevant"
+                  ${PAIMON_DEPENDENCY_USE_SHARED})
+
+    define_option(PAIMON_LZ4_USE_SHARED
+                  "Rely on lz4 shared libraries where relevant"
+                  ${PAIMON_DEPENDENCY_USE_SHARED})
+
+    define_option(PAIMON_ZLIB_USE_SHARED
+                  "Rely on zlib shared libraries where relevant"
+                  ${PAIMON_DEPENDENCY_USE_SHARED})
+
+    define_option(PAIMON_GLOG_USE_SHARED
+                  "Rely on glog shared libraries where relevant"
+                  ${PAIMON_DEPENDENCY_USE_SHARED})
+
+    #----------------------------------------------------------------------
     set_option_category("Advanced developer")
 
     define_option(PAIMON_EXTRA_ERROR_CONTEXT
