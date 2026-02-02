@@ -21,9 +21,13 @@
 #include <string>
 #include <vector>
 
+#include "paimon/catalog/database.h"
 #include "paimon/catalog/identifier.h"
+#include "paimon/core/partition/partition_statistics.h"
+#include "paimon/core/schema/table_schema.h"
+#include "paimon/core/table/table.h"
+#include "paimon/core/view/view.h"
 #include "paimon/result.h"
-#include "paimon/schema/schema.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
@@ -32,7 +36,6 @@ struct ArrowSchema;
 
 namespace paimon {
 class Identifier;
-
 /// This interface is responsible for reading and writing metadata such as database/table from a
 /// paimon catalog.
 class PAIMON_EXPORT Catalog {
@@ -98,6 +101,234 @@ class PAIMON_EXPORT Catalog {
     /// @return A result containing a vector of table names in the specified database, or an error
     /// status.
     virtual Result<std::vector<std::string>> ListTables(const std::string& db_name) const = 0;
+
+    /// Drops a database.
+    ///
+    /// @param name Name of the database to be dropped.
+    /// @param ignore_if_not_exists If true, no action is taken if the database does not exist.
+    /// @param cascade If true, drops all tables and functions in the database before dropping the
+    /// database.
+    /// @return A status indicating success or failure.
+    virtual Status DropDatabase(const std::string& name, bool ignore_if_not_exists, bool cascade) {
+        return Status::NotImplemented("DropDatabase not implemented");
+    }
+
+    /// Alters a database.
+    ///
+    /// @param name Name of the database to alter.
+    /// @param changes Properties to be changed.
+    /// @param ignore_if_not_exists If true, no action is taken if the database does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status AlterDatabase(const std::string& name,
+                                 const std::map<std::string, std::string>& changes,
+                                 bool ignore_if_not_exists) {
+        return Status::NotImplemented("AlterDatabase not implemented");
+    }
+
+    /// Gets a database.
+    ///
+    /// @param name Name of the database to get.
+    /// @return A result containing the database information, or an error status.
+    virtual Result<std::shared_ptr<Database>> GetDatabase(const std::string& name) const {
+        return Status::NotImplemented("GetDatabase not implemented");
+    }
+
+    /// Gets a table.
+    ///
+    /// @param identifier Identifier of the table to get.
+    /// @return A result containing the table, or an error status.
+    virtual Result<std::shared_ptr<Table>> GetTable(const Identifier& identifier) const {
+        return Status::NotImplemented("GetTable not implemented");
+    }
+
+    /// Gets a table by ID.
+    ///
+    /// @param table_id ID of the table to get.
+    /// @return A result containing the table, or an error status.
+    virtual Result<std::shared_ptr<Table>> GetTableById(const std::string& table_id) const {
+        return Status::NotImplemented("GetTableById not implemented");
+    }
+
+    /// Drops a table.
+    ///
+    /// @param identifier Identifier of the table to drop.
+    /// @param ignore_if_not_exists If true, no action is taken if the table does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status DropTable(const Identifier& identifier, bool ignore_if_not_exists) {
+        return Status::NotImplemented("DropTable not implemented");
+    }
+
+    /// Renames a table.
+    ///
+    /// @param from_table Current identifier of the table.
+    /// @param to_table New identifier for the table.
+    /// @param ignore_if_not_exists If true, no action is taken if the table does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status RenameTable(const Identifier& from_table, const Identifier& to_table,
+                               bool ignore_if_not_exists) {
+        return Status::NotImplemented("RenameTable not implemented");
+    }
+
+    /// TODO(liangzi): Support Alter table
+
+    /// Invalidates cached table metadata.
+    ///
+    /// @param identifier Identifier of the table to invalidate.
+    virtual void InvalidateTable(const Identifier& identifier) {}
+
+    /// Marks partitions as done.
+    ///
+    /// @param identifier Identifier of the table.
+    /// @param partitions List of partition specifications.
+    /// @return A status indicating success or failure.
+    virtual Status MarkDonePartitions(
+        const Identifier& identifier,
+        const std::vector<std::map<std::string, std::string>>& partitions) {
+        return Status::NotImplemented("MarkDonePartitions not implemented");
+    }
+
+    /// Lists all partitions of a table.
+    ///
+    /// @param identifier Identifier of the table.
+    /// @return A result containing a list of partitions, or an error status.
+    virtual Result<std::vector<std::map<std::string, std::string>>> ListPartitions(
+        const Identifier& identifier) const {
+        return Status::NotImplemented("ListPartitions not implemented");
+    }
+
+    /// Creates partitions.
+    ///
+    /// @param identifier Identifier of the table.
+    /// @param partitions List of partition specifications to create.
+    /// @return A status indicating success or failure.
+    virtual Status CreatePartitions(
+        const Identifier& identifier,
+        const std::vector<std::map<std::string, std::string>>& partitions) {
+        return Status::NotImplemented("CreatePartitions not implemented");
+    }
+
+    /// Drops partitions.
+    ///
+    /// @param identifier Identifier of the table.
+    /// @param partitions List of partition specifications to drop.
+    /// @return A status indicating success or failure.
+    virtual Status DropPartitions(
+        const Identifier& identifier,
+        const std::vector<std::map<std::string, std::string>>& partitions) {
+        return Status::NotImplemented("DropPartitions not implemented");
+    }
+
+    /// Alters partitions.
+    ///
+    /// @param identifier Identifier of the table.
+    /// @param partitions List of partition statistics to alter.
+    /// @return A status indicating success or failure.
+    virtual Status AlterPartitions(const Identifier& identifier,
+                                   const std::vector<PartitionStatistics>& partitions) {
+        return Status::NotImplemented("AlterPartitions not implemented");
+    }
+
+    /// Gets a view.
+    ///
+    /// @param identifier Identifier of the view to get.
+    /// @return A result containing the view, or an error status.
+    virtual Result<std::shared_ptr<View>> GetView(const Identifier& identifier) const {
+        return Status::NotImplemented("GetView not implemented");
+    }
+
+    /// Drops a view.
+    ///
+    /// @param identifier Identifier of the view to drop.
+    /// @param ignore_if_not_exists If true, no action is taken if the view does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status DropView(const Identifier& identifier, bool ignore_if_not_exists) {
+        return Status::NotImplemented("DropView not implemented");
+    }
+
+    /// Creates a view.
+    ///
+    /// @param identifier Identifier of the view to create.
+    /// @param view The view definition.
+    /// @param ignore_if_exists If true, no action is taken if the view already exists.
+    /// @return A status indicating success or failure.
+    virtual Status CreateView(const Identifier& identifier, const View& view,
+                              bool ignore_if_exists) {
+        return Status::NotImplemented("CreateView not implemented");
+    }
+
+    /// Lists all views in a database.
+    ///
+    /// @param database_name Name of the database.
+    /// @return A result containing a list of view names, or an error status.
+    virtual Result<std::vector<std::string>> ListViews(const std::string& database_name) const {
+        return Status::NotImplemented("ListViews not implemented");
+    }
+
+    /// Renames a view.
+    ///
+    /// @param from_view Current identifier of the view.
+    /// @param to_view New identifier for the view.
+    /// @param ignore_if_not_exists If true, no action is taken if the view does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status RenameView(const Identifier& from_view, const Identifier& to_view,
+                              bool ignore_if_not_exists) {
+        return Status::NotImplemented("RenameView not implemented");
+    }
+
+    /// TODO(liangzi): Support Function/Snapshot/Tag/Branch/Authorizes api
+
+    /// Repairs the entire catalog.
+    ///
+    /// @return A status indicating success or failure.
+    virtual Status RepairCatalog() {
+        return Status::NotImplemented("RepairCatalog not implemented");
+    }
+
+    /// Repairs a database.
+    ///
+    /// @param database_name Name of the database to repair.
+    /// @return A status indicating success or failure.
+    virtual Status RepairDatabase(const std::string& database_name) {
+        return Status::NotImplemented("RepairDatabase not implemented");
+    }
+
+    /// Repairs a table.
+    ///
+    /// @param identifier Identifier of the table to repair.
+    /// @return A status indicating success or failure.
+    virtual Status RepairTable(const Identifier& identifier) {
+        return Status::NotImplemented("RepairTable not implemented");
+    }
+
+    /// Registers a table.
+    ///
+    /// @param identifier Identifier of the table to register.
+    /// @param path Path of the table.
+    /// @return A status indicating success or failure.
+    virtual Status RegisterTable(const Identifier& identifier, const std::string& path) {
+        return Status::NotImplemented("RegisterTable not implemented");
+    }
+
+    /// Checks if list objects paged is supported.
+    ///
+    /// @return True if supported, false otherwise.
+    virtual bool SupportsListObjectsPaged() const {
+        return false;
+    }
+
+    /// Checks if list by pattern is supported.
+    ///
+    /// @return True if supported, false otherwise.
+    virtual bool SupportsListByPattern() const {
+        return false;
+    }
+
+    /// Checks if list table by type is supported.
+    ///
+    /// @return True if supported, false otherwise.
+    virtual bool SupportsListTableByType() const {
+        return false;
+    }
 
     /// Checks whether a database with the specified name exists in the catalog.
     ///
