@@ -50,7 +50,7 @@ class AvroStatsExtractorTest : public ::testing::Test {
         ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
 
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<FileFormat> file_format,
-                             FileFormatFactory::Get("avro", {}));
+                             FileFormatFactory::Get("avro", options_));
         ASSERT_OK_AND_ASSIGN(auto writer_builder,
                              file_format->CreateWriterBuilder(&c_schema, /*batch_size=*/1024));
 
@@ -70,6 +70,10 @@ class AvroStatsExtractorTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(auto file_status, fs->GetFileStatus(file_path));
         ASSERT_GT(file_status->GetLen(), 0);
     }
+
+ private:
+    std::map<std::string, std::string> options_ = {{Options::FILE_FORMAT, "avro"},
+                                                   {Options::MANIFEST_FORMAT, "avro"}};
 };
 
 TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
@@ -111,7 +115,7 @@ TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     std::string file_path = dir->Str() + "/test.avro";
     WriteAvroFile(file_path, src_chunk_array, schema);
 
-    AvroFileFormat format({{"file.format", "avro"}, {"manifest.format", "avro"}});
+    AvroFileFormat format(options_);
     ::ArrowSchema arrow_schema;
     ASSERT_TRUE(arrow::ExportSchema(*schema, &arrow_schema).ok());
     ASSERT_OK_AND_ASSIGN(auto extractor, format.CreateStatsExtractor(&arrow_schema));
@@ -144,7 +148,7 @@ TEST_F(AvroStatsExtractorTest, TestNestedType) {
     std::string file_path = dir->Str() + "/test.avro";
     WriteAvroFile(file_path, src_chunk_array, schema);
 
-    AvroStatsExtractor extractor({});
+    AvroStatsExtractor extractor(options_);
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto results, extractor.Extract(fs, file_path, GetDefaultPool()));
 
@@ -197,7 +201,7 @@ TEST_F(AvroStatsExtractorTest, TestNullForAllType) {
     std::string file_path = dir->Str() + "/test.avro";
     WriteAvroFile(file_path, src_chunk_array, schema);
 
-    AvroStatsExtractor extractor({});
+    AvroStatsExtractor extractor(options_);
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto column_stats, extractor.Extract(fs, file_path, GetDefaultPool()));
 
