@@ -44,16 +44,23 @@ class AvroStatsExtractor : public FormatStatsExtractor {
 
     Result<ColumnStatsVector> Extract(const std::shared_ptr<FileSystem>& file_system,
                                       const std::string& path,
-                                      const std::shared_ptr<MemoryPool>& pool) override;
+                                      const std::shared_ptr<MemoryPool>& pool) override {
+        PAIMON_ASSIGN_OR_RAISE(auto result, ExtractWithFileInfoInternal(file_system, path, pool,
+                                                                        /*with_file_info=*/false));
+        return result.first;
+    }
 
     Result<std::pair<ColumnStatsVector, FileInfo>> ExtractWithFileInfo(
         const std::shared_ptr<FileSystem>& file_system, const std::string& path,
         const std::shared_ptr<MemoryPool>& pool) override {
-        assert(false);
-        return Status::Invalid("Avro format does not support ExtractWithFileInfo.");
+        return ExtractWithFileInfoInternal(file_system, path, pool, /*with_file_info=*/true);
     }
 
  private:
+    Result<std::pair<ColumnStatsVector, FileInfo>> ExtractWithFileInfoInternal(
+        const std::shared_ptr<FileSystem>& file_system, const std::string& path,
+        const std::shared_ptr<MemoryPool>& pool, bool with_file_info) const;
+
     Result<std::unique_ptr<ColumnStats>> FetchColumnStatistics(
         const std::shared_ptr<arrow::DataType>& type) const;
 

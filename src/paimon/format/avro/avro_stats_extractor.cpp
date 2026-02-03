@@ -38,9 +38,11 @@ class MemoryPool;
 
 namespace paimon::avro {
 
-Result<ColumnStatsVector> AvroStatsExtractor::Extract(
-    const std::shared_ptr<FileSystem>& file_system, const std::string& path,
-    const std::shared_ptr<MemoryPool>& pool) {
+Result<std::pair<ColumnStatsVector, FormatStatsExtractor::FileInfo>>
+AvroStatsExtractor::ExtractWithFileInfoInternal(const std::shared_ptr<FileSystem>& file_system,
+                                                const std::string& path,
+                                                const std::shared_ptr<MemoryPool>& pool,
+                                                bool with_file_info) const {
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream, file_system->Open(path));
     assert(input_stream);
@@ -61,7 +63,13 @@ Result<ColumnStatsVector> AvroStatsExtractor::Extract(
                                FetchColumnStatistics(arrow_field->type()));
         result_stats.push_back(std::move(stats));
     }
-    return result_stats;
+    if (!with_file_info) {
+        // Do not return file info if not needed, because GetNumberOfRows in avro reader need I/O
+        // and performance is poor.
+        return std::make_pair(result_stats, FileInfo(-1));
+    }
+    PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, avro_reader->GetNumberOfRows());
+    return std::make_pair(result_stats, FileInfo(num_rows));
 }
 
 Result<std::unique_ptr<ColumnStats>> AvroStatsExtractor::FetchColumnStatistics(
