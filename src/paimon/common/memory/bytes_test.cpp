@@ -104,8 +104,9 @@ TEST(BytesTest, TestMoveAssignmentNoDoubleFree) {
     b = std::move(a);
     ASSERT_EQ(10, pool->CurrentUsage());  // 4 + 6 = 10 (b's 2 bytes freed)
     ASSERT_EQ("aaaa", std::string(b.data(), b.size()));
-    ASSERT_EQ(nullptr, a.data());
-    ASSERT_EQ(0, a.size());
+    // Moved-from object is expected to be empty by Bytes' contract.
+    ASSERT_EQ(nullptr, a.data());  // NOLINT(bugprone-use-after-move, clang-analyzer-cplusplus.Move)
+    ASSERT_EQ(0, a.size());        // NOLINT(bugprone-use-after-move, clang-analyzer-cplusplus.Move)
 
     // Second move: b = std::move(c)
     // Should free b's current memory (4 bytes from a), transfer c's memory to b
@@ -116,8 +117,9 @@ TEST(BytesTest, TestMoveAssignmentNoDoubleFree) {
     b = std::move(c);
     ASSERT_EQ(6, pool->CurrentUsage());  // Only c's 6 bytes remain (now owned by b)
     ASSERT_EQ("cccccc", std::string(b.data(), b.size()));
-    ASSERT_EQ(nullptr, c.data());
-    ASSERT_EQ(0, c.size());
+    // Moved-from object is expected to be empty by Bytes' contract.
+    ASSERT_EQ(nullptr, c.data());  // NOLINT(bugprone-use-after-move, clang-analyzer-cplusplus.Move)
+    ASSERT_EQ(0, c.size());        // NOLINT(bugprone-use-after-move, clang-analyzer-cplusplus.Move)
 
     // Self-assignment should be safe. Use an alias to avoid -Wself-move.
     Bytes* self = &b;
