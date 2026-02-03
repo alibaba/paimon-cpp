@@ -94,9 +94,9 @@ TEST(BytesTest, TestMoveAssignmentNoDoubleFree) {
     auto pool = paimon::GetMemoryPool();
 
     // Create three Bytes objects on stack
-    Bytes a("aaaa", pool.get());  // 4 bytes
-    Bytes b("bb", pool.get());    // 2 bytes
-    Bytes c("cccccc", pool.get()); // 6 bytes
+    Bytes a("aaaa", pool.get());          // 4 bytes
+    Bytes b("bb", pool.get());            // 2 bytes
+    Bytes c("cccccc", pool.get());        // 6 bytes
     ASSERT_EQ(12, pool->CurrentUsage());  // 4 + 2 + 6 = 12
 
     // First move: b = std::move(a)
@@ -131,8 +131,8 @@ TEST(BytesTest, TestMoveAssignmentNoDoubleFree) {
 TEST(BytesTest, TestMoveAssignmentHeapAllocated) {
     auto pool = paimon::GetMemoryPool();
 
-    auto bytes1 = Bytes::AllocateBytes("hello", pool.get());  // 5 bytes + sizeof(Bytes)
-    auto bytes2 = Bytes::AllocateBytes("world!", pool.get()); // 6 bytes + sizeof(Bytes)
+    auto bytes1 = Bytes::AllocateBytes("hello", pool.get());   // 5 bytes + sizeof(Bytes)
+    auto bytes2 = Bytes::AllocateBytes("world!", pool.get());  // 6 bytes + sizeof(Bytes)
     size_t expected = 5 + 6 + 2 * sizeof(Bytes);
     ASSERT_EQ(expected, pool->CurrentUsage());
 
