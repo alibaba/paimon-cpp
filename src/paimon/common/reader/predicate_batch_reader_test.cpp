@@ -188,4 +188,11 @@ TEST_F(PredicateBatchReaderTest, TestFullAndEmptyCase) {
     }
 }
 
+TEST_F(PredicateBatchReaderTest, TestInvalidInput) {
+    auto data_array = PrepareArray(8);
+    auto reader = std::make_unique<MockFileBatchReader>(data_array, data_type_, /*batch_size=*/10);
+    ASSERT_NOK_WITH_MSG(PredicateBatchReader::Create(std::move(reader), nullptr, GetDefaultPool()),
+                        "create predicate batch reader failed. predicate is nullptr");
+}
+
 }  // namespace paimon::test

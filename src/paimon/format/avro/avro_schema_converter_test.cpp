@@ -32,6 +32,7 @@ TEST(AvroSchemaConverterTest, TestSimple) {
     // Test a basic record with primitive types
     std::string schema_json = R"({
         "type": "record",
+        "namespace": "org.apache.paimon.avro.generated",
         "name": "record",
         "fields": [
             {"name": "f_bool", "type": "boolean"},
@@ -196,6 +197,7 @@ TEST(AvroSchemaConverterTest, TestAvroSchemaToArrowDataTypeWithNullableAndComple
 TEST(AvroSchemaConverterTest, TestAvroSchemaToArrowDataTypeWithTimestampType) {
     std::string schema_json = R"({
     "type": "record",
+    "namespace": "org.apache.paimon.avro.generated",
     "name": "record",
     "fields": [
         {

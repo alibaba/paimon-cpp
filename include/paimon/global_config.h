@@ -29,7 +29,7 @@ namespace paimon {
 /// not necessarily the exact number of threads at a given point in time.
 ///
 /// You can change this number using SetArrowCpuThreadPoolCapacity().
-PAIMON_EXPORT int GetArrowCpuThreadPoolCapacity();
+PAIMON_EXPORT int32_t GetArrowCpuThreadPoolCapacity();
 
 /// Set the capacity of the arrow's global thread pool
 /// This is a simple wrapper of arrow::SetCpuThreadPoolCapacity()
@@ -40,6 +40,6 @@ PAIMON_EXPORT int GetArrowCpuThreadPoolCapacity();
 /// The current number is returned by GetArrowCpuThreadPoolCapacity().
 /// Currently, this capacity will significantly affect the performance
 /// of parquet file batch read.
-PAIMON_EXPORT Status SetArrowCpuThreadPoolCapacity(int threads);
+PAIMON_EXPORT Status SetArrowCpuThreadPoolCapacity(int32_t threads);
 
 }  // namespace paimon

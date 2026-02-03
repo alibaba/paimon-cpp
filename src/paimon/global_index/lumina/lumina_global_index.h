@@ -28,6 +28,7 @@
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/global_indexer.h"
 #include "paimon/global_index/lumina/lumina_memory_pool.h"
+#include "paimon/global_index/lumina/lumina_utils.h"
 
 namespace paimon::lumina {
 /// @note When enabling the lumina global index in `paimon-cpp`, all configuration parameters
@@ -92,8 +93,6 @@ class LuminaIndexWriter : public GlobalIndexWriter {
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
-    static constexpr char kIdentifier[] = "lumina";
-
     int64_t count_ = 0;
     std::shared_ptr<LuminaMemoryPool> pool_;
     std::string field_name_;
@@ -124,6 +123,8 @@ class LuminaIndexReader : public GlobalIndexReader {
         [[maybe_unused]] auto status = searcher_->Close();
     }
 
+    /// @note `VisitVectorSearch` is thread-safe (not coroutine-safe) while other `VisitXXX` is not
+    /// thread-safe.
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override;
 
@@ -180,6 +181,14 @@ class LuminaIndexReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override {
         return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+    }
+
+    bool IsThreadSafe() const override {
+        return true;
+    }
+
+    std::string GetIndexType() const override {
+        return LuminaDefines::kIdentifier;
     }
 
     static Result<LuminaIndexReader::IndexInfo> GetIndexInfo(const GlobalIndexIOMeta& io_meta);

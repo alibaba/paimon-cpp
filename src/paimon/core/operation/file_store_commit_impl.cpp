@@ -404,7 +404,7 @@ Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& c
         }
     }
     metrics_->SetCounter(CommitMetrics::LAST_COMMIT_DURATION,
-                         std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         std::chrono::duration_cast<std::chrono::milliseconds>(
                              std::chrono::high_resolution_clock::now() - started)
                              .count());
     metrics_->SetCounter(CommitMetrics::LAST_COMMIT_ATTEMPTS, attempt);

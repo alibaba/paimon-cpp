@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/predicate/compound_predicate_impl.h"
 #include "paimon/common/predicate/leaf_predicate_impl.h"
 #include "paimon/common/predicate/literal_converter.h"
@@ -86,7 +87,8 @@ class FileStoreScan {
           snapshot_manager_(snapshot_manager),
           manifest_list_(manifest_list),
           manifest_file_(manifest_file),
-          executor_(executor) {
+          executor_(executor),
+          metrics_(std::make_shared<MetricsImpl>()) {
         assert(executor_);
     }
 
@@ -133,6 +135,10 @@ class FileStoreScan {
 
     std::shared_ptr<PredicateFilter> GetPartitionPredicate() const {
         return partition_filter_;
+    }
+
+    std::shared_ptr<Metrics> GetScanMetrics() const {
+        return metrics_;
     }
 
     static Result<std::shared_ptr<PredicateFilter>> CreatePartitionPredicate(
@@ -210,7 +216,8 @@ class FileStoreScan {
 
  private:
     Status ReadManifests(std::optional<Snapshot>* snapshot_ptr,
-                         std::vector<ManifestFileMeta>* manifests_ptr) const;
+                         std::vector<ManifestFileMeta>* all_manifests_ptr,
+                         std::vector<ManifestFileMeta>* filtered_manifests_ptr) const;
 
     Status ReadManifestsWithSnapshot(const Snapshot& snapshot,
                                      std::vector<ManifestFileMeta>* manifests) const;
@@ -255,5 +262,6 @@ class FileStoreScan {
     std::optional<int32_t> bucket_filter_;
     std::function<bool(int32_t)> level_filter_;
     std::optional<Snapshot> specified_snapshot_;
+    std::shared_ptr<Metrics> metrics_;
 };
 }  // namespace paimon

@@ -90,11 +90,11 @@ class ReadAheadCache::Impl {
 };
 
 void ReadAheadCache::Impl::Cache(std::vector<ByteRange> ranges) {
-    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     std::sort(ranges.begin(), ranges.end(),
               [](const ByteRange& a, const ByteRange& b) { return a.offset < b.offset; });
     std::vector<RangeCacheEntry> new_entries = MakeCacheEntries(ranges);
     // Add new entries, themselves ordered by offset
+    std::unique_lock<std::shared_mutex> lock(rw_mutex_);
     if (entries_.size() > 0) {
         size_t new_entries_size = 0;
         for (const auto& e : new_entries) {

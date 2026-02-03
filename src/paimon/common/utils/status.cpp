@@ -142,7 +142,7 @@ void Status::AddContextLine(const char* filename, int line, const char* function
                             const char* expr) {
     assert(!ok() && "Cannot add context line to ok status");
     std::stringstream ss;
-    ss << "\nIn " << filename << ", line " << line << ", function: " << function_name
+    ss << "\nIn " << filename << ":" << line << ", function: " << function_name
        << ", code: " << expr;
     state_->msg += ss.str();
 }

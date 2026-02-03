@@ -263,6 +263,9 @@ This product includes code from Apache Iceberg C++.
   * .devcontainer/devcontainer.json.template
 * CI utilities:
   * .pre-commit-config.yaml
+* Avro direct decoder/encoder:
+  * src/paimon/format/avro/avro_direct_decoder.cpp
+  * src/paimon/format/avro/avro_direct_decoder.h
 
 Copyright: 2024-2025 The Apache Software Foundation.
 Home page: https://iceberg.apache.org/

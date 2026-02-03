@@ -123,7 +123,7 @@ std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionF
 
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const {
-    if (!context_->EnablePredicateFilter()) {
+    if (!context_->EnablePredicateFilter() || predicate == nullptr) {
         return std::move(reader);
     }
     return PredicateBatchReader::Create(std::move(reader), predicate, pool_);
@@ -147,7 +147,9 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReade
         // lance do not support stream build with input stream
         return reader_builder->Build(data_file_path);
     }
-    if (context_->EnablePrefetch() && file_format_identifier != "blob") {
+    // TODO(zhanyu.fyh): orc format support prefetch
+    if (context_->EnablePrefetch() && file_format_identifier != "blob" &&
+        file_format_identifier != "avro") {
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<PrefetchFileBatchReaderImpl> prefetch_reader,
             PrefetchFileBatchReaderImpl::Create(

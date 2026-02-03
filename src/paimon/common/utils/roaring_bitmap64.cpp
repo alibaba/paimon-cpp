@@ -97,6 +97,10 @@ bool RoaringBitmap64::Iterator::operator!=(const Iterator& other) const {
     return !(*this == other);
 }
 
+void RoaringBitmap64::Iterator::EqualOrLarger(int64_t value) {
+    [[maybe_unused]] bool _ = GetIterator(iterator_).move(value);
+}
+
 RoaringBitmap64::RoaringBitmap64() {
     roaring_bitmap_ = new roaring::Roaring64Map();
 }

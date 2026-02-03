@@ -80,10 +80,13 @@ if("${BUILD_WARNING_LEVEL}" STREQUAL "CHECKIN")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-unused-parameter")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-unknown-warning-option")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-constant-logical-operand")
+        set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-declarations")
+        set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-builtins")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wall")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-conversion")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-declarations")
+        set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-builtins")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-sign-conversion")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-unused-variable")
     else()
@@ -182,6 +185,8 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STRE
 
     # Don't complain about optimization passes that were not possible
     set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-pass-failed")
+    set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-declarations")
+    set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated-builtins")
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
         # Depending on the default OSX_DEPLOYMENT_TARGET (< 10.9), libstdc++ may be

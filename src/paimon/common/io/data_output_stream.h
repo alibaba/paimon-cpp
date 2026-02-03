@@ -28,7 +28,7 @@ class OutputStream;
 
 // data output stream, support WriteValue() and WriteString() from OutputStream, also do big-endian
 // conversion to ensure cross-language compatibility
-class DataOutputStream {
+class PAIMON_EXPORT DataOutputStream {
  public:
     explicit DataOutputStream(const std::shared_ptr<OutputStream>& output_stream);
 

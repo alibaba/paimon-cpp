@@ -44,7 +44,7 @@ AvroOutputStreamImpl::~AvroOutputStreamImpl() {
 
 bool AvroOutputStreamImpl::next(uint8_t** data, size_t* len) {
     if (available_ == 0) {
-        flush();
+        FlushBuffer();
     }
     *data = next_;
     *len = available_;
@@ -60,7 +60,7 @@ void AvroOutputStreamImpl::backup(size_t len) {
     byte_count_ -= len;
 }
 
-void AvroOutputStreamImpl::flush() {
+void AvroOutputStreamImpl::FlushBuffer() {
     size_t length = buffer_size_ - available_;
     Result<int32_t> write_len = out_->Write(reinterpret_cast<const char*>(buffer_), length);
     if (!write_len.ok()) {
@@ -74,6 +74,15 @@ void AvroOutputStreamImpl::flush() {
     // TODO(jinli.zjw): call out_->Flush() ?
     next_ = buffer_;
     available_ = buffer_size_;
+}
+
+void AvroOutputStreamImpl::flush() {
+    // In avro-java impl, there is an option to control flush frequency.
+    // See: https://github.com/apache/avro/commit/35750393891c40f0ceb925a852162ec764bcae6c
+    //
+    // However, in the avro-cpp impl, there is no such option. Calling flush() too frequently
+    // generates many small I/O operations, affecting write performance, so we make
+    // ::avro::OutputStream's flush() do nothing
 }
 
 }  // namespace paimon::avro

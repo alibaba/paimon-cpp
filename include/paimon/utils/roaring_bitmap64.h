@@ -62,6 +62,8 @@ class PAIMON_EXPORT RoaringBitmap64 {
         Iterator& operator++();
         bool operator==(const Iterator& other) const;
         bool operator!=(const Iterator& other) const;
+        /// Move the iterator to the value which is equal or larger than input value
+        void EqualOrLarger(int64_t value);
 
      private:
         void* iterator_ = nullptr;

@@ -39,9 +39,6 @@
 namespace arrow {
 class Array;
 }  // namespace arrow
-namespace avro {
-class OutputStream;
-}  // namespace avro
 struct ArrowArray;
 
 namespace paimon::avro {
@@ -49,28 +46,30 @@ namespace paimon::avro {
 AvroFormatWriter::AvroFormatWriter(
     const std::shared_ptr<::avro::DataFileWriter<::avro::GenericDatum>>& file_writer,
     const ::avro::ValidSchema& avro_schema, const std::shared_ptr<arrow::DataType>& data_type,
-    std::unique_ptr<AvroAdaptor> adaptor)
+    std::unique_ptr<AvroAdaptor> adaptor, AvroOutputStreamImpl* avro_output_stream)
     : writer_(file_writer),
       avro_schema_(avro_schema),
       data_type_(data_type),
-      adaptor_(std::move(adaptor)) {}
+      adaptor_(std::move(adaptor)),
+      avro_output_stream_(avro_output_stream) {}
 
 Result<std::unique_ptr<AvroFormatWriter>> AvroFormatWriter::Create(
-    std::unique_ptr<::avro::OutputStream> out, const std::shared_ptr<arrow::Schema>& schema,
+    std::unique_ptr<AvroOutputStreamImpl> out, const std::shared_ptr<arrow::Schema>& schema,
     const ::avro::Codec codec) {
     try {
         PAIMON_ASSIGN_OR_RAISE(::avro::ValidSchema avro_schema,
                                AvroSchemaConverter::ArrowSchemaToAvroSchema(schema));
+        AvroOutputStreamImpl* avro_output_stream = out.get();
         auto writer = std::make_shared<::avro::DataFileWriter<::avro::GenericDatum>>(
             std::move(out), avro_schema, DEFAULT_SYNC_INTERVAL, codec);
         auto data_type = arrow::struct_(schema->fields());
         auto adaptor = std::make_unique<AvroAdaptor>(data_type);
-        return std::unique_ptr<AvroFormatWriter>(
-            new AvroFormatWriter(writer, avro_schema, data_type, std::move(adaptor)));
+        return std::unique_ptr<AvroFormatWriter>(new AvroFormatWriter(
+            writer, avro_schema, data_type, std::move(adaptor), avro_output_stream));
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro format writer create failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro format writer create failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro format writer create failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro format writer create failed: unknown exception");
     }
@@ -82,7 +81,7 @@ Status AvroFormatWriter::Flush() {
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer flush failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer flush failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer flush failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer flush failed: unknown exception");
     }
@@ -92,11 +91,12 @@ Status AvroFormatWriter::Flush() {
 
 Status AvroFormatWriter::Finish() {
     try {
+        avro_output_stream_->FlushBuffer();  // we need flush buffer before close writer
         writer_->close();
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer close failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer close failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer close failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer close failed: unknown exception");
     }
@@ -120,7 +120,7 @@ Status AvroFormatWriter::AddBatch(ArrowArray* batch) {
     } catch (const ::avro::Exception& e) {
         return Status::Invalid(fmt::format("avro writer add batch failed. {}", e.what()));
     } catch (const std::exception& e) {
-        return Status::Invalid("avro writer add batch failed: {}", e.what());
+        return Status::Invalid(fmt::format("avro writer add batch failed: {}", e.what()));
     } catch (...) {
         return Status::Invalid("avro writer add batch failed: unknown exception");
     }

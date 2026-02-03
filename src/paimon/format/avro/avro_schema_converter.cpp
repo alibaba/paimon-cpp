@@ -30,9 +30,10 @@
 #include "avro/ValidSchema.hh"
 #include "fmt/format.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/format/avro/avro_file_format_factory.h"
+#include "paimon/format/avro/avro_utils.h"
 #include "paimon/macros.h"
 #include "paimon/status.h"
-
 namespace paimon::avro {
 
 /// Returns schema with nullable true.
@@ -42,6 +43,18 @@ namespace paimon::avro {
     union_schema.addType(::avro::NullSchema());
     union_schema.addType(schema);
     return union_schema;
+}
+
+void AvroSchemaConverter::AddRecordField(::avro::RecordSchema* record_schema,
+                                         const std::string& field_name,
+                                         const ::avro::Schema& field_schema) {
+    if (field_schema.type() == ::avro::Type::AVRO_UNION) {
+        ::avro::CustomAttributes attrs;
+        attrs.addAttribute("default", "null", /*addQuotes=*/false);
+        record_schema->addField(field_name, field_schema, attrs);
+    } else {
+        record_schema->addField(field_name, field_schema);
+    }
 }
 
 Result<bool> AvroSchemaConverter::CheckUnionType(const ::avro::NodePtr& avro_node) {
@@ -142,9 +155,39 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
             auto timezone = DateTimeUtils::GetLocalTimezoneName();
             return arrow::timestamp(arrow::TimeUnit::NANO, timezone);
         }
+        case ::avro::LogicalType::Type::CUSTOM: {
+            if (!AvroUtils::HasMapLogicalType(avro_node)) {
+                return Status::TypeError("invalid avro logical map type");
+            }
+            if (type != ::avro::AVRO_ARRAY) {
+                return Status::TypeError("invalid avro logical map stored as ", toString(type));
+            }
+            size_t subtype_count = avro_node->leaves();
+            if (subtype_count != 1) {
+                return Status::TypeError("invalid avro logical map type");
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> logical_map_field,
+                                   GetArrowField("item", avro_node->leafAt(0)));
+            auto logical_map_type = logical_map_field->type();
+            if (logical_map_type->id() != arrow::Type::STRUCT) {
+                return Status::TypeError("invalid avro logical map item type");
+            }
+            auto struct_type =
+                arrow::internal::checked_pointer_cast<arrow::StructType>(logical_map_type);
+            const auto& fields = struct_type->fields();
+            if (fields.size() != 2) {
+                return Status::TypeError("invalid avro logical map struct fields size");
+            }
+            auto key_field = fields[0]->WithNullable(false);
+            auto value_field = fields[1];
+            if (key_field->name() != "key" || value_field->name() != "value") {
+                return Status::TypeError("invalid avro logical map struct field names");
+            }
+            return std::make_shared<arrow::MapType>(std::move(key_field), std::move(value_field));
+        }
         default:
-            return Status::NotImplemented("not support logical type ",
-                                          std::to_string(logical_type.type()));
+            return Status::Invalid("invalid avro logical type: ",
+                                   AvroUtils::ToString(logical_type));
     }
 
     size_t subtype_count = avro_node->leaves();
@@ -205,7 +248,7 @@ Result<std::shared_ptr<arrow::DataType>> AvroSchemaConverter::GetArrowType(
 }
 
 Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
-    const std::shared_ptr<arrow::Field>& field) {
+    const std::shared_ptr<arrow::Field>& field, const std::string& row_name) {
     bool nullable = field->nullable();
     auto arrow_type = field->type();
     switch (arrow_type->id()) {
@@ -232,20 +275,37 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
             return nullable ? NullableSchema(date_schema) : date_schema;
         }
         case arrow::Type::type::TIMESTAMP: {
-            // TODO(jinli.zjw): support convert with multiple precision & timezone
             const auto& arrow_timestamp_type =
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(arrow_type);
-            if (!arrow_timestamp_type->timezone().empty()) {
-                return Status::Invalid("Unsupported TimestampType with timezone");
-            }
-            if (arrow_timestamp_type->unit() != arrow::TimeUnit::type::NANO) {
-                return Status::Invalid("Only supported TimestampType with nano time unit");
-            }
-            // NOTE: Java Avro only support TIMESTAMP_MILLIS && TIMESTAMP_MICROS
-            ::avro::LogicalType timestamp_type =
-                ::avro::LogicalType(::avro::LogicalType::TIMESTAMP_MICROS);
+            bool has_timezone = !arrow_timestamp_type->timezone().empty();
             ::avro::LongSchema timestamp_schema;
-            timestamp_schema.root()->setLogicalType(timestamp_type);
+            switch (arrow_timestamp_type->unit()) {
+                // Avro doesn't support seconds, convert to milliseconds
+                case arrow::TimeUnit::type::SECOND:
+                case arrow::TimeUnit::type::MILLI: {
+                    ::avro::LogicalType logical_type = ::avro::LogicalType(
+                        has_timezone ? ::avro::LogicalType::LOCAL_TIMESTAMP_MILLIS
+                                     : ::avro::LogicalType::TIMESTAMP_MILLIS);
+                    timestamp_schema.root()->setLogicalType(logical_type);
+                    break;
+                }
+                case arrow::TimeUnit::type::MICRO: {
+                    ::avro::LogicalType logical_type = ::avro::LogicalType(
+                        has_timezone ? ::avro::LogicalType::LOCAL_TIMESTAMP_MICROS
+                                     : ::avro::LogicalType::TIMESTAMP_MICROS);
+                    timestamp_schema.root()->setLogicalType(logical_type);
+                    break;
+                }
+                case arrow::TimeUnit::type::NANO: {
+                    ::avro::LogicalType logical_type = ::avro::LogicalType(
+                        has_timezone ? ::avro::LogicalType::LOCAL_TIMESTAMP_NANOS
+                                     : ::avro::LogicalType::TIMESTAMP_NANOS);
+                    timestamp_schema.root()->setLogicalType(logical_type);
+                    break;
+                }
+                default:
+                    return Status::Invalid("Unknown TimeUnit in TimestampType");
+            }
             return nullable ? NullableSchema(timestamp_schema) : timestamp_schema;
         }
         case arrow::Type::type::DECIMAL128: {
@@ -258,6 +318,56 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
             decimal_schema.root()->setLogicalType(decimal_type);
             return nullable ? NullableSchema(decimal_schema) : decimal_schema;
         }
+        case arrow::Type::LIST: {
+            const auto& list_type =
+                arrow::internal::checked_pointer_cast<const arrow::ListType>(arrow_type);
+            const auto& value_field = list_type->value_field();
+            PAIMON_ASSIGN_OR_RAISE(auto value_schema, ArrowTypeToAvroSchema(value_field, row_name));
+            ::avro::ArraySchema array_schema(value_schema);
+            return nullable ? NullableSchema(array_schema) : array_schema;
+        }
+        case arrow::Type::STRUCT: {
+            const auto& struct_type =
+                arrow::internal::checked_pointer_cast<const arrow::StructType>(arrow_type);
+            const auto& fields = struct_type->fields();
+
+            ::avro::RecordSchema record_schema(row_name);
+            for (const auto& f : fields) {
+                PAIMON_ASSIGN_OR_RAISE(auto field_schema,
+                                       ArrowTypeToAvroSchema(f, row_name + "_" + f->name()));
+                AddRecordField(&record_schema, f->name(), field_schema);
+            }
+            return nullable ? NullableSchema(record_schema) : record_schema;
+        }
+        case arrow::Type::MAP: {
+            const auto& map_type =
+                arrow::internal::checked_pointer_cast<const arrow::MapType>(arrow_type);
+            const auto& key_field = map_type->key_field();
+            const auto& item_field = map_type->item_field();
+            if (key_field->nullable()) {
+                return Status::Invalid("Avro Map key cannot be nullable");
+            }
+            if (key_field->type()->id() == arrow::Type::STRING) {
+                PAIMON_ASSIGN_OR_RAISE(auto item_schema,
+                                       ArrowTypeToAvroSchema(item_field, row_name));
+                ::avro::MapSchema map_schema(item_schema);
+                return nullable ? NullableSchema(map_schema) : map_schema;
+            } else {
+                // convert to list<record<key,value>>
+                PAIMON_ASSIGN_OR_RAISE(auto key_schema,
+                                       ArrowTypeToAvroSchema(key_field, row_name + "_key"));
+                PAIMON_ASSIGN_OR_RAISE(auto item_schema,
+                                       ArrowTypeToAvroSchema(item_field, row_name + "_value"));
+                ::avro::LogicalType logical_map_type =
+                    ::avro::LogicalType(std::make_shared<MapLogicalType>());
+                ::avro::RecordSchema record_schema(row_name);
+                AddRecordField(&record_schema, "key", key_schema);
+                AddRecordField(&record_schema, "value", item_schema);
+                ::avro::ArraySchema logical_map_schema(record_schema);
+                logical_map_schema.root()->setLogicalType(logical_map_type);
+                return nullable ? NullableSchema(logical_map_schema) : logical_map_schema;
+            }
+        }
         default:
             return Status::Invalid(fmt::format("Not support arrow type '{}' convert to avro",
                                                field->type()->ToString()));
@@ -266,16 +376,14 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
 
 Result<::avro::ValidSchema> AvroSchemaConverter::ArrowSchemaToAvroSchema(
     const std::shared_ptr<arrow::Schema>& arrow_schema) {
-    ::avro::RecordSchema record_schema("record");
+    // top level row name of avro record, the same as java paimon
+    static const std::string kTopLevelRowName = "org.apache.paimon.avro.generated.record";
+    ::avro::RecordSchema record_schema(kTopLevelRowName);
     for (const auto& field : arrow_schema->fields()) {
-        PAIMON_ASSIGN_OR_RAISE(::avro::Schema schema, ArrowTypeToAvroSchema(field));
-        if (schema.type() == ::avro::Type::AVRO_UNION) {
-            ::avro::CustomAttributes attrs;
-            attrs.addAttribute("default", "null", /*addQuotes=*/false);
-            record_schema.addField(field->name(), schema, attrs);
-        } else {
-            record_schema.addField(field->name(), schema);
-        }
+        PAIMON_ASSIGN_OR_RAISE(
+            ::avro::Schema field_schema,
+            ArrowTypeToAvroSchema(field, kTopLevelRowName + "_" + field->name()));
+        AddRecordField(&record_schema, field->name(), field_schema);
     }
     return ::avro::ValidSchema(record_schema);
 }

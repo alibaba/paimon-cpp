@@ -32,6 +32,7 @@
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/apply_deletion_vector_batch_reader.h"
@@ -105,7 +106,8 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
     int32_t key_arity = trimmed_primary_key.size();
 
     // projection is the mapping from value_schema in KeyValue object to raw_read_schema
-    std::vector<int32_t> projection = CreateProjection(context->GetReadSchema(), value_schema);
+    std::vector<int32_t> projection =
+        ArrowUtils::CreateProjection(value_schema, context->GetReadSchema()->fields());
 
     return std::unique_ptr<MergeFileSplitRead>(new MergeFileSplitRead(
         path_factory, context,
@@ -366,19 +368,6 @@ Result<std::shared_ptr<Predicate>> MergeFileSplitRead::GenerateKeyPredicates(
         }
     }
     return PredicateUtils::ExcludePredicateWithFields(predicate, non_primary_keys);
-}
-
-std::vector<int32_t> MergeFileSplitRead::CreateProjection(
-    const std::shared_ptr<arrow::Schema>& raw_read_schema,
-    const std::shared_ptr<arrow::Schema>& value_schema) {
-    std::vector<int32_t> target_to_src_mapping;
-    target_to_src_mapping.reserve(raw_read_schema->num_fields());
-    for (const auto& field : raw_read_schema->fields()) {
-        auto src_field_idx = value_schema->GetFieldIndex(field->name());
-        assert(src_field_idx >= 0);
-        target_to_src_mapping.push_back(src_field_idx);
-    }
-    return target_to_src_mapping;
 }
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReaderForSection(
