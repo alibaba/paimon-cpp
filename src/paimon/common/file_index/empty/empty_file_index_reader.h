@@ -46,6 +46,9 @@ class EmptyFileIndexReader : public FileIndexReader {
     Result<std::shared_ptr<FileIndexResult>> VisitContains(const Literal& literal) override {
         return FileIndexResult::Skip();
     }
+    Result<std::shared_ptr<FileIndexResult>> VisitLike(const Literal& literal) override {
+        return FileIndexResult::Skip();
+    }
     Result<std::shared_ptr<FileIndexResult>> VisitLessThan(const Literal& literal) override {
         return FileIndexResult::Skip();
     }

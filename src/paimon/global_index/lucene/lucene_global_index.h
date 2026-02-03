@@ -158,6 +158,10 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         return CreateAllResult();
     }
 
+    Result<std::shared_ptr<GlobalIndexResult>> VisitLike(const Literal& literal) override {
+        return CreateAllResult();
+    }
+
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
         return Status::Invalid(

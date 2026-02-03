@@ -71,5 +71,8 @@ class PAIMON_EXPORT FunctionVisitor {
 
     /// Evaluates whether string values contain the given substring.
     virtual Result<T> VisitContains(const Literal& literal) = 0;
+
+    /// Evaluates whether string values like the given string.
+    virtual Result<T> VisitLike(const Literal& literal) = 0;
 };
 }  // namespace paimon
