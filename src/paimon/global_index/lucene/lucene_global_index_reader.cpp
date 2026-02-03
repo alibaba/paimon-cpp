@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 #include "paimon/global_index/lucene/lucene_global_index_reader.h"
+
 #include "arrow/c/bridge.h"
 #include "lucene++/FileUtils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/rapidjson_util.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
 #include "paimon/global_index/lucene/jieba_analyzer.h"
 #include "paimon/global_index/lucene/lucene_collector.h"
 #include "paimon/global_index/lucene/lucene_defs.h"

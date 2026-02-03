@@ -36,7 +36,7 @@ static inline const char kLuceneWriteOmitTermFreqAndPositions[] =
 
 static inline const char kJiebaDictDirEnv[] = "PAIMON_JIEBA_DICT_DIR";
 
-static inline const char kDefaultJiebaTokenizeMode[] = "mix";    
-// default is "mix". Values can be "mp", "hmm", "mix", "full", "query".    
-static inline const char kJiebaTokenizeMode[] = "jieba.tokenize-mode";         
+static inline const char kDefaultJiebaTokenizeMode[] = "mix";
+// default is "mix". Values can be "mp", "hmm", "mix", "full", "query".
+static inline const char kJiebaTokenizeMode[] = "jieba.tokenize-mode";
 }  // namespace paimon::lucene

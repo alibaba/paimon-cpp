@@ -18,10 +18,9 @@
 #include "arrow/type.h"
 #include "cppjieba/Jieba.hpp"
 #include "lucene++/LuceneHeaders.h"
-#include "paimon/global_index/lucene/lucene_defs.h"
-#include "paimon/global_index/global_index_writer.h"
-#include "paimon/global_index/global_index_writer.h"
 #include "paimon//global_index/io/global_index_file_writer.h"
+#include "paimon/global_index/global_index_writer.h"
+#include "paimon/global_index/lucene/lucene_defs.h"
 
 namespace paimon::lucene {
 class LuceneGlobalIndexWriter : public GlobalIndexWriter {

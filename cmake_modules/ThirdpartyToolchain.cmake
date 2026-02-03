@@ -369,7 +369,7 @@ macro(build_jieba)
                                       "[ -f .patched ] && echo '<SOURCE_DIR> patch already applied, ignore...' || patch -s -N -p1 -i '${PATCH_FILE}' && touch .patched"
                         INSTALL_COMMAND bash -c
                                         "cp -r ${JIEBA_PREFIX}/src/jieba_ep/include/* ${JIEBA_INSTALL}/include/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/dict/* ${JIEBA_INSTALL}/dict/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/deps/limonp/include/* ${JIEBA_INSTALL}/include/"
-                        )
+    )
 
     # The include directory must exist before it is referenced by a target.
     include_directories(SYSTEM ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})

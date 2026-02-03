@@ -63,6 +63,6 @@ if(PAIMON_ENABLE_LUCENE)
                         ${GTEST_LINK_TOOLCHAIN})
 
         target_compile_definitions(paimon-lucene-index-test
-                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")        
+                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
     endif()
 endif()
