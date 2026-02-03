@@ -10,7 +10,7 @@ index 24b2c40..c7c6a94 100644
 +  const std::unordered_set<std::string>& GetStopWords() const {
 +    return stopWords_;
 +  }
-+    
++
   private:
    void LoadIdfDict(const std::string& idfPath) {
      std::ifstream ifs(idfPath.c_str());

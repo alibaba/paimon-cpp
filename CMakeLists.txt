@@ -303,7 +303,7 @@ if(PAIMON_ENABLE_LUCENE)
             PATTERN "user.dict.utf8"
             PATTERN "pos_dict"
             PATTERN ".git*" EXCLUDE
-            PATTERN "*.md"  EXCLUDE)
+            PATTERN "*.md" EXCLUDE)
 endif()
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/

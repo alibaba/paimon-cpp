@@ -29,19 +29,18 @@ JiebaTokenizerContext::JiebaTokenizerContext(const std::string& _tokenize_mode, 
       jieba(_jieba) {}
 
 JiebaTokenizer::JiebaTokenizer(const JiebaTokenizerContext& context, const Lucene::ReaderPtr& input)
-    : Lucene::Tokenizer(), context_(context) {
-    this->input = input;
+    : Lucene::Tokenizer(input), context_(context) {
     term_att_ = addAttribute<Lucene::TermAttribute>();
     pos_att_ = addAttribute<Lucene::PositionIncrementAttribute>();
     buffer_ = static_cast<wchar_t*>(
-        context_.pool->Malloc(context_.buffer_size * sizeof(wchar_t), /*aligment=*/8));
+        context_.pool->Malloc(context_.buffer_size * sizeof(wchar_t), /*alignment=*/8));
 }
 
 JiebaTokenizer::~JiebaTokenizer() {
     if (buffer_) {
         context_.pool->Free(reinterpret_cast<void*>(buffer_),
                             context_.buffer_size * sizeof(wchar_t),
-                            /*aligment=*/8);
+                            /*alignment=*/8);
         buffer_ = nullptr;
     }
 }
@@ -98,7 +97,7 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
 
         // to lower case
         bool is_alphanumeric = true;
-        for (const unsigned char& c : term) {
+        for (const auto& c : term) {
             if (!std::isalnum(c)) {
                 is_alphanumeric = false;
                 break;
@@ -113,6 +112,15 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
 
 void JiebaTokenizer::reset() {
     Lucene::Tokenizer::reset();
+    InnerReset();
+}
+
+void JiebaTokenizer::reset(const Lucene::ReaderPtr& input) {
+    Lucene::Tokenizer::reset(input);
+    InnerReset();
+}
+
+void JiebaTokenizer::InnerReset() {
     terms_.clear();
     normalized_terms_.clear();
     term_index_ = 0;

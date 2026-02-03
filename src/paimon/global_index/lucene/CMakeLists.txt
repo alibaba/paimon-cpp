@@ -13,12 +13,13 @@
 # limitations under the License.
 
 if(PAIMON_ENABLE_LUCENE)
-    set(PAIMON_LUCENE lucene_global_index.cpp
-                      lucene_directory.cpp
-                      jieba_analyzer.cpp
-                      lucene_global_index_writer.cpp
-                      lucene_global_index_reader.cpp
-                      lucene_global_index_factory.cpp)
+    set(PAIMON_LUCENE
+        lucene_global_index.cpp
+        lucene_directory.cpp
+        jieba_analyzer.cpp
+        lucene_global_index_writer.cpp
+        lucene_global_index_reader.cpp
+        lucene_global_index_factory.cpp)
 
     add_paimon_lib(paimon_lucene_index
                    SOURCES
@@ -61,7 +62,7 @@ if(PAIMON_ENABLE_LUCENE)
                         "-Wl,--no-whole-archive"
                         ${GTEST_LINK_TOOLCHAIN})
 
-       target_compile_definitions(paimon-lucene-index-test PRIVATE
-                                        JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")                                       
+        target_compile_definitions(paimon-lucene-index-test
+                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")        
     endif()
 endif()

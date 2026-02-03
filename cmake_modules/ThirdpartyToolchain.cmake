@@ -352,12 +352,10 @@ macro(build_jieba)
     file(MAKE_DIRECTORY ${JIEBA_DICT_DIR})
 
     set(JIEBA_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        "-DENABLE_TEST=OFF"
-        "-DCPPJIEBA_TOP_LEVEL_PROJECT=OFF"
+        ${EP_COMMON_CMAKE_ARGS} "-DENABLE_TEST=OFF" "-DCPPJIEBA_TOP_LEVEL_PROJECT=OFF"
         "-DCMAKE_INSTALL_PREFIX=${JIEBA_INSTALL}")
 
-    set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/jieba.diff")    
+    set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/jieba.diff")
     externalproject_add(jieba_ep
                         ${EP_COMMON_OPTIONS}
                         GIT_REPOSITORY https://github.com/yanyiwu/cppjieba.git
@@ -370,13 +368,14 @@ macro(build_jieba)
                         PATCH_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> bash -c
                                       "[ -f .patched ] && echo '<SOURCE_DIR> patch already applied, ignore...' || patch -s -N -p1 -i '${PATCH_FILE}' && touch .patched"
                         INSTALL_COMMAND bash -c
-                        "cp -r ${JIEBA_PREFIX}/src/jieba_ep/include/* ${JIEBA_INSTALL}/include/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/dict/* ${JIEBA_INSTALL}/dict/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/deps/limonp/include/* ${JIEBA_INSTALL}/include/"
+                                        "cp -r ${JIEBA_PREFIX}/src/jieba_ep/include/* ${JIEBA_INSTALL}/include/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/dict/* ${JIEBA_INSTALL}/dict/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/deps/limonp/include/* ${JIEBA_INSTALL}/include/"
                         )
 
     # The include directory must exist before it is referenced by a target.
     include_directories(SYSTEM ${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR})
     add_library(jieba INTERFACE IMPORTED)
-    target_include_directories(jieba SYSTEM INTERFACE "${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR}")
+    target_include_directories(jieba SYSTEM
+                               INTERFACE "${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR}")
     add_dependencies(jieba jieba_ep)
 endmacro()
 

@@ -46,6 +46,8 @@ class JiebaTokenizer : public Lucene::Tokenizer {
 
     bool incrementToken() override;
 
+    void reset(const Lucene::ReaderPtr& input) override;
+
     void reset() override;
 
     static void CutWithMode(const std::string& tokenize_mode, const cppjieba::Jieba* jieba,
@@ -54,6 +56,9 @@ class JiebaTokenizer : public Lucene::Tokenizer {
     // inplace to lower to avoid data copy
     static void Normalize(const std::unordered_set<std::string>& stop_words,
                           std::vector<std::string>* input, std::vector<std::string_view>* output);
+
+ private:
+    void InnerReset();
 
  private:
     JiebaTokenizerContext context_;
