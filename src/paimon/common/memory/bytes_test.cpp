@@ -119,8 +119,9 @@ TEST(BytesTest, TestMoveAssignmentNoDoubleFree) {
     ASSERT_EQ(nullptr, c.data());
     ASSERT_EQ(0, c.size());
 
-    // Self-assignment should be safe
-    b = std::move(b);
+    // Self-assignment should be safe. Use an alias to avoid -Wself-move.
+    Bytes* self = &b;
+    b = std::move(*self);
     ASSERT_EQ(6, pool->CurrentUsage());
     ASSERT_EQ("cccccc", std::string(b.data(), b.size()));
 }
