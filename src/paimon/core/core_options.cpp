@@ -354,7 +354,7 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
         Options::FILE_FORMAT, /*default_identifier=*/"parquet", &impl->file_format));
     PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
-        Options::MANIFEST_FORMAT, /*default_identifier=*/"orc", &impl->manifest_file_format));
+        Options::MANIFEST_FORMAT, /*default_identifier=*/"avro", &impl->manifest_file_format));
     PAIMON_RETURN_NOT_OK(parser.ParseFileSystem(fs_scheme_to_identifier_map, specified_file_system,
                                                 &impl->file_system));
 

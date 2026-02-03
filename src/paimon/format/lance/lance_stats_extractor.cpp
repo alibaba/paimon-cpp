@@ -59,7 +59,8 @@ LanceStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& file
                                FetchColumnStatistics(arrow_field->type()));
         result_stats.push_back(std::move(stats));
     }
-    return std::make_pair(result_stats, FileInfo(lance_reader->GetNumberOfRows()));
+    PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, lance_reader->GetNumberOfRows());
+    return std::make_pair(result_stats, FileInfo(num_rows));
 }
 
 Result<std::unique_ptr<ColumnStats>> LanceStatsExtractor::FetchColumnStatistics(

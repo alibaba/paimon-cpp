@@ -30,6 +30,7 @@
 #include "avro/Specific.hh"  // IWYU pragma: keep
 #include "avro/ValidSchema.hh"
 #include "fmt/format.h"
+#include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/avro/avro_schema_converter.h"
 
@@ -47,6 +48,7 @@ AvroFormatWriter::AvroFormatWriter(std::unique_ptr<::avro::DataFileWriterBase>&&
     : writer_(std::move(file_writer)),
       avro_schema_(avro_schema),
       data_type_(data_type),
+      metrics_(std::make_shared<MetricsImpl>()),
       avro_output_stream_(avro_output_stream) {}
 
 Result<std::unique_ptr<AvroFormatWriter>> AvroFormatWriter::Create(
@@ -114,7 +116,7 @@ Status AvroFormatWriter::AddBatch(ArrowArray* batch) {
         for (int64_t row_index = 0; row_index < arrow_array->length(); ++row_index) {
             writer_->syncIfNeeded();
             PAIMON_RETURN_NOT_OK(AvroDirectEncoder::EncodeArrowToAvro(
-                avro_schema_.root(), writer_->encoder(), *arrow_array, row_index, encode_ctx_));
+                avro_schema_.root(), *arrow_array, row_index, &writer_->encoder(), &encode_ctx_));
             writer_->incr();
         }
     } catch (const ::avro::Exception& e) {

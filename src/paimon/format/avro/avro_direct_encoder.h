@@ -36,11 +36,8 @@ class AvroDirectEncoder {
     /// Context for reusing scratch buffers during Avro encoding
     ///
     /// Avoids frequent small allocations by reusing temporary buffers across multiple encode
-    /// operations. This is particularly important for binary and decimal data types.
-    struct EncodeContext {
-        // Scratch buffer for binary/decimal data (reused across rows)
-        std::vector<uint8_t> bytes_scratch;
-    };
+    /// operations. This is particularly important for binary/decimal types (reused across rows).
+    using EncodeContext = std::vector<uint8_t>;
 
     /// Directly encode Arrow data to Avro without GenericDatum
     ///
@@ -48,14 +45,14 @@ class AvroDirectEncoder {
     /// methods from Arrow arrays.
     ///
     /// @param avro_node The Avro schema node for the data being encoded
-    /// @param encoder The Avro encoder to write data to
     /// @param array The Arrow array containing the data to encode
     /// @param row_index The index of the row to encode within the array
+    /// @param encoder The Avro encoder to write data to
     /// @param ctx Encode context for reusing scratch buffers
     /// @return Status indicating success, or an error status
-    static Status EncodeArrowToAvro(const ::avro::NodePtr& avro_node, ::avro::Encoder& encoder,
-                                    const arrow::Array& array, int64_t row_index,
-                                    EncodeContext& ctx);
+    static Status EncodeArrowToAvro(const ::avro::NodePtr& avro_node, const arrow::Array& array,
+                                    int64_t row_index, ::avro::Encoder* encoder,
+                                    EncodeContext* ctx);
 };
 
 }  // namespace paimon::avro

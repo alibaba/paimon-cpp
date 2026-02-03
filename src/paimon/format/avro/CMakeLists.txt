@@ -52,6 +52,7 @@ if(PAIMON_ENABLE_AVRO)
                         SOURCES
                         avro_file_batch_reader_test.cpp
                         avro_file_format_test.cpp
+                        avro_format_writer_test.cpp
                         avro_input_stream_impl_test.cpp
                         avro_schema_converter_test.cpp
                         avro_stats_extractor_test.cpp

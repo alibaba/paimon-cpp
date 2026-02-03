@@ -77,7 +77,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
 
     Status SeekToRow(uint64_t row_number) override;
     uint64_t GetPreviousBatchFirstRowNumber() const override;
-    uint64_t GetNumberOfRows() const override;
+    Result<uint64_t> GetNumberOfRows() const override;
     uint64_t GetNextRowToRead() const override;
     void Close() override;
     Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override;
@@ -117,7 +117,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     void Workloop();
     void SetReadStatus(const Status& status);
     Status GetReadStatus() const;
-    bool IsEofRange(const std::pair<uint64_t, uint64_t>& read_range) const;
+    Result<bool> IsEofRange(const std::pair<uint64_t, uint64_t>& read_range) const;
     Status DoReadBatch(size_t reader_idx);
     void ReadBatch(size_t reader_idx);
     size_t GetEnabledReaderSize() const;
@@ -128,7 +128,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     static std::vector<std::vector<std::pair<uint64_t, uint64_t>>> DispatchReadRanges(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges, size_t reader_count);
 
-    std::pair<uint64_t, uint64_t> EofRange() const;
+    Result<std::pair<uint64_t, uint64_t>> EofRange() const;
     std::optional<std::pair<uint64_t, uint64_t>> GetCurrentReadRange(size_t reader_idx) const;
     Status EnsureReaderPosition(size_t reader_idx,
                                 const std::pair<uint64_t, uint64_t>& read_range) const;

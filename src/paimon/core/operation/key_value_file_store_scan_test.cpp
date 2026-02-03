@@ -66,7 +66,7 @@ class KeyValueFileStoreScanTest : public testing::Test {
     Result<std::unique_ptr<KeyValueFileStoreScan>> CreateFileStoreScan(
         const std::string& table_path, const std::shared_ptr<ScanFilter>& scan_filter,
         int32_t table_schema_id, int32_t snapshot_id) const {
-        std::map<std::string, std::string> options_map = {};
+        std::map<std::string, std::string> options_map = {{Options::MANIFEST_FORMAT, "orc"}};
         PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_map));
         auto fs = core_options.GetFileSystem();
         auto schema_manager = std::make_shared<SchemaManager>(fs, table_path);

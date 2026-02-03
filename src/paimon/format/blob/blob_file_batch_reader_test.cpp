@@ -167,7 +167,8 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
                                           /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
 
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
-    ASSERT_EQ(3, reader->GetNumberOfRows());
+    ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
+    ASSERT_EQ(3, number_of_rows);
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
@@ -206,7 +207,8 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbersWithBitmap) {
     RoaringBitmap32 roaring;
     roaring.Add(1);
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, roaring));
-    ASSERT_EQ(3, reader->GetNumberOfRows());
+    ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
+    ASSERT_EQ(3, number_of_rows);
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
@@ -283,7 +285,8 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
                                           /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
 
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
-    ASSERT_EQ(0, reader->GetNumberOfRows());
+    ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
+    ASSERT_EQ(0, number_of_rows);
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
     ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch));

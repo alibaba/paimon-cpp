@@ -25,6 +25,7 @@
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/format/avro/avro_input_stream_impl.h"
 #include "paimon/format/avro/avro_schema_converter.h"
 #include "paimon/reader/batch_reader.h"
@@ -176,6 +177,33 @@ Result<std::unique_ptr<::ArrowSchema>> AvroFileBatchReader::GetFileSchema() cons
     auto c_schema = std::make_unique<::ArrowSchema>();
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportType(*file_data_type_, c_schema.get()));
     return c_schema;
+}
+
+Result<uint64_t> AvroFileBatchReader::GetNumberOfRows() const {
+    if (!total_rows_) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t current_pos, input_stream_->GetPos());
+        ScopeGuard stream_guard([this, current_pos]() -> void {
+            // reset input stream position to original position
+            Status status = input_stream_->Seek(current_pos, SeekOrigin::FS_SEEK_SET);
+            (void)status;
+        });
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::avro::DataFileReaderBase> reader,
+                               CreateDataFileReader(input_stream_, pool_));
+        ScopeGuard reader_guard([&reader]() -> void { reader->close(); });
+        try {
+            while (reader->hasMore()) {
+                reader->decr();
+                total_rows_ = total_rows_.value_or(0) + 1;
+            }
+        } catch (const ::avro::Exception& e) {
+            return Status::Invalid(fmt::format("avro reader GetNumberOfRows failed. {}", e.what()));
+        } catch (const std::exception& e) {
+            return Status::Invalid(fmt::format("avro reader GetNumberOfRows failed. {}", e.what()));
+        } catch (...) {
+            return Status::Invalid("avro reader GetNumberOfRows failed. unknown error");
+        }
+    }
+    return *total_rows_;
 }
 
 }  // namespace paimon::avro
