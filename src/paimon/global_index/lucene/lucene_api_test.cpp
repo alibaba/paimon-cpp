@@ -41,10 +41,13 @@ class LuceneInterfaceTest : public ::testing::Test {
             return doc_id;
         }
         int32_t docID() override {
+            if (cursor_ >= ids_.size()) {
+                return Lucene::DocIdSetIterator::NO_MORE_DOCS;
+            }
             return ids_[cursor_];
         }
         int32_t nextDoc() override {
-            if (cursor_ == ids_.size()) {
+            if (cursor_ >= ids_.size()) {
                 return Lucene::DocIdSetIterator::NO_MORE_DOCS;
             }
             return ids_[cursor_++];
@@ -163,14 +166,14 @@ class LuceneInterfaceTest : public ::testing::Test {
         }
         ASSERT_EQ(expected_doc_id_vec.size(), results->scoreDocs.size());
 
-        std::vector<int32_t> resule_doc_id_vec;
+        std::vector<int32_t> result_doc_id_vec;
         std::vector<std::wstring> result_doc_id_content_vec;
         for (auto score_doc : results->scoreDocs) {
             Lucene::DocumentPtr result_doc = context->searcher->doc(score_doc->doc);
-            resule_doc_id_vec.push_back(score_doc->doc);
+            result_doc_id_vec.push_back(score_doc->doc);
             result_doc_id_content_vec.push_back(result_doc->get(L"id"));
         }
-        ASSERT_EQ(resule_doc_id_vec, expected_doc_id_vec);
+        ASSERT_EQ(result_doc_id_vec, expected_doc_id_vec);
         ASSERT_EQ(result_doc_id_content_vec, expected_doc_id_content_vec);
     }
 };

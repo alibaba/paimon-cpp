@@ -72,7 +72,7 @@ class JiebaTokenizer : public Lucene::Tokenizer {
 
 class JiebaAnalyzer : public Lucene::Analyzer {
  public:
-    JiebaAnalyzer(const JiebaTokenizerContext& context) : context_(context) {}
+    explicit JiebaAnalyzer(const JiebaTokenizerContext& context) : context_(context) {}
 
     ~JiebaAnalyzer() override = default;
 
