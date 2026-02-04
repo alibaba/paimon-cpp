@@ -132,14 +132,14 @@ class LuceneInterfaceTest : public ::testing::Test {
         context->writer->addDocument(context->doc);
     }
 
-    struct ReadConext {
+    struct ReadContext {
         Lucene::IndexReaderPtr reader;
         Lucene::IndexSearcherPtr searcher;
         Lucene::QueryParserPtr parser;
     };
 
-    ReadConext CreateReadContext(const Lucene::DirectoryPtr& lucene_dir,
-                                 const Lucene::AnalyzerPtr& analyzer) const {
+    ReadContext CreateReadContext(const Lucene::DirectoryPtr& lucene_dir,
+                                  const Lucene::AnalyzerPtr& analyzer) const {
         auto lucene_analyzer = analyzer ? analyzer
                                         : Lucene::newLucene<Lucene::StandardAnalyzer>(
                                               Lucene::LuceneVersion::LUCENE_CURRENT);
@@ -155,7 +155,7 @@ class LuceneInterfaceTest : public ::testing::Test {
                 const std::optional<std::vector<int32_t>> selected_id,
                 const std::vector<int32_t>& expected_doc_id_vec,
                 const std::vector<std::wstring>& expected_doc_id_content_vec,
-                ReadConext* context) const {
+                ReadContext* context) const {
         Lucene::QueryPtr query = context->parser->parse(query_str);
         Lucene::TopDocsPtr results;
         if (selected_id) {

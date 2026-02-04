@@ -98,13 +98,15 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
         // to lower case
         bool is_alphanumeric = true;
         for (const auto& c : term) {
-            if (!std::isalnum(c)) {
+            if (!std::isalnum(static_cast<unsigned char>(c))) {
                 is_alphanumeric = false;
                 break;
             }
         }
         if (is_alphanumeric && !term.empty()) {
-            std::transform(term.begin(), term.end(), term.begin(), ::tolower);
+            std::transform(term.begin(), term.end(), term.begin(), [](char ch) {
+                return static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+            });
         }
         output.emplace_back(term.data(), term.length());
     }
