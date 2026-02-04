@@ -43,7 +43,7 @@ class LuceneUtils {
         return std::string(JIEBA_TEST_DICT_DIR);
 #endif
         return Status::Invalid(
-            fmt::format("cannot get dictionary dir for jieba, must set {}", kJiebaDictDirEnv));
+            fmt::format("cannot get dictionary dir for jieba, must set env {}", kJiebaDictDirEnv));
     }
 };
 }  // namespace paimon::lucene
