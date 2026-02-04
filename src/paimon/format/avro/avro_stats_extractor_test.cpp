@@ -129,7 +129,7 @@ TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     for (const auto& stats : column_stats) {
         ASSERT_EQ(stats->ToString(), "min null, max null, null count null");
     }
-    ASSERT_EQ(3, stats_with_info.second.GetRowCount());
+    ASSERT_EQ(3, file_stats.GetRowCount());
 }
 
 TEST_F(AvroStatsExtractorTest, TestNestedType) {
