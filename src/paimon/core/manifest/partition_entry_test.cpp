@@ -66,8 +66,10 @@ TEST_F(PartitionEntryTest, TestSimple) {
                                  /*total_buckets=*/2, GetDataFileMeta(Timestamp(1500, 123)))));
 
         auto res = partition_entry1.Merge(partition_entry2);
-        auto expected_partition_entry = PartitionEntry(BinaryRow::EmptyRow(), /*record_count=*/10,
-                                                       /*file_size_in_bytes=*/20, 2, -28798500);
+        auto expected_partition_entry =
+            PartitionEntry(BinaryRow::EmptyRow(), /*record_count=*/10,
+                           /*file_size_in_bytes=*/20, /*file_count=*/2,
+                           /*last_file_creation_time=*/-28798500, /*total_buckets=*/2);
         ASSERT_EQ(res, expected_partition_entry);
     }
     {
@@ -82,8 +84,10 @@ TEST_F(PartitionEntryTest, TestSimple) {
                                  /*total_buckets=*/2, GetDataFileMeta(Timestamp(1500, 123)))));
 
         auto res = partition_entry1.Merge(partition_entry2);
-        auto expected_partition_entry = PartitionEntry(BinaryRow::EmptyRow(), /*record_count=*/0,
-                                                       /*file_size_in_bytes=*/0, 0, -28798500);
+        auto expected_partition_entry =
+            PartitionEntry(BinaryRow::EmptyRow(), /*record_count=*/0,
+                           /*file_size_in_bytes=*/0, /*file_count=*/0,
+                           /*last_file_creation_time=*/-28798500, /*total_buckets=*/2);
         ASSERT_EQ(res, expected_partition_entry);
     }
 }
@@ -108,10 +112,10 @@ TEST_F(PartitionEntryTest, TestMerge) {
     std::unordered_map<BinaryRow, PartitionEntry> expected_partition_entry;
     expected_partition_entry.emplace(
         std::piecewise_construct, std::forward_as_tuple(partition0),
-        std::forward_as_tuple(PartitionEntry(partition0, 10, 20, 2, -28798500)));
+        std::forward_as_tuple(PartitionEntry(partition0, 10, 20, 2, -28798500, 2)));
     expected_partition_entry.emplace(
         std::piecewise_construct, std::forward_as_tuple(partition1),
-        std::forward_as_tuple(PartitionEntry(partition1, 5, 10, 1, -28800000)));
+        std::forward_as_tuple(PartitionEntry(partition1, 5, 10, 1, -28800000, 2)));
     ASSERT_EQ(to, expected_partition_entry);
 }
 

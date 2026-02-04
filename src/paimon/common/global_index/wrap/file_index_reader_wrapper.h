@@ -114,6 +114,12 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
         return transform_(file_index_result);
     }
 
+    Result<std::shared_ptr<GlobalIndexResult>> VisitLike(const Literal& literal) override {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileIndexResult> file_index_result,
+                               reader_->VisitLike(literal));
+        return transform_(file_index_result);
+    }
+
     Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
         return Status::Invalid(
