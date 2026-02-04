@@ -34,16 +34,6 @@ class LuceneUtils {
         return Lucene::StringUtils::toUTF8(wstr);
     }
 
-    static Result<std::string> GetJiebaDictionaryDir() {
-        const char* env_dir = std::getenv(kJiebaDictDirEnv);
-        if (env_dir && *env_dir != '\0') {
-            return std::string(env_dir);
-        }
-#ifdef JIEBA_TEST_DICT_DIR
-        return std::string(JIEBA_TEST_DICT_DIR);
-#endif
-        return Status::Invalid(
-            fmt::format("cannot get dictionary dir for jieba, must set env {}", kJiebaDictDirEnv));
-    }
+    static Result<std::string> GetJiebaDictionaryDir();
 };
 }  // namespace paimon::lucene
