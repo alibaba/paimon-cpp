@@ -16,7 +16,7 @@ if(PAIMON_ENABLE_LUCENE)
     set(PAIMON_LUCENE
         lucene_global_index.cpp
         lucene_directory.cpp
-        lucene_utils.cpp        
+        lucene_utils.cpp
         jieba_analyzer.cpp
         lucene_global_index_writer.cpp
         lucene_global_index_reader.cpp
@@ -47,7 +47,6 @@ if(PAIMON_ENABLE_LUCENE)
                                    PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
 
     endif()
-    
 
     if(PAIMON_BUILD_TESTS)
         add_paimon_test(lucene_index_test
