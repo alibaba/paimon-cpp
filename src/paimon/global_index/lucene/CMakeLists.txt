@@ -43,10 +43,6 @@ if(PAIMON_ENABLE_LUCENE)
                    ${PAIMON_VERSION_SCRIPT_FLAGS})
 
     if(PAIMON_BUILD_TESTS)
-        target_compile_definitions(paimon_lucene_index_objlib
-                                   PRIVATE JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
-    endif()
-    if(PAIMON_BUILD_TESTS)
         add_paimon_test(lucene_index_test
                         SOURCES
                         jieba_analyzer_test.cpp
@@ -65,5 +61,8 @@ if(PAIMON_ENABLE_LUCENE)
                         paimon_lucene_index_static
                         "-Wl,--no-whole-archive"
                         ${GTEST_LINK_TOOLCHAIN})
+        target_compile_definitions(paimon-lucene-index-test
+                                   PUBLIC JIEBA_TEST_DICT_DIR="${JIEBA_DICT_DIR}")
+
     endif()
 endif()

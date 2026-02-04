@@ -53,7 +53,7 @@ class JiebaTokenizer : public Lucene::Tokenizer {
     static void CutWithMode(const std::string& tokenize_mode, const cppjieba::Jieba* jieba,
                             const std::string& str, std::vector<std::string>* terms_ptr);
 
-    // inplace to lower to avoid data copy
+    // In-place converts each string in `input` to lowercase to avoid data copying.
     static void Normalize(const std::unordered_set<std::string>& stop_words,
                           std::vector<std::string>* input, std::vector<std::string_view>* output);
 
