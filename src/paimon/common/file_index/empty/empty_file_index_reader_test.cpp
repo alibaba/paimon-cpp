@@ -31,6 +31,7 @@ TEST(EmptyFileIndexReaderTest, TestSimple) {
     ASSERT_FALSE(reader.VisitStartsWith(lit0).value()->IsRemain().value());
     ASSERT_FALSE(reader.VisitEndsWith(lit0).value()->IsRemain().value());
     ASSERT_FALSE(reader.VisitContains(lit0).value()->IsRemain().value());
+    ASSERT_FALSE(reader.VisitLike(lit0).value()->IsRemain().value());
     ASSERT_FALSE(reader.VisitLessThan(lit0).value()->IsRemain().value());
     ASSERT_FALSE(reader.VisitGreaterOrEqual(lit0).value()->IsRemain().value());
     ASSERT_FALSE(reader.VisitLessOrEqual(lit0).value()->IsRemain().value());

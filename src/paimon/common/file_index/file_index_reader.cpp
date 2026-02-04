@@ -41,6 +41,10 @@ Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitContains(const Li
     return FileIndexResult::Remain();
 }
 
+Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitLike(const Literal& literal) {
+    return FileIndexResult::Remain();
+}
+
 Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitLessThan(const Literal& literal) {
     return FileIndexResult::Remain();
 }

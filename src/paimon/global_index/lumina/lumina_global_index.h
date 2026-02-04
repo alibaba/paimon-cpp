@@ -183,6 +183,10 @@ class LuminaIndexReader : public GlobalIndexReader {
         return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
     }
 
+    Result<std::shared_ptr<GlobalIndexResult>> VisitLike(const Literal& literal) override {
+        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+    }
+
     bool IsThreadSafe() const override {
         return true;
     }

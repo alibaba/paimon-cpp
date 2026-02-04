@@ -59,9 +59,16 @@ Bytes& Bytes::operator=(Bytes&& other) noexcept {
     if (&other == this) {
         return *this;
     }
-    this->~Bytes();
-    std::memcpy(this, &other, sizeof(*this));
-    new (&other) Bytes();
+    if (data_ != nullptr) {
+        assert(pool_);
+        pool_->Free(data_, size_);
+    }
+    pool_ = other.pool_;
+    data_ = other.data_;
+    size_ = other.size_;
+    other.pool_ = nullptr;
+    other.data_ = nullptr;
+    other.size_ = 0;
     return *this;
 }
 
