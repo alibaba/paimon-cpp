@@ -345,7 +345,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
     lumina_options[std::string(::lumina::core::kSearchThreadSafeFilter)] = "true";
     PAIMON_ASSIGN_OR_RAISE_FROM_LUMINA(
         ::lumina::api::SearchOptions search_options,
-        ::lumina::api::NormalizeSearchOptions(std::string(::lumina::core::kIndexType),
+        ::lumina::api::NormalizeSearchOptions(index_info_.index_type,
                                               std::unordered_map<std::string, std::string>(
                                                   lumina_options.begin(), lumina_options.end())));
 
