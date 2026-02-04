@@ -120,12 +120,16 @@ TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     ASSERT_TRUE(arrow::ExportSchema(*schema, &arrow_schema).ok());
     ASSERT_OK_AND_ASSIGN(auto extractor, format.CreateStatsExtractor(&arrow_schema));
     auto fs = std::make_shared<LocalFileSystem>();
-    ASSERT_OK_AND_ASSIGN(auto results, extractor->Extract(fs, file_path, GetDefaultPool()));
+    ASSERT_OK_AND_ASSIGN(auto stats_with_info,
+                         extractor->ExtractWithFileInfo(fs, file_path, GetDefaultPool()));
+    const auto& column_stats = stats_with_info.first;
+    const auto& file_stats = stats_with_info.second;
 
-    ASSERT_EQ(results.size(), 20);
-    for (const auto& stats : results) {
+    ASSERT_EQ(column_stats.size(), 20);
+    for (const auto& stats : column_stats) {
         ASSERT_EQ(stats->ToString(), "min null, max null, null count null");
     }
+    ASSERT_EQ(3, stats_with_info.second.GetRowCount());
 }
 
 TEST_F(AvroStatsExtractorTest, TestNestedType) {

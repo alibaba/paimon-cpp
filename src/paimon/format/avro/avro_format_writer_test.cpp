@@ -118,7 +118,6 @@ class AvroFormatWriterTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path));
         ASSERT_OK_AND_ASSIGN(auto file_reader,
                              AvroFileBatchReader::Create(input_stream, 1024, pool_));
-        auto& reader = file_reader->reader_;
         ASSERT_OK_AND_ASSIGN(uint64_t num_rows, file_reader->GetNumberOfRows());
         ASSERT_EQ(num_rows, row_count);
 

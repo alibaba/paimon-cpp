@@ -159,7 +159,8 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
 Result<std::set<size_t>> AvroFileBatchReader::CalculateReadFieldsProjection(
     const std::shared_ptr<::arrow::Schema>& file_schema, const arrow::FieldVector& read_fields) {
     std::set<size_t> projection_set;
-    auto projection = ArrowUtils::CreateProjection(file_schema, read_fields);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> projection,
+                           ArrowUtils::CreateProjection(file_schema, read_fields));
     int32_t prev_index = -1;
     for (auto& index : projection) {
         if (index <= prev_index) {

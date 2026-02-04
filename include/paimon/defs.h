@@ -130,7 +130,7 @@ struct PAIMON_EXPORT Options {
     static const char MANIFEST_TARGET_FILE_SIZE[];
 
     /// "manifest.format" - Specify the message format of manifest files.
-    /// Default value is orc.
+    /// Default value is avro.
     static const char MANIFEST_FORMAT[];
 
     /// "manifest.compression" - File compression for manifest, default value is zstd.
