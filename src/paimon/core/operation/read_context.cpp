@@ -36,7 +36,7 @@ ReadContext::ReadContext(
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor,
     const std::shared_ptr<FileSystem>& specific_file_system,
     const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-    const std::map<std::string, std::string>& options, bool enable_prefetch_cache,
+    const std::map<std::string, std::string>& options, PrefetchCacheMode prefetch_cache_mode,
     const CacheConfig& cache_config)
     : path_(path),
       branch_(branch),
@@ -55,7 +55,7 @@ ReadContext::ReadContext(
       specific_file_system_(specific_file_system),
       fs_scheme_to_identifier_map_(fs_scheme_to_identifier_map),
       options_(options),
-      enable_prefetch_cache_(enable_prefetch_cache),
+      prefetch_cache_mode_(prefetch_cache_mode),
       cache_config_(cache_config) {}
 
 ReadContext::~ReadContext() = default;
@@ -72,7 +72,7 @@ class ReadContextBuilder::Impl {
         predicate_.reset();
         enable_predicate_filter_ = false;
         enable_prefetch_ = false;
-        enable_prefetch_cache_ = true;
+        prefetch_cache_mode_ = PrefetchCacheMode::ALWAYS;
         prefetch_batch_count_ = 600;
         prefetch_max_parallel_num_ = 3;
         enable_multi_thread_row_to_batch_ = false;
@@ -102,7 +102,7 @@ class ReadContextBuilder::Impl {
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<FileSystem> specific_file_system_;
-    bool enable_prefetch_cache_ = true;
+    PrefetchCacheMode prefetch_cache_mode_ = PrefetchCacheMode::ALWAYS;
     CacheConfig cache_config_;
 };
 
@@ -207,8 +207,8 @@ ReadContextBuilder& ReadContextBuilder::WithFileSystem(
     return *this;
 }
 
-ReadContextBuilder& ReadContextBuilder::EnablePrefetchCache(bool enabled) {
-    impl_->enable_prefetch_cache_ = enabled;
+ReadContextBuilder& ReadContextBuilder::SetPrefetchCacheMode(PrefetchCacheMode mode) {
+    impl_->prefetch_cache_mode_ = mode;
     return *this;
 }
 
@@ -245,7 +245,7 @@ Result<std::unique_ptr<ReadContext>> ReadContextBuilder::Finish() {
         impl_->prefetch_batch_count_, impl_->prefetch_max_parallel_num_,
         impl_->enable_multi_thread_row_to_batch_, impl_->row_to_batch_thread_number_,
         impl_->table_schema_, impl_->memory_pool_, impl_->executor_, impl_->specific_file_system_,
-        impl_->fs_scheme_to_identifier_map_, impl_->options_, impl_->enable_prefetch_cache_,
+        impl_->fs_scheme_to_identifier_map_, impl_->options_, impl_->prefetch_cache_mode_,
         impl_->cache_config_);
     impl_->Reset();
     return ctx;

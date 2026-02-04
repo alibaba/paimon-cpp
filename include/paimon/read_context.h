@@ -54,8 +54,8 @@ class PAIMON_EXPORT ReadContext {
                 const std::shared_ptr<Executor>& executor,
                 const std::shared_ptr<FileSystem>& specific_file_system,
                 const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-                const std::map<std::string, std::string>& options, bool enable_prefetch_cache,
-                const CacheConfig& cache_config);
+                const std::map<std::string, std::string>& options,
+                PrefetchCacheMode prefetch_cache_mode, const CacheConfig& cache_config);
     ~ReadContext();
 
     const std::string& GetPath() const {
@@ -117,8 +117,8 @@ class PAIMON_EXPORT ReadContext {
         return specific_file_system_;
     }
 
-    bool EnablePrefetchCache() const {
-        return enable_prefetch_cache_;
+    PrefetchCacheMode GetPrefetchCacheMode() const {
+        return prefetch_cache_mode_;
     }
 
     const CacheConfig& GetCacheConfig() const {
@@ -143,7 +143,7 @@ class PAIMON_EXPORT ReadContext {
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
-    bool enable_prefetch_cache_;
+    PrefetchCacheMode prefetch_cache_mode_;
     CacheConfig cache_config_;
 };
 
@@ -227,13 +227,13 @@ class PAIMON_EXPORT ReadContextBuilder {
     /// @return Reference to this builder for method chaining.
     ReadContextBuilder& EnablePrefetch(bool enabled);
 
-    /// Enable or disable prefetch cache for read operations.
+    /// Set prefetch cache mode for read operations.
     ///
-    /// When enabled, a prefetch cache is used to prebuffer data ranges before they are needed,
+    /// A prefetch cache is used to prebuffer data ranges before they are needed,
     /// which can improve read performance by reducing redundant I/O operations.
-    /// @param enabled Whether to enable prefetch cache (default: true)
+    /// @param mode (default: PrefetchCacheMode::ALWAYS)
     /// @return Reference to this builder for method chaining.
-    ReadContextBuilder& EnablePrefetchCache(bool enabled);
+    ReadContextBuilder& SetPrefetchCacheMode(PrefetchCacheMode mode);
 
     /// Set the cache configuration for prefetch read operations.
     ///

@@ -34,6 +34,24 @@
 
 namespace paimon {
 
+/// PrefetchCacheMode
+/// Cache prefetch switch modes.
+/// Controls whether to enable cache prefetching under different circumstances, such as queries with
+/// predicates or bitmap indexes.
+///
+/// - ALWAYS: Enable cache in all scenarios.
+/// - EXCLUDE_PREDICATE: Disable cache when query has predicates.
+/// - EXCLUDE_BITMAP: Disable cache when using bitmap index.
+/// - EXCLUDE_BITMAP_OR_PREDICATE: Disable cache if query has predicates or bitmap index.
+/// - NEVER: Always disable cache.
+enum class PAIMON_EXPORT PrefetchCacheMode {
+    ALWAYS = 1,
+    EXCLUDE_PREDICATE = 2,
+    EXCLUDE_BITMAP = 3,
+    EXCLUDE_BITMAP_OR_PREDICATE = 4,
+    NEVER = 5
+};
+
 /// Configuration parameters for the read-ahead cache behavior.
 ///
 /// This struct controls various limits and prefetching strategies used by
