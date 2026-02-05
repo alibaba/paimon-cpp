@@ -30,7 +30,6 @@
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/status.h"
@@ -40,11 +39,10 @@ class MemoryPool;
 
 Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionConsumer::Create(
     const std::shared_ptr<arrow::Schema>& target_schema, const std::shared_ptr<MemoryPool>& pool) {
-    auto arrow_pool = GetArrowPool(pool);
     // target fields of output array: special fields + value fields
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(
-        arrow_pool.get(), arrow::struct_(target_schema->fields()), &array_builder));
+        pool->AsArrowMemoryPool(), arrow::struct_(target_schema->fields()), &array_builder));
 
     auto struct_builder =
         arrow::internal::checked_pointer_cast<arrow::StructBuilder>(std::move(array_builder));
@@ -73,7 +71,7 @@ Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionCo
         appenders.emplace_back(func);
     }
     return std::unique_ptr<KeyValueMetaProjectionConsumer>(new KeyValueMetaProjectionConsumer(
-        reserve_count, std::move(appenders), std::move(struct_builder), std::move(arrow_pool),
+        reserve_count, std::move(appenders), std::move(struct_builder), pool,
         sequence_appender, value_kind_appender));
 }
 

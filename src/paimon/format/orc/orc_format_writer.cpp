@@ -39,9 +39,9 @@
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/orc/orc_adapter.h"
 #include "paimon/format/orc/orc_format_defs.h"
-#include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/macros.h"
+#include "paimon/memory/memory_pool.h"
 
 namespace paimon {
 class MemoryPool;
@@ -50,7 +50,7 @@ struct ArrowArray;
 
 namespace paimon::orc {
 
-OrcFormatWriter::OrcFormatWriter(const std::shared_ptr<OrcMemoryPool>& orc_memory_pool,
+OrcFormatWriter::OrcFormatWriter(const std::shared_ptr<MemoryPool>& memory_pool,
                                  std::unique_ptr<::orc::OutputStream>&& output_stream,
                                  std::unique_ptr<::orc::WriterMetrics>&& writer_metrics,
                                  std::unique_ptr<::orc::Writer>&& writer,
@@ -58,7 +58,7 @@ OrcFormatWriter::OrcFormatWriter(const std::shared_ptr<OrcMemoryPool>& orc_memor
                                  std::unique_ptr<::orc::Type>&& orc_type,
                                  const ::orc::WriterOptions& writer_options,
                                  const std::shared_ptr<arrow::DataType>& data_type)
-    : orc_memory_pool_(orc_memory_pool),
+    : memory_pool_(memory_pool),
       output_stream_(std::move(output_stream)),
       writer_metrics_(std::move(writer_metrics)),
       writer_(std::move(writer)),
@@ -78,10 +78,8 @@ Result<std::unique_ptr<OrcFormatWriter>> OrcFormatWriter::Create(
     try {
         PAIMON_ASSIGN_OR_RAISE(::orc::WriterOptions writer_options,
                                PrepareWriterOptions(options, compression, data_type));
-        std::shared_ptr<OrcMemoryPool> orc_memory_pool;
         if (pool) {
-            orc_memory_pool = std::make_shared<OrcMemoryPool>(pool);
-            writer_options.setMemoryPool(orc_memory_pool.get());
+            writer_options.setMemoryPool(pool->AsOrcMemoryPool());
         }
 
         std::unique_ptr<::orc::WriterMetrics> writer_metrics;
@@ -97,7 +95,7 @@ Result<std::unique_ptr<OrcFormatWriter>> OrcFormatWriter::Create(
         assert(writer);
         std::unique_ptr<::orc::ColumnVectorBatch> orc_batch = writer->createRowBatch(batch_size);
         return std::unique_ptr<OrcFormatWriter>(new OrcFormatWriter(
-            orc_memory_pool, std::move(output_stream), std::move(writer_metrics), std::move(writer),
+            pool, std::move(output_stream), std::move(writer_metrics), std::move(writer),
             std::move(orc_batch), std::move(orc_type), writer_options, data_type));
     } catch (const std::exception& e) {
         return Status::Invalid(

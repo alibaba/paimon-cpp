@@ -28,7 +28,6 @@
 #include "arrow/io/caching.h"
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
@@ -55,7 +54,6 @@ class FileReaderWrapperTest : public ::testing::Test {
         ASSERT_TRUE(dir_);
         fs_ = std::make_shared<LocalFileSystem>();
         pool_ = GetDefaultPool();
-        arrow_pool_ = GetArrowPool(pool_);
         batch_size_ = 512;
     }
     void TearDown() override {}
@@ -117,7 +115,7 @@ class FileReaderWrapperTest : public ::testing::Test {
     Result<std::unique_ptr<FileReaderWrapper>> PrepareReaderWrapper(const std::string& file_path) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs_->Open(file_path));
         PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, in->Length());
-        auto input_stream = std::make_unique<ParquetInputStreamImpl>(in, arrow_pool_, file_length);
+        auto input_stream = std::make_unique<ParquetInputStreamImpl>(in, pool_, file_length);
         ::parquet::arrow::FileReaderBuilder file_reader_builder;
         ::parquet::ReaderProperties reader_properties;
         reader_properties.enable_buffered_stream();
@@ -130,7 +128,7 @@ class FileReaderWrapperTest : public ::testing::Test {
         arrow_reader_props.set_use_threads(true);
         arrow_reader_props.set_cache_options(arrow::io::CacheOptions::Defaults());
         std::unique_ptr<::parquet::arrow::FileReader> file_reader;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(arrow_pool_.get())
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool_->AsArrowMemoryPool())
                                             ->properties(arrow_reader_props)
                                             ->Build(&file_reader));
         return FileReaderWrapper::Create(std::move(file_reader));
@@ -150,7 +148,7 @@ class FileReaderWrapperTest : public ::testing::Test {
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<ParquetFormatWriter> format_writer,
-            ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+            ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
 
         AddRecordBatchOnce(format_writer, struct_type, /*record_batch_size=*/row_count,
                            /*offset=*/0);
@@ -164,7 +162,6 @@ class FileReaderWrapperTest : public ::testing::Test {
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     int32_t batch_size_;
 };
 

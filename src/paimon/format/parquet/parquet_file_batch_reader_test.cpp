@@ -32,7 +32,6 @@
 #include "arrow/util/thread_pool.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/defs.h"
@@ -65,7 +64,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         dir_ = paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(dir_);
         fs_ = std::make_shared<LocalFileSystem>();
-        pool_ = GetArrowPool(GetDefaultPool());
+        pool_ = GetDefaultPool();
         batch_size_ = 10;
         file_path_ = PathUtil::JoinPath(dir_->Str(), "test.parquet");
 
@@ -156,7 +155,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
     std::string file_path_;
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
-    std::shared_ptr<arrow::MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> pool_;
     int32_t batch_size_;
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<arrow::StructArray> struct_array_;

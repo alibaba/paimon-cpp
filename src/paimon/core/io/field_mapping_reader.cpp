@@ -30,7 +30,6 @@
 #include "fmt/format.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/types/data_field.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/casting/cast_executor.h"
 #include "paimon/core/casting/casting_utils.h"
@@ -46,7 +45,7 @@ FieldMappingReader::FieldMappingReader(int32_t field_count, std::unique_ptr<Batc
                                        std::unique_ptr<FieldMapping>&& mapping,
                                        const std::shared_ptr<MemoryPool>& pool)
     : field_count_(field_count),
-      arrow_pool_(GetArrowPool(pool)),
+      memory_pool_(pool),
       reader_(std::move(reader)),
       partition_(partition),
       partition_info_(mapping->partition_info),
@@ -89,13 +88,13 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayI
                 PAIMON_ASSIGN_OR_RAISE(
                     single_column_array,
                     CastingUtils::Cast(dict_array, /*target_type=*/arrow::utf8(),
-                                       arrow::compute::CastOptions::Safe(), arrow_pool_.get()));
+                                       arrow::compute::CastOptions::Safe(), memory_pool_->AsArrowMemoryPool()));
             }
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> casted,
                 non_partition_info_.cast_executors[i]->Cast(
                     single_column_array, non_partition_info_.non_partition_read_schema[i].Type(),
-                    arrow_pool_.get()));
+                    memory_pool_->AsArrowMemoryPool()));
             casted_array.push_back(casted);
             casted_field_names.push_back(non_partition_info_.non_partition_read_schema[i].Name());
         } else {
@@ -177,7 +176,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateSinglePartitio
         // for null partition value
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> null_array,
-            arrow::MakeArrayOfNull(type, batch_size, arrow_pool_.get()));
+            arrow::MakeArrayOfNull(type, batch_size, memory_pool_->AsArrowMemoryPool()));
         return null_array;
     }
     auto type_id = type->id();
@@ -242,7 +241,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateSinglePartitio
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::shared_ptr<arrow::Array> arrow_array,
-        arrow::MakeArrayFromScalar(*scalar, batch_size, arrow_pool_.get()));
+        arrow::MakeArrayFromScalar(*scalar, batch_size, memory_pool_->AsArrowMemoryPool()));
     return arrow_array;
 }
 
@@ -273,7 +272,7 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
     for (const auto& non_exist_field : non_exist_field_info_.value().non_exist_read_schema) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> null_array,
-            arrow::MakeArrayOfNull(non_exist_field.Type(), batch_size, arrow_pool_.get()));
+            arrow::MakeArrayOfNull(non_exist_field.Type(), batch_size, memory_pool_->AsArrowMemoryPool()));
         non_exist_array.push_back(null_array);
         non_exist_field_names.push_back(non_exist_field.Name());
     }

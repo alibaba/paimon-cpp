@@ -33,7 +33,7 @@ namespace paimon::parquet {
 class ParquetInputStreamImpl : public arrow::io::RandomAccessFile {
  public:
     ParquetInputStreamImpl(const std::shared_ptr<::paimon::InputStream>& input_stream,
-                           const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size);
+                           const std::shared_ptr<MemoryPool>& pool, uint64_t file_size);
     ~ParquetInputStreamImpl() override;
 
     // NOTE: In paimon file system definition, position + nbytes should not exceed file_size_.
@@ -55,7 +55,7 @@ class ParquetInputStreamImpl : public arrow::io::RandomAccessFile {
  private:
     arrow::Status DoClose();
     std::shared_ptr<::paimon::InputStream> input_stream_;
-    std::shared_ptr<arrow::MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> pool_;
     uint64_t file_size_;
     bool closed_ = false;
 };

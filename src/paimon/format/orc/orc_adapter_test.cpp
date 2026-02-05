@@ -630,8 +630,8 @@ TEST_F(OrcAdapterTest, TestBridgeForMapType) {
 TEST_F(OrcAdapterTest, TestDataBufferSetData) {
     {
         // buffer1 !ownBuf
-        OrcMemoryPool orc_pool(GetDefaultPool());
-        ::orc::DataBuffer<int32_t> buffer1(orc_pool, /*size=*/0, /*ownBuf=*/false);
+        ::orc::MemoryPool* orc_pool = GetDefaultPool()->AsOrcMemoryPool();
+        ::orc::DataBuffer<int32_t> buffer1(*orc_pool, /*size=*/0, /*ownBuf=*/false);
         std::vector<int32_t> data = {1, 2, 3, 1};
         buffer1.setData(data.data(), /*bufSize=*/4 * 4);
 
@@ -646,8 +646,8 @@ TEST_F(OrcAdapterTest, TestDataBufferSetData) {
     }
     {
         // buffer1 ownBuf
-        OrcMemoryPool orc_pool(GetDefaultPool());
-        ::orc::DataBuffer<int32_t> buffer1(orc_pool, /*size=*/4, /*ownBuf=*/true);
+        ::orc::MemoryPool* orc_pool = GetDefaultPool()->AsOrcMemoryPool();
+        ::orc::DataBuffer<int32_t> buffer1(*orc_pool, /*size=*/4, /*ownBuf=*/true);
         buffer1[0] = 1;
         buffer1[1] = 2;
         buffer1[2] = 3;

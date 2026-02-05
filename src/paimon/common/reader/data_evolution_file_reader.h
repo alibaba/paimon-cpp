@@ -72,8 +72,8 @@ class DataEvolutionFileReader : public BatchReader {
                             const std::shared_ptr<arrow::Schema>& read_schema,
                             int32_t read_batch_size, const std::vector<int32_t>& reader_offsets,
                             const std::vector<int32_t>& field_offsets,
-                            const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
-        : arrow_pool_(arrow_pool),
+                            const std::shared_ptr<MemoryPool>& memory_pool)
+        : memory_pool_(memory_pool),
           readers_(std::move(readers)),
           read_schema_(read_schema),
           read_batch_size_(read_batch_size),
@@ -90,7 +90,7 @@ class DataEvolutionFileReader : public BatchReader {
                                                                    int64_t array_length);
 
  private:
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::vector<std::unique_ptr<BatchReader>> readers_;
     std::shared_ptr<arrow::Schema> read_schema_;
     int32_t read_batch_size_;

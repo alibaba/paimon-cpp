@@ -27,7 +27,6 @@
 #include "arrow/io/file.h"
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/avro/avro_file_batch_reader.h"
 #include "paimon/format/file_format.h"
@@ -49,7 +48,6 @@ class AvroFormatWriterTest : public ::testing::Test {
         ASSERT_TRUE(dir_);
         fs_ = std::make_shared<LocalFileSystem>();
         pool_ = GetDefaultPool();
-        arrow_pool_ = GetArrowPool(pool_);
     }
     void TearDown() override {}
 
@@ -157,7 +155,6 @@ class AvroFormatWriterTest : public ::testing::Test {
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(AvroFormatWriterTest, TestWriteWithVariousBatchSize) {

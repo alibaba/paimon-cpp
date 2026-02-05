@@ -38,7 +38,7 @@ class ParquetTimestampConverter {
     static Result<std::shared_ptr<arrow::Array>> CastArrayForTimestamp(
         const std::shared_ptr<arrow::Array>& array,
         const std::shared_ptr<arrow::DataType>& target_data_type,
-        const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
+        const std::shared_ptr<MemoryPool>& memory_pool);
 };
 
 }  // namespace paimon::parquet

@@ -160,7 +160,6 @@ class BlobFileBatchReader : public FileBatchReader {
     const int32_t batch_size_;
     const bool blob_as_descriptor_;
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 
     std::shared_ptr<arrow::DataType> target_type_;
     std::shared_ptr<Metrics> metrics_;

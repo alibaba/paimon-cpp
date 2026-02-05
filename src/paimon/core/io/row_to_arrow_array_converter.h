@@ -24,7 +24,6 @@
 #include "arrow/c/bridge.h"
 #include "paimon/common/data/internal_array.h"
 #include "paimon/common/data/internal_map.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/key_value.h"
@@ -49,7 +48,7 @@ class RowToArrowArrayConverter {
         std::function<arrow::Status(const DataGetters& data_getter, int32_t pos)>;
     RowToArrowArrayConverter(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
                              std::unique_ptr<arrow::StructBuilder>&& array_builder,
-                             std::unique_ptr<arrow::MemoryPool>&& arrow_pool);
+                             std::shared_ptr<MemoryPool>&& memory_pool);
 
     static Result<AppendValueFunc> AppendField(bool use_view, arrow::ArrayBuilder* array_builder,
                                                int32_t* reserve_count);
@@ -69,7 +68,7 @@ class RowToArrowArrayConverter {
 
  protected:
     std::vector<int32_t> reserved_sizes_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::vector<AppendValueFunc> appenders_;
     std::unique_ptr<arrow::StructBuilder> array_builder_;
 };
@@ -83,9 +82,9 @@ template <typename T, typename R>
 RowToArrowArrayConverter<T, R>::RowToArrowArrayConverter(
     int32_t reserve_count, std::vector<RowToArrowArrayConverter<T, R>::AppendValueFunc>&& appenders,
     std::unique_ptr<arrow::StructBuilder>&& array_builder,
-    std::unique_ptr<arrow::MemoryPool>&& arrow_pool)
+    std::shared_ptr<MemoryPool>&& memory_pool)
     : reserved_sizes_(reserve_count, -1),
-      arrow_pool_(std::move(arrow_pool)),
+      memory_pool_(std::move(memory_pool)),
       appenders_(std::move(appenders)),
       array_builder_(std::move(array_builder)) {}
 

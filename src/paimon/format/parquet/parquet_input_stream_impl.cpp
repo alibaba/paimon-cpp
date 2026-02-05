@@ -24,6 +24,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/macros.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -35,7 +36,7 @@ namespace paimon::parquet {
 
 ParquetInputStreamImpl::ParquetInputStreamImpl(
     const std::shared_ptr<::paimon::InputStream>& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size)
+    const std::shared_ptr<MemoryPool>& pool, uint64_t file_size)
     : input_stream_(input_stream), pool_(pool), file_size_(file_size) {}
 
 ParquetInputStreamImpl::~ParquetInputStreamImpl() {
@@ -56,7 +57,7 @@ arrow::Result<int64_t> ParquetInputStreamImpl::Read(int64_t nbytes, void* out) {
 
 arrow::Result<std::shared_ptr<arrow::Buffer>> ParquetInputStreamImpl::Read(int64_t nbytes) {
     ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ResizableBuffer> buffer,
-                          arrow::AllocateResizableBuffer(nbytes, pool_.get()));
+                          arrow::AllocateResizableBuffer(nbytes, pool_->AsArrowMemoryPool()));
     ARROW_ASSIGN_OR_RAISE(int64_t read_bytes, Read(nbytes, buffer->mutable_data()));
     if (read_bytes < nbytes) {
         RETURN_NOT_OK(buffer->Resize(read_bytes));
@@ -75,7 +76,7 @@ arrow::Result<int64_t> ParquetInputStreamImpl::ReadAt(int64_t position, int64_t 
 arrow::Result<std::shared_ptr<arrow::Buffer>> ParquetInputStreamImpl::ReadAt(int64_t position,
                                                                              int64_t nbytes) {
     ARROW_ASSIGN_OR_RAISE(std::shared_ptr<arrow::ResizableBuffer> buffer,
-                          arrow::AllocateResizableBuffer(nbytes, pool_.get()));
+                          arrow::AllocateResizableBuffer(nbytes, pool_->AsArrowMemoryPool()));
     ARROW_ASSIGN_OR_RAISE(int64_t read_bytes, ReadAt(position, nbytes, buffer->mutable_data()));
     if (read_bytes < nbytes) {
         RETURN_NOT_OK(buffer->Resize(read_bytes));
@@ -86,7 +87,7 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> ParquetInputStreamImpl::ReadAt(int
 arrow::Future<std::shared_ptr<arrow::Buffer>> ParquetInputStreamImpl::ReadAsync(
     const arrow::io::IOContext& io_context, int64_t position, int64_t nbytes) {
     arrow::Result<std::shared_ptr<arrow::Buffer>> buffer_result =
-        arrow::AllocateResizableBuffer(nbytes, pool_.get());
+        arrow::AllocateResizableBuffer(nbytes, pool_->AsArrowMemoryPool());
     auto fut = arrow::Future<std::shared_ptr<arrow::Buffer>>::Make();
     if (PAIMON_UNLIKELY(!buffer_result.ok())) {
         fut.MarkFinished(buffer_result.status());

@@ -51,10 +51,10 @@ class KeyValueProjectionConsumer
  private:
     KeyValueProjectionConsumer(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
                                std::unique_ptr<arrow::StructBuilder>&& array_builder,
-                               std::unique_ptr<arrow::MemoryPool>&& arrow_pool,
+                               std::shared_ptr<MemoryPool> memory_pool,
                                const std::vector<int32_t>& target_to_src_mapping)
         : RowToArrowArrayConverter(reserve_count, std::move(appenders), std::move(array_builder),
-                                   std::move(arrow_pool)),
+                                   std::move(memory_pool)),
           target_to_src_mapping_(target_to_src_mapping) {}
 
     std::vector<int32_t> target_to_src_mapping_;

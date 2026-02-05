@@ -60,7 +60,7 @@ class PredicateBatchReader : public BatchReader {
     Result<RoaringBitmap32> Filter(const std::shared_ptr<arrow::Array>& array) const;
 
  private:
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::unique_ptr<BatchReader> reader_;
     std::shared_ptr<PredicateFilter> predicate_filter_;
 };

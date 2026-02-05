@@ -29,7 +29,6 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -59,7 +58,6 @@ class PredicatePushdownTest : public ::testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
-        arrow_pool_ = GetArrowPool(pool_);
         batch_size_ = 10;
 
         arrow::FieldVector fields = {
@@ -93,7 +91,7 @@ class PredicatePushdownTest : public ::testing::Test {
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             auto format_writer,
-            ParquetFormatWriter::Create(out, data_schema, writer_properties, arrow_pool_));
+            ParquetFormatWriter::Create(out, data_schema, writer_properties, pool_));
         ASSERT_OK(format_writer->AddBatch(data_arrow_array.get()));
         ASSERT_OK(format_writer->Finish());
         ASSERT_OK(out->Close());
@@ -106,13 +104,13 @@ class PredicatePushdownTest : public ::testing::Test {
                          paimon::parquet::DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
         ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-        auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, pool_, length);
 
         std::map<std::string, std::string> options;
         options[paimon::parquet::PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT] =
             std::to_string(predicate_node_count_limit);
         ASSERT_OK_AND_ASSIGN(auto batch_reader,
-                             ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_,
+                             ParquetFileBatchReader::Create(std::move(in_stream), pool_,
                                                             options, batch_size_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
@@ -131,7 +129,6 @@ class PredicatePushdownTest : public ::testing::Test {
     }
 
  private:
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
     std::shared_ptr<MemoryPool> pool_;
     int32_t batch_size_;
     std::shared_ptr<arrow::StructArray> struct_array_;

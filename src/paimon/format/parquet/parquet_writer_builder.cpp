@@ -42,7 +42,7 @@ Result<std::unique_ptr<FormatWriter>> ParquetWriterBuilder::Build(
     const std::shared_ptr<OutputStream>& out, const std::string& compression) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::WriterProperties> writer_properties,
                            PrepareWriterProperties(compression));
-    return ParquetFormatWriter::Create(out, schema_, writer_properties, pool_);
+    return ParquetFormatWriter::Create(out, schema_, writer_properties, memory_pool_);
 }
 
 Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::PrepareWriterProperties(
@@ -52,7 +52,7 @@ Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::Prepa
         arrow::Compression::type compression_type,
         arrow::util::Codec::GetCompressionType(StringUtils::ToLowerCase(compression)));
     ::parquet::WriterProperties::Builder builder;
-    builder.memory_pool(pool_.get());
+    builder.memory_pool(memory_pool_->AsArrowMemoryPool());
     builder.write_batch_size(batch_size_);
     builder.compression(compression_type);
     PAIMON_ASSIGN_OR_RAISE(

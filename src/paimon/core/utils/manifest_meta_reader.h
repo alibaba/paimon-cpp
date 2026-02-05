@@ -22,7 +22,6 @@
 #include "arrow/c/bridge.h"
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
@@ -66,7 +65,7 @@ class PAIMON_EXPORT ManifestMetaReader : public BatchReader {
 
     std::unique_ptr<BatchReader> reader_;
     std::shared_ptr<arrow::DataType> target_type_;
-    std::unique_ptr<arrow::MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> pool_;
 };
 
 }  // namespace paimon

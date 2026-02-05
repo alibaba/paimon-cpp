@@ -148,7 +148,7 @@ Result<bool> ParquetTimestampConverter::NeedCastArrayForTimestamp(
 Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTimestamp(
     const std::shared_ptr<arrow::Array>& array,
     const std::shared_ptr<arrow::DataType>& target_data_type,
-    const std::shared_ptr<arrow::MemoryPool>& arrow_pool) {
+    const std::shared_ptr<MemoryPool>& memory_pool) {
     arrow::Type::type type = array->type()->id();
     switch (type) {
         case arrow::Type::type::STRUCT: {
@@ -161,7 +161,7 @@ Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTim
                 const auto& field = struct_array->field(i);
                 PAIMON_ASSIGN_OR_RAISE(
                     std::shared_ptr<arrow::Array> sub_array,
-                    CastArrayForTimestamp(field, target_data_type->field(i)->type(), arrow_pool));
+                    CastArrayForTimestamp(field, target_data_type->field(i)->type(), memory_pool));
                 target_sub_arrays.push_back(sub_array);
                 target_names.push_back(target_data_type->field(i)->name());
             }
@@ -177,10 +177,10 @@ Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTim
             auto* map_type = arrow::internal::checked_cast<arrow::MapType*>(target_data_type.get());
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> key_array,
-                CastArrayForTimestamp(map_array->keys(), map_type->key_type(), arrow_pool));
+                CastArrayForTimestamp(map_array->keys(), map_type->key_type(), memory_pool));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> item_array,
-                CastArrayForTimestamp(map_array->items(), map_type->item_type(), arrow_pool));
+                CastArrayForTimestamp(map_array->items(), map_type->item_type(), memory_pool));
             return std::make_shared<arrow::MapArray>(
                 arrow::map(key_array->type(), item_array->type()), map_array->length(),
                 map_array->value_offsets(), key_array, item_array, map_array->null_bitmap(),
@@ -192,7 +192,7 @@ Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTim
                 arrow::internal::checked_cast<arrow::ListType*>(target_data_type.get());
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> value_array,
-                CastArrayForTimestamp(list_array->values(), list_type->value_type(), arrow_pool));
+                CastArrayForTimestamp(list_array->values(), list_type->value_type(), memory_pool));
             return std::make_shared<arrow::ListArray>(
                 arrow::list(value_array->type()), list_array->length(), list_array->value_offsets(),
                 value_array, list_array->null_bitmap(), list_array->null_count(),
@@ -211,7 +211,7 @@ Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTim
                 auto cast_executor = std::make_shared<TimestampToTimestampCastExecutor>();
                 PAIMON_ASSIGN_OR_RAISE(
                     std::shared_ptr<arrow::Array> target_array,
-                    cast_executor->Cast(array, target_data_type, arrow_pool.get()));
+                    cast_executor->Cast(array, target_data_type, memory_pool->AsArrowMemoryPool()));
                 return target_array;
             }
             if (src_type->timezone() != ts_target_type->timezone()) {

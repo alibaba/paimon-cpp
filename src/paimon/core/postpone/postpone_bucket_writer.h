@@ -102,7 +102,6 @@ class PostponeBucketWriter : public BatchWriter {
 
  private:
     std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
     std::vector<std::string> trimmed_primary_keys_;
     CoreOptions options_;
     std::shared_ptr<DataFilePathFactory> path_factory_;

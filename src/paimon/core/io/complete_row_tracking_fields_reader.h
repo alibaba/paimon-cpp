@@ -80,7 +80,7 @@ class CompleteRowTrackingFieldsBatchReader : public FileBatchReader {
  private:
     std::optional<int64_t> first_row_id_;
     int64_t snapshot_id_ = -1;
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<arrow::Schema> read_schema_;
     std::unique_ptr<FileBatchReader> reader_;
 };

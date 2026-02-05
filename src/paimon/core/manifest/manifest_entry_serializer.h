@@ -22,7 +22,6 @@
 
 #include "arrow/api.h"
 #include "arrow/c/bridge.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/io/data_file_meta_serializer.h"
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/utils/versioned_object_serializer.h"
@@ -42,7 +41,7 @@ class ManifestEntrySerializer : public VersionedObjectSerializer<ManifestEntry> 
  public:
     explicit ManifestEntrySerializer(const std::shared_ptr<MemoryPool>& pool)
         : VersionedObjectSerializer<ManifestEntry>(pool),
-          arrow_pool_(GetArrowPool(pool_)),
+          memory_pool_(pool_),
           data_file_meta_serializer_(pool) {}
 
     int32_t GetVersion() const override {
@@ -56,7 +55,7 @@ class ManifestEntrySerializer : public VersionedObjectSerializer<ManifestEntry> 
  private:
     static constexpr int32_t VERSION_1 = 1;
     static constexpr int32_t VERSION_2 = 2;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     DataFileMetaSerializer data_file_meta_serializer_;
 };
 }  // namespace paimon
