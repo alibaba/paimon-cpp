@@ -145,6 +145,11 @@ paimon::Status Run(const std::string& root_path, const std::string& db_name,
         auto result_array = arrow_result.ValueUnsafe();
         result_array_vector.push_back(result_array);
     }
+
+    // Safely close the reader and release resources
+    batch_reader->Close();
+    batch_reader.reset();
+
     auto chunk_result = arrow::ChunkedArray::Make(result_array_vector);
     if (!chunk_result.ok()) {
         return paimon::Status::Invalid(chunk_result.status().ToString());
