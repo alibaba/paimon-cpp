@@ -27,8 +27,6 @@
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
 
-struct ArrowSchema;
-
 namespace paimon {
 
 /// A table provides basic abstraction for table type.
