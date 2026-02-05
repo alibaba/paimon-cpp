@@ -161,7 +161,8 @@ Result<std::shared_ptr<arrow::Array>> PostponeBucketWriter::PrepareRowKindArray(
             std::make_shared<arrow::Int8Scalar>(RowKind::Insert()->ToByteValue());
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> scalar_array,
-            arrow::MakeArrayFromScalar(*row_kind_scalar, value_array_length, pool_->AsArrowMemoryPool()));
+            arrow::MakeArrayFromScalar(*row_kind_scalar, value_array_length,
+                                       pool_->AsArrowMemoryPool()));
         auto typed_row_kind_array =
             arrow::internal::checked_pointer_cast<arrow::NumericArray<arrow::Int8Type>>(
                 scalar_array);

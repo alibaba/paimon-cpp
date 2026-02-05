@@ -71,8 +71,8 @@ Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionCo
         appenders.emplace_back(func);
     }
     return std::unique_ptr<KeyValueMetaProjectionConsumer>(new KeyValueMetaProjectionConsumer(
-        reserve_count, std::move(appenders), std::move(struct_builder), pool,
-        sequence_appender, value_kind_appender));
+        reserve_count, std::move(appenders), std::move(struct_builder), pool, sequence_appender,
+        value_kind_appender));
 }
 
 Result<KeyValueBatch> KeyValueMetaProjectionConsumer::NextBatch(

@@ -123,7 +123,8 @@ class ParquetFormatWriterTest : public ::testing::Test {
         auto file = arrow::io::ReadableFile::Open(file_path, pool_->AsArrowMemoryPool());
         ASSERT_TRUE(file.ok());
         std::unique_ptr<::parquet::arrow::FileReader> reader;
-        auto status = ::parquet::arrow::OpenFile(file.ValueOrDie(), pool_->AsArrowMemoryPool(), &reader);
+        auto status =
+            ::parquet::arrow::OpenFile(file.ValueOrDie(), pool_->AsArrowMemoryPool(), &reader);
         ASSERT_TRUE(status.ok()) << status.ToString();
         const ::parquet::FileMetaData* metadata = reader->parquet_reader()->metadata().get();
         const ::parquet::SchemaDescriptor* schema = metadata->schema();
@@ -224,9 +225,8 @@ TEST_F(ParquetFormatWriterTest, TestWriteMultipleTimes) {
     ::parquet::WriterProperties::Builder builder;
     builder.write_batch_size(10);
     auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
+                         ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
 
     // add batch first time, 6 rows
     AddRecordBatchOnce(format_writer, struct_type, 6, 0);
@@ -266,9 +266,8 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
                          fs_->Create(file_path, /*overwrite=*/false));
     ::parquet::WriterProperties::Builder builder;
     auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
+                         ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
 
     // add batch first time, 1 row
     AddRecordBatchOnce(format_writer, struct_type, 1, 0);

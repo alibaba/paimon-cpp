@@ -61,8 +61,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
  public:
     static Result<std::unique_ptr<ParquetFileBatchReader>> Create(
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-        const std::shared_ptr<MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+        int32_t batch_size);
 
     // For timestamp type, we return the schema stored in file, e.g., second in parquet file will
     // store as milli.
@@ -128,12 +128,11 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
                            const std::shared_ptr<MemoryPool>& memory_pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
-        const std::shared_ptr<MemoryPool>& pool,
-        const std::map<std::string, std::string>& options);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
-        const std::shared_ptr<MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+        int32_t batch_size);
 
     static void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
                               std::vector<int32_t>* index_vector) {

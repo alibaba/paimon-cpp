@@ -37,7 +37,8 @@ namespace paimon {
 Result<BatchReader::ReadBatch> CompleteRowKindBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
-    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap), memory_pool_->AsArrowMemoryPool());
+    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
+                                               memory_pool_->AsArrowMemoryPool());
 }
 
 Result<BatchReader::ReadBatchWithBitmap> CompleteRowKindBatchReader::NextBatchWithBitmap() {
@@ -82,8 +83,8 @@ Result<std::shared_ptr<arrow::Array>> CompleteRowKindBatchReader::PrepareRowKind
         auto row_kind_scalar =
             std::make_shared<arrow::Int8Scalar>(RowKind::Insert()->ToByteValue());
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            row_kind_array_,
-            arrow::MakeArrayFromScalar(*row_kind_scalar, struct_array_length, memory_pool_->AsArrowMemoryPool()));
+            row_kind_array_, arrow::MakeArrayFromScalar(*row_kind_scalar, struct_array_length,
+                                                        memory_pool_->AsArrowMemoryPool()));
         return row_kind_array_;
     } else {
         return row_kind_array_->Slice(0, struct_array_length);

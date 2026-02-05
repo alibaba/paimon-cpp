@@ -68,7 +68,7 @@ set(PAIMON_COMMON_SRCS
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
     common/memory/memory_pool_adaptor_factor.cpp
-        common/memory/memory_segment.cpp
+    common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
     common/memory/memory_slice.cpp
     common/memory/memory_slice_input.cpp

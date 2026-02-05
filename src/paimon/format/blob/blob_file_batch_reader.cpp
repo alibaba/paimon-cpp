@@ -178,8 +178,9 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
         const size_t i = current_pos_ + k;
         total_length += GetTargetContentLength(i);
     }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Buffer> data_buffer,
-                                      arrow::AllocateBuffer(total_length, pool_->AsArrowMemoryPool()));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+        std::shared_ptr<arrow::Buffer> data_buffer,
+        arrow::AllocateBuffer(total_length, pool_->AsArrowMemoryPool()));
     uint8_t* buffer = data_buffer->mutable_data();
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;

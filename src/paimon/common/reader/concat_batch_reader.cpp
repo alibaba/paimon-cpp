@@ -32,7 +32,8 @@ ConcatBatchReader::ConcatBatchReader(std::vector<std::unique_ptr<BatchReader>>&&
 Result<BatchReader::ReadBatch> ConcatBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
-    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap), memory_pool_->AsArrowMemoryPool());
+    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
+                                               memory_pool_->AsArrowMemoryPool());
 }
 
 void ConcatBatchReader::Close() {

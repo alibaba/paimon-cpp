@@ -22,7 +22,7 @@
 namespace paimon {
 class MemoryPoolAdaptorSlot {
  public:
-    template<typename T>
+    template <typename T>
     T* GetOrCreate(MemoryPool& pool) {
         std::call_once(once_flag_, [this, &pool] {
             ptr_ = MemoryPoolAdaptorFactory::Get(MemoryPoolAdaptorTraits<T>::identifier, pool);
@@ -31,7 +31,7 @@ class MemoryPoolAdaptorSlot {
     }
 
  private:
-    MemoryPoolAdaptorPtr ptr_{nullptr, [](void*){}};
+    MemoryPoolAdaptorPtr ptr_{nullptr, [](void*) {}};
     std::once_flag once_flag_;
 };
 
@@ -40,4 +40,4 @@ struct MemoryPoolAdaptorHolder {
     MemoryPoolAdaptorSlot orc_adaptor_slot;
 };
 
-} // namespace paimon
+}  // namespace paimon

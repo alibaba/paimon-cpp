@@ -24,24 +24,20 @@ namespace paimon {
 
 class MemoryPool;
 
-using MemoryPoolAdaptorPtr = std::unique_ptr<void, void(*)(void*)>;
+using MemoryPoolAdaptorPtr = std::unique_ptr<void, void (*)(void*)>;
 
 class MemoryPoolAdaptorFactory : public Factory {
  public:
-
     static MemoryPoolAdaptorPtr Get(const std::string& identifier, MemoryPool& pool);
 
-    template<typename AdaptorType>
+    template <typename AdaptorType>
     static MemoryPoolAdaptorPtr MakeAdaptor(MemoryPool& pool) {
         auto temp = std::make_unique<AdaptorType>(pool);
-        return MemoryPoolAdaptorPtr(
-            temp.release(),
-            [](void* ptr) { delete static_cast<AdaptorType*>(ptr); }
-        );
+        return MemoryPoolAdaptorPtr(temp.release(),
+                                    [](void* ptr) { delete static_cast<AdaptorType*>(ptr); });
     }
 
     virtual MemoryPoolAdaptorPtr Create(MemoryPool& pool) const = 0;
 };
 
-
-} // namespace paimon
+}  // namespace paimon

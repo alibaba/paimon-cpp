@@ -52,8 +52,8 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
         arrow_properties_builder.enable_deprecated_int96_timestamps()->build();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::unique_ptr<::parquet::arrow::FileWriter> file_writer,
-        ::parquet::arrow::FileWriter::Open(*schema, pool->AsArrowMemoryPool(), out, writer_properties,
-                                           arrow_writer_properties));
+        ::parquet::arrow::FileWriter::Open(*schema, pool->AsArrowMemoryPool(), out,
+                                           writer_properties, arrow_writer_properties));
     return std::unique_ptr<ParquetFormatWriter>(
         new ParquetFormatWriter(std::move(file_writer), out, schema, pool));
 }

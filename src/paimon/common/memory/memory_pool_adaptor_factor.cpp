@@ -18,18 +18,18 @@
 
 namespace paimon {
 
-MemoryPoolAdaptorPtr MemoryPoolAdaptorFactory::Get(
-    const std::string& identifier, MemoryPool& pool) {
+MemoryPoolAdaptorPtr MemoryPoolAdaptorFactory::Get(const std::string& identifier,
+                                                   MemoryPool& pool) {
     auto factory_creator = FactoryCreator::GetInstance();
     if (factory_creator == nullptr) {
-        return {nullptr, [](void*){}};
+        return {nullptr, [](void*) {}};
     }
     auto memory_pool_adaptor_factory =
         dynamic_cast<MemoryPoolAdaptorFactory*>(factory_creator->Create(identifier));
     if (memory_pool_adaptor_factory == nullptr) {
-        return {nullptr, [](void*){}};
+        return {nullptr, [](void*) {}};
     }
     return memory_pool_adaptor_factory->Create(pool);
 }
 
-} // namespace paimon
+}  // namespace paimon

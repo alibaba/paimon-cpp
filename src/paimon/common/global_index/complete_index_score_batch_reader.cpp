@@ -39,7 +39,8 @@ CompleteIndexScoreBatchReader::CompleteIndexScoreBatchReader(
 Result<BatchReader::ReadBatch> CompleteIndexScoreBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
-    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap), memory_pool_->AsArrowMemoryPool());
+    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
+                                               memory_pool_->AsArrowMemoryPool());
 }
 
 void CompleteIndexScoreBatchReader::UpdateScoreFieldIndex(const arrow::StructType* struct_type) {
@@ -76,8 +77,9 @@ Result<BatchReader::ReadBatchWithBitmap> CompleteIndexScoreBatchReader::NextBatc
 
     // prepare index score array
     std::unique_ptr<arrow::ArrayBuilder> index_score_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(
-        memory_pool_->AsArrowMemoryPool(), SpecialFields::IndexScore().Type(), &index_score_builder));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(memory_pool_->AsArrowMemoryPool(),
+                                                       SpecialFields::IndexScore().Type(),
+                                                       &index_score_builder));
     auto typed_builder = dynamic_cast<arrow::FloatBuilder*>(index_score_builder.get());
     assert(typed_builder);
     PAIMON_RETURN_NOT_OK_FROM_ARROW(typed_builder->Reserve(struct_array->length()));

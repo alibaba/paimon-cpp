@@ -97,9 +97,7 @@ uint64_t MemoryPoolImpl::CurrentUsage() const {
 MemoryPool::~MemoryPool() = default;
 
 MemoryPoolAdaptorHolder* MemoryPool::GetAdaptorHolder() const {
-    std::call_once(flag_, [this]() {
-        holder_ = std::make_unique<MemoryPoolAdaptorHolder>();
-    });
+    std::call_once(flag_, [this]() { holder_ = std::make_unique<MemoryPoolAdaptorHolder>(); });
     return holder_.get();
 }
 

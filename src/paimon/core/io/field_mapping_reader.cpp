@@ -85,10 +85,10 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::CastNonPartitionArrayI
             auto dict_array =
                 std::dynamic_pointer_cast<arrow::DictionaryArray>(single_column_array);
             if (dict_array) {
-                PAIMON_ASSIGN_OR_RAISE(
-                    single_column_array,
-                    CastingUtils::Cast(dict_array, /*target_type=*/arrow::utf8(),
-                                       arrow::compute::CastOptions::Safe(), memory_pool_->AsArrowMemoryPool()));
+                PAIMON_ASSIGN_OR_RAISE(single_column_array,
+                                       CastingUtils::Cast(dict_array, /*target_type=*/arrow::utf8(),
+                                                          arrow::compute::CastOptions::Safe(),
+                                                          memory_pool_->AsArrowMemoryPool()));
             }
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<arrow::Array> casted,
@@ -272,7 +272,8 @@ Result<std::shared_ptr<arrow::Array>> FieldMappingReader::GenerateNonExistArray(
     for (const auto& non_exist_field : non_exist_field_info_.value().non_exist_read_schema) {
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> null_array,
-            arrow::MakeArrayOfNull(non_exist_field.Type(), batch_size, memory_pool_->AsArrowMemoryPool()));
+            arrow::MakeArrayOfNull(non_exist_field.Type(), batch_size,
+                                   memory_pool_->AsArrowMemoryPool()));
         non_exist_array.push_back(null_array);
         non_exist_field_names.push_back(non_exist_field.Name());
     }

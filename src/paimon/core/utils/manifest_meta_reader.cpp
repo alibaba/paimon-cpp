@@ -52,8 +52,9 @@ Result<BatchReader::ReadBatch> ManifestMetaReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
                                       arrow::ImportArray(c_array.get(), c_schema.get()));
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> target_array,
-                           AlignArrayWithSchema(arrow_array, target_type_, pool_->AsArrowMemoryPool()));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<arrow::Array> target_array,
+        AlignArrayWithSchema(arrow_array, target_type_, pool_->AsArrowMemoryPool()));
     std::unique_ptr<ArrowArray> target_c_arrow_array = std::make_unique<ArrowArray>();
     std::unique_ptr<ArrowSchema> target_c_schema = std::make_unique<ArrowSchema>();
 

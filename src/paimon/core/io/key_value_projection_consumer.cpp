@@ -58,9 +58,9 @@ Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::
             AppendField(/*use_view=*/true, struct_builder->field_builder(i), &reserve_count));
         appenders.emplace_back(func);
     }
-    return std::unique_ptr<KeyValueProjectionConsumer>(new KeyValueProjectionConsumer(
-        reserve_count, std::move(appenders), std::move(struct_builder), pool,
-        target_to_src_mapping));
+    return std::unique_ptr<KeyValueProjectionConsumer>(
+        new KeyValueProjectionConsumer(reserve_count, std::move(appenders),
+                                       std::move(struct_builder), pool, target_to_src_mapping));
 }
 
 Result<BatchReader::ReadBatch> KeyValueProjectionConsumer::NextBatch(

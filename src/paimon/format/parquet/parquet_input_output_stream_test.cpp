@@ -62,8 +62,7 @@ TEST(ParquetInputOutputStreamTest, TestInOutStream) {
     // in stream
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, file_system->Open(file_name));
     ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-    auto in_stream =
-        std::make_unique<ParquetInputStreamImpl>(in, GetDefaultPool(), length);
+    auto in_stream = std::make_unique<ParquetInputStreamImpl>(in, GetDefaultPool(), length);
     int64_t file_length = in_stream->GetSize().ValueOr(-1);
     ASSERT_EQ(file_length, data.length());
     int64_t in_tell1 = in_stream->Tell().ValueOr(-1);

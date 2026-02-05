@@ -39,9 +39,8 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionFileReader::Create
     if (readers.size() <= 1) {
         return Status::Invalid("readers size is supposed to be more than 1");
     }
-    return std::unique_ptr<DataEvolutionFileReader>(
-        new DataEvolutionFileReader(std::move(readers), read_schema, read_batch_size,
-                                    reader_offsets, field_offsets, pool));
+    return std::unique_ptr<DataEvolutionFileReader>(new DataEvolutionFileReader(
+        std::move(readers), read_schema, read_batch_size, reader_offsets, field_offsets, pool));
 }
 
 Result<BatchReader::ReadBatchWithBitmap> DataEvolutionFileReader::NextBatchWithBitmap() {
@@ -169,8 +168,9 @@ Result<std::shared_ptr<arrow::Array>> DataEvolutionFileReader::NextBatchForSingl
         return concat_array_vec[0];
     }
     // TODO(xinyu.lxy) remove data copy for efficiency
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> concat_array,
-                                      arrow::Concatenate(concat_array_vec, memory_pool_->AsArrowMemoryPool()));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+        std::shared_ptr<arrow::Array> concat_array,
+        arrow::Concatenate(concat_array_vec, memory_pool_->AsArrowMemoryPool()));
     assert(concat_array->length() == total_array_length);
     assert(concat_array->length() <= read_batch_size_);
     return concat_array;

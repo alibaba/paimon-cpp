@@ -70,8 +70,9 @@ class ParquetStatsExtractorTest : public ::testing::Test {
                              fs->Create(file_path, /*overwrite=*/false));
         ::parquet::WriterProperties::Builder builder;
         builder.enable_store_decimal_as_integer();
-        ASSERT_OK_AND_ASSIGN(auto format_writer,
-                             ParquetFormatWriter::Create(out, arrow_schema, builder.build(), GetDefaultPool()));
+        ASSERT_OK_AND_ASSIGN(
+            auto format_writer,
+            ParquetFormatWriter::Create(out, arrow_schema, builder.build(), GetDefaultPool()));
         auto array = arrow::ipc::internal::json::ArrayFromJSON(struct_type, input).ValueOrDie();
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());

@@ -273,8 +273,8 @@ ParquetStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& fi
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream, file_system->Open(path));
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, input_stream->Length());
-    auto parquet_input_file = std::make_shared<ParquetInputStreamImpl>(
-        std::move(input_stream), pool, file_length);
+    auto parquet_input_file =
+        std::make_shared<ParquetInputStreamImpl>(std::move(input_stream), pool, file_length);
     ::parquet::ReaderProperties read_properties(pool->AsArrowMemoryPool());
     read_properties.enable_buffered_stream();
     ::parquet::arrow::FileReaderBuilder file_reader_builder;

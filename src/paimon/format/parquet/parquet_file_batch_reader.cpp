@@ -68,8 +68,8 @@ ParquetFileBatchReader::ParquetFileBatchReader(
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+    int32_t batch_size) {
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
                            CreateReaderProperties(pool, options));
@@ -253,8 +253,7 @@ Result<std::vector<std::pair<uint64_t, uint64_t>>> ParquetFileBatchReader::GenRe
 }
 
 Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperties(
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::map<std::string, std::string>& options) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options) {
     ::parquet::ReaderProperties reader_properties;
     // TODO(jinli.zjw): set more ReaderProperties (compare with java)
     reader_properties.enable_buffered_stream();
@@ -262,8 +261,8 @@ Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperti
 }
 
 Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowReaderProperties(
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+    int32_t batch_size) {
     PAIMON_ASSIGN_OR_RAISE(bool use_threads,
                            OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_USE_THREADS,
                                                                DEFAULT_PARQUET_READ_USE_THREADS));

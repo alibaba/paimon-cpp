@@ -147,7 +147,8 @@ Status CompleteRowTrackingFieldsBatchReader::ConvertRowTrackingField(
         // condition2: special field all null
         auto scalar = std::make_shared<arrow::Int64Scalar>(init_value);
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            special_array, arrow::MakeArrayFromScalar(*scalar, array_length, memory_pool_->AsArrowMemoryPool()));
+            special_array,
+            arrow::MakeArrayFromScalar(*scalar, array_length, memory_pool_->AsArrowMemoryPool()));
         auto typed_special_array =
             arrow::internal::checked_pointer_cast<arrow::NumericArray<arrow::Int64Type>>(
                 special_array);

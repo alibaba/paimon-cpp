@@ -89,9 +89,8 @@ class PredicatePushdownTest : public ::testing::Test {
         ::parquet::WriterProperties::Builder builder;
         builder.write_batch_size(batch_size_);
         auto writer_properties = builder.build();
-        ASSERT_OK_AND_ASSIGN(
-            auto format_writer,
-            ParquetFormatWriter::Create(out, data_schema, writer_properties, pool_));
+        ASSERT_OK_AND_ASSIGN(auto format_writer, ParquetFormatWriter::Create(
+                                                     out, data_schema, writer_properties, pool_));
         ASSERT_OK(format_writer->AddBatch(data_arrow_array.get()));
         ASSERT_OK(format_writer->Finish());
         ASSERT_OK(out->Close());
@@ -109,9 +108,9 @@ class PredicatePushdownTest : public ::testing::Test {
         std::map<std::string, std::string> options;
         options[paimon::parquet::PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT] =
             std::to_string(predicate_node_count_limit);
-        ASSERT_OK_AND_ASSIGN(auto batch_reader,
-                             ParquetFileBatchReader::Create(std::move(in_stream), pool_,
-                                                            options, batch_size_));
+        ASSERT_OK_AND_ASSIGN(
+            auto batch_reader,
+            ParquetFileBatchReader::Create(std::move(in_stream), pool_, options, batch_size_));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         ASSERT_TRUE(arrow_status.ok());

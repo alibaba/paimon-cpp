@@ -40,9 +40,7 @@ class MemoryPool;
 PredicateBatchReader::PredicateBatchReader(std::unique_ptr<BatchReader>&& reader,
                                            const std::shared_ptr<PredicateFilter>& predicate_filter,
                                            const std::shared_ptr<MemoryPool>& pool)
-    : memory_pool_(pool),
-      reader_(std::move(reader)),
-      predicate_filter_(predicate_filter) {}
+    : memory_pool_(pool), reader_(std::move(reader)), predicate_filter_(predicate_filter) {}
 
 Result<std::unique_ptr<PredicateBatchReader>> PredicateBatchReader::Create(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate,
@@ -62,7 +60,8 @@ Result<std::unique_ptr<PredicateBatchReader>> PredicateBatchReader::Create(
 Result<BatchReader::ReadBatch> PredicateBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
-    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap), memory_pool_->AsArrowMemoryPool());
+    return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
+                                               memory_pool_->AsArrowMemoryPool());
 }
 
 Result<BatchReader::ReadBatchWithBitmap> PredicateBatchReader::NextBatchWithBitmap() {

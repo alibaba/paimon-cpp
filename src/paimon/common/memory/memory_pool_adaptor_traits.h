@@ -25,7 +25,7 @@ class MemoryPool;
 }
 
 namespace paimon {
-template<typename AdaptorType>
+template <typename AdaptorType>
 struct MemoryPoolAdaptorTraits {
     static_assert(sizeof(AdaptorType) == 0, "Unknown memory pool adaptor type");
 };
@@ -40,4 +40,4 @@ struct MemoryPoolAdaptorTraits<::orc::MemoryPool> {
     static constexpr auto identifier = "orc_memory_pool_adaptor";
 };
 
-}
+}  // namespace paimon
