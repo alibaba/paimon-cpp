@@ -111,9 +111,11 @@ TEST(AppendOnlyFileStoreScanTest, TestReadPartitionEntries) {
 
     std::vector<PartitionEntry> expected_partition_entries = {
         PartitionEntry(GenerateRow(10), /*record_count=*/9, /*file_size_in_bytes=*/1183,
-                       /*file_count=*/2, /*last_file_creation_time=*/1721643834472l - 28800000l),
+                       /*file_count=*/2, /*last_file_creation_time=*/1721643834472l - 28800000l,
+                       /*total_buckets=*/2),
         PartitionEntry(GenerateRow(20), /*record_count=*/2, /*file_size_in_bytes=*/1047,
-                       /*file_count=*/2, /*last_file_creation_time=*/1721643267404l - 28800000l)};
+                       /*file_count=*/2, /*last_file_creation_time=*/1721643267404l - 28800000l,
+                       /*total_buckets=*/2)};
     auto ComparePartitionEntryByPartition = [](const PartitionEntry& lhs,
                                                const PartitionEntry& rhs) -> bool {
         return lhs.Partition().GetInt(0) < rhs.Partition().GetInt(0);

@@ -43,7 +43,8 @@ TEST_F(PartitionStatisticsTest, TestJsonizable) {
         "recordCount": 4,
         "fileSizeInBytes": 1118,
         "fileCount": 2,
-        "lastFileCreationTime": 1724090888727
+        "lastFileCreationTime": 1724090888727,
+        "totalBuckets": 1
     })";
 
     ASSERT_OK_AND_ASSIGN(PartitionStatistics partition_statistics,
@@ -51,7 +52,7 @@ TEST_F(PartitionStatisticsTest, TestJsonizable) {
 
     PartitionStatistics expected_partition_statistics(
         /*spec=*/{{"f1", "10"}, {"f2", "20"}}, /*record_count=*/4, /*file_size_in_bytes=*/1118,
-        /*file_count=*/2, /*last_file_creation_time=*/1724090888727);
+        /*file_count=*/2, /*last_file_creation_time=*/1724090888727, /*total_buckets=*/1);
     ASSERT_EQ(expected_partition_statistics, partition_statistics);
 
     ASSERT_OK_AND_ASSIGN(std::string new_json_str, partition_statistics.ToJsonString());
