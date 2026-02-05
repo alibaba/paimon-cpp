@@ -184,6 +184,11 @@ class PAIMON_EXPORT OrphanFilesCleaner {
     /// files.
     virtual Result<std::set<std::string>> Clean() = 0;
 
+    /// Retrieve metrics related to orphan files cleaning operations.
+    ///
+    /// @return A shared pointer to a `Metrics` object containing cleaning metrics.
+    virtual std::shared_ptr<Metrics> GetMetrics() const = 0;
+
  protected:
     OrphanFilesCleaner() = default;
 };
