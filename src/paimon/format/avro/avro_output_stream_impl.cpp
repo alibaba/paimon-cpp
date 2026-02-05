@@ -71,7 +71,10 @@ void AvroOutputStreamImpl::FlushBuffer() {
             fmt::format("write failed, expected length: {}, actual write length: {}", length,
                         write_len.value()));
     }
-    // TODO(jinli.zjw): call out_->Flush() ?
+    Status status = out_->Flush();
+    if (!status.ok()) {
+        throw std::runtime_error("flush failed, status: " + status.ToString());
+    }
     next_ = buffer_;
     available_ = buffer_size_;
 }

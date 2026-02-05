@@ -47,15 +47,8 @@ class AvroFileBatchReaderTest : public ::testing::Test, public ::testing::WithPa
     }
     void TearDown() override {}
 
-    std::pair<std::unique_ptr<FileBatchReader>, std::shared_ptr<arrow::ChunkedArray>>
-    ReadBatchWithCustomizedData(const std::shared_ptr<arrow::Array>& src_array,
-                                int32_t read_batch_size) {
-        std::string file_path = PathUtil::JoinPath(dir_->Str(), "file.avro");
-        WriteData(src_array, file_path);
-        return ReadData(file_path, read_batch_size);
-    }
-
-    void WriteData(const std::shared_ptr<arrow::Array>& src_array, const std::string& file_path) {
+    void WriteData(const std::shared_ptr<arrow::Array>& src_array, const std::string& file_path,
+                   const std::string& compression) {
         arrow::Schema src_schema(src_array->type()->fields());
         ::ArrowSchema c_schema;
         ASSERT_TRUE(arrow::ExportSchema(src_schema, &c_schema).ok());
@@ -63,7 +56,7 @@ class AvroFileBatchReaderTest : public ::testing::Test, public ::testing::WithPa
                              file_format_->CreateWriterBuilder(&c_schema, /*batch_size=*/-1));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                              fs_->Create(file_path, /*overwrite=*/false));
-        ASSERT_OK_AND_ASSIGN(auto writer, writer_builder->Build(out, "zstd"));
+        ASSERT_OK_AND_ASSIGN(auto writer, writer_builder->Build(out, compression));
 
         ::ArrowArray arrow_array;
         ASSERT_TRUE(arrow::ExportArray(*src_array, &arrow_array).ok());
@@ -117,6 +110,8 @@ TEST_F(AvroFileBatchReaderTest, TestReadDataWithNull) {
     ASSERT_TRUE(array_status.ok()) << array_status.ToString();
     ASSERT_TRUE(result_array->Equals(expected_array));
     ASSERT_TRUE(expected_array->Equals(result_array));
+    auto read_metrics = reader_holder->GetReaderMetrics();
+    ASSERT_TRUE(read_metrics);
 }
 
 TEST_F(AvroFileBatchReaderTest, TestReadWithDifferentBatchSize) {
@@ -149,9 +144,9 @@ TEST_F(AvroFileBatchReaderTest, TestReadWithDifferentBatchSize) {
     data_str.append("]");
 
     std::shared_ptr<arrow::Array> src_array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, data_str).ValueOr(nullptr);
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, data_str).ValueOrDie();
     ASSERT_TRUE(src_array);
-    WriteData(src_array, file_path);
+    WriteData(src_array, file_path, /*compression=*/"zstd");
 
     for (int32_t batch_size : {1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1}) {
         auto [reader_holder, result_array] = ReadData(file_path, batch_size);
@@ -246,7 +241,7 @@ TEST_P(AvroFileBatchReaderTest, TestReadTimestampTypes) {
     ASSERT_TRUE(expected_array->Equals(result_array));
 }
 
-TEST_P(AvroFileBatchReaderTest, TestReadMapTypes) {
+TEST_F(AvroFileBatchReaderTest, TestReadMapTypes) {
     std::string path = paimon::test::GetDataDir() +
                        "/avro/append_with_multiple_map.db/"
                        "append_with_multiple_map/bucket-0/"
@@ -299,7 +294,7 @@ TEST_P(AvroFileBatchReaderTest, TestReadMapTypes) {
     ASSERT_TRUE(expected_array->Equals(result_array));
 }
 
-TEST_P(AvroFileBatchReaderTest, TestReadRowNumbers) {
+TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFirstRowNumber) {
     std::string path = paimon::test::GetDataDir() +
                        "/avro/append_simple.db/"
                        "append_simple/bucket-0/"
@@ -322,6 +317,8 @@ TEST_P(AvroFileBatchReaderTest, TestReadRowNumbers) {
     EXPECT_OK(reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
                                     /*selection_bitmap=*/std::nullopt));
 
+    ASSERT_OK_AND_ASSIGN(auto num_rows, reader->GetNumberOfRows());
+    ASSERT_EQ(4, num_rows);
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
@@ -342,6 +339,66 @@ TEST_P(AvroFileBatchReaderTest, TestReadRowNumbers) {
     ASSERT_OK_AND_ASSIGN(auto batch5, reader->NextBatch());
     ASSERT_EQ(4, reader->GetPreviousBatchFirstRowNumber());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch5));
+}
+
+TEST_F(AvroFileBatchReaderTest, TestGetNumberOfRows) {
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), "file.avro");
+
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::int64()),   arrow::field("f3", arrow::float32()),
+        arrow::field("f4", arrow::float64()), arrow::field("f5", arrow::utf8()),
+        arrow::field("f6", arrow::binary())};
+    auto arrow_data_type = arrow::struct_(fields);
+
+    size_t length = 102400;
+    std::string data_str = "[";
+    for (size_t i = 0; i < length; i++) {
+        data_str.append(fmt::format(R"([{}, {}, {}, {}, {}, "str_{}", "bin_{}"])", "true", i,
+                                    i * 100000000000L, i * 0.12, i * 123.45678901, i, i));
+        if (i != length - 1) {
+            data_str.append(",");
+        }
+    }
+    data_str.append("]");
+
+    std::shared_ptr<arrow::Array> src_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type, data_str).ValueOrDie();
+    ASSERT_TRUE(src_array);
+    WriteData(src_array, file_path, /*compression=*/"null");
+
+    ASSERT_OK_AND_ASSIGN(auto reader_builder, file_format_->CreateReaderBuilder(25600));
+
+    // check GetNumberOfRows can be called at any position, and continue read
+    int32_t expected_batches = 4;
+    for (int32_t pos = 0; pos < expected_batches; pos++) {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_path));
+        ASSERT_OK_AND_ASSIGN(auto reader, reader_builder->Build(in));
+
+        arrow::ArrayVector result_array_vector;
+        for (int32_t i = 0; i < pos; i++) {
+            ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
+            auto result_array =
+                arrow::ImportArray(batch.first.get(), batch.second.get()).ValueOrDie();
+            result_array_vector.push_back(result_array);
+        }
+        // check number of rows, and continue read
+        ASSERT_OK_AND_ASSIGN(auto num_rows, reader->GetNumberOfRows());
+        ASSERT_EQ(length, num_rows);
+        for (int32_t i = pos; i < expected_batches; i++) {
+            ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
+            auto result_array =
+                arrow::ImportArray(batch.first.get(), batch.second.get()).ValueOrDie();
+            result_array_vector.push_back(result_array);
+        }
+        ASSERT_OK_AND_ASSIGN(auto eof_batch, reader->NextBatch());
+        ASSERT_TRUE(BatchReader::IsEofBatch(eof_batch));
+        ASSERT_OK_AND_ASSIGN(num_rows, reader->GetNumberOfRows());
+        ASSERT_EQ(length, num_rows);
+
+        auto result_array = arrow::ChunkedArray(result_array_vector);
+        ASSERT_TRUE(result_array.Equals(arrow::ChunkedArray(src_array)));
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(TestParam, AvroFileBatchReaderTest, ::testing::Values(false, true));

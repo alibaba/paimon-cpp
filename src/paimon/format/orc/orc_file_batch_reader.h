@@ -66,7 +66,7 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
         return reader_->GetRowNumber();
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         return reader_->GetNumberOfRows();
     }
 
@@ -78,7 +78,8 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
 
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         bool* need_prefetch) const override {
-        return reader_->GenReadRanges(target_column_ids_, 0, GetNumberOfRows(), need_prefetch);
+        PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, GetNumberOfRows());
+        return reader_->GenReadRanges(target_column_ids_, 0, num_rows, need_prefetch);
     }
 
     void Close() override {

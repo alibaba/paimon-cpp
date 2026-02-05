@@ -130,7 +130,8 @@ class LanceFileReaderWriterTest : public ::testing::Test {
             ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result,
                                  paimon::test::ReadResultCollector::CollectResult(reader.get()));
             ASSERT_TRUE(result->Equals(src_chunk_array)) << result->ToString();
-            ASSERT_EQ(reader->GetNumberOfRows(), src_chunk_array->length());
+            ASSERT_OK_AND_ASSIGN(uint64_t num_rows, reader->GetNumberOfRows());
+            ASSERT_EQ(num_rows, src_chunk_array->length());
         }
     }
 };

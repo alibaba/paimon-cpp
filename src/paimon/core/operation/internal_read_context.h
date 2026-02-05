@@ -90,8 +90,8 @@ class InternalReadContext {
         return read_context_->GetExecutor();
     }
 
-    bool EnablePrefetchCache() const {
-        return read_context_->EnablePrefetchCache();
+    PrefetchCacheMode GetPrefetchCacheMode() const {
+        return read_context_->GetPrefetchCacheMode();
     }
 
     const CacheConfig& GetCacheConfig() const {

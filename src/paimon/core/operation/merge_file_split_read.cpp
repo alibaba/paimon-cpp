@@ -106,8 +106,9 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
     int32_t key_arity = trimmed_primary_key.size();
 
     // projection is the mapping from value_schema in KeyValue object to raw_read_schema
-    std::vector<int32_t> projection =
-        ArrowUtils::CreateProjection(value_schema, context->GetReadSchema()->fields());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<int32_t> projection,
+        ArrowUtils::CreateProjection(value_schema, context->GetReadSchema()->fields()));
 
     return std::unique_ptr<MergeFileSplitRead>(new MergeFileSplitRead(
         path_factory, context,

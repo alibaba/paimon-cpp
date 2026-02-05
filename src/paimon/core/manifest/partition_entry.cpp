@@ -29,28 +29,31 @@
 namespace paimon {
 PartitionEntry::PartitionEntry(const BinaryRow& partition, int64_t record_count,
                                int64_t file_size_in_bytes, int64_t file_count,
-                               int64_t last_file_creation_time)
+                               int64_t last_file_creation_time, int32_t total_buckets)
     : partition_(partition),
       record_count_(record_count),
       file_size_in_bytes_(file_size_in_bytes),
       file_count_(file_count),
-      last_file_creation_time_(last_file_creation_time) {}
+      last_file_creation_time_(last_file_creation_time),
+      total_buckets_(total_buckets) {}
 
 PartitionEntry PartitionEntry::Merge(const PartitionEntry& entry) const {
-    return PartitionEntry(partition_, record_count_ + entry.record_count_,
-                          file_size_in_bytes_ + entry.file_size_in_bytes_,
-                          file_count_ + entry.file_count_,
-                          std::max(last_file_creation_time_, entry.last_file_creation_time_));
+    return PartitionEntry(
+        partition_, record_count_ + entry.record_count_,
+        file_size_in_bytes_ + entry.file_size_in_bytes_, file_count_ + entry.file_count_,
+        std::max(last_file_creation_time_, entry.last_file_creation_time_), entry.total_buckets_);
 }
 
 Result<PartitionEntry> PartitionEntry::FromDataFile(const BinaryRow& partition,
                                                     const FileKind& kind,
-                                                    const std::shared_ptr<DataFileMeta>& file) {
+                                                    const std::shared_ptr<DataFileMeta>& file,
+                                                    const int32_t total_buckets) {
     int64_t record_count = kind == FileKind::Delete() ? -file->row_count : file->row_count;
     int64_t file_size_in_bytes = kind == FileKind::Delete() ? -file->file_size : file->file_size;
     int64_t file_count = kind == FileKind::Delete() ? -1 : 1;
     PAIMON_ASSIGN_OR_RAISE(int64_t utc_millis, file->CreationTimeEpochMillis());
-    return PartitionEntry(partition, record_count, file_size_in_bytes, file_count, utc_millis);
+    return PartitionEntry(partition, record_count, file_size_in_bytes, file_count, utc_millis,
+                          total_buckets);
 }
 
 Status PartitionEntry::Merge(const std::vector<ManifestEntry>& from,
@@ -75,7 +78,7 @@ Result<PartitionStatistics> PartitionEntry::ToPartitionStatistics(
     PAIMON_ASSIGN_OR_RAISE(part_values, partition_computer->GeneratePartitionVector(partition_));
     std::map<std::string, std::string> part_values_map(part_values.begin(), part_values.end());
     return PartitionStatistics(part_values_map, record_count_, file_size_in_bytes_, file_count_,
-                               last_file_creation_time_);
+                               last_file_creation_time_, total_buckets_);
 }
 
 bool PartitionEntry::operator==(const PartitionEntry& other) const {
@@ -84,7 +87,8 @@ bool PartitionEntry::operator==(const PartitionEntry& other) const {
     }
     return partition_ == other.partition_ && record_count_ == other.record_count_ &&
            file_size_in_bytes_ == other.file_size_in_bytes_ && file_count_ == other.file_count_ &&
-           last_file_creation_time_ == other.last_file_creation_time_;
+           last_file_creation_time_ == other.last_file_creation_time_ &&
+           total_buckets_ == other.total_buckets_;
 }
 
 }  // namespace paimon

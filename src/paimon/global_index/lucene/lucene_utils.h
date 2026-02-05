@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 #pragma once
-
+#include "fmt/format.h"
 #include "lucene++/StringUtils.h"
+#include "paimon/global_index/lucene/lucene_defs.h"
+#include "paimon/result.h"
 namespace paimon::lucene {
 class LuceneUtils {
  public:
@@ -31,5 +33,7 @@ class LuceneUtils {
     static std::string WstringToString(const Lucene::String& wstr) {
         return Lucene::StringUtils::toUTF8(wstr);
     }
+
+    static Result<std::string> GetJiebaDictionaryDir();
 };
 }  // namespace paimon::lucene
