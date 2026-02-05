@@ -28,6 +28,7 @@
 #include "paimon/core/snapshot.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/metrics.h"
 #include "paimon/orphan_files_cleaner.h"
 #include "paimon/result.h"
 
@@ -62,6 +63,10 @@ class OrphanFilesCleanerImpl : public OrphanFilesCleaner {
 
     Result<std::set<std::string>> Clean() override;
 
+    std::shared_ptr<Metrics> GetMetrics() const override {
+        return metrics_;
+    }
+
  private:
     Result<std::set<std::string>> ListPaimonFileDirs() const;
     std::vector<std::unique_ptr<FileStatus>> TryBestListingDirs(const std::string& path) const;
@@ -86,5 +91,7 @@ class OrphanFilesCleanerImpl : public OrphanFilesCleaner {
     std::shared_ptr<ManifestList> manifest_list_;
     int64_t older_than_ms_;
     std::function<bool(const std::string&)> should_be_retained_;
+
+    std::shared_ptr<Metrics> metrics_;
 };
 }  // namespace paimon
