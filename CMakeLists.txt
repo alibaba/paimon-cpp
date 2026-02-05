@@ -290,6 +290,22 @@ if(PAIMON_ENABLE_LUMINA)
             DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()
 
+if(PAIMON_ENABLE_LUCENE)
+    set(PAIMON_DICT_DEST "share/paimon/dict")
+
+    install(DIRECTORY ${JIEBA_DICT_DIR}/
+            DESTINATION ${PAIMON_DICT_DEST}
+            FILES_MATCHING
+            PATTERN "jieba.dict.utf8"
+            PATTERN "hmm_model.utf8"
+            PATTERN "idf.utf8"
+            PATTERN "stop_words.utf8"
+            PATTERN "user.dict.utf8"
+            PATTERN "pos_dict"
+            PATTERN ".git*" EXCLUDE
+            PATTERN "*.md" EXCLUDE)
+endif()
+
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
         DESTINATION "include"
         FILES_MATCHING
@@ -389,7 +405,6 @@ if(PAIMON_BUILD_TESTS)
         list(APPEND TEST_STATIC_LINK_LIBS paimon_lucene_index_shared)
         list(APPEND TEST_STATIC_LINK_LIBS "-Wl,--as-needed")
     endif()
-
 endif()
 
 include(CMakePackageConfigHelpers)

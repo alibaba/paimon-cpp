@@ -77,6 +77,8 @@ PAIMON_LUCENE_BUILD_VERSION=3.0.9
 PAIMON_LUCENE_BUILD_SHA256_CHECKSUM=4e69e29d5d79a976498ef71eab70c9c88c7014708be4450a9fda7780fe93584e
 PAIMON_LUCENE_PKG_NAME=rel_${PAIMON_LUCENE_BUILD_VERSION}.tar.gz
 
+PAIMON_JIEBA_BUILD_VERSION=v5.6.0
+
 # The first field is the name of the environment variable expected by cmake.
 # This _must_ match what is defined. The second field is the name of the
 # generated archive file. The third field is the url of the project for the
