@@ -208,7 +208,6 @@ class PAIMON_EXPORT Catalog {
         const Identifier& identifier,
         const std::vector<std::map<std::string, std::string>>& partitions) {
         return Status::NotImplemented("CreatePartitions not implemented");
-        `
     }
 
     /// Drops partitions.
