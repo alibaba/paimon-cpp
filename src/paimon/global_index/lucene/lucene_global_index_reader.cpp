@@ -118,7 +118,7 @@ std::vector<std::wstring> LuceneGlobalIndexReader::TokenizeQuery(const std::stri
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructMatchQuery(
-    const std::shared_ptr<FullTextSearch>& full_text_search) const {
+    const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::MATCH_ALL ||
            full_text_search->search_type == FullTextSearch::SearchType::MATCH_ANY);
     Lucene::BooleanClause::Occur occur =
@@ -141,7 +141,7 @@ Lucene::QueryPtr LuceneGlobalIndexReader::ConstructMatchQuery(
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPhraseQuery(
-    const std::shared_ptr<FullTextSearch>& full_text_search) const {
+    const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::PHRASE);
     std::vector<std::wstring> query_terms = TokenizeQuery(full_text_search->query);
     auto typed_query = Lucene::newLucene<Lucene::PhraseQuery>();
@@ -152,63 +152,55 @@ Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPhraseQuery(
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructPrefixQuery(
-    const std::shared_ptr<FullTextSearch>& full_text_search) const {
+    const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::PREFIX);
     return Lucene::newLucene<Lucene::PrefixQuery>(Lucene::newLucene<Lucene::Term>(
         wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
 }
 
 Lucene::QueryPtr LuceneGlobalIndexReader::ConstructWildCardQuery(
-    const std::shared_ptr<FullTextSearch>& full_text_search) const {
+    const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false) {
     assert(full_text_search->search_type == FullTextSearch::SearchType::WILDCARD);
     return Lucene::newLucene<Lucene::WildcardQuery>(Lucene::newLucene<Lucene::Term>(
         wfield_name_, LuceneUtils::StringToWstring(full_text_search->query)));
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::SearchWithLimit(
-    const Lucene::QueryPtr& query, const std::shared_ptr<FullTextSearch>& full_text_search) const {
+    const Lucene::QueryPtr& query, const std::shared_ptr<FullTextSearch>& full_text_search) const
+    noexcept(false) {
     assert(full_text_search->limit);
-    try {
-        Lucene::FilterPtr filter =
-            full_text_search->pre_filter
-                ? Lucene::newLucene<LuceneFilter>(&(full_text_search->pre_filter.value()))
-                : Lucene::FilterPtr();
+    Lucene::FilterPtr filter =
+        full_text_search->pre_filter
+            ? Lucene::newLucene<LuceneFilter>(&(full_text_search->pre_filter.value()))
+            : Lucene::FilterPtr();
 
-        Lucene::TopDocsPtr results =
-            searcher_->search(query, filter, full_text_search->limit.value());
+    Lucene::TopDocsPtr results = searcher_->search(query, filter, full_text_search->limit.value());
 
-        // prepare BitmapVectorSearchGlobalIndexResult
-        std::map<int64_t, float> id_to_score;
-        for (auto score_doc : results->scoreDocs) {
-            Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
-            std::string row_id_str =
-                LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));
-            std::optional<int32_t> row_id = StringUtils::StringToValue<int32_t>(row_id_str);
-            if (!row_id) {
-                return Status::Invalid(
-                    fmt::format("parse row id str {} to int failed", row_id_str));
-            }
-            id_to_score[static_cast<int64_t>(row_id.value())] =
-                static_cast<float>(score_doc->score);
+    // prepare BitmapVectorSearchGlobalIndexResult
+    std::map<int64_t, float> id_to_score;
+    for (auto score_doc : results->scoreDocs) {
+        Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
+        std::string row_id_str = LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));
+        std::optional<int32_t> row_id = StringUtils::StringToValue<int32_t>(row_id_str);
+        if (!row_id) {
+            return Status::Invalid(fmt::format("parse row id str {} to int failed", row_id_str));
         }
-        RoaringBitmap64 bitmap;
-        std::vector<float> scores;
-        scores.reserve(id_to_score.size());
-        for (const auto& [id, score] : id_to_score) {
-            bitmap.Add(id);
-            scores.push_back(score);
-        }
-        return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
-                                                                     std::move(scores));
-    } catch (const std::exception& e) {
-        return Status::Invalid(fmt::format("visit term query failed, with {} error.", e.what()));
-    } catch (...) {
-        return Status::UnknownError("visit term query failed, with unknown error.");
+        id_to_score[static_cast<int64_t>(row_id.value())] = static_cast<float>(score_doc->score);
     }
+    RoaringBitmap64 bitmap;
+    std::vector<float> scores;
+    scores.reserve(id_to_score.size());
+    for (const auto& [id, score] : id_to_score) {
+        bitmap.Add(id);
+        scores.push_back(score);
+    }
+    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
+                                                                 std::move(scores));
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::SearchWithNoLimit(
-    const Lucene::QueryPtr& query, const std::shared_ptr<FullTextSearch>& full_text_search) const {
+std::shared_ptr<GlobalIndexResult> LuceneGlobalIndexReader::SearchWithNoLimit(
+    const Lucene::QueryPtr& query, const std::shared_ptr<FullTextSearch>& full_text_search) const
+    noexcept(false) {
     assert(!full_text_search->limit);
     Lucene::FilterPtr filter =
         full_text_search->pre_filter

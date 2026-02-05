@@ -132,24 +132,24 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
     }
 
     Lucene::QueryPtr ConstructMatchQuery(
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
     Lucene::QueryPtr ConstructPhraseQuery(
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
     Lucene::QueryPtr ConstructPrefixQuery(
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
     Lucene::QueryPtr ConstructWildCardQuery(
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
     Result<std::shared_ptr<GlobalIndexResult>> SearchWithLimit(
         const Lucene::QueryPtr& query,
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
-    Result<std::shared_ptr<GlobalIndexResult>> SearchWithNoLimit(
+    std::shared_ptr<GlobalIndexResult> SearchWithNoLimit(
         const Lucene::QueryPtr& query,
-        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+        const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
  private:
     int64_t range_end_;
