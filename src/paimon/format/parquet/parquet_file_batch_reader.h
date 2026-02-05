@@ -89,7 +89,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         return reader_->GetPreviousBatchFirstRowNumber();
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         assert(reader_);
         return reader_->GetNumberOfRows();
     }

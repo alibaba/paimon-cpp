@@ -42,10 +42,11 @@ TEST(CommitTableRequestTest, TestSimple) {
         /*statistics=*/std::nullopt, /*properties=*/std::nullopt, /*next_row_id=*/0);
     std::vector<PartitionStatistics> partition_statistics = {
         PartitionStatistics(/*spec=*/{{"f1", "20"}}, /*record_count=*/1, /*file_size_in_bytes=*/541,
-                            /*file_count=*/1, /*last_file_creation_time=*/1724090888743),
+                            /*file_count=*/1, /*last_file_creation_time=*/1724090888743,
+                            /*total_buckets=*/-1),
         PartitionStatistics(/*spec=*/{{"f1", "10"}}, /*record_count=*/4,
                             /*file_size_in_bytes=*/1118, /*file_count=*/2,
-                            /*last_file_creation_time=*/1724090888727)};
+                            /*last_file_creation_time=*/1724090888727, /*total_buckets=*/-1)};
     std::string expected_request_str = R"({
     "snapshot": {
         "version": 3,
@@ -74,7 +75,8 @@ TEST(CommitTableRequestTest, TestSimple) {
             "recordCount": 1,
             "fileSizeInBytes": 541,
             "fileCount": 1,
-            "lastFileCreationTime": 1724090888743
+            "lastFileCreationTime": 1724090888743,
+            "totalBuckets": -1
         },
         {
             "spec": {
@@ -83,7 +85,8 @@ TEST(CommitTableRequestTest, TestSimple) {
             "recordCount": 4,
             "fileSizeInBytes": 1118,
             "fileCount": 2,
-            "lastFileCreationTime": 1724090888727
+            "lastFileCreationTime": 1724090888727,
+            "totalBuckets": -1
         }
     ]
 })";

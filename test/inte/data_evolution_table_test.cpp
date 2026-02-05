@@ -1010,7 +1010,7 @@ TEST_P(DataEvolutionTableTest, TestWithPartitionWithoutPartitionFieldsInFile) {
 
 TEST_P(DataEvolutionTableTest, TestPartitionWithPredicate) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     std::vector<std::string> partition_keys = {"f1"};
@@ -1183,7 +1183,7 @@ TEST_P(DataEvolutionTableTest, TestPartitionWithPredicate) {
 
 TEST_P(DataEvolutionTableTest, TestAlterTable) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     std::string table_path = paimon::test::GetDataDir() + file_format +
@@ -1280,7 +1280,7 @@ TEST_P(DataEvolutionTableTest, TestAlterTable) {
 
 TEST_P(DataEvolutionTableTest, TestReadCompactFiles) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     std::string table_path =
@@ -1310,7 +1310,7 @@ TEST_P(DataEvolutionTableTest, TestReadCompactFiles) {
 
 TEST_P(DataEvolutionTableTest, TestReadTableWithDenseStats) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     std::string table_path = paimon::test::GetDataDir() + file_format +
@@ -1391,7 +1391,7 @@ TEST_P(DataEvolutionTableTest, TestReadTableWithDenseStats) {
 
 TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     // only f2 has index
@@ -1531,8 +1531,8 @@ TEST_P(DataEvolutionTableTest, TestScanAndReadWithIndex) {
 }
 
 TEST_P(DataEvolutionTableTest, TestPredicate) {
-    if (GetParam() == "lance") {
-        // lance does not have stats
+    if (GetParam() == "lance" || GetParam() == "avro") {
+        // lance and avro do not have stats
         return;
     }
     CreateTable();
@@ -1837,8 +1837,8 @@ TEST_P(DataEvolutionTableTest, TestWithRowIds) {
                               /*predicate=*/nullptr,
                               /*row_ranges=*/row_ranges));
     }
-    if (GetParam() == "lance") {
-        // as lance does not support stats
+    if (GetParam() == "lance" || GetParam() == "avro") {
+        // as lance and avro do not support stats
         return;
     }
     {
@@ -1905,6 +1905,9 @@ std::vector<std::string> GetTestValuesForDataEvolutionTableTest() {
 #endif
 #ifdef PAIMON_ENABLE_LANCE
     values.emplace_back("lance");
+#endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro");
 #endif
     return values;
 }

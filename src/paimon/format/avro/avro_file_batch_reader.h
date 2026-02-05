@@ -49,10 +49,7 @@ class AvroFileBatchReader : public FileBatchReader {
         return previous_first_row_;
     }
 
-    uint64_t GetNumberOfRows() const override {
-        assert(false);
-        return -1;
-    }
+    Result<uint64_t> GetNumberOfRows() const override;
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
         return metrics_;
@@ -93,6 +90,7 @@ class AvroFileBatchReader : public FileBatchReader {
     std::optional<std::set<size_t>> read_fields_projection_;
     uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
     uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
+    mutable std::optional<uint64_t> total_rows_ = std::nullopt;
     const int32_t batch_size_;
     bool close_ = false;
     std::shared_ptr<Metrics> metrics_;

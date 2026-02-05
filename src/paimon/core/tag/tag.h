@@ -26,7 +26,6 @@
 #include "paimon/common/utils/jsonizable.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/result.h"
-#include "rapidjson/allocators.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
 
@@ -56,17 +55,18 @@ class Tag : public Snapshot {
         const std::optional<int64_t>& changelog_record_count,
         const std::optional<int64_t>& watermark, const std::optional<std::string>& statistics,
         const std::optional<std::map<std::string, std::string>>& properties,
-        const std::optional<int64_t>& next_row_id, const std::optional<int64_t>& tag_create_time,
-        const std::optional<int64_t>& tag_time_retained);
+        const std::optional<int64_t>& next_row_id,
+        const std::optional<std::vector<int64_t>>& tag_create_time,
+        const std::optional<double_t>& tag_time_retained);
 
     bool operator==(const Tag& other) const;
     bool TEST_Equal(const Tag& other) const;
 
-    std::optional<int64_t> TagCreateTime() const {
+    std::optional<std::vector<int64_t>> TagCreateTime() const {
         return tag_create_time_;
     }
 
-    std::optional<int64_t> TagTimeRetained() const {
+    std::optional<double_t> TagTimeRetained() const {
         return tag_time_retained_;
     }
 
@@ -80,7 +80,7 @@ class Tag : public Snapshot {
     static Result<Tag> FromPath(const std::shared_ptr<FileSystem>& fs, const std::string& path);
 
  private:
-    std::optional<int64_t> tag_create_time_;
-    std::optional<int64_t> tag_time_retained_;
+    std::optional<std::vector<int64_t>> tag_create_time_;
+    std::optional<double_t> tag_time_retained_;
 };
 }  // namespace paimon

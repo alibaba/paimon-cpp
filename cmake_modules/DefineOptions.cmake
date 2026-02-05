@@ -92,7 +92,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     define_option_string(PAIMON_CXXFLAGS "Compiler flags to append when compiling Paimon"
                          "")
 
-    define_option(PAIMON_BUILD_STATIC "Build static libraries" OFF)
+    define_option(PAIMON_BUILD_STATIC "Build static libraries" ON)
 
     define_option(PAIMON_BUILD_SHARED "Build shared libraries" ON)
     #----------------------------------------------------------------------

@@ -17,20 +17,17 @@
 #include "paimon/core/tag/tag.h"
 
 #include <cassert>
-#include <stdexcept>
-#include <utility>
 
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
-#include "rapidjson/allocators.h"
 #include "rapidjson/document.h"
 #include "rapidjson/rapidjson.h"
 
 namespace paimon {
 
-Tag::Tag(const std::optional<int32_t>& version, int64_t id, int64_t schema_id,
+Tag::Tag(const std::optional<int32_t>& version, const int64_t id, const int64_t schema_id,
          const std::string& base_manifest_list,
          const std::optional<int64_t>& base_manifest_list_size,
          const std::string& delta_manifest_list,
@@ -38,15 +35,16 @@ Tag::Tag(const std::optional<int32_t>& version, int64_t id, int64_t schema_id,
          const std::optional<std::string>& changelog_manifest_list,
          const std::optional<int64_t>& changelog_manifest_list_size,
          const std::optional<std::string>& index_manifest, const std::string& commit_user,
-         int64_t commit_identifier, CommitKind commit_kind, int64_t time_millis,
+         const int64_t commit_identifier, const CommitKind commit_kind, const int64_t time_millis,
          const std::optional<std::map<int32_t, int64_t>>& log_offsets,
          const std::optional<int64_t>& total_record_count,
          const std::optional<int64_t>& delta_record_count,
          const std::optional<int64_t>& changelog_record_count,
          const std::optional<int64_t>& watermark, const std::optional<std::string>& statistics,
          const std::optional<std::map<std::string, std::string>>& properties,
-         const std::optional<int64_t>& next_row_id, const std::optional<int64_t>& tag_create_time,
-         const std::optional<int64_t>& tag_time_retained)
+         const std::optional<int64_t>& next_row_id,
+         const std::optional<std::vector<int64_t>>& tag_create_time,
+         const std::optional<double_t>& tag_time_retained)
     : Snapshot(version, id, schema_id, base_manifest_list, base_manifest_list_size,
                delta_manifest_list, delta_manifest_list_size, changelog_manifest_list,
                changelog_manifest_list_size, index_manifest, commit_user, commit_identifier,
@@ -99,10 +97,10 @@ rapidjson::Value Tag::ToJson(rapidjson::Document::AllocatorType* allocator) cons
 
 void Tag::FromJson(const rapidjson::Value& obj) noexcept(false) {
     Snapshot::FromJson(obj);
-    tag_create_time_ =
-        RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(obj, FIELD_TAG_CREATE_TIME);
+    tag_create_time_ = RapidJsonUtil::DeserializeKeyValue<std::optional<std::vector<int64_t>>>(
+        obj, FIELD_TAG_CREATE_TIME);
     tag_time_retained_ =
-        RapidJsonUtil::DeserializeKeyValue<std::optional<int64_t>>(obj, FIELD_TAG_TIME_RETAINED);
+        RapidJsonUtil::DeserializeKeyValue<std::optional<double_t>>(obj, FIELD_TAG_TIME_RETAINED);
 }
 
 Result<Tag> Tag::FromPath(const std::shared_ptr<FileSystem>& fs, const std::string& path) {

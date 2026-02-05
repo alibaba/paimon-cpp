@@ -25,6 +25,8 @@
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/lucene/lucene_global_index_reader.h"
+#include "paimon/global_index/lucene/lucene_global_index_writer.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::lucene::test {
@@ -283,6 +285,124 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                 /*limit=*/std::nullopt, "document test", FullTextSearch::SearchType::MATCH_ALL,
                 /*pre_filter=*/RoaringBitmap64::From({1l, 2l, 3l, 100l}))));
         CheckResult(result, {2l});
+    }
+}
+
+TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
+    int32_t read_buffer_size = GetParam();
+
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> options = {
+        {"lucene-fts.write.omit-term-freq-and-position", "false"},
+        {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)},
+        {"lucene-fts.jieba.tokenize-mode", "query"},
+    };
+
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                    R"([
+["QianWen 是一个基于 AI 的智能助手，类似于 Siri 和 Alexa。我们正在用 Python 开发 QianWen 的 Natural Language Understanding 模块，该模块支持多轮对话和意图识别功能，是新一代智能助手的核心技术之一。"],
+["最近开源了一个新项目叫ｑｉａｎｗｅｎ（全角字符），功能类似之前的 Qianwen，是一个面向 AI 应用的智能助手。它不仅支持 Machine Learning 和 NLP 技术，还提供了可扩展的开发框架，便于开发者构建自己的智能助手系统。"],
+["我们在测试 qianwen-core v1.2 和 ai-engine-alpha 中的 bug，重点优化了 qianwen 的响应速度和稳定性。本次更新增强了核心模块的功能，提升了智能助手的开发效率，并修复了与 NLP 模块相关的多个问题。"],
+["AI 助手开发中常用的技术包括 Speech Recognition、Natural Language Processing 和 Recommendation System。我们使用 TensorFlow 和 PyTorch 构建模型，开发了多个智能助手原型，支持语音交互和上下文理解功能，是当前热门的人工智能发展应用方向。"],
+["新一代的 AI 助手代号为「千问」，内部命名为 QianwenX-2024，计划在 next quarter 发布。QianwenX 将集成更强的 multimodal 能力，支持图像和文本联合处理，进一步提升智能助手的理解能力和交互体验，是未来智能助手的重要发展方向。"]
+    ])")
+                                              .ValueOrDie();
+
+    // write index
+    ASSERT_OK_AND_ASSIGN(auto meta,
+                         WriteGlobalIndex(test_root, data_type_, options, array, Range(0, 4)));
+    if (read_buffer_size == 10) {
+        ASSERT_EQ(
+            std::string(meta.metadata->data(), meta.metadata->size()),
+            R"({"jieba.tokenize-mode":"query","read.buffer-size":"10","write.omit-term-freq-and-position":"false"})");
+    }
+
+    // create reader
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateGlobalIndexReader(test_root, data_type_, options, meta));
+    auto lucene_reader = std::dynamic_pointer_cast<LuceneGlobalIndexReader>(reader);
+    ASSERT_TRUE(lucene_reader);
+
+    // test visit
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "模块", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l, 2l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/1, "模块", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "模块技术", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "模块技术", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l, 1l, 2l, 3l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "发展方向", FullTextSearch::SearchType::PHRASE,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {4l});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "发", FullTextSearch::SearchType::PREFIX,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {3l, 4l});
+    }
+    // test wildcard query
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*发*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l, 1l, 2l, 3l, 4l});
+    }
+    // test filter
+    {
+        ASSERT_OK_AND_ASSIGN(auto result,
+                             lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "模块技术", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*pre_filter=*/RoaringBitmap64::From({1l, 3l, 4l}))));
+
+        CheckResult(result, {1l, 3l});
+    }
+    // test no limit
+    {
+        ASSERT_OK_AND_ASSIGN(
+            auto result,
+            lucene_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                "f0",
+                /*limit=*/std::nullopt, "模块技术", FullTextSearch::SearchType::MATCH_ANY,
+                /*pre_filter=*/std::nullopt)));
+        CheckResult(result, {0l, 1l, 2l, 3l});
     }
 }
 

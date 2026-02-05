@@ -58,7 +58,7 @@ class DelegatingPrefetchReader : public FileBatchReader {
         return GetReader()->GetPreviousBatchFirstRowNumber();
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         return GetReader()->GetNumberOfRows();
     }
 

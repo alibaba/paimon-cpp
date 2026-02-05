@@ -171,6 +171,19 @@ class ScanAndReadInteTest : public testing::Test,
              DataField(3, arrow::field("f3", arrow::float64()))}));
 };
 
+std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() {
+    std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
+#ifdef PAIMON_ENABLE_ORC
+    values.emplace_back("orc", false);
+    values.emplace_back("orc", true);
+#endif
+    return values;
+}
+
+INSTANTIATE_TEST_SUITE_P(FileFormatAndEnablePaimonPrefetch, ScanAndReadInteTest,
+                         ::testing::ValuesIn(std::vector<std::pair<std::string, bool>>(
+                             GetTestValuesForScanAndReadInteTest())));
+
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshotIOException) {
     auto [file_format, enable_prefetch] = GetParam();
     std::string table_path = GetDataDir() + "/" + file_format + "/append_09.db/append_09";
@@ -546,30 +559,30 @@ TEST_P(ScanAndReadInteTest, TestJavaPaimon1WithAppendSnapshotOfNestedType) {
 }
 
 // test pk with dv
-TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
-    auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = GetDataDir() + "/" + file_format +
-                             "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
+TEST_F(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
+    auto check_result = [&](const std::string& file_format) {
+        std::string table_path = GetDataDir() + "/" + file_format +
+                                 "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
 
-    // normal batch scan case for pk+dv, all data in level 0 is filtered out
-    ScanContextBuilder scan_context_builder(table_path);
-    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        // normal batch scan case for pk+dv, all data in level 0 is filtered out
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
+        ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
-    ReadContextBuilder read_context_builder(table_path);
-    AddReadOptionsForPrefetch(&read_context_builder);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ReadContextBuilder read_context_builder(table_path);
+        ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
 
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 6);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+        ASSERT_EQ(result_plan->SnapshotId().value(), 6);
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(auto read_result,
+                             ReadResultCollector::CollectResult(batch_reader.get()));
 
-    // check result
-    auto expected = std::make_shared<arrow::ChunkedArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
+        // check result
+        auto expected = std::make_shared<arrow::ChunkedArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
 [0, "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 10, 1, 11.0],
 [0, "Alice", 10, 1, 19.1],
 [0, "Alex", 10, 0, 16.1],
@@ -579,9 +592,14 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
 [0, "Lucy", 20, 1, 14.1],
 [0, "Paul", 20, 1, 18.1]
    ])")
-            .ValueOrDie());
-    ASSERT_TRUE(expected);
-    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+                .ValueOrDie());
+        ASSERT_TRUE(expected);
+        ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+    };
+    for (auto [file_format, enable_prefetch] : GetTestValuesForScanAndReadInteTest()) {
+        check_result(file_format);
+    }
+    check_result("avro");
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot1) {
@@ -2567,8 +2585,7 @@ TEST_P(ScanAndReadInteTest, TestCastTimestampType) {
 }
 
 #ifdef PAIMON_ENABLE_AVRO
-// TODO(zjw): remove DISABLED_ when avro write is ready
-TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithAppendTable) {
+TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path = GetDataDir() + "/avro/append_multiple.db/append_multiple";
         // scan
@@ -2620,7 +2637,8 @@ TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithAppendTable) {
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), result_json)
                 .ValueOrDie());
         ASSERT_TRUE(expected);
-        ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+        ASSERT_TRUE(expected->Equals(read_result))
+            << "read_result: " << read_result->ToString() << "expected: " << expected->ToString();
     };
 
     read_data(1, R"([
@@ -2631,13 +2649,17 @@ TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithAppendTable) {
 ])");
 
     read_data(2, R"([
-[0, 6, 10, 1, 100, 6.0, 4.0, "six", "fff", 123, "123.45", "1970-01-02 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000", "1970-01-06 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000",[[["key",123]],[1,2,3]]],
-[0, 5, 10, 0, 100, 5.0, 2.0, null, "eee", 123, "123.45", "1970-01-01 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000", "1970-01-05 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000",[[["key",123]],[1,2,3]]],
-[0, 7, 11, 0, 100, 7.0, 6.0, "seven", "ggg", 123, "123.45", "1970-01-03 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000", "1970-01-07 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000",[[["key",123]],[1,2,3]]]
+[0, 2, 10, 1, 100, 2.0, 2.0, "two", "bbb", 123, "123.45", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 6, 10, 1, 100, 6.0, 4.0, "six", "fff", 123, "123.45", "1970-01-06 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000", "1970-01-06 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 1, 10, 0, 100, 1.0, 1.0, "one", "aaa", 123, "123.45", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 5, 10, 0, 100, 5.0, 2.0, null, "eee", 123, "123.45", "1970-01-05 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000", "1970-01-05 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 3, 11, 0, 100, null, 3.0, "three", "ccc", 123, "123.45", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 4, 11, 0, 100, 4.0, null, "four", "ddd", 123, "123.45", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 7, 11, 0, 100, 7.0, 6.0, "seven", "ggg", 123, "123.45", "1970-01-07 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000", "1970-01-07 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000",[[["key",123]],[1,2,3]]]
 ])");
 }
 
-TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithPkTable) {
+TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path =
             GetDataDir() + "/avro/pk_with_multiple_type.db/pk_with_multiple_type";
@@ -2700,18 +2722,5 @@ TEST_F(ScanAndReadInteTest, DISABLED_TestAvroWithPkTable) {
 ])");
 }
 #endif
-
-std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() {
-    std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
-#ifdef PAIMON_ENABLE_ORC
-    values.emplace_back("orc", false);
-    values.emplace_back("orc", true);
-#endif
-    return values;
-}
-
-INSTANTIATE_TEST_SUITE_P(FileFormatAndEnablePaimonPrefetch, ScanAndReadInteTest,
-                         ::testing::ValuesIn(std::vector<std::pair<std::string, bool>>(
-                             GetTestValuesForScanAndReadInteTest())));
 
 }  // namespace paimon::test
