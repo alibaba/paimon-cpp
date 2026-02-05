@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,15 @@
 
 #pragma once
 
-#include <memory>
-
-#include "arrow/memory_pool.h"
-#include "paimon/memory/memory_pool.h"
-#include "paimon/visibility.h"
+#include "paimon/common/memory/memory_pool_adaptor_factor.h"
 
 namespace paimon {
-class MemoryPool;
 
-PAIMON_EXPORT std::unique_ptr<arrow::MemoryPool> GetArrowPool(MemoryPool& pool);
+class ArrowMemPoolAdaptorFactory final : public MemoryPoolAdaptorFactory {
+ public:
+    const char* Identifier() const override;
 
-PAIMON_EXPORT std::unique_ptr<arrow::MemoryPool> GetArrowPool(
-    const std::shared_ptr<MemoryPool>& pool);
+    MemoryPoolAdaptorPtr Create(MemoryPool& pool) const override;
+};
 
 }  // namespace paimon

@@ -23,6 +23,8 @@
 #include <cstring>
 #include <memory>
 
+#include "paimon/common/memory/memory_pool_adaptor_holder.h"
+
 namespace paimon {
 
 class MemoryPoolImpl : public MemoryPool {
@@ -90,6 +92,25 @@ void MemoryPoolImpl::Free(void* p, uint64_t size) {
 
 uint64_t MemoryPoolImpl::CurrentUsage() const {
     return total_allocated_size.load();
+}
+
+MemoryPool::~MemoryPool() = default;
+
+MemoryPoolAdaptorHolder* MemoryPool::GetAdaptorHolder() const {
+    std::call_once(flag_, [this]() {
+        holder_ = std::make_unique<MemoryPoolAdaptorHolder>();
+    });
+    return holder_.get();
+}
+
+arrow::MemoryPool* MemoryPool::AsArrowMemoryPool() {
+    MemoryPoolAdaptorSlot& slot = GetAdaptorHolder()->arrow_adaptor_slot;
+    return slot.GetOrCreate<arrow::MemoryPool>(*this);
+}
+
+::orc::MemoryPool* MemoryPool::AsOrcMemoryPool() {
+    MemoryPoolAdaptorSlot& slot = GetAdaptorHolder()->orc_adaptor_slot;
+    return slot.GetOrCreate<::orc::MemoryPool>(*this);
 }
 
 PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool() {

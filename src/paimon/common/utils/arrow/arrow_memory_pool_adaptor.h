@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-#include "paimon/common/utils/arrow/mem_utils.h"
+#pragma once
 
-#include <cstdint>
-#include <memory>
 #include <string>
 
 #include "arrow/memory_pool.h"
@@ -26,12 +24,9 @@
 
 namespace paimon {
 
-class ArrowMemPoolAdaptor : public arrow::MemoryPool {
+class ArrowMemoryPoolAdaptor : public arrow::MemoryPool {
  public:
-    explicit ArrowMemPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
-
-    explicit ArrowMemPoolAdaptor(const std::shared_ptr<paimon::MemoryPool>& pool)
-        : pool_(*pool), life_holder_(pool) {}
+    explicit ArrowMemoryPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
 
     arrow::Status Allocate(int64_t size, int64_t alignment, uint8_t** out) override {
         *out = reinterpret_cast<uint8_t*>(pool_.Malloc(size, alignment));
@@ -75,16 +70,7 @@ class ArrowMemPoolAdaptor : public arrow::MemoryPool {
 
  private:
     paimon::MemoryPool& pool_;
-    std::shared_ptr<paimon::MemoryPool> life_holder_;
     arrow::internal::MemoryPoolStats stats_;
 };
-
-std::unique_ptr<arrow::MemoryPool> GetArrowPool(MemoryPool& pool) {
-    return std::make_unique<ArrowMemPoolAdaptor>(pool);
-}
-
-std::unique_ptr<arrow::MemoryPool> GetArrowPool(const std::shared_ptr<MemoryPool>& pool) {
-    return std::make_unique<ArrowMemPoolAdaptor>(pool);
-}
 
 }  // namespace paimon

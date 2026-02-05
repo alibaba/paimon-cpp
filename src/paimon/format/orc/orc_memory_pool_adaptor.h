@@ -19,15 +19,14 @@
 #include <memory>
 
 #include "orc/MemoryPool.hh"
-#include "paimon/common/utils/concurrent_hash_map.h"
 #include "paimon/memory/memory_pool.h"
 
 namespace paimon::orc {
 
-class OrcMemoryPool : public ::orc::MemoryPool {
+class OrcMemoryPoolAdaptor : public ::orc::MemoryPool {
  public:
     using SizeType = uint64_t;
-    explicit OrcMemoryPool(const std::shared_ptr<paimon::MemoryPool>& pool) : pool_(pool) {}
+    explicit OrcMemoryPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
     char* malloc(SizeType size) override {
         if (size == 0) {
             return ZERO_SIZE_AREA;
@@ -35,7 +34,7 @@ class OrcMemoryPool : public ::orc::MemoryPool {
         if (size > std::numeric_limits<SizeType>::max() - HEADER_SIZE) {
             return nullptr;
         }
-        if (void* ret = pool_->Malloc(size + HEADER_SIZE)) {
+        if (void* ret = pool_.Malloc(size + HEADER_SIZE)) {
             *reinterpret_cast<SizeType*>(ret) = size;
             return reinterpret_cast<char*>(ret) + HEADER_SIZE;
         }
@@ -47,7 +46,7 @@ class OrcMemoryPool : public ::orc::MemoryPool {
         }
         char* raw = p - HEADER_SIZE;
         SizeType size = *reinterpret_cast<SizeType*>(raw);
-        pool_->Free(raw, size + HEADER_SIZE);
+        pool_.Free(raw, size + HEADER_SIZE);
     }
 
  private:
@@ -55,7 +54,7 @@ class OrcMemoryPool : public ::orc::MemoryPool {
     static constexpr size_t HEADER_SIZE = (sizeof(SizeType) + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
     alignas(ALIGNMENT) inline static char ZERO_SIZE_AREA[1];
 
-    std::shared_ptr<paimon::MemoryPool> pool_;
+    paimon::MemoryPool& pool_;
 };
 
 }  // namespace paimon::orc

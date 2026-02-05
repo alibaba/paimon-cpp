@@ -21,15 +21,25 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <utility>
 
 #include "paimon/macros.h"
 #include "paimon/visibility.h"
 
+namespace arrow {
+class MemoryPool;
+}
+
+namespace orc {
+class MemoryPool;
+}
+
 namespace paimon {
 
 class MemoryPool;
+struct MemoryPoolAdaptorHolder;
 
 /// Create a default implementation of memory pool.
 /// @return Unique pointer to a newly created `MemoryPool` instance.
@@ -42,7 +52,7 @@ PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool();
 /// Abstract base class for memory pool implementations that provides controlled memory management.
 class PAIMON_EXPORT MemoryPool {
  public:
-    virtual ~MemoryPool() = default;
+    virtual ~MemoryPool();
     MemoryPool& operator=(const MemoryPool& other) = delete;
     MemoryPool& operator=(MemoryPool& other) = delete;
     MemoryPool& operator=(MemoryPool&& other) = delete;
@@ -110,6 +120,30 @@ class PAIMON_EXPORT MemoryPool {
     /// @return Peak memory usage in bytes.
     virtual uint64_t MaxMemoryUsage() const = 0;
 
+    /// Adapts this memory pool to the Arrow memory pool interface.
+    ///
+    /// Returns a pointer to an Arrow memory pool adapter that wraps this memory pool.
+    /// The returned pointer is lazily created on first call and its lifetime is managed
+    /// internally by this memory pool instance. This method is thread-safe.
+    ///
+    /// @return Pointer to the Arrow memory pool adapter.
+    /// @note Subclasses can override this method to provide custom Arrow integration.
+    virtual arrow::MemoryPool* AsArrowMemoryPool();
+
+    /// Adapts this memory pool to the ORC memory pool interface.
+    ///
+    /// Returns a pointer to an ORC memory pool adapter that wraps this memory pool.
+    /// The returned pointer is lazily created on first call and its lifetime is managed
+    /// internally by this memory pool instance. This method is thread-safe.
+    ///
+    /// @return Pointer to the ORC memory pool adapter, or nullptr if ORC support is unavailable.
+    /// @note IMPORTANT: This method should only be used in ORC format-related code.
+    ///       The default implementation requires the ORC format library (paimon_orc_file_format)
+    ///       to be linked, as it depends on the ORC adaptor factory registered by that library.
+    ///       If the ORC format library is not linked, this method returns nullptr.
+    /// @note Subclasses can override this method to provide custom ORC integration.
+    virtual ::orc::MemoryPool* AsOrcMemoryPool();
+
     /// Custom deleter for use with std::unique_ptr that integrates with memory pools.
     ///
     /// AllocatorDelete provides automatic memory deallocation through the memory pool
@@ -141,7 +175,7 @@ class PAIMON_EXPORT MemoryPool {
             return *this;
         }
 
-        AllocatorDelete& operator=(AllocatorDelete&& other) {
+        AllocatorDelete& operator=(AllocatorDelete&& other) noexcept {
             pool = other.GetPool();
             size = other.GetSize();
             return *this;
@@ -208,6 +242,12 @@ class PAIMON_EXPORT MemoryPool {
         return std::unique_ptr<T, AllocatorDelete<T>>(reinterpret_cast<T*>(p),
                                                       AllocatorDelete<T>(*this, sizeof(T)));
     }
+
+ private:
+    MemoryPoolAdaptorHolder* GetAdaptorHolder() const;
+
+    mutable std::unique_ptr<MemoryPoolAdaptorHolder> holder_;
+    mutable std::once_flag flag_;
 };
 
 template <class T>

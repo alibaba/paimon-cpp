@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 
 #include "gtest/gtest.h"
 #include "paimon/memory/memory_pool.h"
@@ -23,7 +23,7 @@ namespace paimon::test {
 
 TEST(MemUtilsTest, TestSimple) {
     const int64_t alignment = 64;
-    auto pool = GetArrowPool(GetDefaultPool());
+    auto pool = GetDefaultPool()->AsArrowMemoryPool();
     ASSERT_EQ("Paimon Pool", pool->backend_name());
     ASSERT_EQ(0, pool->total_bytes_allocated());
     ASSERT_EQ(0, pool->num_allocations());
