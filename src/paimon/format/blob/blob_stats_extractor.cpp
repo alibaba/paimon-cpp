@@ -55,7 +55,8 @@ BlobStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& file_
     ColumnStatsVector result_stats;
     result_stats.push_back(
         ColumnStats::CreateStringColumnStats(std::nullopt, std::nullopt, /*null_count=*/0));
-    return std::make_pair(result_stats, FileInfo(blob_reader->GetNumberOfRows()));
+    PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, blob_reader->GetNumberOfRows());
+    return std::make_pair(result_stats, FileInfo(num_rows));
 }
 
 }  // namespace paimon::blob

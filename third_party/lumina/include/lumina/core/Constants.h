@@ -25,6 +25,9 @@ constexpr uint32_t LUMINA_CURRENT_VERSION = 0;
 // Prime magic number
 constexpr uint32_t LUMINA_MAGIC_NUMBER = 19260817u;
 
+// Recommended file suffix for Lumina persisted artifacts (not enforced by IO).
+constexpr std::string_view kLuminaFileSuffix = ".lmi";
+
 // Basic options
 constexpr std::string_view kIndexPrefix = "index.";
 constexpr std::string_view kDimension = "index.dimension";

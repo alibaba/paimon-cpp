@@ -133,13 +133,13 @@ Status BlobFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
         std::vector<int64_t> new_offsets(cardinality);
         std::vector<uint64_t> new_row_indexes(cardinality);
 
+        PAIMON_ASSIGN_OR_RAISE(uint64_t total_rows, GetNumberOfRows());
         RoaringBitmap32::Iterator iterator(*selection_bitmap);
         for (int32_t i = 0; i < cardinality; i++) {
             int32_t row_index = *iterator;
-            if (static_cast<size_t>(row_index) >= GetNumberOfRows()) {
-                return Status::Invalid(
-                    fmt::format("row index {} is out of bound of total row number {}", row_index,
-                                GetNumberOfRows()));
+            if (static_cast<size_t>(row_index) >= total_rows) {
+                return Status::Invalid(fmt::format(
+                    "row index {} is out of bound of total row number {}", row_index, total_rows));
             }
             ++iterator;
             new_lengths[i] = all_blob_lengths_[row_index];
@@ -231,7 +231,7 @@ Result<BatchReader::ReadBatch> BlobFileBatchReader::NextBatch() {
         return Status::Invalid("blob file batch reader is closed");
     }
     if (current_pos_ >= target_blob_lengths_.size()) {
-        previous_batch_first_row_number_ = GetNumberOfRows();
+        PAIMON_ASSIGN_OR_RAISE(previous_batch_first_row_number_, GetNumberOfRows());
         return BatchReader::MakeEofBatch();
     }
     int32_t left_rows = target_blob_lengths_.size() - current_pos_;

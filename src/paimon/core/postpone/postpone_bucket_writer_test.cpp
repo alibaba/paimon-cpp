@@ -89,6 +89,7 @@ class PostponeBucketWriterTest : public ::testing::Test,
     }
 
     void CheckFileContent(const std::string& file_format_str, const std::string& data_file_name,
+                          const std::shared_ptr<arrow::DataType>& file_schema,
                           const std::shared_ptr<arrow::ChunkedArray>& expected_array) const {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream,
                              file_system_->Open(data_file_name));
@@ -97,9 +98,14 @@ class PostponeBucketWriterTest : public ::testing::Test,
         ASSERT_OK_AND_ASSIGN(auto reader_builder,
                              file_format->CreateReaderBuilder(/*batch_size=*/10));
         ASSERT_OK_AND_ASSIGN(auto batch_reader, reader_builder->Build(input_stream));
+        auto c_schema = std::make_unique<::ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportType(*file_schema, c_schema.get()).ok());
+        ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), /*predicate=*/nullptr,
+                                              /*selection_bitmap=*/std::nullopt));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(batch_reader.get()));
-        ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString();
+        ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString() << "\n != \n"
+                                                          << expected_array->ToString();
     }
 
  private:
@@ -116,6 +122,9 @@ std::vector<std::string> GetTestValuesForPostponeBucketWriterTest() {
     std::vector<std::string> values = {"parquet"};
 #ifdef PAIMON_ENABLE_ORC
     values.emplace_back("orc");
+#endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro");
 #endif
     return values;
 }
@@ -168,7 +177,7 @@ TEST_P(PostponeBucketWriterTest, TestSimple) {
     ])"},
                                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
-    CheckFileContent(file_format, expected_data_file_path, expected_array);
+    CheckFileContent(file_format, expected_data_file_path, write_type_, expected_array);
 
     // check data file meta
     ASSERT_TRUE(commit_increment.GetCompactIncrement().IsEmpty());
@@ -240,16 +249,16 @@ TEST_P(PostponeBucketWriterTest, TestNestedType) {
                                        arrow::field("_VALUE_KIND", arrow::int8())};
     write_fields.insert(write_fields.end(), fields.begin(), fields.end());
     std::shared_ptr<arrow::ChunkedArray> expected_array;
-    auto array_status =
-        arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow::struct_(write_fields), {R"([
+    auto write_type = arrow::struct_(write_fields);
+    auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(write_type, {R"([
         [-1, 0, "Lucy", [null, [1, true], null], [[[1, true], true]]],
         [-1, 0, "Bob", [[2, false], null], null],
         [-1, 0, "David", [[2, false], [3, true], [4, null]], [[[1, true], true], [[5, false], null]]],
         [-1, 0, "Alice", null, null]
     ])"},
-                                                         &expected_array);
+                                                                         &expected_array);
     ASSERT_TRUE(array_status.ok());
-    CheckFileContent(file_format, expected_data_file_path, expected_array);
+    CheckFileContent(file_format, expected_data_file_path, write_type, expected_array);
 
     // check data file meta
     ASSERT_TRUE(commit_increment.GetCompactIncrement().IsEmpty());
@@ -345,7 +354,7 @@ TEST_P(PostponeBucketWriterTest, TestWriteMultiBatch) {
     ])"},
                                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
-    CheckFileContent(file_format, expected_data_file_path, expected_array);
+    CheckFileContent(file_format, expected_data_file_path, write_type_, expected_array);
 
     // check data file meta
     ASSERT_TRUE(commit_increment.GetCompactIncrement().IsEmpty());
@@ -444,7 +453,7 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     ])"},
                                                                          &expected_array1);
     ASSERT_TRUE(array_status.ok());
-    CheckFileContent(file_format, expected_data_file_dir + expected_data_file_name1,
+    CheckFileContent(file_format, expected_data_file_dir + expected_data_file_name1, write_type_,
                      expected_array1);
 
     std::shared_ptr<arrow::ChunkedArray> expected_array2;
@@ -454,7 +463,7 @@ TEST_P(PostponeBucketWriterTest, TestMultiplePrepareCommit) {
     ])"},
                                                                     &expected_array2);
     ASSERT_TRUE(array_status.ok());
-    CheckFileContent(file_format, expected_data_file_dir + expected_data_file_name2,
+    CheckFileContent(file_format, expected_data_file_dir + expected_data_file_name2, write_type_,
                      expected_array2);
 
     // check data file meta

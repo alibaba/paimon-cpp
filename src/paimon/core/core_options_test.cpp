@@ -32,7 +32,7 @@ namespace paimon::test {
 
 TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
-    ASSERT_EQ(core_options.GetManifestFormat()->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetManifestFormat()->Identifier(), "avro");
     ASSERT_EQ(core_options.GetWriteFileFormat()->Identifier(), "parquet");
     ASSERT_TRUE(core_options.GetFileSystem());
     ASSERT_EQ(-1, core_options.GetBucket());

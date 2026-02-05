@@ -151,7 +151,8 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
         actual_selection = *selection;
     } else if (deletion) {
         actual_selection = *deletion;
-        actual_selection.value().Flip(0, file_reader->GetNumberOfRows());
+        PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, file_reader->GetNumberOfRows());
+        actual_selection.value().Flip(0, num_rows);
     }
 
     if (actual_selection && actual_selection.value().IsEmpty()) {
