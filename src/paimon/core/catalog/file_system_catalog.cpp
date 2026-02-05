@@ -27,7 +27,6 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
-#include "paimon/core/schema/schema_manager.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"

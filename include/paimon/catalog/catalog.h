@@ -16,19 +16,13 @@
 
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#include "paimon/catalog/database.h"
 #include "paimon/catalog/identifier.h"
-#include "paimon/core/partition/partition_statistics.h"
-#include "paimon/core/schema/table_schema.h"
-#include "paimon/core/snapshot.h"
-#include "paimon/core/table/table.h"
-#include "paimon/core/tag_info.h"
-#include "paimon/core/view/view.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
@@ -37,6 +31,13 @@
 struct ArrowSchema;
 
 namespace paimon {
+class Database;
+class Table;
+class View;
+class Schema;
+class Snapshot;
+class PartitionStatistics;
+class Tag;
 class Identifier;
 /// This interface is responsible for reading and writing metadata such as database/table from a
 /// paimon catalog.
@@ -460,12 +461,12 @@ class PAIMON_EXPORT Catalog {
     ///
     /// @param identifier path of the table, cannot be system name.
     /// @param tag_name tag name
-    /// @return TagInfo containing tag information
+    /// @return Tag containing tag information
     /// @return TableNotExist error if the table does not exist
     /// @return TagNotExist error if the tag does not exist
     /// @return NotImplemented error if the catalog does not support version management
-    virtual Result<TagInfo> GetTag(const Identifier& identifier,
-                                   const std::string& tag_name) const {
+    virtual Result<std::shared_ptr<Tag>> GetTag(const Identifier& identifier,
+                                                const std::string& tag_name) const {
         return Status::NotImplemented("GetTag not implemented");
     }
 

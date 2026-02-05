@@ -34,6 +34,9 @@ namespace paimon {
 /// Interface for view definition.
 class PAIMON_EXPORT View {
  public:
+    View() = default;
+    virtual ~View() = default;
+
     /// A name to identify this view.
     virtual std::string Name() = 0;
 

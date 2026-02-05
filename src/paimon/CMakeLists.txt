@@ -265,6 +265,7 @@ set(PAIMON_CORE_SRCS
     core/table/source/table_read.cpp
     core/table/source/table_scan.cpp
     core/table/source/data_evolution_batch_scan.cpp
+    core/tag/tag.cpp
     core/utils/field_mapping.cpp
     core/utils/fields_comparator.cpp
     core/utils/file_store_path_factory.cpp
