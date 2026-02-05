@@ -289,6 +289,7 @@ bool PrefetchFileBatchReaderImpl::NeedInitCache() const {
         case PrefetchCacheMode::ALWAYS:
             return true;
         default:
+            assert(false);
             return true;
     }
 }

@@ -34,11 +34,17 @@
 #include "paimon/testing/mock/mock_format_reader_builder.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/utils/read_ahead_cache.h"
 
 namespace paimon::test {
 
+struct TestParam {
+    std::string file_format;
+    PrefetchCacheMode cache_mode;
+};
+
 class PrefetchFileBatchReaderImplTest : public ::testing::Test,
-                                        public ::testing::WithParamInterface<std::string> {
+                                        public ::testing::WithParamInterface<TestParam> {
  public:
     void SetUp() override {
         fields_ = {arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int64()),
@@ -113,7 +119,7 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
         const std::string& file_format_str, const arrow::Schema* read_schema,
         const std::shared_ptr<Predicate>& predicate,
         const std::optional<RoaringBitmap32>& selection_bitmap, int32_t batch_size,
-        int32_t prefetch_max_parallel_num) const {
+        int32_t prefetch_max_parallel_num, PrefetchCacheMode cache_mode) const {
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<FileFormat> file_format,
                              FileFormatFactory::Get(file_format_str, {}));
         EXPECT_OK_AND_ASSIGN(auto reader_builder, file_format->CreateReaderBuilder(batch_size));
@@ -124,8 +130,7 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
                 reader_builder.get(), local_fs_, prefetch_max_parallel_num, batch_size,
                 prefetch_max_parallel_num * 2, /*enable_adaptive_prefetch_strategy=*/false,
                 CreateDefaultExecutor(prefetch_max_parallel_num - 1),
-                /*initialize_read_ranges=*/false, /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS,
-                CacheConfig(), GetDefaultPool()));
+                /*initialize_read_ranges=*/false, cache_mode, CacheConfig(), GetDefaultPool()));
         std::unique_ptr<ArrowSchema> c_schema = std::make_unique<ArrowSchema>();
         auto arrow_status = arrow::ExportSchema(*read_schema, c_schema.get());
         EXPECT_TRUE(arrow_status.ok());
@@ -168,17 +173,25 @@ class PrefetchFileBatchReaderImplTest : public ::testing::Test,
     std::shared_ptr<Executor> executor_;
 };
 
-std::vector<std::string> GetTestValues() {
-    std::vector<std::string> values;
-    values.emplace_back("parquet");
+std::vector<TestParam> PrepareTestParam() {
+    std::vector<TestParam> values = {
+        TestParam{"parquet", PrefetchCacheMode::ALWAYS},
+        TestParam{"parquet", PrefetchCacheMode::EXCLUDE_BITMAP},
+        TestParam{"parquet", PrefetchCacheMode::EXCLUDE_PREDICATE},
+        TestParam{"parquet", PrefetchCacheMode::EXCLUDE_BITMAP_OR_PREDICATE},
+        TestParam{"parquet", PrefetchCacheMode::NEVER}};
 #ifdef PAIMON_ENABLE_ORC
-    values.emplace_back("orc");
+    values.emplace_back(TestParam{"orc", PrefetchCacheMode::ALWAYS});
+    values.emplace_back(TestParam{"orc", PrefetchCacheMode::EXCLUDE_BITMAP});
+    values.emplace_back(TestParam{"orc", PrefetchCacheMode::EXCLUDE_PREDICATE});
+    values.emplace_back(TestParam{"orc", PrefetchCacheMode::EXCLUDE_BITMAP_OR_PREDICATE});
+    values.emplace_back(TestParam{"orc", PrefetchCacheMode::NEVER});
 #endif
     return values;
 }
 
-INSTANTIATE_TEST_SUITE_P(FileFormat, PrefetchFileBatchReaderImplTest,
-                         ::testing::ValuesIn(GetTestValues()));
+INSTANTIATE_TEST_SUITE_P(TestParam, PrefetchFileBatchReaderImplTest,
+                         ::testing::ValuesIn(PrepareTestParam()));
 
 TEST_F(PrefetchFileBatchReaderImplTest, TestSimple) {
     auto data_array = PrepareArray(101);
@@ -594,7 +607,7 @@ TEST_F(PrefetchFileBatchReaderImplTest, TestInvalidCase) {
 /// [30,60) will be filtered out.
 /// The read range is [0,30), [30,60), [60,90). So, expected results is [0,30), [60,90)
 TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCompleteFiltering) {
-    auto file_format = GetParam();
+    auto [file_format, cache_mode] = GetParam();
     auto data_array = PrepareArray(90);
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/30);
     auto schema = arrow::schema(fields_);
@@ -606,9 +619,10 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCom
                                                            FieldType::BIGINT, Literal(70l)),
                          }));
 
-    auto reader = PreparePrefetchReader(file_format, schema.get(), predicate,
-                                        /*selection_bitmap=*/std::nullopt,
-                                        /*batch_size=*/10, /*prefetch_max_parallel_num=*/3);
+    auto reader =
+        PreparePrefetchReader(file_format, schema.get(), predicate,
+                              /*selection_bitmap=*/std::nullopt,
+                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
     ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber(), -1);
     ASSERT_OK_AND_ASSIGN(auto result_array,
                          ReadResultCollector::CollectResult(
@@ -627,7 +641,7 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCom
 /// The read range is [0,30), [30,60), [60,90).
 TEST_P(PrefetchFileBatchReaderImplTest,
        TestPrefetchWithOrcPredicatePushdownWithRowGroupGranularity) {
-    auto file_format = GetParam();
+    auto [file_format, cache_mode] = GetParam();
     auto data_array = PrepareArray(90);
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/10);
 
@@ -640,9 +654,10 @@ TEST_P(PrefetchFileBatchReaderImplTest,
                                                            FieldType::BIGINT, Literal(70l)),
                          }));
 
-    auto reader = PreparePrefetchReader(file_format, schema.get(), predicate,
-                                        /*selection_bitmap=*/std::nullopt,
-                                        /*batch_size=*/10, /*prefetch_max_parallel_num=*/3);
+    auto reader =
+        PreparePrefetchReader(file_format, schema.get(), predicate,
+                              /*selection_bitmap=*/std::nullopt,
+                              /*batch_size=*/10, /*prefetch_max_parallel_num=*/3, cache_mode);
     ASSERT_OK(reader->RefreshReadRanges());
     ASSERT_EQ(reader->GetPreviousBatchFirstRowNumber(), -1);
     ASSERT_OK_AND_ASSIGN(auto result_array,
