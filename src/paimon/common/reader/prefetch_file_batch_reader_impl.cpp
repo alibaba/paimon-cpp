@@ -208,9 +208,11 @@ Status PrefetchFileBatchReaderImpl::SetReadRanges(
         read_ranges_.push_back(read_range);
     }
     // Note: add a special read range out of file row count, for trigger an EOF access.
-    read_ranges_.push_back(EofRange());
+    std::pair<uint64_t, uint64_t> eof_range;
+    PAIMON_ASSIGN_OR_RAISE(eof_range, EofRange());
+    read_ranges_.push_back(eof_range);
     for (auto& read_ranges : read_ranges_in_group_) {
-        read_ranges.push_back(EofRange());
+        read_ranges.push_back(eof_range);
     }
     return Status::OK();
 }
@@ -420,7 +422,9 @@ Status PrefetchFileBatchReaderImpl::HandleReadResult(
         }
         prefetch_queue->push({read_range, std::move(read_batch_with_bitmap), first_row_number});
     } else {
-        prefetch_queue->push({EofRange(), std::move(read_batch_with_bitmap), first_row_number});
+        std::pair<uint64_t, uint64_t> eof_range;
+        PAIMON_ASSIGN_OR_RAISE(eof_range, EofRange());
+        prefetch_queue->push({eof_range, std::move(read_batch_with_bitmap), first_row_number});
         readers_pos_[reader_idx]->store(std::numeric_limits<uint64_t>::max());
     }
     return Status::OK();
@@ -490,7 +494,8 @@ Result<BatchReader::ReadBatchWithBitmap> PrefetchFileBatchReaderImpl::NextBatchW
                 }
             }
             value_count++;
-            if (IsEofRange(peek_batch->read_range)) {
+            PAIMON_ASSIGN_OR_RAISE(bool is_eof_range, IsEofRange(peek_batch->read_range));
+            if (is_eof_range) {
                 eof_count++;
                 continue;
             }
@@ -550,7 +555,7 @@ uint64_t PrefetchFileBatchReaderImpl::GetPreviousBatchFirstRowNumber() const {
     return previous_batch_first_row_num_;
 }
 
-uint64_t PrefetchFileBatchReaderImpl::GetNumberOfRows() const {
+Result<uint64_t> PrefetchFileBatchReaderImpl::GetNumberOfRows() const {
     assert(!readers_.empty());
     return readers_[0]->GetNumberOfRows();
 }
@@ -569,13 +574,15 @@ Status PrefetchFileBatchReaderImpl::GetReadStatus() const {
     std::shared_lock<std::shared_mutex> lock(rw_mutex_);
     return read_status_;
 }
-bool PrefetchFileBatchReaderImpl::IsEofRange(
+Result<bool> PrefetchFileBatchReaderImpl::IsEofRange(
     const std::pair<uint64_t, uint64_t>& read_range) const {
-    return read_range.first >= GetNumberOfRows();
+    PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, GetNumberOfRows());
+    return read_range.first >= num_rows;
 }
 
-std::pair<uint64_t, uint64_t> PrefetchFileBatchReaderImpl::EofRange() const {
-    return {GetNumberOfRows(), GetNumberOfRows() + 1};
+Result<std::pair<uint64_t, uint64_t>> PrefetchFileBatchReaderImpl::EofRange() const {
+    PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, GetNumberOfRows());
+    return std::make_pair(num_rows, num_rows + 1);
 }
 
 void PrefetchFileBatchReaderImpl::Close() {

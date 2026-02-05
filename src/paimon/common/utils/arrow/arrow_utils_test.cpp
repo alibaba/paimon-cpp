@@ -18,30 +18,93 @@
 
 #include "arrow/api.h"
 #include "gtest/gtest.h"
-#include "paimon/common/types/data_field.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
 TEST(ArrowUtilsTest, TestCreateProjection) {
-    std::vector<DataField> read_fields = {DataField(1, arrow::field("k1", arrow::int32())),
-                                          DataField(3, arrow::field("p1", arrow::int32())),
-                                          DataField(5, arrow::field("s1", arrow::utf8())),
-                                          DataField(6, arrow::field("v0", arrow::float64())),
-                                          DataField(7, arrow::field("v1", arrow::boolean()))};
-    auto read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields);
+    arrow::FieldVector file_fields = {
+        arrow::field("k0", arrow::int32()),   arrow::field("k1", arrow::int32()),
+        arrow::field("p1", arrow::int32()),   arrow::field("s1", arrow::utf8()),
+        arrow::field("v0", arrow::float64()), arrow::field("v1", arrow::boolean()),
+        arrow::field("s0", arrow::utf8())};
+    auto file_schema = arrow::schema(file_fields);
 
-    std::vector<DataField> file_fields = {DataField(0, arrow::field("k0", arrow::int32())),
-                                          DataField(1, arrow::field("k1", arrow::int32())),
-                                          DataField(3, arrow::field("p1", arrow::int32())),
-                                          DataField(5, arrow::field("s1", arrow::utf8())),
-                                          DataField(6, arrow::field("v0", arrow::float64())),
-                                          DataField(7, arrow::field("v1", arrow::boolean())),
-                                          DataField(4, arrow::field("s0", arrow::utf8()))};
-    auto file_schema = DataField::ConvertDataFieldsToArrowSchema(file_fields);
-
-    auto projection = ArrowUtils::CreateProjection(file_schema, read_schema->fields());
-    std::vector<int32_t> expected_projection = {1, 2, 3, 4, 5};
-    ASSERT_EQ(projection, expected_projection);
+    {
+        // normal case
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()), arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()), arrow::field("v0", arrow::float64()),
+            arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_OK_AND_ASSIGN(std::vector<int32_t> projection,
+                             ArrowUtils::CreateProjection(file_schema, read_schema->fields()));
+        std::vector<int32_t> expected_projection = {1, 2, 3, 4, 5};
+        ASSERT_EQ(projection, expected_projection);
+    }
+    {
+        // duplicate read field
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()),   arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()),    arrow::field("v0", arrow::float64()),
+            arrow::field("v0", arrow::float64()), arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_OK_AND_ASSIGN(std::vector<int32_t> projection,
+                             ArrowUtils::CreateProjection(file_schema, read_schema->fields()));
+        std::vector<int32_t> expected_projection = {1, 2, 3, 4, 4, 5};
+        ASSERT_EQ(projection, expected_projection);
+    }
+    {
+        // duplicate read field, and sizeof(read_fields) > sizeof(file_fields)
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()),   arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()),    arrow::field("v0", arrow::float64()),
+            arrow::field("v0", arrow::float64()), arrow::field("v0", arrow::float64()),
+            arrow::field("v0", arrow::float64()), arrow::field("v0", arrow::float64()),
+            arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_OK_AND_ASSIGN(std::vector<int32_t> projection,
+                             ArrowUtils::CreateProjection(file_schema, read_schema->fields()));
+        std::vector<int32_t> expected_projection = {1, 2, 3, 4, 4, 4, 4, 4, 5};
+        ASSERT_EQ(projection, expected_projection);
+    }
+    {
+        // read field not found in file schema
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()), arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()), arrow::field("v2", arrow::float64()),
+            arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_NOK_WITH_MSG(ArrowUtils::CreateProjection(file_schema, read_schema->fields()),
+                            "Field 'v2' not found or duplicate in file schema");
+    }
+    {
+        // duplicate field in file schema
+        arrow::FieldVector file_fields_dup = {
+            arrow::field("k0", arrow::int32()),   arrow::field("k1", arrow::int32()),
+            arrow::field("p1", arrow::int32()),   arrow::field("s1", arrow::utf8()),
+            arrow::field("v0", arrow::float64()), arrow::field("v1", arrow::boolean()),
+            arrow::field("v1", arrow::boolean()), arrow::field("s0", arrow::utf8())};
+        auto file_schema_dup = arrow::schema(file_fields_dup);
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()), arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()), arrow::field("v1", arrow::float64()),
+            arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_NOK_WITH_MSG(ArrowUtils::CreateProjection(file_schema_dup, read_schema->fields()),
+                            "Field 'v1' not found or duplicate in file schema");
+    }
+    {
+        arrow::FieldVector read_fields = {
+            arrow::field("k1", arrow::int32()), arrow::field("p1", arrow::int32()),
+            arrow::field("s1", arrow::utf8()), arrow::field("v0", arrow::float64()),
+            arrow::field("v1", arrow::boolean())};
+        auto read_schema = arrow::schema(read_fields);
+        ASSERT_OK_AND_ASSIGN(std::vector<int32_t> projection,
+                             ArrowUtils::CreateProjection(file_schema, read_schema->fields()));
+        std::vector<int32_t> expected_projection = {1, 2, 3, 4, 5};
+        ASSERT_EQ(projection, expected_projection);
+    }
 }
 
 }  // namespace paimon::test

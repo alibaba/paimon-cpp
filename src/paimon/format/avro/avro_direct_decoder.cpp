@@ -76,10 +76,6 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder)
             decoder->skipBytes();
             return Status::OK();
 
-        case ::avro::AVRO_FIXED:
-            decoder->skipFixed(avro_node->fixedSize());
-            return Status::OK();
-
         case ::avro::AVRO_RECORD: {
             // Skip all fields in order
             for (size_t i = 0; i < avro_node->leaves(); ++i) {
@@ -87,10 +83,6 @@ Status SkipAvroValue(const ::avro::NodePtr& avro_node, ::avro::Decoder* decoder)
             }
             return Status::OK();
         }
-
-        case ::avro::AVRO_ENUM:
-            decoder->decodeEnum();
-            return Status::OK();
 
         case ::avro::AVRO_ARRAY: {
             const auto& element_node = avro_node->leafAt(0);

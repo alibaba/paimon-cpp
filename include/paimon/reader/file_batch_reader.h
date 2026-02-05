@@ -50,7 +50,7 @@ class PAIMON_EXPORT FileBatchReader : public BatchReader {
     virtual uint64_t GetPreviousBatchFirstRowNumber() const = 0;
 
     /// Get the number of rows in the file.
-    virtual uint64_t GetNumberOfRows() const = 0;
+    virtual Result<uint64_t> GetNumberOfRows() const = 0;
 
     /// Get whether or not support read precisely while bitmap pushed down.
     virtual bool SupportPreciseBitmapSelection() const = 0;

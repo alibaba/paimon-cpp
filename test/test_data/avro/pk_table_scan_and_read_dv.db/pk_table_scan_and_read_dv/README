@@ -1,0 +1,36 @@
+f0:string f1:int f2:int f3:double
+partition key: f1
+primary key: f0 f1 f2
+bucket key: f2
+bucket count: 2
+deletion-vectors.enabled = true
+
+Msgs:
+Add: "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 10, 1, 11.0
+Add: "Alice", 10, 1, 11.1
+
+Add: "Bob", 10, 0, 12.1
+Add: "Emily", 10, 0, 13.1
+Add: "Tony", 10, 0, 14.1
+Add: "Alex", 10, 0, 16.1
+Add: "David", 10, 0, 17.1
+
+Add: "Lucy", 20, 1, 14.1
+Add: "Paul", 20, 1, 18.1
+Commit - snapshot 1
+Compact - snapshot 2
+
+DELETE: "Tony", 10, 0, 14.1
+UPDATE_AFTER: "Alice", 10, 1, 19.1
+Commit - snapshot 3
+Compact - snapshot 4
+
+Add: "Skye", 10, 0, 21.0
+Add: "Marco", 10, 0, 21.1
+UPDATE_AFTER: "Alex", 10, 0, 21.2
+Commit - snapshot 5
+
+Add: "Skye2", 10, 0, 31.0
+Add: "Marco2", 10, 0, 31.1
+DELETE: "Alex", 10, 0, 31.2
+Commit - snapshot 6

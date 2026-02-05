@@ -23,6 +23,7 @@
 #include "arrow/c/helpers.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/avro/avro_reader_builder.h"
+#include "paimon/format/avro/avro_stats_extractor.h"
 #include "paimon/format/avro/avro_writer_builder.h"
 #include "paimon/status.h"
 
@@ -54,7 +55,7 @@ Result<std::unique_ptr<WriterBuilder>> AvroFileFormat::CreateWriterBuilder(
 Result<std::unique_ptr<FormatStatsExtractor>> AvroFileFormat::CreateStatsExtractor(
     ::ArrowSchema* schema) const {
     ArrowSchemaRelease(schema);
-    return Status::NotImplemented("do not support extract stats in avro format for now");
+    return std::make_unique<AvroStatsExtractor>(options_);
 }
 
 }  // namespace paimon::avro

@@ -353,11 +353,8 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse file format and file system configurations
     PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
         Options::FILE_FORMAT, /*default_identifier=*/"parquet", &impl->file_format));
-    if (impl->file_format->Identifier() == "avro") {
-        return Status::NotImplemented("not support avro as file format");
-    }
     PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
-        Options::MANIFEST_FORMAT, /*default_identifier=*/"orc", &impl->manifest_file_format));
+        Options::MANIFEST_FORMAT, /*default_identifier=*/"avro", &impl->manifest_file_format));
     PAIMON_RETURN_NOT_OK(parser.ParseFileSystem(fs_scheme_to_identifier_map, specified_file_system,
                                                 &impl->file_system));
 
