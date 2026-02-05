@@ -41,7 +41,6 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
-#include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/format/orc/orc_output_stream_impl.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
