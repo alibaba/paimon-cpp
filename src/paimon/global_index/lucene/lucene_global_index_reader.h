@@ -131,6 +131,26 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
     }
 
+    Lucene::QueryPtr ConstructMatchQuery(
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
+    Lucene::QueryPtr ConstructPhraseQuery(
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
+    Lucene::QueryPtr ConstructPrefixQuery(
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
+    Lucene::QueryPtr ConstructWildCardQuery(
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
+    Result<std::shared_ptr<GlobalIndexResult>> SearchWithLimit(
+        const Lucene::QueryPtr& query,
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
+    Result<std::shared_ptr<GlobalIndexResult>> SearchWithNoLimit(
+        const Lucene::QueryPtr& query,
+        const std::shared_ptr<FullTextSearch>& full_text_search) const;
+
  private:
     int64_t range_end_;
     std::wstring wfield_name_;
