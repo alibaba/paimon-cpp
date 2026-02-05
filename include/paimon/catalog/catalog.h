@@ -208,6 +208,7 @@ class PAIMON_EXPORT Catalog {
         const Identifier& identifier,
         const std::vector<std::map<std::string, std::string>>& partitions) {
         return Status::NotImplemented("CreatePartitions not implemented");
+        `
     }
 
     /// Drops partitions.
@@ -335,7 +336,7 @@ class PAIMON_EXPORT Catalog {
 
     // ==================== Version management methods ==========================
 
-    /// \brief Whether this catalog supports version management for tables.
+    /// Whether this catalog supports version management for tables.
     ///
     /// If not supported, corresponding methods will return NotImplemented status.
     /// Affected methods:
@@ -352,22 +353,20 @@ class PAIMON_EXPORT Catalog {
         return false;
     }
 
-    /// \brief Commit the Snapshot for table identified by the given Identifier.
+    /// Commit the Snapshot for table identified by the given Identifier.
     ///
-    /// \param identifier Path of the table
-    /// \param table_uuid Uuid of the table to avoid wrong commit
-    /// \param snapshot Snapshot to be committed
-    /// \param statistics Statistics information of this change
-    /// \return Success or not
-    /// \return TableNotExist error if the target does not exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table
+    /// @param table_uuid Uuid of the table to avoid wrong commit
+    /// @param snapshot Snapshot to be committed
+    /// @param statistics Statistics information of this change
+    /// @return A result containing true if commit succeeded, or an error status.
     virtual Result<bool> CommitSnapshot(const Identifier& identifier, const std::string& table_uuid,
                                         const std::shared_ptr<Snapshot>& snapshot,
                                         const std::vector<PartitionStatistics>& statistics) {
         return Status::NotImplemented("CommitSnapshot not implemented");
     }
 
-    /// \brief Return the snapshot of table for given version.
+    /// Return the snapshot of table for given version.
     ///
     /// Version parsing order:
     /// 1. If it is 'EARLIEST', get the earliest snapshot
@@ -375,96 +374,83 @@ class PAIMON_EXPORT Catalog {
     /// 3. If it is a number, get snapshot by snapshot id
     /// 4. Else try to get snapshot from Tag name
     ///
-    /// \param identifier Path of the table
-    /// \param version Version to snapshot
-    /// \return The requested snapshot
-    /// \return TableNotExist error if the target does not exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table
+    /// @param version Version to snapshot
+    /// @return A result containing the requested snapshot, or an error status.
     virtual Result<std::shared_ptr<Snapshot>> LoadSnapshot(const Identifier& identifier,
                                                            const std::string& version) const {
         return Status::NotImplemented("LoadSnapshot not implemented");
     }
 
-    /// \brief Rollback table by the given Identifier and instant.
+    /// Rollback table by the given Identifier and instant.
     ///
-    /// \param identifier Path of the table
-    /// \param instant Like snapshotId or tagName
-    /// \return TableNotExist error if the table does not exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table
+    /// @param instant Like snapshotId or tagName
+    /// @return A status indicating success or failure.
     virtual Status RollbackTo(const Identifier& identifier,
                               const std::chrono::system_clock::time_point& instant) {
         return RollbackTo(identifier, instant, std::nullopt);
     }
 
-    /// \brief Rollback table by the given Identifier and instant.
+    /// Rollback table by the given Identifier and instant.
     ///
-    /// \param identifier Path of the table
-    /// \param instant Like snapshotId or tagName
-    /// \param from_snapshot Snapshot from, success only occurs when the latest snapshot is this
+    /// @param identifier Path of the table
+    /// @param instant Like snapshotId or tagName
+    /// @param from_snapshot Snapshot from, success only occurs when the latest snapshot is this
     /// snapshot
-    /// \return TableNotExist error if the table does not exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @return A status indicating success or failure.
     virtual Status RollbackTo(const Identifier& identifier,
                               const std::chrono::system_clock::time_point& instant,
                               const std::optional<int64_t>& from_snapshot) {
         return Status::NotImplemented("RollbackTo not implemented");
     }
 
-    /// \brief Create a new branch for this table.
+    /// Create a new branch for this table.
     ///
     /// By default, an empty branch will be created using the latest schema.
     /// If from_tag is provided, a branch will be created from the tag and the
     /// data files will be inherited from it.
     ///
-    /// \param identifier Path of the table, cannot be system or branch name
-    /// \param branch The branch name
-    /// \param from_tag From the tag
-    /// \return TableNotExist error if the table in identifier doesn't exist
-    /// \return BranchAlreadyExist error if the branch already exists
-    /// \return TagNotExist error if the tag doesn't exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system or branch name
+    /// @param branch The branch name
+    /// @param from_tag From the tag
+    /// @return A status indicating success or failure.
     virtual Status CreateBranch(const Identifier& identifier, const std::string& branch,
                                 const std::optional<std::string>& from_tag = std::nullopt) {
         return Status::NotImplemented("CreateBranch not implemented");
     }
 
-    /// \brief Drop the branch for this table.
+    /// Drop the branch for this table.
     ///
-    /// \param identifier Path of the table, cannot be system or branch name
-    /// \param branch The branch name
-    /// \return BranchNotExist error if the branch doesn't exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system or branch name
+    /// @param branch The branch name
+    /// @return A status indicating success or failure.
     virtual Status DropBranch(const Identifier& identifier, const std::string& branch) {
         return Status::NotImplemented("DropBranch not implemented");
     }
 
-    /// \brief Fast-forward a branch to main branch.
+    /// Fast-forward a branch to main branch.
     ///
-    /// \param identifier Path of the table, cannot be system or branch name
-    /// \param branch The branch name
-    /// \return BranchNotExist error if the branch doesn't exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system or branch name
+    /// @param branch The branch name
+    /// @return A status indicating success or failure.
     virtual Status FastForward(const Identifier& identifier, const std::string& branch) {
         return Status::NotImplemented("FastForward not implemented");
     }
 
-    /// \brief List all branches of the table.
+    /// List all branches of the table.
     ///
-    /// \param identifier Path of the table, cannot be system or branch name
-    /// \return TableNotExist error if the table in identifier doesn't exist
-    /// \return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system or branch name
+    /// @return A result containing a list of branch names, or an error status.
     virtual Result<std::vector<std::string>> ListBranches(const Identifier& identifier) const {
         return Status::NotImplemented("ListBranches not implemented");
     }
 
     /// Get tag for table.
     ///
-    /// @param identifier path of the table, cannot be system name.
-    /// @param tag_name tag name
-    /// @return Tag containing tag information
-    /// @return TableNotExist error if the table does not exist
-    /// @return TagNotExist error if the tag does not exist
-    /// @return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system name.
+    /// @param tag_name Tag name
+    /// @return A result containing the tag information, or an error status.
     virtual Result<std::shared_ptr<Tag>> GetTag(const Identifier& identifier,
                                                 const std::string& tag_name) const {
         return Status::NotImplemented("GetTag not implemented");
@@ -472,15 +458,12 @@ class PAIMON_EXPORT Catalog {
 
     /// Create tag for table.
     ///
-    /// @param identifier path of the table, cannot be system name.
-    /// @param tag_name tag name
-    /// @param snapshot_id optional snapshot id, if not provided uses latest snapshot
-    /// @param time_retained optional time retained as string (e.g., "1d", "12h", "30m")
-    /// @param ignore_if_exists if true, ignore if tag already exists
-    /// @return TableNotExist error if the table does not exist
-    /// @return SnapshotNotExist error if the snapshot does not exist
-    /// @return TagAlreadyExist error if the tag already exists and ignore_if_exists is false
-    /// @return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system name.
+    /// @param tag_name Tag name
+    /// @param snapshot_id Optional snapshot id, if not provided uses latest snapshot
+    /// @param time_retained Optional time retained as string (e.g., "1d", "12h", "30m")
+    /// @param ignore_if_exists If true, ignore if tag already exists
+    /// @return A status indicating success or failure.
     virtual Status CreateTag(const Identifier& identifier, const std::string& tag_name,
                              const std::optional<int64_t>& snapshot_id,
                              const std::optional<std::string>& time_retained,
@@ -490,11 +473,9 @@ class PAIMON_EXPORT Catalog {
 
     /// Delete tag for table.
     ///
-    /// @param identifier path of the table, cannot be system name.
-    /// @param tag_name tag name
-    /// @return TableNotExist error if the table does not exist
-    /// @return TagNotExist error if the tag does not exist
-    /// @return NotImplemented error if the catalog does not support version management
+    /// @param identifier Path of the table, cannot be system name.
+    /// @param tag_name Tag name
+    /// @return A status indicating success or failure.
     virtual Status DeleteTag(const Identifier& identifier, const std::string& tag_name) {
         return Status::NotImplemented("DeleteTag not implemented");
     }
