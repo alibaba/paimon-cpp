@@ -100,7 +100,8 @@ MemoryPool::~MemoryPool() = default;
 void* MemoryPool::GetAdaptor(const std::string& identifier) {
     std::call_once(flag_, [this]() { holder_ = std::make_unique<MemoryPoolAdaptorHolder>(); });
     MemoryPoolAdaptorSlot& slot = holder_->GetOrCreateSlot(identifier);
-    return slot.GetOrCreate(identifier, *this);
+    assert(slot.Identifier() == identifier);
+    return slot.GetOrCreateAdaptor(*this);
 }
 
 arrow::MemoryPool* MemoryPool::AsArrowMemoryPool() {

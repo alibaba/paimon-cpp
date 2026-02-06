@@ -24,14 +24,19 @@
 namespace paimon {
 class MemoryPoolAdaptorSlot {
  public:
-    void* GetOrCreate(const std::string& identifier, MemoryPool& pool) {
-        std::call_once(once_flag_, [this, &pool, &identifier] {
-            ptr_ = MemoryPoolAdaptorFactory::Get(identifier, pool);
+    explicit MemoryPoolAdaptorSlot(const std::string& identifier) : identifier_(identifier) {}
+
+    std::string& Identifier() { return identifier_; }
+
+    void* GetOrCreateAdaptor(MemoryPool& pool) {
+        std::call_once(once_flag_, [this, &pool] {
+            ptr_ = MemoryPoolAdaptorFactory::Get(identifier_, pool);
         });
         return ptr_.get();
     }
 
  private:
+    std::string identifier_;
     MemoryPoolAdaptorPtr ptr_{nullptr, [](void*) {}};
     std::once_flag once_flag_;
 };
@@ -43,7 +48,7 @@ class MemoryPoolAdaptorHolder {
         if (auto it = snapshot->find(identifier); it != snapshot->end()) {
             return *it->second;
         }
-        auto new_slot = std::make_shared<MemoryPoolAdaptorSlot>();
+        auto new_slot = std::make_shared<MemoryPoolAdaptorSlot>(identifier);
         while (true) {
             auto new_snapshot = std::make_shared<SlotMap>(*snapshot);
             auto [slot, inserted] = new_snapshot->emplace(identifier, new_slot);
