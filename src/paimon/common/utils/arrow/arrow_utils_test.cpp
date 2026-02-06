@@ -122,7 +122,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchSimple) {
 
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field column1 not nullable while data have null value");
+            "CheckNullabilityMatch failed, field column1 not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -150,7 +150,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchWithStruct) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field parent not nullable while data have null value");
+            "CheckNullabilityMatch failed, field parent not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -161,7 +161,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchWithStruct) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field child1 not nullable while data have null value");
+            "CheckNullabilityMatch failed, field child1 not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -187,7 +187,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchWithList) {
 ])")
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(ArrowUtils::CheckNullabilityMatch(schema, array),
-                            "check nullable match failed, field list_column not nullable while "
+                            "CheckNullabilityMatch failed, field list_column not nullable while "
                             "data have null value");
     }
     {
@@ -198,7 +198,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchWithList) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field value not nullable while data have null value");
+            "CheckNullabilityMatch failed, field value not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -224,7 +224,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchWithMap) {
 ])")
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(ArrowUtils::CheckNullabilityMatch(schema, array),
-                            "check nullable match failed, field map_column not nullable while "
+                            "CheckNullabilityMatch failed, field map_column not nullable while "
                             "data have null value");
     }
     {
@@ -269,7 +269,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field value not nullable while data have null value");
+            "CheckNullabilityMatch failed, field value not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -282,7 +282,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field inner1 not nullable while data have null value");
+            "CheckNullabilityMatch failed, field inner1 not nullable while data have null value");
     }
     // test inner2
     {
@@ -295,7 +295,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field value not nullable while data have null value");
+            "CheckNullabilityMatch failed, field value not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -307,7 +307,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field inner2 not nullable while data have null value");
+            "CheckNullabilityMatch failed, field inner2 not nullable while data have null value");
     }
     // test inner3
     {
@@ -320,7 +320,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field value not nullable while data have null value");
+            "CheckNullabilityMatch failed, field value not nullable while data have null value");
     }
     {
         std::shared_ptr<arrow::Array> array =
@@ -332,7 +332,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
                 .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             ArrowUtils::CheckNullabilityMatch(schema, array),
-            "check nullable match failed, field inner3 not nullable while data have null value");
+            "CheckNullabilityMatch failed, field inner3 not nullable while data have null value");
     }
 }
 

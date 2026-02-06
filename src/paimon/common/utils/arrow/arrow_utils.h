@@ -59,20 +59,21 @@ class ArrowUtils {
         auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(data);
         if (schema->num_fields() != struct_array->num_fields()) {
             return Status::Invalid(
-                "CheckNullableMatch failed, input data and schema field count mismatch");
+                "CheckNullabilityMatch failed, input data and schema field count mismatch");
         }
         for (int32_t i = 0; i < schema->num_fields(); i++) {
-            PAIMON_RETURN_NOT_OK(CheckNullabilityMatch(schema->field(i), struct_array->field(i)));
+            PAIMON_RETURN_NOT_OK(
+                InnerCheckNullabilityMatch(schema->field(i), struct_array->field(i)));
         }
         return Status::OK();
     }
 
  private:
-    static Status CheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
-                                        const std::shared_ptr<arrow::Array>& data) {
+    static Status InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
+                                             const std::shared_ptr<arrow::Array>& data) {
         if (!field->nullable() && data->null_count() != 0) {
             return Status::Invalid(fmt::format(
-                "check nullable match failed, field {} not nullable while data have null value",
+                "CheckNullabilityMatch failed, field {} not nullable while data have null value",
                 field->name()));
         }
         auto type = field->type();
@@ -82,19 +83,20 @@ class ArrowUtils {
             auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(data);
             for (int32_t i = 0; i < struct_type->num_fields(); ++i) {
                 PAIMON_RETURN_NOT_OK(
-                    CheckNullabilityMatch(struct_type->field(i), struct_array->field(i)));
+                    InnerCheckNullabilityMatch(struct_type->field(i), struct_array->field(i)));
             }
-
         } else if (type->id() == arrow::Type::LIST) {
             auto list_type = arrow::internal::checked_pointer_cast<arrow::ListType>(field->type());
             auto list_array = arrow::internal::checked_pointer_cast<arrow::ListArray>(data);
             PAIMON_RETURN_NOT_OK(
-                CheckNullabilityMatch(list_type->value_field(), list_array->values()));
+                InnerCheckNullabilityMatch(list_type->value_field(), list_array->values()));
         } else if (type->id() == arrow::Type::MAP) {
             auto map_type = arrow::internal::checked_pointer_cast<arrow::MapType>(field->type());
             auto map_array = arrow::internal::checked_pointer_cast<arrow::MapArray>(data);
-            PAIMON_RETURN_NOT_OK(CheckNullabilityMatch(map_type->key_field(), map_array->keys()));
-            PAIMON_RETURN_NOT_OK(CheckNullabilityMatch(map_type->item_field(), map_array->items()));
+            PAIMON_RETURN_NOT_OK(
+                InnerCheckNullabilityMatch(map_type->key_field(), map_array->keys()));
+            PAIMON_RETURN_NOT_OK(
+                InnerCheckNullabilityMatch(map_type->item_field(), map_array->items()));
         }
         return Status::OK();
     }

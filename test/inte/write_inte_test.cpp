@@ -3922,7 +3922,7 @@ TEST_P(WriteInteTest, TestNullabilityCheck) {
     ASSERT_NOK_WITH_MSG(
         helper->WriteAndCommit(std::move(batch), commit_identifier++,
                                /*expected_commit_messages=*/std::nullopt),
-        "check nullable match failed, field f1 not nullable while data have null value");
+        "CheckNullabilityMatch failed, field f1 not nullable while data have null value");
 
     // write valid data
     data = R"([
