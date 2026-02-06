@@ -120,7 +120,7 @@ function(add_paimon_lib LIB_NAME)
         target_link_options(${LIB_NAME}_shared
                             PRIVATE
                             -Wl,--exclude-libs,ALL
-                            -Wl,-Bsymbolic
+                            -Wl,-Bsymbolic-functions
                             -Wl,-z,defs
                             -Wl,--gc-sections)
 

@@ -21,14 +21,14 @@
 
 namespace paimon {
 
-const char* ArrowMemPoolAdaptorFactory::Identifier() const {
+const char* ArrowMemoryPoolAdaptorFactory::Identifier() const {
     return MemoryPoolAdaptorTraits<arrow::MemoryPool>::identifier;
 }
 
-MemoryPoolAdaptorPtr ArrowMemPoolAdaptorFactory::Create(MemoryPool& pool) const {
+MemoryPoolAdaptorPtr ArrowMemoryPoolAdaptorFactory::Create(MemoryPool& pool) const {
     return MakeAdaptor<ArrowMemoryPoolAdaptor>(pool);
 }
 
-REGISTER_PAIMON_FACTORY(ArrowMemPoolAdaptorFactory);
+REGISTER_PAIMON_FACTORY(ArrowMemoryPoolAdaptorFactory);
 
 }  // namespace paimon

@@ -20,7 +20,7 @@
 
 namespace paimon {
 
-class ArrowMemPoolAdaptorFactory final : public MemoryPoolAdaptorFactory {
+class ArrowMemoryPoolAdaptorFactory final : public MemoryPoolAdaptorFactory {
  public:
     const char* Identifier() const override;
 
