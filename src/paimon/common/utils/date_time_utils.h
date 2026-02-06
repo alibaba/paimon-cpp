@@ -167,6 +167,22 @@ class DateTimeUtils {
         return tz ? tz->name() : "UTC";
     }
 
+    static std::string GetArrowTimeUnitStr(arrow::TimeUnit::type unit) {
+        switch (unit) {
+            case arrow::TimeUnit::SECOND:
+                return "SECOND";
+            case arrow::TimeUnit::MILLI:
+                return "MILLISECOND";
+            case arrow::TimeUnit::MICRO:
+                return "MICROSECOND";
+            case arrow::TimeUnit::NANO:
+                return "NANOSECOND";
+            default:
+                break;
+        }
+        return "UNKNOWN";
+    }
+
     // there may be a precision loss for nano
     static Result<Timestamp> ToUTCTimestamp(const Timestamp& timestamp) {
         int64_t micro_second = timestamp.ToMicrosecond();

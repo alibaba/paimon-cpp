@@ -60,6 +60,8 @@ class PAIMON_EXPORT FileIndexReader : public FunctionVisitor<std::shared_ptr<Fil
     Result<std::shared_ptr<FileIndexResult>> VisitEndsWith(const Literal& suffix) override;
 
     Result<std::shared_ptr<FileIndexResult>> VisitContains(const Literal& literal) override;
+
+    Result<std::shared_ptr<FileIndexResult>> VisitLike(const Literal& literal) override;
 };
 
 }  // namespace paimon

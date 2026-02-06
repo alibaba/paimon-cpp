@@ -265,6 +265,7 @@ set(PAIMON_CORE_SRCS
     core/table/source/table_read.cpp
     core/table/source/table_scan.cpp
     core/table/source/data_evolution_batch_scan.cpp
+    core/tag/tag.cpp
     core/utils/field_mapping.cpp
     core/utils/fields_comparator.cpp
     core/utils/file_store_path_factory.cpp
@@ -273,7 +274,8 @@ set(PAIMON_CORE_SRCS
     core/utils/partition_path_utils.cpp
     core/utils/primary_key_table_utils.cpp
     core/utils/snapshot_manager.cpp
-    core/utils/special_field_ids.cpp)
+    core/utils/special_field_ids.cpp
+    core/utils/tag_manager.cpp)
 
 add_paimon_lib(paimon
                SOURCES
@@ -386,6 +388,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/arrow/arrow_utils_test.cpp
                     common/utils/arrow/mem_utils_test.cpp
                     common/utils/arrow/status_utils_test.cpp
                     common/utils/concurrent_hash_map_test.cpp
@@ -563,6 +566,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/split_generator_test.cpp
                     core/table/source/startup_mode_test.cpp
                     core/table/source/table_scan_test.cpp
+                    core/tag/tag_test.cpp
                     core/utils/branch_manager_test.cpp
                     core/utils/field_mapping_test.cpp
                     core/utils/fields_comparator_test.cpp
@@ -572,6 +576,7 @@ if(PAIMON_BUILD_TESTS)
                     core/utils/offset_row_test.cpp
                     core/utils/partition_path_utils_test.cpp
                     core/utils/snapshot_manager_test.cpp
+                    core/utils/tag_manager_test.cpp
                     core/utils/primary_key_table_utils_test.cpp
                     core/utils/index_file_path_factories_test.cpp
                     STATIC_LINK_LIBS

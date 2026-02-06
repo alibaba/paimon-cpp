@@ -22,9 +22,9 @@
 
 #include "arrow/api.h"
 #include "avro/DataFile.hh"
-#include "avro/Stream.hh"
 #include "avro/ValidSchema.hh"
-#include "paimon/format/avro/avro_adaptor.h"
+#include "paimon/format/avro/avro_direct_encoder.h"
+#include "paimon/format/avro/avro_output_stream_impl.h"
 #include "paimon/format/format_writer.h"
 #include "paimon/metrics.h"
 #include "paimon/result.h"
@@ -36,7 +36,6 @@ class Schema;
 }  // namespace arrow
 namespace avro {
 class GenericDatum;
-class OutputStream;
 }  // namespace avro
 namespace paimon {
 class Metrics;
@@ -49,7 +48,7 @@ namespace paimon::avro {
 class AvroFormatWriter : public FormatWriter {
  public:
     static Result<std::unique_ptr<AvroFormatWriter>> Create(
-        std::unique_ptr<::avro::OutputStream> out, const std::shared_ptr<arrow::Schema>& schema,
+        std::unique_ptr<AvroOutputStreamImpl> out, const std::shared_ptr<arrow::Schema>& schema,
         const ::avro::Codec codec);
 
     Status AddBatch(ArrowArray* batch) override;
@@ -65,18 +64,20 @@ class AvroFormatWriter : public FormatWriter {
     }
 
  private:
-    static constexpr size_t DEFAULT_SYNC_INTERVAL = 16 * 1024;
+    static constexpr size_t DEFAULT_SYNC_INTERVAL = 64 * 1024;
 
-    AvroFormatWriter(
-        const std::shared_ptr<::avro::DataFileWriter<::avro::GenericDatum>>& file_writer,
-        const ::avro::ValidSchema& avro_schema, const std::shared_ptr<arrow::DataType>& data_type,
-        std::unique_ptr<AvroAdaptor> adaptor);
+    AvroFormatWriter(std::unique_ptr<::avro::DataFileWriterBase>&& file_writer,
+                     const ::avro::ValidSchema& avro_schema,
+                     const std::shared_ptr<arrow::DataType>& data_type,
+                     AvroOutputStreamImpl* avro_output_stream);
 
-    std::shared_ptr<::avro::DataFileWriter<::avro::GenericDatum>> writer_;
+    std::unique_ptr<::avro::DataFileWriterBase> writer_;
     ::avro::ValidSchema avro_schema_;
     std::shared_ptr<arrow::DataType> data_type_;
     std::shared_ptr<Metrics> metrics_;
-    std::unique_ptr<AvroAdaptor> adaptor_;
+    AvroOutputStreamImpl* avro_output_stream_;
+    // Encode context for reusing scratch buffers
+    AvroDirectEncoder::EncodeContext encode_ctx_;
 };
 
 }  // namespace paimon::avro

@@ -1,0 +1,7 @@
+f0:map<int,int> f1:map<double,double> f2:map<string,string> f3:map<string,binary(6)> f4:map<timestamp(6),timestamp(6)> f5:map<string,array<double>> f6:map<string,map<double,string>> f7:map<long,struct<f0:int,f1:string,f2:decimal(5,2)>>
+bucket count: -1
+
+Msgs:
+snapshot-1 (1 data files)
+Add: [[1,10],[2,20]],[[1.1,10.1],[2.2,20.2]],[["key1","val1"],["key2","val2"]],[["123456","abcdef"]],[["2023-01-01 12:00:00.123000","2023-01-01 12:00:00.123000"],["2023-01-02 13:30:00.456000","2023-01-02 13:30:00.456000"]],
+     [["arr_key",[1.5, 2.5, 3.5]]],[["outer_key",[[99.9,"nested_val"]]]],[[1000, [42, "row_str", "123.45"]]]

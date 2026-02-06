@@ -20,11 +20,16 @@
 #include <memory>
 #include <string>
 
+#include "avro/LogicalType.hh"
 #include "paimon/format/file_format.h"
 #include "paimon/format/file_format_factory.h"
 #include "paimon/result.h"
 
 namespace paimon::avro {
+
+struct MapLogicalType : public ::avro::CustomLogicalType {
+    MapLogicalType() : ::avro::CustomLogicalType("map") {}
+};
 
 class AvroFileFormatFactory : public FileFormatFactory {
  public:

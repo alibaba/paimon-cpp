@@ -928,8 +928,9 @@ TEST_F(ScanInteTest, TestScanAppendWithInvalidOptions) {
             .WithStreamingMode(true);
         ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
-        ASSERT_NOK_WITH_MSG(table_scan->CreatePlan(),
-                            "scan.snapshot-id must be set when startup mode is FROM_SNAPSHOT");
+        ASSERT_NOK_WITH_MSG(
+            table_scan->CreatePlan(),
+            "scan.snapshot-id or scan.tag-name must be set when startup mode is FROM_SNAPSHOT");
     }
     {
         ScanContextBuilder context_builder(table_path);
@@ -2077,6 +2078,28 @@ TEST_F(ScanInteTest, TestScanAppendWithBitmapAndAlterTableWithEmptyResult) {
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
     ASSERT_TRUE(result_plan->Splits().empty());
+}
+
+TEST_F(ScanInteTest, TestScanAppendWithTag1) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "orc/append_table_with_tag.db/append_table_with_tag";
+    ScanContextBuilder context_builder(table_path);
+    context_builder.AddOption(Options::SCAN_TAG_NAME, "1");
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+    // check snapshot id
+    ASSERT_EQ(1, result_plan->SnapshotId().value());
+}
+
+TEST_F(ScanInteTest, TestScanInvalidTag) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "orc/append_table_with_tag.db/append_table_with_tag";
+    ScanContextBuilder context_builder(table_path);
+    context_builder.AddOption(Options::SCAN_TAG_NAME, "unknown");
+    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    ASSERT_NOK_WITH_MSG(table_scan->CreatePlan(), "Tag 'unknown' doesn't exist.");
 }
 
 }  // namespace paimon::test

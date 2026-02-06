@@ -171,6 +171,19 @@ class ScanAndReadInteTest : public testing::Test,
              DataField(3, arrow::field("f3", arrow::float64()))}));
 };
 
+std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() {
+    std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
+#ifdef PAIMON_ENABLE_ORC
+    values.emplace_back("orc", false);
+    values.emplace_back("orc", true);
+#endif
+    return values;
+}
+
+INSTANTIATE_TEST_SUITE_P(FileFormatAndEnablePaimonPrefetch, ScanAndReadInteTest,
+                         ::testing::ValuesIn(std::vector<std::pair<std::string, bool>>(
+                             GetTestValuesForScanAndReadInteTest())));
+
 TEST_P(ScanAndReadInteTest, TestWithAppendSnapshotIOException) {
     auto [file_format, enable_prefetch] = GetParam();
     std::string table_path = GetDataDir() + "/" + file_format + "/append_09.db/append_09";
@@ -546,30 +559,30 @@ TEST_P(ScanAndReadInteTest, TestJavaPaimon1WithAppendSnapshotOfNestedType) {
 }
 
 // test pk with dv
-TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
-    auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = GetDataDir() + "/" + file_format +
-                             "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
+TEST_F(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
+    auto check_result = [&](const std::string& file_format) {
+        std::string table_path = GetDataDir() + "/" + file_format +
+                                 "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
 
-    // normal batch scan case for pk+dv, all data in level 0 is filtered out
-    ScanContextBuilder scan_context_builder(table_path);
-    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
-    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        // normal batch scan case for pk+dv, all data in level 0 is filtered out
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
+        ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
 
-    ReadContextBuilder read_context_builder(table_path);
-    AddReadOptionsForPrefetch(&read_context_builder);
-    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ReadContextBuilder read_context_builder(table_path);
+        ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
 
-    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
-    ASSERT_EQ(result_plan->SnapshotId().value(), 6);
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
-    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+        ASSERT_EQ(result_plan->SnapshotId().value(), 6);
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(result_plan->Splits()));
+        ASSERT_OK_AND_ASSIGN(auto read_result,
+                             ReadResultCollector::CollectResult(batch_reader.get()));
 
-    // check result
-    auto expected = std::make_shared<arrow::ChunkedArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
+        // check result
+        auto expected = std::make_shared<arrow::ChunkedArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
 [0, "Two roads diverged in a wood, and I took the one less traveled by, And that has made all the difference.", 10, 1, 11.0],
 [0, "Alice", 10, 1, 19.1],
 [0, "Alex", 10, 0, 16.1],
@@ -579,9 +592,14 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot6) {
 [0, "Lucy", 20, 1, 14.1],
 [0, "Paul", 20, 1, 18.1]
    ])")
-            .ValueOrDie());
-    ASSERT_TRUE(expected);
-    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+                .ValueOrDie());
+        ASSERT_TRUE(expected);
+        ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+    };
+    for (auto [file_format, enable_prefetch] : GetTestValuesForScanAndReadInteTest()) {
+        check_result(file_format);
+    }
+    check_result("avro");
 }
 
 TEST_P(ScanAndReadInteTest, TestWithPKWithDvBatchScanSnapshot1) {
@@ -2566,17 +2584,143 @@ TEST_P(ScanAndReadInteTest, TestCastTimestampType) {
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
-std::vector<std::pair<std::string, bool>> GetTestValuesForScanAndReadInteTest() {
-    std::vector<std::pair<std::string, bool>> values = {{"parquet", false}, {"parquet", true}};
-#ifdef PAIMON_ENABLE_ORC
-    values.emplace_back("orc", false);
-    values.emplace_back("orc", true);
-#endif
-    return values;
+#ifdef PAIMON_ENABLE_AVRO
+TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
+    auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
+        std::string table_path = GetDataDir() + "/avro/append_multiple.db/append_multiple";
+        // scan
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, std::to_string(snapshot_id));
+        ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+        ASSERT_EQ(result_plan->SnapshotId().value(), snapshot_id);
+        auto splits = result_plan->Splits();
+        ASSERT_EQ(3, splits.size());
+
+        // read
+        ReadContextBuilder read_context_builder(table_path);
+        read_context_builder.AddOption("test.enable-adaptive-prefetch-strategy", "false");
+        read_context_builder.EnablePrefetch(true).SetPrefetchBatchCount(3);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
+                             read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
+        ASSERT_OK_AND_ASSIGN(auto read_result,
+                             ReadResultCollector::CollectResult(batch_reader.get()));
+
+        // check result
+        auto timezone = DateTimeUtils::GetLocalTimezoneName();
+        arrow::FieldVector fields = {
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("f0", arrow::int8()),
+            arrow::field("f1", arrow::int16()),
+            arrow::field("f2", arrow::int32()),
+            arrow::field("f3", arrow::int64()),
+            arrow::field("f4", arrow::float32()),
+            arrow::field("f5", arrow::float64()),
+            arrow::field("f6", arrow::utf8()),
+            arrow::field("f7", arrow::binary()),
+            arrow::field("f8", arrow::date32()),
+            arrow::field("f9", arrow::decimal128(5, 2)),
+            arrow::field("f10", arrow::timestamp(arrow::TimeUnit::SECOND)),
+            arrow::field("f11", arrow::timestamp(arrow::TimeUnit::MILLI)),
+            arrow::field("f12", arrow::timestamp(arrow::TimeUnit::MICRO)),
+            arrow::field("f13", arrow::timestamp(arrow::TimeUnit::SECOND, timezone)),
+            arrow::field("f14", arrow::timestamp(arrow::TimeUnit::MILLI, timezone)),
+            arrow::field("f15", arrow::timestamp(arrow::TimeUnit::MICRO, timezone)),
+            arrow::field("f16", arrow::struct_(
+                                    {arrow::field("f0", arrow::map(arrow::utf8(), arrow::int32())),
+                                     arrow::field("f1", arrow::list(arrow::int32()))})),
+        };
+        auto expected = std::make_shared<arrow::ChunkedArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), result_json)
+                .ValueOrDie());
+        ASSERT_TRUE(expected);
+        ASSERT_TRUE(expected->Equals(read_result))
+            << "read_result: " << read_result->ToString() << "expected: " << expected->ToString();
+    };
+
+    read_data(1, R"([
+[0, 2, 10, 1, 100, 2.0, 2.0, "two", "bbb", 123, "123.45", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 1, 10, 0, 100, 1.0, 1.0, "one", "aaa", 123, "123.45", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 3, 11, 0, 100, null, 3.0, "three", "ccc", 123, "123.45", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 4, 11, 0, 100, 4.0, null, "four", "ddd", 123, "123.45", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000",[[["key",123]],[1,2,3]]]
+])");
+
+    read_data(2, R"([
+[0, 2, 10, 1, 100, 2.0, 2.0, "two", "bbb", 123, "123.45", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000", "1970-01-02 00:00:00", "1970-01-02 00:00:00.000", "1970-01-02 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 6, 10, 1, 100, 6.0, 4.0, "six", "fff", 123, "123.45", "1970-01-06 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000", "1970-01-06 00:00:00", "1970-01-06 00:00:00.000", "1970-01-06 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 1, 10, 0, 100, 1.0, 1.0, "one", "aaa", 123, "123.45", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000", "1970-01-01 00:00:00", "1970-01-01 00:00:00.000", "1970-01-01 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 5, 10, 0, 100, 5.0, 2.0, null, "eee", 123, "123.45", "1970-01-05 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000", "1970-01-05 00:00:00", "1970-01-05 00:00:00.000", "1970-01-05 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 3, 11, 0, 100, null, 3.0, "three", "ccc", 123, "123.45", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000", "1970-01-03 00:00:00", "1970-01-03 00:00:00.000", "1970-01-03 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 4, 11, 0, 100, 4.0, null, "four", "ddd", 123, "123.45", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000", "1970-01-04 00:00:00", "1970-01-04 00:00:00.000", "1970-01-04 00:00:00.000000",[[["key",123]],[1,2,3]]],
+[0, 7, 11, 0, 100, 7.0, 6.0, "seven", "ggg", 123, "123.45", "1970-01-07 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000", "1970-01-07 00:00:00", "1970-01-07 00:00:00.000", "1970-01-07 00:00:00.000000",[[["key",123]],[1,2,3]]]
+])");
 }
 
-INSTANTIATE_TEST_SUITE_P(FileFormatAndEnablePaimonPrefetch, ScanAndReadInteTest,
-                         ::testing::ValuesIn(std::vector<std::pair<std::string, bool>>(
-                             GetTestValuesForScanAndReadInteTest())));
+TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
+    auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
+        std::string table_path =
+            GetDataDir() + "/avro/pk_with_multiple_type.db/pk_with_multiple_type";
+        // scan
+        ScanContextBuilder scan_context_builder(table_path);
+        scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, std::to_string(snapshot_id));
+        ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+        ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+        ASSERT_EQ(result_plan->SnapshotId().value(), snapshot_id);
+
+        auto splits = result_plan->Splits();
+        ASSERT_EQ(1, splits.size());
+
+        // read
+        ReadContextBuilder read_context_builder(table_path);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ReadContext> read_context,
+                             read_context_builder.Finish());
+        ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+        ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
+        ASSERT_OK_AND_ASSIGN(auto read_result,
+                             ReadResultCollector::CollectResult(batch_reader.get()));
+
+        // check result
+        arrow::FieldVector fields = {
+            arrow::field("_VALUE_KIND", arrow::int8()),
+            arrow::field("f0", arrow::boolean()),
+            arrow::field("f1", arrow::int8()),
+            arrow::field("f2", arrow::int16()),
+            arrow::field("f3", arrow::int32()),
+            arrow::field("f4", arrow::int64()),
+            arrow::field("f5", arrow::float32()),
+            arrow::field("f6", arrow::float64()),
+            arrow::field("f7", arrow::utf8()),
+            arrow::field("f8", arrow::binary()),
+            arrow::field("f9", arrow::date32()),
+            arrow::field("f10", arrow::decimal128(5, 2)),
+            arrow::field("f11", arrow::struct_(
+                                    {arrow::field("f0", arrow::map(arrow::utf8(), arrow::int32())),
+                                     arrow::field("f1", arrow::list(arrow::int32()))})),
+        };
+        auto expected = std::make_shared<arrow::ChunkedArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(struct_(fields), result_json).ValueOrDie());
+        ASSERT_TRUE(expected);
+        ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+    };
+
+    read_data(1, R"([
+[0, false, 10, 1, 1, 1000, 1.5, 2.5, "Alice", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, false, 10, 1, 1, 1000, 1.5, 2.5, "Bob", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, true, 10, 1, 1, 1000, 1.5, 2.5, "Emily", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, true, 10, 1, 1, 1000, 1.5, 2.5, "Tony", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]]
+])");
+
+    read_data(2, R"([
+[0, false, 10, 1, 1, 1000, 1.5, 2.5, "Alice", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, false, 10, 1, 1, 1000, 1.5, 2.5, "Bob", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, true, 10, 1, 1, 1000, 1.5, 2.5, "Lucy", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]],
+[0, true, 10, 1, 1, 1000, 1.5, 2.5, "Tony", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]]
+])");
+}
+#endif
 
 }  // namespace paimon::test

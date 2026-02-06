@@ -39,7 +39,7 @@ class BinaryRowPartitionComputer;
 class PartitionEntry {
  public:
     PartitionEntry(const BinaryRow& partition, int64_t record_count, int64_t file_size_in_bytes,
-                   int64_t file_count, int64_t last_file_creation_time);
+                   int64_t file_count, int64_t last_file_creation_time, int32_t total_buckets);
 
     const BinaryRow& Partition() const {
         return partition_;
@@ -58,14 +58,18 @@ class PartitionEntry {
     int64_t LastFileCreationTime() const {
         return last_file_creation_time_;
     }
+    int32_t TotalBuckets() const {
+        return total_buckets_;
+    }
     PartitionEntry Merge(const PartitionEntry& entry) const;
 
     static Result<PartitionEntry> FromManifestEntry(const ManifestEntry& entry) {
-        return FromDataFile(entry.Partition(), entry.Kind(), entry.File());
+        return FromDataFile(entry.Partition(), entry.Kind(), entry.File(), entry.TotalBuckets());
     }
 
     static Result<PartitionEntry> FromDataFile(const BinaryRow& partition, const FileKind& kind,
-                                               const std::shared_ptr<DataFileMeta>& file);
+                                               const std::shared_ptr<DataFileMeta>& file,
+                                               int32_t total_buckets);
 
     Result<PartitionStatistics> ToPartitionStatistics(
         const BinaryRowPartitionComputer* partition_computer) const;
@@ -81,5 +85,6 @@ class PartitionEntry {
     int64_t file_size_in_bytes_;
     int64_t file_count_;
     int64_t last_file_creation_time_;
+    int32_t total_buckets_;
 };
 }  // namespace paimon

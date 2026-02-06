@@ -88,13 +88,14 @@ class ApplyBitmapIndexBatchReaderTest : public ::testing::Test,
             bool enable_prefetch = GetParam();
             if (enable_prefetch) {
                 MockFormatReaderBuilder reader_builder(data, target_type_, batch_size);
-                ASSERT_OK_AND_ASSIGN(file_batch_reader,
-                                     PrefetchFileBatchReaderImpl::Create(
-                                         /*data_file_path=*/"DUMMY", &reader_builder, fs_,
-                                         prefetch_batch_count, batch_size, prefetch_batch_count * 2,
-                                         /*enable_adaptive_prefetch_strategy=*/false, executor_,
-                                         /*initialize_read_ranges=*/true,
-                                         /*enable_prefetch_cache=*/true, CacheConfig(), pool_));
+                ASSERT_OK_AND_ASSIGN(
+                    file_batch_reader,
+                    PrefetchFileBatchReaderImpl::Create(
+                        /*data_file_path=*/"DUMMY", &reader_builder, fs_, prefetch_batch_count,
+                        batch_size, prefetch_batch_count * 2,
+                        /*enable_adaptive_prefetch_strategy=*/false, executor_,
+                        /*initialize_read_ranges=*/true,
+                        /*prefetch_cache_mode=*/PrefetchCacheMode::ALWAYS, CacheConfig(), pool_));
             } else {
                 file_batch_reader =
                     std::make_unique<MockFileBatchReader>(data, target_type_, batch_size);

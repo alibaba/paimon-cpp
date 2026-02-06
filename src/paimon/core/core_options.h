@@ -118,6 +118,8 @@ class PAIMON_EXPORT CoreOptions {
     bool GlobalIndexEnabled() const;
     Result<std::optional<std::string>> CreateGlobalIndexExternalPath() const;
 
+    std::optional<std::string> GetScanTagName() const;
+
     const std::map<std::string, std::string>& ToMap() const;
 
  private:

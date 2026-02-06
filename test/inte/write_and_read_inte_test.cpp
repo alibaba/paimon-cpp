@@ -75,7 +75,7 @@ TEST_P(WriteAndReadInteTest, TestAppendSimple) {
     auto [file_format, file_system] = GetParam();
     // manifest and file format are upper case
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "ORC"},
+        {Options::MANIFEST_FORMAT, "AVRO"},
         {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format)},
         {Options::TARGET_FILE_SIZE, "1024"},
         {Options::BUCKET, "-1"},
@@ -126,7 +126,7 @@ TEST_P(WriteAndReadInteTest, TestPKSimple) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},          {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},         {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"},        {Options::BUCKET, "1"},
         {Options::FILE_SYSTEM, file_system},        {"orc.read.enable-lazy-decoding", "true"},
         {"orc.dictionary-key-size-threshold", "1"},
@@ -192,7 +192,7 @@ TEST_P(WriteAndReadInteTest, TestNestedType) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "-1"},
         {Options::FILE_SYSTEM, file_system},
     };
@@ -440,7 +440,7 @@ TEST_P(WriteAndReadInteTest, TestAppendTimestampType) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "-1"},
         {Options::FILE_SYSTEM, file_system}, {"orc.timestamp-ltz.legacy.type", "false"}};
     if (file_system == "jindo") {
@@ -493,7 +493,7 @@ TEST_P(WriteAndReadInteTest, TestPkTimestampType) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},  {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "1"},
         {Options::FILE_SYSTEM, file_system}, {"orc.timestamp-ltz.legacy.type", "false"}};
     if (file_system == "jindo") {
@@ -543,7 +543,7 @@ TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldInPKField) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},        {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"},       {Options::BUCKET, "1"},
         {Options::FILE_SYSTEM, file_system},       {Options::SEQUENCE_FIELD, "p2"},
         {"orc.read.enable-lazy-decoding", "true"}, {"orc.dictionary-key-size-threshold", "1"},
@@ -608,7 +608,7 @@ TEST_P(WriteAndReadInteTest, TestPKWithSequenceFieldPartialInPKField) {
     auto schema = arrow::schema(fields);
     auto [file_format, file_system] = GetParam();
     std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},         {Options::FILE_FORMAT, file_format},
+        {Options::MANIFEST_FORMAT, "avro"},        {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"},       {Options::BUCKET, "1"},
         {Options::FILE_SYSTEM, file_system},       {Options::SEQUENCE_FIELD, "p2,f1"},
         {"orc.read.enable-lazy-decoding", "true"}, {"orc.dictionary-key-size-threshold", "1"},
@@ -671,6 +671,9 @@ std::vector<std::pair<std::string, std::string>> GetTestValuesForWriteAndReadInt
 #endif
 #ifdef PAIMON_ENABLE_LANCE
     values.emplace_back("lance", "local");
+#endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro", "local");
 #endif
     return values;
 }

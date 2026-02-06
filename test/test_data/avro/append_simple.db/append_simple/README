@@ -1,0 +1,10 @@
+f0:int f1:double f2:smallint f3:string f4:struct<map<string,int>,array<int>>
+bucket count: -1
+
+Msgs:
+snapshot-1 (1 data files)
+Add: 1, 2.0, "test", [[["key",123]],[1,2,3]]
+Add: 1, 2.0, "test", [[["key",123]],[1,2,3]]
+Add: 1, 2.0, "test", [[["key",123]],[1,2,3]]
+Add: 1, 2.0, "test", [[["key",123]],[1,2,3]]
+NoCompact

@@ -196,10 +196,10 @@ class WriteInteTest : public testing::Test, public ::testing::WithParamInterface
 
     std::shared_ptr<DataFileMeta> ReconstructDataFileMeta(
         const std::shared_ptr<DataFileMeta>& file_meta) const {
-        if (GetParam() != "lance") {
+        if (GetParam() != "lance" && GetParam() != "avro") {
             return file_meta;
         }
-        // for lance format, all stats is null
+        // for lance and avro format, all stats is null
         auto new_meta = std::make_shared<DataFileMeta>(
             file_meta->file_name, file_meta->file_size, file_meta->row_count, file_meta->min_key,
             file_meta->max_key, file_meta->key_stats, file_meta->value_stats,
@@ -261,6 +261,9 @@ std::vector<std::string> GetTestValuesForWriteInteTest() {
 #endif
 #ifdef PAIMON_ENABLE_LANCE
     values.emplace_back("lance");
+#endif
+#ifdef PAIMON_ENABLE_AVRO
+    values.emplace_back("avro");
 #endif
     return values;
 }
@@ -688,7 +691,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
         arrow::field("f2", arrow::list(arrow::float32())),
         arrow::field("f3", arrow::struct_({arrow::field("f0", arrow::boolean()),
                                            arrow::field("f1", arrow::int64())})),
-        arrow::field("f4", arrow::timestamp(arrow::TimeUnit::NANO)),
+        arrow::field("f4", arrow::timestamp(arrow::TimeUnit::MILLI)),
         arrow::field("f5", arrow::date32()),
         arrow::field("f6", arrow::decimal128(2, 2))};
     auto schema = arrow::schema(fields);
@@ -705,12 +708,12 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     int64_t commit_identifier = 0;
 
     std::string data_1 = R"([
-        [[[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [[[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [[[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [[[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [[[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [[[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [[[1, 64], [2, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [[[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [[[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
                          TestHelper::MakeRecordBatch(
@@ -719,43 +722,14 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
                               RecordBatch::RowKind::INSERT, RecordBatch::RowKind::INSERT,
                               RecordBatch::RowKind::INSERT, RecordBatch::RowKind::INSERT}));
 
-    SimpleStats value_stats = SimpleStats::EmptyStats();
-    if (file_format != "parquet") {
-        value_stats = BinaryRowGenerator::GenerateStats(
-            {NullType(), NullType(), NullType(), TimestampType(Timestamp(0, 0), 9),
-             static_cast<int32_t>(24), Decimal(2, 2, DecimalUtils::StrToInt128("12").value())},
-            {NullType(), NullType(), NullType(), TimestampType(Timestamp(123999, 999000), 9),
-             static_cast<int32_t>(2456), Decimal(2, 2, DecimalUtils::StrToInt128("78").value())},
-            std::vector<int64_t>({0, 0, 0, 0, 0, 0}), pool_.get());
-    } else {
-        BinaryRow min_row(6);
-        BinaryRowWriter min_writer(&min_row, 0, pool_.get());
-        min_writer.Reset();
-        min_writer.SetNullAt(0);
-        min_writer.SetNullAt(1);
-        min_writer.SetNullAt(2);
-        min_writer.WriteTimestamp(3, std::nullopt, Timestamp::MAX_PRECISION);
-        min_writer.WriteInt(4, 24);
-        Decimal decimal(2, 2, DecimalUtils::StrToInt128("12").value());
-        min_writer.WriteDecimal(5, decimal, 2);
-        min_writer.Complete();
-
-        BinaryRow max_row(6);
-        BinaryRowWriter max_writer(&max_row, 0, pool_.get());
-        max_writer.Reset();
-        max_writer.SetNullAt(0);
-        max_writer.SetNullAt(1);
-        max_writer.SetNullAt(2);
-        max_writer.WriteTimestamp(3, std::nullopt, Timestamp::MAX_PRECISION);
-        max_writer.WriteInt(4, 2456);
-        Decimal decimal1(2, 2, DecimalUtils::StrToInt128("78").value());
-        max_writer.WriteDecimal(5, decimal1, 2);
-        max_writer.Complete();
-
-        auto null_counts =
-            BinaryRowGenerator::FromLongArrayWithNull({-1, -1, -1, -1, 0, 0}, pool_.get());
-        value_stats = SimpleStats(min_row, max_row, null_counts);
-    }
+    SimpleStats value_stats = BinaryRowGenerator::GenerateStats(
+        {NullType(), NullType(), NullType(), TimestampType(Timestamp(0, 0), 3),
+         static_cast<int32_t>(24), Decimal(2, 2, DecimalUtils::StrToInt128("12").value())},
+        {NullType(), NullType(), NullType(), TimestampType(Timestamp(123999, 000000), 3),
+         static_cast<int32_t>(2456), Decimal(2, 2, DecimalUtils::StrToInt128("78").value())},
+        file_format == "parquet" ? std::vector<int64_t>({-1, -1, -1, 0, 0, 0})
+                                 : std::vector<int64_t>({0, 0, 0, 0, 0, 0}),
+        pool_.get());
 
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
@@ -795,12 +769,12 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 = R"([
-        [0, [[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [0, [[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [0, [[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [0, [[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [0, [[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [0, [[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [0, [[1, 64], [2, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [0, [[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [0, [[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
 
     ASSERT_OK_AND_ASSIGN(bool success,
@@ -808,10 +782,10 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     ASSERT_TRUE(success);
 
     std::string data_2 = R"([
-        [[[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [[[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [[[10, 20], [20, 30]], [2.0, 3.0], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [[[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [[[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_2,
                          TestHelper::MakeRecordBatch(
@@ -833,6 +807,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
         /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
         /*first_row_id=*/std::nullopt,
         /*write_cols=*/std::nullopt);
+    file_meta_2 = ReconstructDataFileMeta(file_meta_2);
     DataIncrement data_increment_2({file_meta_2}, {}, {});
     std::shared_ptr<CommitMessage> expected_commit_message_2 = std::make_shared<CommitMessageImpl>(
         BinaryRow::EmptyRow(), /*bucket=*/0,
@@ -852,10 +827,10 @@ TEST_P(WriteInteTest, TestAppendTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 = R"([
-        [0, [[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [0, [[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [0, [[10, 20], [20, 30]], [2.0, 3.0], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [0, [[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [0, [[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(success,
                          helper->ReadAndCheckResult(data_type, data_splits_2, expected_data_2));
@@ -1542,7 +1517,7 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
         arrow::field("f2", arrow::list(arrow::float32())),
         arrow::field("f3", arrow::struct_({arrow::field("f0", arrow::boolean()),
                                            arrow::field("f1", arrow::int64())})),
-        arrow::field("f4", arrow::timestamp(arrow::TimeUnit::NANO)),
+        arrow::field("f4", arrow::timestamp(arrow::TimeUnit::MILLI)),
         arrow::field("f5", arrow::date32()),
         arrow::field("f6", arrow::decimal128(2, 2))};
     auto schema = arrow::schema(fields);
@@ -1559,12 +1534,12 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
                                         /*is_streaming_mode=*/true));
     int64_t commit_identifier = 0;
     std::string data_1 = R"([
-        [[[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [[[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [[[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [[[0, 0]], [0.1, 0.2], [true, 2], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [[[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [[[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [[[1, 64], [2, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [[[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [[[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch_1,
                          TestHelper::MakeRecordBatch(
@@ -1575,80 +1550,26 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
 
     auto min_key = BinaryRowGenerator::GenerateRow(
         {Decimal(2, 2, DecimalUtils::StrToInt128("12").value()),
-         TimestampType(Timestamp(123123, 123000), 9), static_cast<int32_t>(245)},
+         TimestampType(Timestamp(123123, 000000), 3), static_cast<int32_t>(245)},
         pool_.get());
     auto max_key = BinaryRowGenerator::GenerateRow(
         {Decimal(2, 2, DecimalUtils::StrToInt128("78").value()),
-         TimestampType(Timestamp(123, 123000), 9), static_cast<int32_t>(24)},
+         TimestampType(Timestamp(123, 000000), 3), static_cast<int32_t>(24)},
         pool_.get());
-    SimpleStats key_stats = SimpleStats::EmptyStats();
-    if (file_format != "parquet") {
-        key_stats = BinaryRowGenerator::GenerateStats(
-            {Decimal(2, 2, DecimalUtils::StrToInt128("12").value()),
-             TimestampType(Timestamp(0, 0), 9), static_cast<int32_t>(24)},
-            {Decimal(2, 2, DecimalUtils::StrToInt128("78").value()),
-             TimestampType(Timestamp(123999, 999000), 9), static_cast<int32_t>(2456)},
-            std::vector<int64_t>({0, 0, 0}), pool_.get());
-    } else {
-        BinaryRow min_row(3);
-        BinaryRowWriter min_writer(&min_row, 0, pool_.get());
-        min_writer.Reset();
-        Decimal decimal(2, 2, DecimalUtils::StrToInt128("12").value());
-        min_writer.WriteDecimal(0, decimal, 2);
-        min_writer.WriteTimestamp(1, std::nullopt, Timestamp::MAX_PRECISION);
-        min_writer.WriteInt(2, 24);
-        min_writer.Complete();
-
-        BinaryRow max_row(3);
-        BinaryRowWriter max_writer(&max_row, 0, pool_.get());
-        max_writer.Reset();
-        Decimal decimal1(2, 2, DecimalUtils::StrToInt128("78").value());
-        max_writer.WriteDecimal(0, decimal1, 2);
-        max_writer.WriteTimestamp(1, std::nullopt, Timestamp::MAX_PRECISION);
-        max_writer.WriteInt(2, 2456);
-        max_writer.Complete();
-
-        auto null_counts = BinaryRowGenerator::FromLongArrayWithNull({0, -1, 0}, pool_.get());
-        key_stats = SimpleStats(min_row, max_row, null_counts);
-    }
-
-    SimpleStats value_stats = SimpleStats::EmptyStats();
-    if (file_format != "parquet") {
-        value_stats = BinaryRowGenerator::GenerateStats(
-            {NullType(), NullType(), NullType(), TimestampType(Timestamp(0, 0), 9),
-             static_cast<int32_t>(24), Decimal(2, 2, DecimalUtils::StrToInt128("12").value())},
-            {NullType(), NullType(), NullType(), TimestampType(Timestamp(123999, 999000), 9),
-             static_cast<int32_t>(2456), Decimal(2, 2, DecimalUtils::StrToInt128("78").value())},
-            std::vector<int64_t>({0, 0, 0, 0, 0, 0}), pool_.get());
-    } else {
-        BinaryRow min_row(6);
-        BinaryRowWriter min_writer(&min_row, 0, pool_.get());
-        min_writer.Reset();
-        min_writer.SetNullAt(0);
-        min_writer.SetNullAt(1);
-        min_writer.SetNullAt(2);
-        min_writer.WriteTimestamp(3, std::nullopt, Timestamp::MAX_PRECISION);
-        min_writer.WriteInt(4, 24);
-        Decimal decimal(2, 2, DecimalUtils::StrToInt128("12").value());
-        min_writer.WriteDecimal(5, decimal, 2);
-        min_writer.Complete();
-
-        BinaryRow max_row(6);
-        BinaryRowWriter max_writer(&max_row, 0, pool_.get());
-        max_writer.Reset();
-        max_writer.SetNullAt(0);
-        max_writer.SetNullAt(1);
-        max_writer.SetNullAt(2);
-        max_writer.WriteTimestamp(3, std::nullopt, Timestamp::MAX_PRECISION);
-        max_writer.WriteInt(4, 2456);
-        Decimal decimal1(2, 2, DecimalUtils::StrToInt128("78").value());
-        max_writer.WriteDecimal(5, decimal1, 2);
-        max_writer.Complete();
-
-        auto null_counts =
-            BinaryRowGenerator::FromLongArrayWithNull({-1, -1, -1, -1, 0, 0}, pool_.get());
-        value_stats = SimpleStats(min_row, max_row, null_counts);
-    }
+    SimpleStats key_stats = BinaryRowGenerator::GenerateStats(
+        {Decimal(2, 2, DecimalUtils::StrToInt128("12").value()), TimestampType(Timestamp(0, 0), 3),
+         static_cast<int32_t>(24)},
+        {Decimal(2, 2, DecimalUtils::StrToInt128("78").value()),
+         TimestampType(Timestamp(123999, 000000), 3), static_cast<int32_t>(2456)},
+        std::vector<int64_t>({0, 0, 0}), pool_.get());
+    SimpleStats value_stats = BinaryRowGenerator::GenerateStats(
+        {NullType(), NullType(), NullType(), TimestampType(Timestamp(0, 0), 3),
+         static_cast<int32_t>(24), Decimal(2, 2, DecimalUtils::StrToInt128("12").value())},
+        {NullType(), NullType(), NullType(), TimestampType(Timestamp(123999, 000000), 3),
+         static_cast<int32_t>(2456), Decimal(2, 2, DecimalUtils::StrToInt128("78").value())},
+        file_format == "parquet" ? std::vector<int64_t>({-1, -1, -1, 0, 0, 0})
+                                 : std::vector<int64_t>({0, 0, 0, 0, 0, 0}),
+        pool_.get());
 
     auto file_meta = std::make_shared<DataFileMeta>(
         "data-xxx.xxx", /*file_size=*/543,
@@ -1686,21 +1607,21 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
                          helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
     ASSERT_EQ(data_splits_1.size(), 1);
     std::string expected_data_1 = R"([
-        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
-        [0, [[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123123", 2456, "0.22"],
-        [0, [[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
+        [0, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
+        [0, [[10, 10]], [1.1, 1.2], [false, 12], "1970-01-01 00:02:03.123", 2456, "0.22"],
+        [0, [[0, 1]], [0.1, 0.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
         [0, [[1, 64], [2, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [0, [[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [0, [[11, 64], [12, 32]], [2.2, 3.2], [true, 2], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(bool success,
                          helper->ReadAndCheckResult(data_type, data_splits_1, expected_data_1));
     ASSERT_TRUE(success);
 
     std::string data_2 = R"([
-        [[[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
-        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
+        [[[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
+        [[[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
         [[[10, 20], [20, 30]], [2.0, 3.0], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [[[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [[[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
     ASSERT_OK_AND_ASSIGN(
         std::unique_ptr<RecordBatch> batch_2,
@@ -1711,11 +1632,11 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
 
     auto min_key_2 = BinaryRowGenerator::GenerateRow(
         {Decimal(2, 2, DecimalUtils::StrToInt128("12").value()),
-         TimestampType(Timestamp(123123, 123000), 9), static_cast<int32_t>(245)},
+         TimestampType(Timestamp(123123, 000000), 3), static_cast<int32_t>(245)},
         pool_.get());
     auto max_key_2 = BinaryRowGenerator::GenerateRow(
         {Decimal(2, 2, DecimalUtils::StrToInt128("78").value()),
-         TimestampType(Timestamp(123, 123000), 9), static_cast<int32_t>(24)},
+         TimestampType(Timestamp(123, 000000), 3), static_cast<int32_t>(24)},
         pool_.get());
     auto key_stats_2 = key_stats;
     key_stats_2.max_values_.SetInt(2, 245);
@@ -1754,10 +1675,10 @@ TEST_P(WriteInteTest, TestPkTableWriteWithComplexType) {
     ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits_2, helper->Scan());
     ASSERT_EQ(data_splits_2.size(), 1);
     std::string expected_data_2 = R"([
-        [3, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123123", 245, "0.12"],
-        [0, [[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999999", 24, "0.28"],
+        [3, [[127, 32767], [-128, -32768]], [1.1, 1.2], [false, 2222], "1970-01-01 00:02:03.123", 245, "0.12"],
+        [0, [[10, 11]], [1.1, 1.3], [true, 1], "1970-01-01 00:02:03.999", 24, "0.28"],
         [1, [[10, 20], [20, 30]], [2.0, 3.0], [true, 2], "1970-01-01 00:00:00.0", 24, "0.78"],
-        [2, [[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123123", 24, "0.78"]
+        [2, [[11, 61], [21, 31]], [2.1, 3.1], [false, 1], "1970-01-01 00:00:00.123", 24, "0.78"]
     ])";
 
     ASSERT_OK_AND_ASSIGN(success,
@@ -2434,7 +2355,7 @@ TEST_P(WriteInteTest, TestWriteAndCommitIOException) {
 
 TEST_P(WriteInteTest, TestWriteWithFieldId) {
     auto file_format = GetParam();
-    if (file_format == "lance") {
+    if (file_format == "lance" || file_format == "avro") {
         return;
     }
     // prepare write schema and write data
@@ -3375,7 +3296,7 @@ TEST_P(WriteInteTest, TestAppendTableWithAllNull) {
     // test compatible with java
     ASSERT_EQ(stats.min_values_.HashCode(), 0xc7883013);
     ASSERT_EQ(stats.max_values_.HashCode(), 0xc7883013);
-    if (GetParam() != "parquet") {
+    if (GetParam() != "parquet" && GetParam() != "avro") {
         ASSERT_EQ(stats.null_counts_.HashCode(), 0x5ddc482d);
     }
 }

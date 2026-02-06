@@ -1,0 +1,124 @@
+{
+  "version": 3,
+  "id": 0,
+  "fields": [
+    {
+      "id": 0,
+      "name": "f0",
+      "type": "TINYINT"
+    },
+    {
+      "id": 1,
+      "name": "f1",
+      "type": "SMALLINT"
+    },
+    {
+      "id": 2,
+      "name": "f2",
+      "type": "INT"
+    },
+    {
+      "id": 3,
+      "name": "f3",
+      "type": "BIGINT"
+    },
+    {
+      "id": 4,
+      "name": "f4",
+      "type": "FLOAT"
+    },
+    {
+      "id": 5,
+      "name": "f5",
+      "type": "DOUBLE"
+    },
+    {
+      "id": 6,
+      "name": "f6",
+      "type": "STRING"
+    },
+    {
+      "id": 7,
+      "name": "f7",
+      "type": "BYTES"
+    },
+    {
+      "id": 8,
+      "name": "f8",
+      "type": "DATE"
+    },
+    {
+      "id": 9,
+      "name": "f9",
+      "type": "DECIMAL(5, 2)"
+    },
+    {
+      "id": 10,
+      "name": "f10",
+      "type": "TIMESTAMP(0)"
+    },
+    {
+      "id": 11,
+      "name": "f11",
+      "type": "TIMESTAMP(3)"
+    },
+    {
+      "id": 12,
+      "name": "f12",
+      "type": "TIMESTAMP(6)"
+    },
+    {
+      "id": 13,
+      "name": "f13",
+      "type": "TIMESTAMP(0) WITH LOCAL TIME ZONE"
+    },
+    {
+      "id": 14,
+      "name": "f14",
+      "type": "TIMESTAMP(3) WITH LOCAL TIME ZONE"
+    },
+    {
+      "id": 15,
+      "name": "f15",
+      "type": "TIMESTAMP(6) WITH LOCAL TIME ZONE"
+    },
+    {
+      "id": 16,
+      "name": "f16",
+      "type": {
+        "type": "ROW",
+        "fields": [
+          {
+            "id": 17,
+            "name": "f0",
+            "type": {
+              "type": "MAP",
+              "key": "STRING",
+              "value": "INT"
+            }
+          },
+          {
+            "id": 18,
+            "name": "f1",
+            "type": {
+              "type": "ARRAY",
+              "element": "INT"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "highestFieldId": 18,
+  "partitionKeys": [
+    "f1"
+  ],
+  "primaryKeys": [],
+  "options": {
+    "bucket": "2",
+    "bucket-key": "f2",
+    "manifest.format": "avro",
+    "file.format": "avro"
+  },
+  "timeMillis": 1767864228000
+}

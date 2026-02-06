@@ -42,6 +42,14 @@ SnapshotManager::SnapshotManager(const std::shared_ptr<FileSystem>& fs,
 
 SnapshotManager::~SnapshotManager() = default;
 
+const std::shared_ptr<FileSystem>& SnapshotManager::Fs() const {
+    return fs_;
+}
+
+const std::string& SnapshotManager::RootPath() const {
+    return root_path_;
+}
+
 const std::string& SnapshotManager::Branch() const {
     return branch_;
 }

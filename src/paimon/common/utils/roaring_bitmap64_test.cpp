@@ -403,4 +403,15 @@ TEST(RoaringBitmap64Test, TestFromRoaringBitmap32) {
     }
 }
 
+TEST(RoaringBitmap64Test, TestIteratorEqualOrLarger) {
+    RoaringBitmap64 roaring = RoaringBitmap64::From({1l, 3l, 5l, 100l});
+    auto iter = roaring.Begin();
+    ASSERT_EQ(*iter, 1l);
+    iter.EqualOrLarger(5l);
+    ASSERT_EQ(*iter, 5l);
+    iter.EqualOrLarger(10l);
+    ASSERT_EQ(*iter, 100l);
+    iter.EqualOrLarger(200l);
+    ASSERT_EQ(iter, roaring.End());
+}
 }  // namespace paimon::test

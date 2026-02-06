@@ -102,7 +102,7 @@ class BlobFileBatchReader : public FileBatchReader {
         return previous_batch_first_row_number_;
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         return all_blob_lengths_.size();
     }
 

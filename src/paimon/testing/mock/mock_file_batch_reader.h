@@ -82,7 +82,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
         bool* need_prefetch) const override {
         uint64_t begin_row_num = 0;
-        uint64_t end_row_num = GetNumberOfRows();
+        PAIMON_ASSIGN_OR_RAISE(uint64_t end_row_num, GetNumberOfRows());
         std::vector<std::pair<uint64_t, uint64_t>> read_ranges;
         for (uint64_t begin = begin_row_num; begin < end_row_num; begin += batch_size_) {
             uint64_t end = std::min(begin + batch_size_, end_row_num);
@@ -145,7 +145,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
 
     std::shared_ptr<Metrics> GetReaderMetrics() const override {
         auto metrics = std::make_shared<MetricsImpl>();
-        metrics->SetCounter("mock.number.of.rows", GetNumberOfRows());
+        metrics->SetCounter("mock.number.of.rows", GetNumberOfRows().value_or(-1));
         return metrics;
     }
 
@@ -153,7 +153,7 @@ class MockFileBatchReader : public PrefetchFileBatchReader {
         return previous_batch_first_row_num_;
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         return data_ ? data_->length() : 0;
     }
     uint64_t GetNextRowToRead() const override {

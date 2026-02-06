@@ -34,12 +34,13 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
  public:
     using SpecType = std::map<std::string, std::string>;
     PartitionStatistics(const SpecType& spec, int64_t record_count, int64_t file_size_in_bytes,
-                        int64_t file_count, int64_t last_file_creation_time)
+                        int64_t file_count, int64_t last_file_creation_time, int32_t total_buckets)
         : spec_(spec),
           record_count_(record_count),
           file_size_in_bytes_(file_size_in_bytes),
           file_count_(file_count),
-          last_file_creation_time_(last_file_creation_time) {}
+          last_file_creation_time_(last_file_creation_time),
+          total_buckets_(total_buckets) {}
 
     const SpecType& Spec() const {
         return spec_;
@@ -55,6 +56,9 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
     }
     int64_t LastFileCreationTime() const {
         return last_file_creation_time_;
+    }
+    int32_t TotalBuckets() const {
+        return total_buckets_;
     }
 
     rapidjson::Value ToJson(rapidjson::Document::AllocatorType* allocator) const
@@ -72,6 +76,8 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
         obj.AddMember(rapidjson::StringRef(FIELD_LAST_FILE_CREATION_TIME),
                       RapidJsonUtil::SerializeValue(last_file_creation_time_, allocator).Move(),
                       *allocator);
+        obj.AddMember(rapidjson::StringRef(FIELD_TOTAL_BUCKETS),
+                      RapidJsonUtil::SerializeValue(total_buckets_, allocator).Move(), *allocator);
         return obj;
     }
 
@@ -83,12 +89,14 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
         file_count_ = RapidJsonUtil::DeserializeKeyValue<int64_t>(obj, FIELD_FILE_COUNT);
         last_file_creation_time_ =
             RapidJsonUtil::DeserializeKeyValue<int64_t>(obj, FIELD_LAST_FILE_CREATION_TIME);
+        total_buckets_ = RapidJsonUtil::DeserializeKeyValue<int32_t>(obj, FIELD_TOTAL_BUCKETS);
     }
 
     bool operator==(const PartitionStatistics& rhs) const {
         return record_count_ == rhs.record_count_ &&
                file_size_in_bytes_ == rhs.file_size_in_bytes_ && file_count_ == rhs.file_count_ &&
-               last_file_creation_time_ == rhs.last_file_creation_time_ && spec_ == rhs.spec_;
+               last_file_creation_time_ == rhs.last_file_creation_time_ &&
+               total_buckets_ == rhs.total_buckets_ && spec_ == rhs.spec_;
     }
 
     std::string ToString() const {
@@ -102,7 +110,8 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
         }
         oss << "}, recordCount=" << record_count_ << ", fileSizeInBytes=" << file_size_in_bytes_
             << ", fileCount=" << file_count_
-            << ", lastFileCreationTime=" << last_file_creation_time_ << "}";
+            << ", lastFileCreationTime=" << last_file_creation_time_
+            << ", totalBuckets=" << total_buckets_ << "}";
         return oss.str();
     }
 
@@ -115,12 +124,14 @@ class PartitionStatistics : public Jsonizable<PartitionStatistics> {
     static constexpr const char* FIELD_FILE_SIZE_IN_BYTES = "fileSizeInBytes";
     static constexpr const char* FIELD_FILE_COUNT = "fileCount";
     static constexpr const char* FIELD_LAST_FILE_CREATION_TIME = "lastFileCreationTime";
+    static constexpr const char* FIELD_TOTAL_BUCKETS = "totalBuckets";
 
     SpecType spec_;
     int64_t record_count_ = 0;
     int64_t file_size_in_bytes_ = 0;
     int64_t file_count_ = 0;
     int64_t last_file_creation_time_ = 0;
+    int32_t total_buckets_ = 0;
 };
 
 }  // namespace paimon

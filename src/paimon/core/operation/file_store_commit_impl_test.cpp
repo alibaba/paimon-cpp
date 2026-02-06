@@ -344,10 +344,12 @@ TEST_F(FileStoreCommitImplTest, TestRESTCatalogCommit) {
     std::vector<PartitionStatistics> expected_partition_statistics = {
         PartitionStatistics(/*spec=*/{{"f1", "20"}}, /*record_count=*/1, /*file_size_in_bytes=*/541,
                             /*file_count=*/1,
-                            /*last_file_creation_time=*/1724090888743l - 28800000l),
+                            /*last_file_creation_time=*/1724090888743l - 28800000l,
+                            /*total_buckets=*/-1),
         PartitionStatistics(/*spec=*/{{"f1", "10"}}, /*record_count=*/4,
                             /*file_size_in_bytes=*/1118, /*file_count=*/2,
-                            /*last_file_creation_time=*/1724090888727l - 28800000l)};
+                            /*last_file_creation_time=*/1724090888727l - 28800000l,
+                            /*total_buckets=*/-1)};
     CommitTableRequest expected_commit_table_request(expected_snapshot,
                                                      expected_partition_statistics);
     ASSERT_TRUE(commit_table_request.TEST_Equal(expected_commit_table_request));
