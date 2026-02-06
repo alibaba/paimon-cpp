@@ -275,8 +275,8 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
         std::shared_ptr<arrow::Array> array =
             arrow::ipc::internal::json::ArrayFromJSON(
                 arrow::struct_({inner_child1, inner_child2, inner_child3}), R"([
-[[["outer_key", [1, 2, 3]]], [["outer_key", [["key1", 1]]]], [["outer_key", [100, 200]]]], 
-[[["outer_key", null]], [["outer_key", [["key1", 1]]]], [["outer_key", [100, 200]]]], 
+[[["outer_key", [1, 2, 3]]], [["outer_key", [["key1", 1]]]], [["outer_key", [100, 200]]]],
+[[["outer_key", null]], [["outer_key", [["key1", 1]]]], [["outer_key", [100, 200]]]],
 [null, [["outer_key", [["key1", 1]]]], [["outer_key", [100, 200]]]]
 ])")
                 .ValueOrDie();
@@ -289,7 +289,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
         std::shared_ptr<arrow::Array> array =
             arrow::ipc::internal::json::ArrayFromJSON(
                 arrow::struct_({inner_child1, inner_child2, inner_child3}), R"([
-[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", [100, 200]]]], 
+[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", [100, 200]]]],
 [[["outer_key", null]], [["outer_key", [["key1", null]]]], [["outer_key", [100, 200]]]]
 ])")
                 .ValueOrDie();
@@ -301,7 +301,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
         std::shared_ptr<arrow::Array> array =
             arrow::ipc::internal::json::ArrayFromJSON(
                 arrow::struct_({inner_child1, inner_child2, inner_child3}), R"([
-[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", [100, 200]]]], 
+[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", [100, 200]]]],
 [[["outer_key", [1, 2, 3]]], null, [["outer_key", [100, 200]]]]
 ])")
                 .ValueOrDie();
@@ -314,7 +314,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
         std::shared_ptr<arrow::Array> array =
             arrow::ipc::internal::json::ArrayFromJSON(
                 arrow::struct_({inner_child1, inner_child2, inner_child3}), R"([
-[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", null]]], 
+[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", null]]],
 [[["outer_key", null]], [["outer_key", [["key1", 2]]]], [["outer_key", [100, null]]]]
 ])")
                 .ValueOrDie();
@@ -326,7 +326,7 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
         std::shared_ptr<arrow::Array> array =
             arrow::ipc::internal::json::ArrayFromJSON(
                 arrow::struct_({inner_child1, inner_child2, inner_child3}), R"([
-[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", null]]], 
+[[["outer_key", [1, 2, 3]]], [["outer_key", null]], [["outer_key", null]]],
 [[["outer_key", null]], [["outer_key", [["key1", 2]]]], null]
 ])")
                 .ValueOrDie();
