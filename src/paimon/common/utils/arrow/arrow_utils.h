@@ -39,8 +39,8 @@ class ArrowUtils {
         return std::make_shared<arrow::Schema>(struct_type->fields());
     }
 
-    static std::vector<int32_t> CreateProjection(const std::shared_ptr<arrow::Schema>& file_schema,
-                                                 const arrow::FieldVector& read_fields) {
+    static Result<std::vector<int32_t>> CreateProjection(
+        const std::shared_ptr<arrow::Schema>& file_schema, const arrow::FieldVector& read_fields) {
         std::vector<int32_t> target_to_src_mapping;
         target_to_src_mapping.reserve(read_fields.size());
         for (const auto& field : read_fields) {
