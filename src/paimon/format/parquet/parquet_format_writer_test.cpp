@@ -36,6 +36,8 @@
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/format/file_format.h"
+#include "paimon/format/file_format_factory.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/fs/file_system.h"
@@ -84,8 +86,8 @@ class ParquetFormatWriterTest : public ::testing::Test {
     }
 
     std::shared_ptr<arrow::Array> PrepareArray(const std::shared_ptr<arrow::DataType>& data_type,
-                                               int32_t record_batch_size,
-                                               int32_t offset = 0) const {
+                                               int32_t record_batch_size, int32_t offset = 0,
+                                               bool all_null_value = false) const {
         arrow::StructBuilder struct_builder(
             data_type, arrow::default_memory_pool(),
             {std::make_shared<arrow::StringBuilder>(), std::make_shared<arrow::Int32Builder>(),
@@ -95,24 +97,31 @@ class ParquetFormatWriterTest : public ::testing::Test {
         auto bool_builder = static_cast<arrow::BooleanBuilder*>(struct_builder.field_builder(2));
         for (int32_t i = 0 + offset; i < record_batch_size + offset; ++i) {
             EXPECT_TRUE(struct_builder.Append().ok());
-            EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
-            if (i % 3 == 0) {
-                // test null
+            if (all_null_value) {
+                EXPECT_TRUE(string_builder->AppendNull().ok());
                 EXPECT_TRUE(int_builder->AppendNull().ok());
+                EXPECT_TRUE(bool_builder->AppendNull().ok());
             } else {
-                EXPECT_TRUE(int_builder->Append(i).ok());
+                EXPECT_TRUE(string_builder->Append("str_" + std::to_string(i)).ok());
+                if (i % 3 == 0) {
+                    // test null
+                    EXPECT_TRUE(int_builder->AppendNull().ok());
+                } else {
+                    EXPECT_TRUE(int_builder->Append(i).ok());
+                }
+                EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
             }
-            EXPECT_TRUE(bool_builder->Append(static_cast<bool>(i % 2)).ok());
         }
         std::shared_ptr<arrow::Array> array;
         EXPECT_TRUE(struct_builder.Finish(&array).ok());
         return array;
     }
 
-    void AddRecordBatchOnce(const std::shared_ptr<ParquetFormatWriter>& format_writer,
+    void AddRecordBatchOnce(const std::shared_ptr<FormatWriter>& format_writer,
                             const std::shared_ptr<arrow::DataType>& struct_type,
-                            int32_t record_batch_size, int32_t offset) const {
-        auto array = PrepareArray(struct_type, record_batch_size, offset);
+                            int32_t record_batch_size, int32_t offset,
+                            bool all_null_value = false) const {
+        auto array = PrepareArray(struct_type, record_batch_size, offset, all_null_value);
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
         auto batch = std::make_shared<RecordBatch>(
@@ -196,7 +205,8 @@ TEST_F(ParquetFormatWriterTest, TestWriteWithVariousBatchSize) {
             auto writer_properties = builder.build();
             ASSERT_OK_AND_ASSIGN(
                 auto format_writer,
-                ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+                ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_,
+                                            DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
             auto array = PrepareArray(struct_type, record_batch_size);
             auto arrow_array = std::make_unique<ArrowArray>();
             ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
@@ -229,7 +239,8 @@ TEST_F(ParquetFormatWriterTest, TestWriteMultipleTimes) {
     auto writer_properties = builder.build();
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_,
+                                    DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
 
     // add batch first time, 6 rows
     AddRecordBatchOnce(format_writer, struct_type, 6, 0);
@@ -271,7 +282,8 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
     auto writer_properties = builder.build();
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_,
+                                    DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
 
     // add batch first time, 1 row
     AddRecordBatchOnce(format_writer, struct_type, 1, 0);
@@ -289,6 +301,59 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
     ASSERT_TRUE(format_writer->Finish().ok());
 }
 
+TEST_F(ParquetFormatWriterTest, TestMemoryControl) {
+    auto check_result = [&](bool all_null_value, uint64_t max_memory_use) {
+        ASSERT_OK_AND_ASSIGN(
+            std::unique_ptr<FileFormat> file_format,
+            FileFormatFactory::Get(
+                "parquet", {{Options::FILE_FORMAT, "parquet"},
+                            {Options::MANIFEST_FORMAT, "parquet"},
+                            {"parquet.writer.max.memory.use", std::to_string(max_memory_use)}}));
+
+        std::shared_ptr<MemoryPool> pool = GetMemoryPool();
+        auto schema_pair = PrepareArrowSchema();
+        const auto& arrow_schema = schema_pair.first;
+        const auto& struct_type = schema_pair.second;
+        int32_t batch_size = 4096;
+
+        auto c_schema = std::make_unique<::ArrowSchema>();
+        ASSERT_TRUE(arrow::ExportSchema(*arrow_schema, c_schema.get()).ok());
+        ASSERT_OK_AND_ASSIGN(auto writer_builder,
+                             file_format->CreateWriterBuilder(c_schema.get(), batch_size));
+        ASSERT_OK_AND_ASSIGN(
+            std::shared_ptr<OutputStream> out,
+            fs_->Create(
+                PathUtil::JoinPath(dir_->Str(), std::to_string(all_null_value) +
+                                                    std::to_string(max_memory_use) + ".parquet"),
+                /*overwrite=*/false));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<FormatWriter> writer,
+                             writer_builder->WithMemoryPool(pool)->Build(out, "uncompressed"));
+
+        auto array = PrepareArray(struct_type, batch_size, /*offset=*/0, all_null_value);
+        for (int32_t i = 0; i < 2000; ++i) {
+            auto arrow_array = std::make_unique<ArrowArray>();
+            ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
+            auto batch = std::make_shared<RecordBatch>(
+                /*partition=*/std::map<std::string, std::string>(), /*bucket=*/-1,
+                /*row_kinds=*/std::vector<RecordBatch::RowKind>(), arrow_array.get());
+            ASSERT_OK(writer->AddBatch(batch->GetData()));
+            ASSERT_OK(writer->Flush());
+        }
+
+        ASSERT_OK(writer->Flush());
+        ASSERT_OK(writer->Finish());
+        ASSERT_OK(out->Flush());
+        ASSERT_OK(out->Close());
+        uint64_t actual_max_mem = pool->MaxMemoryUsage();
+        ASSERT_GT(actual_max_mem, max_memory_use);
+        ASSERT_LT(actual_max_mem, max_memory_use * 1.5);  // allow 50% overhead
+    };
+    check_result(/*all_null_value=*/true, /*max_memory_use=*/20 * 1024 * 1024);   // 20MB
+    check_result(/*all_null_value=*/true, /*max_memory_use=*/40 * 1024 * 1024);   // 40MB
+    check_result(/*all_null_value=*/false, /*max_memory_use=*/20 * 1024 * 1024);  // 20MB
+    check_result(/*all_null_value=*/false, /*max_memory_use=*/40 * 1024 * 1024);  // 40MB
+}
+
 TEST_F(ParquetFormatWriterTest, TestTimestampType) {
     auto timezone = DateTimeUtils::GetLocalTimezoneName();
     arrow::FieldVector fields = {
@@ -298,15 +363,17 @@ TEST_F(ParquetFormatWriterTest, TestTimestampType) {
         arrow::field("ts_nano", arrow::timestamp(arrow::TimeUnit::NANO)),
         arrow::field("ts_utc1", arrow::timestamp(arrow::TimeUnit::SECOND, timezone)),
         arrow::field("ts_utc2", arrow::timestamp(arrow::TimeUnit::MICRO, timezone))};
+    [[maybe_unused]] auto test = new arrow::Schema(fields);  // for test
 
     std::string file_path = PathUtil::JoinPath(dir_->Str(), "timezone.parquet");
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs_->Create(file_path, /*overwrite=*/true));
     ::parquet::WriterProperties::Builder builder;
     auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
-                         ParquetFormatWriter::Create(out, std::make_shared<arrow::Schema>(fields),
-                                                     writer_properties, arrow_pool_));
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<ParquetFormatWriter> format_writer,
+        ParquetFormatWriter::Create(out, std::make_shared<arrow::Schema>(fields), writer_properties,
+                                    arrow_pool_, DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
 
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([

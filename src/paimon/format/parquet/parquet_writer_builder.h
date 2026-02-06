@@ -24,13 +24,11 @@
 
 #include "arrow/memory_pool.h"
 #include "arrow/type.h"
-#include "arrow/util/compression.h"
 #include "arrow/util/type_fwd.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/format_writer.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/fs/file_system.h"
-#include "paimon/fs/file_system_factory.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/type_fwd.h"

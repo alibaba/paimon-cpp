@@ -54,7 +54,7 @@ class ParquetFormatWriter : public FormatWriter {
         const std::shared_ptr<OutputStream>& output_stream,
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<::parquet::WriterProperties>& writer_properties,
-        const std::shared_ptr<arrow::MemoryPool>& pool);
+        const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t max_memory_use);
 
     Status AddBatch(ArrowArray* batch) override;
 
@@ -72,7 +72,7 @@ class ParquetFormatWriter : public FormatWriter {
     ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
                         const std::shared_ptr<ParquetOutputStreamImpl>& out,
                         const std::shared_ptr<arrow::Schema>& schema,
-                        const std::shared_ptr<arrow::MemoryPool>& pool);
+                        const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t max_memory_use);
 
     Result<uint64_t> GetEstimateLength() const;
 
@@ -82,6 +82,7 @@ class ParquetFormatWriter : public FormatWriter {
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<Metrics> metrics_;
     int64_t total_records_written_ = 0;
+    uint64_t max_memory_use_;
 };
 
 }  // namespace paimon::parquet

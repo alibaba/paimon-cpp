@@ -29,7 +29,6 @@
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
 #include "arrow/ipc/json_simple.h"
-#include "arrow/util/thread_pool.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
@@ -112,7 +111,8 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         enable_dictionary ? builder.enable_dictionary() : builder.disable_dictionary();
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(auto format_writer, ParquetFormatWriter::Create(
-                                                     out, arrow_schema, writer_properties, pool_));
+                                                     out, arrow_schema, writer_properties, pool_,
+                                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
 
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*src_array, arrow_array.get()).ok());

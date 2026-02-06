@@ -39,6 +39,7 @@
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/stats/simple_stats_converter.h"
 #include "paimon/format/column_stats.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
@@ -73,7 +74,8 @@ class ParquetStatsExtractorTest : public ::testing::Test {
         ::parquet::WriterProperties::Builder builder;
         builder.enable_store_decimal_as_integer();
         ASSERT_OK_AND_ASSIGN(auto format_writer,
-                             ParquetFormatWriter::Create(out, arrow_schema, builder.build(), pool));
+                             ParquetFormatWriter::Create(out, arrow_schema, builder.build(), pool,
+                                                         DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
         auto array = arrow::ipc::internal::json::ArrayFromJSON(struct_type, input).ValueOrDie();
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
@@ -272,7 +274,8 @@ TEST_F(ParquetStatsExtractorTest, TestNullForAllType) {
     ::parquet::WriterProperties::Builder builder;
     builder.enable_store_decimal_as_integer();
     ASSERT_OK_AND_ASSIGN(auto format_writer,
-                         ParquetFormatWriter::Create(out, schema, builder.build(), arrow_pool));
+                         ParquetFormatWriter::Create(out, schema, builder.build(), arrow_pool,
+                                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
         [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]
