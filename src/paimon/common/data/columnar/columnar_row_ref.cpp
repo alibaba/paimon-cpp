@@ -57,8 +57,8 @@ std::shared_ptr<InternalRow> ColumnarRowRef::GetRow(int32_t pos, int32_t num_fie
     auto struct_array =
         arrow::internal::checked_pointer_cast<arrow::StructArray>(ctx_->array_vec_holder[pos]);
     assert(struct_array);
-    auto nested_ctx = std::make_shared<ColumnarBatchContext>(
-        struct_array, struct_array->fields(), ctx_->pool);
+    auto nested_ctx =
+        std::make_shared<ColumnarBatchContext>(struct_array, struct_array->fields(), ctx_->pool);
     return std::make_shared<ColumnarRowRef>(std::move(nested_ctx), row_id_);
 }
 
