@@ -26,12 +26,13 @@ class MemoryPoolAdaptorSlot {
  public:
     explicit MemoryPoolAdaptorSlot(const std::string& identifier) : identifier_(identifier) {}
 
-    std::string& Identifier() { return identifier_; }
+    std::string& Identifier() {
+        return identifier_;
+    }
 
     void* GetOrCreateAdaptor(MemoryPool& pool) {
-        std::call_once(once_flag_, [this, &pool] {
-            ptr_ = MemoryPoolAdaptorFactory::Get(identifier_, pool);
-        });
+        std::call_once(once_flag_,
+                       [this, &pool] { ptr_ = MemoryPoolAdaptorFactory::Get(identifier_, pool); });
         return ptr_.get();
     }
 
