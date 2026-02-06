@@ -46,7 +46,7 @@ Result<std::unique_ptr<FormatWriter>> ParquetWriterBuilder::Build(
                                                         options_, PARQUET_WRITER_MAX_MEMORY_USE,
                                                         DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
 
-    return ParquetFormatWriter::Create(out, schema_, writer_properties, pool_, max_memory_use);
+    return ParquetFormatWriter::Create(out, schema_, writer_properties, max_memory_use, pool_);
 }
 
 Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::PrepareWriterProperties(

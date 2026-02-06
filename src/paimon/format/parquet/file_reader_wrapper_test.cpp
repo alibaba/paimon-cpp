@@ -151,8 +151,8 @@ class FileReaderWrapperTest : public ::testing::Test {
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<ParquetFormatWriter> format_writer,
-            ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_,
-                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
+            ParquetFormatWriter::Create(out, arrow_schema, writer_properties,
+                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
 
         AddRecordBatchOnce(format_writer, struct_type, /*record_batch_size=*/row_count,
                            /*offset=*/0);

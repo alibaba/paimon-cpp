@@ -43,8 +43,8 @@ namespace paimon::parquet {
 Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
     const std::shared_ptr<OutputStream>& output_stream,
     const std::shared_ptr<arrow::Schema>& schema,
-    const std::shared_ptr<::parquet::WriterProperties>& writer_properties,
-    const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t max_memory_use) {
+    const std::shared_ptr<::parquet::WriterProperties>& writer_properties, uint64_t max_memory_use,
+    const std::shared_ptr<arrow::MemoryPool>& pool) {
     auto out = std::make_shared<ParquetOutputStreamImpl>(output_stream);
     ::parquet::ArrowWriterProperties::Builder arrow_properties_builder;
     auto arrow_writer_properties =
@@ -54,7 +54,7 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
         ::parquet::arrow::FileWriter::Open(*schema, pool.get(), out, writer_properties,
                                            arrow_writer_properties));
     return std::unique_ptr<ParquetFormatWriter>(
-        new ParquetFormatWriter(std::move(file_writer), out, schema, pool, max_memory_use));
+        new ParquetFormatWriter(std::move(file_writer), out, schema, max_memory_use, pool));
 }
 
 Status ParquetFormatWriter::AddBatch(ArrowArray* batch) {
@@ -95,8 +95,8 @@ Result<uint64_t> ParquetFormatWriter::GetEstimateLength() const {
 ParquetFormatWriter::ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
                                          const std::shared_ptr<ParquetOutputStreamImpl>& out,
                                          const std::shared_ptr<arrow::Schema>& schema,
-                                         const std::shared_ptr<arrow::MemoryPool>& pool,
-                                         uint64_t max_memory_use)
+                                         uint64_t max_memory_use,
+                                         const std::shared_ptr<arrow::MemoryPool>& pool)
     : pool_(pool),
       out_(out),
       writer_(std::move(writer)),
