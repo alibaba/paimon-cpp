@@ -39,6 +39,7 @@
 #include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/stats/simple_stats.h"
+#include "paimon/core/utils/duration.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/predicate/literal.h"
@@ -94,7 +95,7 @@ Result<std::vector<PartitionEntry>> FileStoreScan::ReadPartitionEntries() const 
 }
 
 Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() const {
-    const auto started = std::chrono::high_resolution_clock::now();
+    Duration duration;
     std::optional<Snapshot> snapshot;
     std::vector<ManifestFileMeta> all_manifest_file_metas;
     std::vector<ManifestFileMeta> filtered_manifest_file_metas;
@@ -133,10 +134,7 @@ Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() cons
         [](const int64_t sum, const ManifestFileMeta& manifest_file_meta) {
             return sum + manifest_file_meta.NumAddedFiles() - manifest_file_meta.NumDeletedFiles();
         });
-    metrics_->SetCounter(ScanMetrics::LAST_SCAN_DURATION,
-                         std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::high_resolution_clock::now() - started)
-                             .count());
+    metrics_->SetCounter(ScanMetrics::LAST_SCAN_DURATION, duration.Get());
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_SNAPSHOT_ID,
                          snapshot.has_value() ? snapshot.value().Id() : int64_t{0});
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_MANIFESTS, filtered_manifest_file_metas.size());

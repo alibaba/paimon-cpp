@@ -25,6 +25,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/executor/future.h"
+#include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/common/utils/string_utils.h"
@@ -32,7 +33,9 @@
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/operation/metrics/clean_metrics.h"
 #include "paimon/core/snapshot.h"
+#include "paimon/core/utils/duration.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/status.h"
@@ -61,7 +64,8 @@ OrphanFilesCleanerImpl::OrphanFilesCleanerImpl(
       manifest_file_(manifest_file),
       manifest_list_(manifest_list),
       older_than_ms_(older_than_ms),
-      should_be_retained_(should_be_retained) {}
+      should_be_retained_(should_be_retained),
+      metrics_(std::make_shared<MetricsImpl>()) {}
 
 bool OrphanFilesCleanerImpl::SupportToClean(const std::string& file_name) {
     static std::vector<std::pair<std::string, std::string>> supported_pattern = {
@@ -83,6 +87,7 @@ bool OrphanFilesCleanerImpl::SupportToClean(const std::string& file_name) {
 }
 
 Result<std::set<std::string>> OrphanFilesCleanerImpl::Clean() {
+    Duration main_duration;
     if (!MinimalTryBestListingDirs(PathUtil::JoinPath(root_path_, "tag")).empty()) {
         return Status::NotImplemented("OrphanFilesCleaner do not support cleaning table with tag");
     }
@@ -98,9 +103,11 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::Clean() {
     }
     PAIMON_ASSIGN_OR_RAISE(std::set<std::string> used_file_names, GetUsedFiles());
 
+    Duration duration;
     std::set<std::string> need_to_deletes;
     std::vector<std::future<void>> futures;
     ScopeGuard guard([&futures]() { Wait(futures); });
+    uint64_t file_statuses_duration = duration.Reset();
     for (const auto& file_statuses : CollectAll(file_statuses_futures)) {
         for (const auto& file_status : file_statuses) {
             if (file_status->IsDir()) {
@@ -129,10 +136,18 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::Clean() {
             }
         }
     }
+    metrics_->SetCounter(CleanMetrics::CLEAN_DURATION, main_duration.Get());
+    metrics_->SetCounter(CleanMetrics::CLEAN_SCAN_ORPHAN_FILES_DURATION, duration.Get());
+    metrics_->SetCounter(CleanMetrics::CLEAN_LIST_FILE_STATUS_DURATION, file_statuses_duration);
+    metrics_->SetCounter(CleanMetrics::CLEAN_LIST_FILE_STATUS_TASKS,
+                         static_cast<uint64_t>(file_statuses_futures.size()));
+    metrics_->SetCounter(CleanMetrics::CLEAN_ORPHAN_FILES,
+                         static_cast<uint64_t>(need_to_deletes.size()));
     return need_to_deletes;
 }
 
 Result<std::set<std::string>> OrphanFilesCleanerImpl::ListPaimonFileDirs() const {
+    Duration duration;
     std::set<std::string> paimon_file_dirs;
     paimon_file_dirs.insert(snapshot_manager_->SnapshotDirectory());
     paimon_file_dirs.insert(FileStorePathFactory::ManifestPath(root_path_));
@@ -156,6 +171,9 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::ListPaimonFileDirs() const
     //         ListFileDirs(external_path, partition_keys_.size());
     //     paimon_file_dirs.insert(external_file_dirs.begin(), external_file_dirs.end());
     // }
+    metrics_->SetCounter(CleanMetrics::CLEAN_LIST_DIRECTORIES_DURATION, duration.Get());
+    metrics_->SetCounter(CleanMetrics::CLEAN_LIST_DIRECTORIES,
+                         static_cast<uint64_t>(paimon_file_dirs.size()));
     return paimon_file_dirs;
 }
 
@@ -225,6 +243,7 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::GetUsedFiles() const {
     // TODO(jinli.zjw): consider changelog(add tests), stats
     used_files.insert(SnapshotManager::EARLIEST);
     used_files.insert(SnapshotManager::LATEST);
+    Duration duration;
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager_->GetAllSnapshots());
     for (const auto& snapshot : snapshots) {
         used_files.insert(SnapshotManager::SNAPSHOT_PREFIX + std::to_string(snapshot.Id()));
@@ -257,6 +276,8 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::GetUsedFiles() const {
             }
         }
     }
+    metrics_->SetCounter(CleanMetrics::CLEAN_LIST_USED_FILES_DURATION, duration.Get());
+    metrics_->SetCounter(CleanMetrics::CLEAN_USED_FILES, static_cast<uint64_t>(used_files.size()));
     return used_files;
 }
 
