@@ -57,9 +57,10 @@ class ArrowUtils {
     static Status CheckNullabilityMatch(const std::shared_ptr<arrow::Schema>& schema,
                                         const std::shared_ptr<arrow::Array>& data) {
         auto struct_array = arrow::internal::checked_pointer_cast<arrow::StructArray>(data);
-        if (schema->num_fields() != struct_array->num_fields()) {
-            return Status::Invalid(
-                "CheckNullabilityMatch failed, input data and schema field count mismatch");
+        if (struct_array->num_fields() != schema->num_fields()) {
+            return Status::Invalid(fmt::format(
+                "CheckNullabilityMatch failed, data field count {} mismatch schema field count {}",
+                struct_array->num_fields(), schema->num_fields()));
         }
         for (int32_t i = 0; i < schema->num_fields(); i++) {
             PAIMON_RETURN_NOT_OK(
@@ -71,7 +72,7 @@ class ArrowUtils {
  private:
     static Status InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
                                              const std::shared_ptr<arrow::Array>& data) {
-        if (!field->nullable() && data->null_count() != 0) {
+        if (PAIMON_UNLIKELY(!field->nullable() && data->null_count() != 0)) {
             return Status::Invalid(fmt::format(
                 "CheckNullabilityMatch failed, field {} not nullable while data have null value",
                 field->name()));

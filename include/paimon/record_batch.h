@@ -100,7 +100,8 @@ class PAIMON_EXPORT RecordBatchBuilder {
     ///       - If a field in table schema is marked as non-nullable (`nullable = false`),
     ///         the corresponding array in `data` must have zero null entries.
     ///
-    /// @note Consistency between `data` and table schema will be validated when write process.
+    /// @note Consistency between `data` and table schema will be validated during the write
+    /// process.
     ///
     /// @param data ArrowArray struct containing the columnar data (via C Data Interface)
     explicit RecordBatchBuilder(::ArrowArray* data);
