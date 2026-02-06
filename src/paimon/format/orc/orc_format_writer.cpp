@@ -39,6 +39,7 @@
 #include "paimon/core/schema/arrow_schema_validator.h"
 #include "paimon/format/orc/orc_adapter.h"
 #include "paimon/format/orc/orc_format_defs.h"
+#include "paimon/format/orc/orc_memory_pool_adaptor.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/macros.h"
 #include "paimon/memory/memory_pool.h"
@@ -79,7 +80,7 @@ Result<std::unique_ptr<OrcFormatWriter>> OrcFormatWriter::Create(
         PAIMON_ASSIGN_OR_RAISE(::orc::WriterOptions writer_options,
                                PrepareWriterOptions(options, compression, data_type));
         if (pool) {
-            writer_options.setMemoryPool(pool->AsOrcMemoryPool());
+            writer_options.setMemoryPool(AsOrcMemoryPool(*pool));
         }
 
         std::unique_ptr<::orc::WriterMetrics> writer_metrics;

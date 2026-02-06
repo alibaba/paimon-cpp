@@ -23,6 +23,7 @@
 #include <cstring>
 #include <memory>
 
+#include "arrow/memory_pool.h"
 #include "paimon/common/memory/memory_pool_adaptor_holder.h"
 
 namespace paimon {
@@ -96,19 +97,14 @@ uint64_t MemoryPoolImpl::CurrentUsage() const {
 
 MemoryPool::~MemoryPool() = default;
 
-MemoryPoolAdaptorHolder* MemoryPool::GetAdaptorHolder() const {
+void* MemoryPool::GetAdaptor(const std::string& identifier) {
     std::call_once(flag_, [this]() { holder_ = std::make_unique<MemoryPoolAdaptorHolder>(); });
-    return holder_.get();
+    MemoryPoolAdaptorSlot& slot = holder_->GetOrCreateSlot(identifier);
+    return slot.GetOrCreate(identifier, *this);
 }
 
 arrow::MemoryPool* MemoryPool::AsArrowMemoryPool() {
-    MemoryPoolAdaptorSlot& slot = GetAdaptorHolder()->arrow_adaptor_slot;
-    return slot.GetOrCreate<arrow::MemoryPool>(*this);
-}
-
-::orc::MemoryPool* MemoryPool::AsOrcMemoryPool() {
-    MemoryPoolAdaptorSlot& slot = GetAdaptorHolder()->orc_adaptor_slot;
-    return slot.GetOrCreate<::orc::MemoryPool>(*this);
+    return AsSpecifiedMemoryPool<arrow::MemoryPool>();
 }
 
 PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool() {

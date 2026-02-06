@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "paimon/common/memory/memory_pool_adaptor_factor.h"
+#include "paimon/memory/memory_pool_adaptor_factor.h"
 
 namespace paimon::orc {
 

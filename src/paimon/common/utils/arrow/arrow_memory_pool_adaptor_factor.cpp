@@ -16,8 +16,8 @@
 
 #include "paimon/common/utils/arrow/arrow_memory_pool_adaptor_factor.h"
 
-#include "paimon/common/memory/memory_pool_adaptor_traits.h"
 #include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
+#include "paimon/memory/memory_pool_adaptor_traits.h"
 
 namespace paimon {
 

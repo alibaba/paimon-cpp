@@ -21,6 +21,11 @@
 #include "orc/MemoryPool.hh"
 #include "paimon/memory/memory_pool.h"
 
+template <>
+struct paimon::MemoryPoolAdaptorTraits<::orc::MemoryPool> {
+    static constexpr auto identifier = "orc_memory_pool_adaptor";
+};
+
 namespace paimon::orc {
 
 class OrcMemoryPoolAdaptor : public ::orc::MemoryPool {
@@ -56,5 +61,9 @@ class OrcMemoryPoolAdaptor : public ::orc::MemoryPool {
 
     paimon::MemoryPool& pool_;
 };
+
+inline ::orc::MemoryPool* AsOrcMemoryPool(paimon::MemoryPool& pool) {
+    return pool.AsSpecifiedMemoryPool<::orc::MemoryPool>();
+}
 
 }  // namespace paimon::orc

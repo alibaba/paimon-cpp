@@ -20,11 +20,8 @@ namespace arrow {
 class MemoryPool;
 }
 
-namespace orc {
-class MemoryPool;
-}
-
 namespace paimon {
+
 template <typename AdaptorType>
 struct MemoryPoolAdaptorTraits {
     static_assert(sizeof(AdaptorType) == 0, "Unknown memory pool adaptor type");
@@ -33,11 +30,6 @@ struct MemoryPoolAdaptorTraits {
 template <>
 struct MemoryPoolAdaptorTraits<arrow::MemoryPool> {
     static constexpr auto identifier = "arrow_memory_pool_adaptor";
-};
-
-template <>
-struct MemoryPoolAdaptorTraits<::orc::MemoryPool> {
-    static constexpr auto identifier = "orc_memory_pool_adaptor";
 };
 
 }  // namespace paimon

@@ -34,6 +34,7 @@
 #include "paimon/format/orc/orc_adapter.h"
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
+#include "paimon/format/orc/orc_memory_pool_adaptor.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/format/orc/predicate_converter.h"
 
@@ -60,7 +61,7 @@ Result<std::unique_ptr<OrcFileBatchReader>> OrcFileBatchReader::Create(
             return Status::Invalid("memory pool is nullptr");
         }
         uint64_t natural_read_size = input_stream->getNaturalReadSize();
-        reader_options.setMemoryPool(*pool->AsOrcMemoryPool());
+        reader_options.setMemoryPool(*AsOrcMemoryPool(*pool));
 
         std::unique_ptr<::orc::ReaderMetrics> reader_metrics;
         PAIMON_ASSIGN_OR_RAISE(
