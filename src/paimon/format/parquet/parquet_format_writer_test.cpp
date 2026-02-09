@@ -33,6 +33,7 @@
 #include "arrow/ipc/api.h"
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
