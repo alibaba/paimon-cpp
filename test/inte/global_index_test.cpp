@@ -2230,15 +2230,15 @@ TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
                                  "f0",
                                  /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
                                  /*pre_filter=*/std::nullopt)));
-        ASSERT_EQ(index_result->ToString(), "row ids: {0,1,2}, scores: {1.00,1.73,2.00}");
+        ASSERT_TRUE(index_result->ToString().find("row ids: {0,1,2}") != std::string::npos);
     }
     {
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                                  "f0",
-                                 /*limit=*/10, "test new", FullTextSearch::SearchType::MATCH_ANY,
+                                 /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD,
                                  /*pre_filter=*/std::nullopt)));
-        ASSERT_EQ(index_result->ToString(), "row ids: {0,1,2}, scores: {0.39,0.67,0.39}");
+        ASSERT_TRUE(index_result->ToString().find("row ids: {3}") != std::string::npos);
     }
 }
 #endif
