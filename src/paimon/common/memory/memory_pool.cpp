@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <string>
 
-#include "arrow/memory_pool.h"
 #include "paimon/common/memory/memory_pool_adaptor_holder.h"
 
 namespace paimon {
