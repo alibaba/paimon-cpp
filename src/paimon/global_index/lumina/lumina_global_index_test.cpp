@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/global_index_result.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/testing/utils/testharness.h"
@@ -94,10 +94,10 @@ class LuminaGlobalIndexTest : public ::testing::Test {
         return result_metas[0];
     }
 
-    void CheckResult(const std::shared_ptr<VectorSearchGlobalIndexResult>& result,
+    void CheckResult(const std::shared_ptr<ScoredGlobalIndexResult>& result,
                      const std::vector<int64_t>& expected_ids,
                      const std::vector<float>& expected_scores) const {
-        auto typed_result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result);
         ASSERT_TRUE(typed_result);
         ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
         ASSERT_TRUE(bitmap);
@@ -190,20 +190,20 @@ TEST_F(LuminaGlobalIndexTest, TestSimple) {
     {
         // recall all data
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 /*field_name=*/"f0", /*limit=*/4, query_, /*filter=*/nullptr,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        CheckResult(vector_search_result, {3l, 1l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
+        CheckResult(scored_result, {3l, 1l, 2l, 0l}, {0.01f, 2.01f, 2.21f, 4.21f});
     }
     {
         // small limit
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 /*field_name=*/"f0", /*limit=*/3, query_, /*filter=*/nullptr,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        CheckResult(vector_search_result, {3l, 1l, 2l}, {0.01f, 2.01f, 2.21f});
+        CheckResult(scored_result, {3l, 1l, 2l}, {0.01f, 2.01f, 2.21f});
     }
     {
         // visit equal will return all rows
@@ -223,29 +223,29 @@ TEST_F(LuminaGlobalIndexTest, TestWithFilter) {
                          CreateGlobalIndexReader(test_root, data_type_, options_, meta));
     {
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 /*field_name=*/"f0", /*limit=*/2, query_, /*filter=*/nullptr,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        CheckResult(vector_search_result, {3l, 1l}, {0.01f, 2.01f});
+        CheckResult(scored_result, {3l, 1l}, {0.01f, 2.01f});
     }
     {
         auto filter = [](int64_t id) -> bool { return id < 3; };
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 /*field_name=*/"f0", /*limit=*/2, query_, filter,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        CheckResult(vector_search_result, {1l, 2l}, {2.01f, 2.21f});
+        CheckResult(scored_result, {1l, 2l}, {2.01f, 2.21f});
     }
     {
         auto filter = [](int64_t id) -> bool { return id < 3; };
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 /*field_name=*/"f0", /*limit=*/4, query_, filter,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        CheckResult(vector_search_result, {1l, 2l, 0l}, {2.01f, 2.21f, 4.21f});
+        CheckResult(scored_result, {1l, 2l, 0l}, {2.01f, 2.21f, 4.21f});
     }
 }
 
@@ -440,12 +440,11 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
         int32_t limit = paimon::test::RandomNumber(1, 100);
         auto filter = [](int64_t id) -> bool { return id % 2; };
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 "f0", limit, query_, filter,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        auto typed_result =
-            std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(vector_search_result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(scored_result);
         ASSERT_TRUE(typed_result);
         ASSERT_EQ(typed_result->bitmap_.Cardinality(), limit);
     };
@@ -453,12 +452,11 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
     auto search = [&]() {
         int32_t limit = paimon::test::RandomNumber(1, 100);
         ASSERT_OK_AND_ASSIGN(
-            auto vector_search_result,
+            auto scored_result,
             reader->VisitVectorSearch(std::make_shared<VectorSearch>(
                 "f0", limit, query_, /*filter=*/nullptr,
                 /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/options_)));
-        auto typed_result =
-            std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(vector_search_result);
+        auto typed_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(scored_result);
         ASSERT_TRUE(typed_result);
         ASSERT_EQ(typed_result->bitmap_.Cardinality(), limit);
     };

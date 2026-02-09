@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 
 #include "fmt/format.h"
 #include "fmt/ranges.h"
@@ -41,29 +41,28 @@ std::vector<float> GetScoresFromMap(const RoaringBitmap64& bitmap,
     return scores;
 }
 }  // namespace
-Result<std::unique_ptr<GlobalIndexResult::Iterator>>
-BitmapVectorSearchGlobalIndexResult::CreateIterator() const {
+Result<std::unique_ptr<GlobalIndexResult::Iterator>> BitmapScoredGlobalIndexResult::CreateIterator()
+    const {
     return std::make_unique<BitmapGlobalIndexResult::Iterator>(&bitmap_, bitmap_.Begin());
 }
 
-Result<std::unique_ptr<VectorSearchGlobalIndexResult::VectorSearchIterator>>
-BitmapVectorSearchGlobalIndexResult::CreateVectorSearchIterator() const {
-    return std::make_unique<BitmapVectorSearchGlobalIndexResult::VectorSearchIterator>(
+Result<std::unique_ptr<ScoredGlobalIndexResult::ScoredIterator>>
+BitmapScoredGlobalIndexResult::CreateScoredIterator() const {
+    return std::make_unique<BitmapScoredGlobalIndexResult::ScoredIterator>(
         &bitmap_, bitmap_.Begin(), scores_.data());
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::And(
+Result<std::shared_ptr<GlobalIndexResult>> BitmapScoredGlobalIndexResult::And(
     const std::shared_ptr<GlobalIndexResult>& other) {
-    auto vector_search_other =
-        std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(other);
-    if (vector_search_other) {
-        // If current and other result are both BitmapVectorSearchGlobalIndexResult, return
+    auto scored_other = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(other);
+    if (scored_other) {
+        // If current and other result are both BitmapScoredGlobalIndexResult, return
         // BitmapGlobalIndexResult. Erase scores to prevent the same row id with different
         // scores in current and other results.
-        auto supplier = [vector_search_other,
-                         result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(
+        auto supplier = [scored_other,
+                         result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(
                              shared_from_this())]() -> Result<RoaringBitmap64> {
-            PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* r1, vector_search_other->GetBitmap());
+            PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* r1, scored_other->GetBitmap());
             PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* r2, result->GetBitmap());
             return RoaringBitmap64::And(*r1, *r2);
         };
@@ -71,40 +70,39 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::
     }
     auto bitmap_other = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(other);
     if (bitmap_other) {
-        // If other bitmap is BitmapGlobalIndexResult, return BitmapVectorSearchGlobalIndexResult as
-        // score must exist in current vector search result.
+        // If other bitmap is BitmapGlobalIndexResult, return BitmapScoredGlobalIndexResult as
+        // score must exist in current scored result.
         std::map<int64_t, float> id_to_score = CreateIdToScoreMap(bitmap_, scores_);
         PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* other_bitmap, bitmap_other->GetBitmap());
         auto and_bitmap = RoaringBitmap64::And(bitmap_, *other_bitmap);
         std::vector<float> and_scores = GetScoresFromMap(and_bitmap, id_to_score);
-        return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(and_bitmap),
-                                                                     std::move(and_scores));
+        return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(and_bitmap),
+                                                               std::move(and_scores));
     }
     return GlobalIndexResult::And(other);
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::Or(
+Result<std::shared_ptr<GlobalIndexResult>> BitmapScoredGlobalIndexResult::Or(
     const std::shared_ptr<GlobalIndexResult>& other) {
-    auto vector_search_other =
-        std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(other);
-    if (vector_search_other) {
-        // If current and other result are both BitmapVectorSearchGlobalIndexResult, return
-        // BitmapVectorSearchGlobalIndexResult when current and other have has no intersection row
+    auto scored_other = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(other);
+    if (scored_other) {
+        // If current and other result are both BitmapScoredGlobalIndexResult, return
+        // BitmapScoredGlobalIndexResult when current and other have has no intersection row
         // id.
         std::map<int64_t, float> id_to_score = CreateIdToScoreMap(bitmap_, scores_);
         size_t idx = 0;
-        for (auto iter = vector_search_other->bitmap_.Begin();
-             iter != vector_search_other->bitmap_.End(); ++iter, ++idx) {
+        for (auto iter = scored_other->bitmap_.Begin(); iter != scored_other->bitmap_.End();
+             ++iter, ++idx) {
             if (id_to_score.find(*iter) != id_to_score.end()) {
                 return Status::Invalid(
-                    "not support two BitmapVectorSearchGlobalIndexResult or with same row id");
+                    "not support two BitmapScoredGlobalIndexResult or with same row id");
             }
-            id_to_score[*iter] = vector_search_other->scores_[idx];
+            id_to_score[*iter] = scored_other->scores_[idx];
         }
-        auto or_bitmap = RoaringBitmap64::Or(bitmap_, vector_search_other->bitmap_);
+        auto or_bitmap = RoaringBitmap64::Or(bitmap_, scored_other->bitmap_);
         std::vector<float> or_scores = GetScoresFromMap(or_bitmap, id_to_score);
-        return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(or_bitmap),
-                                                                     std::move(or_scores));
+        return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(or_bitmap),
+                                                               std::move(or_scores));
     }
 
     auto bitmap_other = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(other);
@@ -112,7 +110,7 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::
         // If other bitmap is BitmapGlobalIndexResult, return BitmapGlobalIndexResult as
         // score for union row id is unknown.
         auto supplier = [bitmap_other,
-                         result = std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(
+                         result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(
                              shared_from_this())]() -> Result<RoaringBitmap64> {
             PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* r1, bitmap_other->GetBitmap());
             PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* r2, result->GetBitmap());
@@ -123,7 +121,7 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::
     return GlobalIndexResult::Or(other);
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::AddOffset(
+Result<std::shared_ptr<GlobalIndexResult>> BitmapScoredGlobalIndexResult::AddOffset(
     int64_t offset) {
     PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* bitmap, GetBitmap());
     RoaringBitmap64 bitmap64;
@@ -131,23 +129,22 @@ Result<std::shared_ptr<GlobalIndexResult>> BitmapVectorSearchGlobalIndexResult::
         bitmap64.Add(offset + (*iter));
     }
     auto scores = GetScores();
-    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap64),
-                                                                 std::move(scores));
+    return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(bitmap64), std::move(scores));
 }
 
-Result<bool> BitmapVectorSearchGlobalIndexResult::IsEmpty() const {
+Result<bool> BitmapScoredGlobalIndexResult::IsEmpty() const {
     return bitmap_.IsEmpty();
 }
 
-Result<const RoaringBitmap64*> BitmapVectorSearchGlobalIndexResult::GetBitmap() const {
+Result<const RoaringBitmap64*> BitmapScoredGlobalIndexResult::GetBitmap() const {
     return &bitmap_;
 }
 
-const std::vector<float>& BitmapVectorSearchGlobalIndexResult::GetScores() const {
+const std::vector<float>& BitmapScoredGlobalIndexResult::GetScores() const {
     return scores_;
 }
 
-std::string BitmapVectorSearchGlobalIndexResult::ToString() const {
+std::string BitmapScoredGlobalIndexResult::ToString() const {
     std::vector<std::string> formatted_scores;
     formatted_scores.reserve(scores_.size());
     for (const auto& score : scores_) {

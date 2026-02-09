@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,9 +85,9 @@ GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
                 return bitmap->Contains(row_id);
             });
     }
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> vector_search_result,
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> scored_result,
                            vector_search_reader->VisitVectorSearch(final_vector_search));
-    return std::optional<std::shared_ptr<GlobalIndexResult>>(vector_search_result);
+    return std::optional<std::shared_ptr<GlobalIndexResult>>(scored_result);
 }
 
 Result<std::optional<std::shared_ptr<GlobalIndexResult>>>

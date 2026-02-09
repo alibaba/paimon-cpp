@@ -97,14 +97,14 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         return CreateAllResult();
     }
 
-    Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+    Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
         return Status::Invalid(
             "LuceneGlobalIndexReader is not supposed to handle vector search query");
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
-        const std::shared_ptr<FullTextSearch>& full_text_search);
+        const std::shared_ptr<FullTextSearch>& full_text_search) override;
 
     bool IsThreadSafe() const override {
         return false;

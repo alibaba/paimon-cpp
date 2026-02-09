@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     /// Serializes a GlobalIndexResult object into a byte array.
     ///
     /// @note This method only supports the following concrete implementations:
-    ///       - BitmapVectorSearchGlobalIndexResult
+    ///       - BitmapScoredGlobalIndexResult
     ///       - BitmapGlobalIndexResult
     ///
     /// @param global_index_result The GlobalIndexResult instance to serialize (must not be null).
@@ -91,7 +91,7 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     ///
     /// @note The concrete type of the deserialized object is determined by metadata
     ///       embedded in the buffer. Currently, only the following types are supported:
-    ///       - BitmapVectorSearchGlobalIndexResult
+    ///       - BitmapScoredGlobalIndexResult
     ///       - BitmapGlobalIndexResult
     ///
     /// @param buffer Pointer to the serialized byte data (must not be null).
@@ -106,18 +106,18 @@ class PAIMON_EXPORT GlobalIndexResult : public std::enable_shared_from_this<Glob
     static constexpr int32_t VERSION = 1;
 };
 
-/// Represents the result of a vector search query against a global index.
+/// Represents the result with score of a query against a global index.
 /// This class encapsulates a set of search candidates (row id + score pairs) and provides
 /// an iterator interface to traverse them.
-class PAIMON_EXPORT VectorSearchGlobalIndexResult : public GlobalIndexResult {
+class PAIMON_EXPORT ScoredGlobalIndexResult : public GlobalIndexResult {
  public:
-    /// An iterator over the vector search results, returning (row_id, score) pairs.
+    /// An iterator over the scored results, returning (row_id, score) pairs.
     ///
     /// @note The results are **NOT sorted by score**. Instead, they are returned in **ascending
     ///       order of row_id**.
-    class VectorSearchIterator {
+    class ScoredIterator {
      public:
-        virtual ~VectorSearchIterator() = default;
+        virtual ~ScoredIterator() = default;
 
         /// Checks whether more row ids are available.
         virtual bool HasNext() const = 0;
@@ -132,7 +132,7 @@ class PAIMON_EXPORT VectorSearchGlobalIndexResult : public GlobalIndexResult {
         virtual std::pair<int64_t, float> NextWithScore() = 0;
     };
 
-    /// Creates a new iterator for traversing the vector search results.
-    virtual Result<std::unique_ptr<VectorSearchIterator>> CreateVectorSearchIterator() const = 0;
+    /// Creates a new iterator for traversing the scored results.
+    virtual Result<std::unique_ptr<ScoredIterator>> CreateScoredIterator() const = 0;
 };
 }  // namespace paimon

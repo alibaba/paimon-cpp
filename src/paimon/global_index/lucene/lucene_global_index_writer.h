@@ -62,7 +62,7 @@ class LuceneGlobalIndexWriter : public GlobalIndexWriter {
                             const std::map<std::string, std::string>& options,
                             const std::shared_ptr<MemoryPool>& pool);
 
-    Result<std::string> FlushIndexToFinal() const;
+    Result<std::string> FlushIndexToFinal();
 
  private:
     std::shared_ptr<MemoryPool> pool_;
