@@ -93,8 +93,17 @@ class PAIMON_EXPORT RecordBatch {
 /// various properties such as data, row kinds, partition information, and bucket id.
 class PAIMON_EXPORT RecordBatchBuilder {
  public:
-    /// Constructs a `RecordBatchBuilder` with Arrow data.
-    /// @param data Arrow array containing the record data.
+    /// Constructs a `RecordBatchBuilder` with Arrow data
+    ///
+    /// @note The `data` must conform to table schema:
+    ///       - Each array in `data` corresponds to a field in table schema.
+    ///       - If a field in table schema is marked as non-nullable (`nullable = false`),
+    ///         the corresponding array in `data` must have zero null entries.
+    ///
+    /// @note Consistency between `data` and table schema will be validated during the write
+    /// process.
+    ///
+    /// @param data ArrowArray struct containing the columnar data (via C Data Interface)
     explicit RecordBatchBuilder(::ArrowArray* data);
 
     ~RecordBatchBuilder();

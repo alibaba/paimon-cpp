@@ -38,6 +38,7 @@ TEST(ReadContextTest, TestSimple) {
     ASSERT_FALSE(ctx->GetPredicate());
     ASSERT_FALSE(ctx->EnablePredicateFilter());
     ASSERT_FALSE(ctx->EnablePrefetch());
+    ASSERT_EQ(PrefetchCacheMode::ALWAYS, ctx->GetPrefetchCacheMode());
     ASSERT_EQ(600, ctx->GetPrefetchBatchCount());
     ASSERT_EQ(3, ctx->GetPrefetchMaxParallelNum());
     ASSERT_FALSE(ctx->EnableMultiThreadRowToBatch());
@@ -57,6 +58,7 @@ TEST(ReadContextTest, TestSetContent) {
     builder.SetPredicate(predicate);
     builder.EnablePredicateFilter(true);
     builder.EnablePrefetch(true);
+    builder.SetPrefetchCacheMode(PrefetchCacheMode::NEVER);
     builder.SetPrefetchBatchCount(1200);
     builder.SetPrefetchMaxParallelNum(6);
     builder.EnableMultiThreadRowToBatch(true);
@@ -76,6 +78,7 @@ TEST(ReadContextTest, TestSetContent) {
     ASSERT_EQ(*predicate, *(ctx->GetPredicate()));
     ASSERT_TRUE(ctx->EnablePredicateFilter());
     ASSERT_TRUE(ctx->EnablePrefetch());
+    ASSERT_EQ(PrefetchCacheMode::NEVER, ctx->GetPrefetchCacheMode());
     ASSERT_EQ(1200, ctx->GetPrefetchBatchCount());
     ASSERT_EQ(6, ctx->GetPrefetchMaxParallelNum());
     ASSERT_TRUE(ctx->EnableMultiThreadRowToBatch());

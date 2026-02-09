@@ -170,13 +170,14 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
     if (!table_schema.value()->PrimaryKeys().empty()) {
         return Status::NotImplemented("orphan files cleaner only support append table");
     }
+    // merge options
     const auto& schema = table_schema.value();
     auto opts = schema->Options();
     for (const auto& [key, value] : ctx->GetOptions()) {
         opts[key] = value;
     }
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
-                           CoreOptions::FromMap(ctx->GetOptions(), ctx->GetSpecificFileSystem()));
+                           CoreOptions::FromMap(opts, ctx->GetSpecificFileSystem()));
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(schema->Fields());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths, options.CreateExternalPaths());
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,

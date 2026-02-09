@@ -1,0 +1,16 @@
+diff --git a/include/cppjieba/KeywordExtractor.hpp b/include/cppjieba/KeywordExtractor.hpp
+index 24b2c40..c7c6a94 100644
+--- a/include/cppjieba/KeywordExtractor.hpp
++++ b/include/cppjieba/KeywordExtractor.hpp
+@@ -89,6 +89,11 @@ class KeywordExtractor {
+     std::partial_sort(keywords.begin(), keywords.begin() + topN, keywords.end(), Compare);
+     keywords.resize(topN);
+   }
++
++  const std::unordered_set<std::string>& GetStopWords() const {
++    return stopWords_;
++  }
++
+  private:
+   void LoadIdfDict(const std::string& idfPath) {
+     std::ifstream ifs(idfPath.c_str());

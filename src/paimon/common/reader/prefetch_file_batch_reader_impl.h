@@ -58,7 +58,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
         const std::shared_ptr<FileSystem>& fs, uint32_t prefetch_max_parallel_num,
         int32_t batch_size, uint32_t prefetch_batch_count, bool enable_adaptive_prefetch_strategy,
         const std::shared_ptr<Executor>& executor, bool initialize_read_ranges,
-        bool enable_prefetch_cache, const CacheConfig& cache_config,
+        PrefetchCacheMode prefetch_cache_mode, const CacheConfig& cache_config,
         const std::shared_ptr<MemoryPool>& pool);
 
     ~PrefetchFileBatchReaderImpl() override;
@@ -77,7 +77,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
 
     Status SeekToRow(uint64_t row_number) override;
     uint64_t GetPreviousBatchFirstRowNumber() const override;
-    uint64_t GetNumberOfRows() const override;
+    Result<uint64_t> GetNumberOfRows() const override;
     uint64_t GetNextRowToRead() const override;
     void Close() override;
     Status SetReadRanges(const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) override;
@@ -111,13 +111,14 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     PrefetchFileBatchReaderImpl(
         const std::vector<std::shared_ptr<PrefetchFileBatchReader>>& readers, int32_t batch_size,
         uint32_t prefetch_queue_capacity, bool enable_adaptive_prefetch_strategy,
-        const std::shared_ptr<Executor>& executor, const std::shared_ptr<ReadAheadCache>& cache);
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<ReadAheadCache>& cache,
+        PrefetchCacheMode cache_mode);
 
     Status CleanUp();
     void Workloop();
     void SetReadStatus(const Status& status);
     Status GetReadStatus() const;
-    bool IsEofRange(const std::pair<uint64_t, uint64_t>& read_range) const;
+    Result<bool> IsEofRange(const std::pair<uint64_t, uint64_t>& read_range) const;
     Status DoReadBatch(size_t reader_idx);
     void ReadBatch(size_t reader_idx);
     size_t GetEnabledReaderSize() const;
@@ -128,12 +129,13 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     static std::vector<std::vector<std::pair<uint64_t, uint64_t>>> DispatchReadRanges(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges, size_t reader_count);
 
-    std::pair<uint64_t, uint64_t> EofRange() const;
+    Result<std::pair<uint64_t, uint64_t>> EofRange() const;
     std::optional<std::pair<uint64_t, uint64_t>> GetCurrentReadRange(size_t reader_idx) const;
     Status EnsureReaderPosition(size_t reader_idx,
                                 const std::pair<uint64_t, uint64_t>& read_range) const;
     Status HandleReadResult(size_t reader_idx, const std::pair<uint64_t, uint64_t>& read_range,
                             FileBatchReader::ReadBatchWithBitmap&& read_batch_with_bitmap);
+    bool NeedInitCache() const;
 
  private:
     std::vector<std::shared_ptr<PrefetchFileBatchReader>> readers_;
@@ -143,6 +145,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     std::vector<std::unique_ptr<std::atomic<uint64_t>>> seek_cnt_;
     const int32_t batch_size_;
     std::optional<RoaringBitmap32> selection_bitmap_;
+    std::shared_ptr<Predicate> predicate_;
     std::deque<std::pair<uint64_t, uint64_t>> read_ranges_;
     std::vector<std::vector<std::pair<uint64_t, uint64_t>>> read_ranges_in_group_;
     std::vector<std::unique_ptr<ThreadsafeQueue<PrefetchBatch>>> prefetch_queues_;
@@ -151,6 +154,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
     std::condition_variable cv_;
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<ReadAheadCache> cache_;
+    PrefetchCacheMode cache_mode_;
 
     mutable std::shared_mutex rw_mutex_;
     std::unique_ptr<std::thread> background_thread_;

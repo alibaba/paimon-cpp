@@ -1,0 +1,33 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "STRING NOT NULL"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "INT NOT NULL"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "INT NOT NULL"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : "DOUBLE"
+  } ],
+  "highestFieldId" : 3,
+  "partitionKeys" : [ "f1" ],
+  "primaryKeys" : [ "f0", "f1", "f2" ],
+  "options" : {
+    "bucket" : "2",
+    "bucket-key" : "f2",
+    "manifest.format" : "avro",
+    "file.format" : "avro",
+    "deletion-vectors.enabled" : "true",
+    "commit.force-compact" : "true"
+  },
+  "timeMillis" : 1770109651519
+}

@@ -15,15 +15,16 @@
 if(PAIMON_ENABLE_AVRO)
 
     set(PAIMON_AVRO_FILE_FORMAT
-        avro_adaptor.cpp
         avro_direct_decoder.cpp
+        avro_direct_encoder.cpp
         avro_file_batch_reader.cpp
         avro_file_format.cpp
         avro_file_format_factory.cpp
         avro_format_writer.cpp
         avro_input_stream_impl.cpp
         avro_output_stream_impl.cpp
-        avro_schema_converter.cpp)
+        avro_schema_converter.cpp
+        avro_stats_extractor.cpp)
 
     add_paimon_lib(paimon_avro_file_format
                    SOURCES
@@ -49,11 +50,12 @@ if(PAIMON_ENABLE_AVRO)
     if(PAIMON_BUILD_TESTS)
         add_paimon_test(avro_format_test
                         SOURCES
-                        avro_adaptor_test.cpp
                         avro_file_batch_reader_test.cpp
                         avro_file_format_test.cpp
+                        avro_format_writer_test.cpp
                         avro_input_stream_impl_test.cpp
                         avro_schema_converter_test.cpp
+                        avro_stats_extractor_test.cpp
                         avro_writer_builder_test.cpp
                         EXTRA_INCLUDES
                         ${AVRO_INCLUDE_DIR}

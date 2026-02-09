@@ -25,6 +25,7 @@
 #include "paimon/core/table/source/snapshot/full_starting_scanner.h"
 #include "paimon/core/table/source/snapshot/snapshot_reader.h"
 #include "paimon/core/table/source/snapshot/static_from_snapshot_starting_scanner.h"
+#include "paimon/core/table/source/snapshot/static_from_tag_starting_scanner.h"
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/table/source/table_scan.h"
 namespace paimon {
@@ -51,6 +52,7 @@ class AbstractTableScan : public TableScan {
                 return std::shared_ptr<StartingScanner>(new FullStartingScanner(snapshot_manager));
             }
         } else if (startup_mode == StartupMode::FromSnapshot()) {
+            const std::optional<std::string> scan_tag_name = core_options_.GetScanTagName();
             if (specified_snapshot_id != std::nullopt) {
                 return is_streaming
                            ? std::shared_ptr<StartingScanner>(
@@ -58,9 +60,16 @@ class AbstractTableScan : public TableScan {
                                      snapshot_manager, specified_snapshot_id.value()))
                            : std::shared_ptr<StartingScanner>(new StaticFromSnapshotStartingScanner(
                                  snapshot_manager, specified_snapshot_id.value()));
+            } else if (scan_tag_name != std::nullopt) {
+                if (is_streaming) {
+                    return Status::Invalid("Cannot scan from tag in streaming mode");
+                }
+                return std::make_shared<StaticFromTagStartingScanner>(snapshot_manager,
+                                                                      scan_tag_name.value());
             } else {
                 return Status::Invalid(
-                    "scan.snapshot-id must be set when startup mode is FROM_SNAPSHOT");
+                    "scan.snapshot-id or scan.tag-name must be set when startup mode is "
+                    "FROM_SNAPSHOT");
             }
         } else if (startup_mode == StartupMode::FromSnapshotFull()) {
             if (specified_snapshot_id != std::nullopt) {

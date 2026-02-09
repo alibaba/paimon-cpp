@@ -45,6 +45,8 @@ class SnapshotManager {
                     const std::string& branch);
     ~SnapshotManager();
 
+    const std::shared_ptr<FileSystem>& Fs() const;
+    const std::string& RootPath() const;
     const std::string& Branch() const;
     Result<std::optional<Snapshot>> LatestSnapshot() const;
     std::string SnapshotDirectory() const;

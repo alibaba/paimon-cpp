@@ -47,7 +47,7 @@ class LanceFileBatchReader : public FileBatchReader {
         return -1;
     }
 
-    uint64_t GetNumberOfRows() const override {
+    Result<uint64_t> GetNumberOfRows() const override {
         return num_rows_;
     }
 
