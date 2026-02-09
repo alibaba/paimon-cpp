@@ -327,7 +327,8 @@ macro(build_lucene)
     add_library(lucene STATIC IMPORTED)
     set_target_properties(lucene
                           PROPERTIES IMPORTED_LOCATION "${LUCENE_LIB}"
-                          INTERFACE_INCLUDE_DIRECTORIES "${LUCENE_INCLUDE_DIR}")
+                                     INTERFACE_INCLUDE_DIRECTORIES
+                                     "${LUCENE_INCLUDE_DIR}")
 
     target_link_libraries(lucene
                           INTERFACE boost_date_time
