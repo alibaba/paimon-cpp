@@ -36,7 +36,8 @@ Result<LocalFile> LocalFileSystem::ToFile(const std::string& path_string) const 
     // rewritten to "/tmp"
     PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(path_string));
     if (!path.scheme.empty() && StringUtils::ToLowerCase(path.scheme) != "file") {
-        return Status::Invalid(fmt::format("invalid scheme {} for local file system", path.scheme));
+        return Status::Invalid(
+            fmt::format("{} invalid scheme {} for local file system", path_string, path.scheme));
     }
     return LocalFile(path.path);
 }

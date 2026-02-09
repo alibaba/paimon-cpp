@@ -231,6 +231,7 @@ class TokenParser {
     template <typename T>
     Result<std::shared_ptr<arrow::DataType>> ParseStringType();
     Result<std::shared_ptr<arrow::DataType>> ParseDecimalType();
+    Result<std::shared_ptr<arrow::DataType>> ParseBinaryType();
     Result<std::shared_ptr<arrow::DataType>> ParseDoubleType();
     Result<std::shared_ptr<arrow::DataType>> ParseTimestampType();
     Result<std::shared_ptr<arrow::DataType>> ParseTimestampLtzType();
@@ -465,7 +466,8 @@ Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseTypeByKeyword(bool* i
     PAIMON_RETURN_NOT_OK(NextToken(TokenType::KEYWORD));
     switch (TokenAsKeyword()) {
         case Keyword::BYTES:
-            return arrow::binary();
+        case Keyword::BINARY:
+            return ParseBinaryType();
         case Keyword::BLOB: {
             *is_blob = true;
             return arrow::large_binary();
@@ -536,6 +538,16 @@ Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseDecimalType() {
         PAIMON_RETURN_NOT_OK(NextToken(TokenType::END_PARAMETER));
     }
     return arrow::decimal128(precision, scale);
+}
+
+Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseBinaryType() {
+    if (HasNextToken({TokenType::BEGIN_PARAMETER})) {
+        PAIMON_RETURN_NOT_OK(NextToken(TokenType::BEGIN_PARAMETER));
+        // length of bytes is ignored.
+        PAIMON_RETURN_NOT_OK(NextToken(TokenType::LITERAL_INT));
+        PAIMON_RETURN_NOT_OK(NextToken(TokenType::END_PARAMETER));
+    }
+    return arrow::binary();
 }
 
 Result<std::shared_ptr<arrow::DataType>> TokenParser::ParseDoubleType() {
