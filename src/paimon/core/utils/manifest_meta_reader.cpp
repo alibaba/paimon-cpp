@@ -31,6 +31,7 @@
 #include "arrow/compute/cast.h"
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/status.h"
 
@@ -54,7 +55,7 @@ Result<BatchReader::ReadBatch> ManifestMetaReader::NextBatch() {
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<arrow::Array> target_array,
-        AlignArrayWithSchema(arrow_array, target_type_, pool_->AsArrowMemoryPool()));
+        AlignArrayWithSchema(arrow_array, target_type_, AsArrowMemoryPool(*pool_)));
     std::unique_ptr<ArrowArray> target_c_arrow_array = std::make_unique<ArrowArray>();
     std::unique_ptr<ArrowSchema> target_c_schema = std::make_unique<ArrowSchema>();
 

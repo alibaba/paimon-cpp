@@ -21,6 +21,7 @@
 #include "arrow/c/abi.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 
 namespace paimon {
 class MemoryPool;
@@ -33,7 +34,7 @@ Result<BatchReader::ReadBatch> ConcatBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
     return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
-                                               memory_pool_->AsArrowMemoryPool());
+                                               AsArrowMemoryPool(*memory_pool_));
 }
 
 void ConcatBatchReader::Close() {

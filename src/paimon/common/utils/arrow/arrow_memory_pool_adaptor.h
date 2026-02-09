@@ -21,11 +21,17 @@
 #include "arrow/memory_pool.h"
 #include "arrow/status.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/memory/memory_pool_adaptor.h"
 
 namespace paimon {
 
-class ArrowMemoryPoolAdaptor : public arrow::MemoryPool {
+class ArrowMemoryPoolAdaptor : public arrow::MemoryPool,
+                               public MemoryPoolAdaptor<ArrowMemoryPoolAdaptor> {
  public:
+    static std::string Identifier() {
+        return "ArrowMemoryPoolAdaptor";
+    }
+
     explicit ArrowMemoryPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
 
     arrow::Status Allocate(int64_t size, int64_t alignment, uint8_t** out) override {
@@ -72,5 +78,9 @@ class ArrowMemoryPoolAdaptor : public arrow::MemoryPool {
     paimon::MemoryPool& pool_;
     arrow::internal::MemoryPoolStats stats_;
 };
+
+inline arrow::MemoryPool* AsArrowMemoryPool(paimon::MemoryPool& pool) {
+    return pool.AsSpecifiedMemoryPool<ArrowMemoryPoolAdaptor>();
+}
 
 }  // namespace paimon

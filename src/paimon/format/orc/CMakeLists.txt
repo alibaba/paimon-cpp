@@ -23,7 +23,6 @@ if(PAIMON_ENABLE_ORC)
         orc_input_stream_impl.cpp
         orc_output_stream_impl.cpp
         orc_adapter.cpp
-        orc_memory_pool_adaptor_factor.cpp
         orc_stats_extractor.cpp
         orc_format_writer.cpp)
 

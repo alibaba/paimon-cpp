@@ -21,7 +21,9 @@
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/reader/reader_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+
 namespace paimon {
 Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionFileReader::Create(
     std::vector<std::unique_ptr<BatchReader>>&& readers,
@@ -99,7 +101,7 @@ Result<std::shared_ptr<arrow::Array>> DataEvolutionFileReader::GetOrCreateNonExi
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             non_exist_array_vec_[field_idx],
             arrow::MakeArrayOfNull(read_schema_->field(field_idx)->type(), array_length,
-                                   memory_pool_->AsArrowMemoryPool()));
+                                   AsArrowMemoryPool(*memory_pool_)));
     }
     if (non_exist_array_vec_[field_idx]->length() == array_length) {
         return non_exist_array_vec_[field_idx];
@@ -170,7 +172,7 @@ Result<std::shared_ptr<arrow::Array>> DataEvolutionFileReader::NextBatchForSingl
     // TODO(xinyu.lxy) remove data copy for efficiency
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::shared_ptr<arrow::Array> concat_array,
-        arrow::Concatenate(concat_array_vec, memory_pool_->AsArrowMemoryPool()));
+        arrow::Concatenate(concat_array_vec, AsArrowMemoryPool(*memory_pool_)));
     assert(concat_array->length() == total_array_length);
     assert(concat_array->length() <= read_batch_size_);
     return concat_array;

@@ -34,6 +34,7 @@
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/compact_increment.h"
@@ -146,7 +147,7 @@ Result<std::shared_ptr<arrow::Array>> PostponeBucketWriter::PrepareSequenceNumbe
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             sequence_number_array_,
             arrow::MakeArrayFromScalar(*sequence_number_scalar, value_array_length,
-                                       pool_->AsArrowMemoryPool()));
+                                       AsArrowMemoryPool(*pool_)));
         return sequence_number_array_;
     }
     assert(sequence_number_array_->length() >= value_array_length);
@@ -162,7 +163,7 @@ Result<std::shared_ptr<arrow::Array>> PostponeBucketWriter::PrepareRowKindArray(
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
             std::shared_ptr<arrow::Array> scalar_array,
             arrow::MakeArrayFromScalar(*row_kind_scalar, value_array_length,
-                                       pool_->AsArrowMemoryPool()));
+                                       AsArrowMemoryPool(*pool_)));
         auto typed_row_kind_array =
             arrow::internal::checked_pointer_cast<arrow::NumericArray<arrow::Int8Type>>(
                 scalar_array);

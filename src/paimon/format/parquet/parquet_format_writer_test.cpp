@@ -120,11 +120,11 @@ class ParquetFormatWriterTest : public ::testing::Test {
     }
 
     void CheckResult(const std::string& file_path, int32_t row_count) const {
-        auto file = arrow::io::ReadableFile::Open(file_path, pool_->AsArrowMemoryPool());
+        auto file = arrow::io::ReadableFile::Open(file_path, AsArrowMemoryPool(*pool_));
         ASSERT_TRUE(file.ok());
         std::unique_ptr<::parquet::arrow::FileReader> reader;
         auto status =
-            ::parquet::arrow::OpenFile(file.ValueOrDie(), pool_->AsArrowMemoryPool(), &reader);
+            ::parquet::arrow::OpenFile(file.ValueOrDie(), AsArrowMemoryPool(*pool_), &reader);
         ASSERT_TRUE(status.ok()) << status.ToString();
         const ::parquet::FileMetaData* metadata = reader->parquet_reader()->metadata().get();
         const ::parquet::SchemaDescriptor* schema = metadata->schema();

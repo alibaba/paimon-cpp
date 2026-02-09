@@ -22,6 +22,7 @@
 #include "arrow/c/bridge.h"
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -68,9 +69,8 @@ Result<std::unique_ptr<AvroFileBatchReader>> AvroFileBatchReader::Create(
     const auto& avro_file_schema = reader->dataSchema();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::arrow::DataType> file_data_type,
                            AvroSchemaConverter::AvroSchemaToArrowDataType(avro_file_schema));
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::unique_ptr<arrow::ArrayBuilder> array_builder,
-        arrow::MakeBuilder(file_data_type, pool->AsArrowMemoryPool()));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
+                                      arrow::MakeBuilder(file_data_type, AsArrowMemoryPool(*pool)));
     return std::unique_ptr<AvroFileBatchReader>(
         new AvroFileBatchReader(input_stream, file_data_type, std::move(reader),
                                 std::move(array_builder), batch_size, pool));
@@ -149,7 +149,7 @@ Status AvroFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
     array_builder_->Reset();
     std::shared_ptr<::arrow::DataType> read_data_type = arrow::struct_(arrow_read_schema->fields());
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        array_builder_, arrow::MakeBuilder(read_data_type, pool_->AsArrowMemoryPool()));
+        array_builder_, arrow::MakeBuilder(read_data_type, AsArrowMemoryPool(*pool_)));
     return Status::OK();
 }
 

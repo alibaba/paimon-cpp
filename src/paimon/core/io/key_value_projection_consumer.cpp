@@ -26,6 +26,7 @@
 #include "arrow/c/abi.h"
 #include "arrow/util/checked_cast.h"
 #include "paimon/common/data/internal_row.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/key_value.h"
 #include "paimon/status.h"
@@ -42,7 +43,7 @@ Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::
     }
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(
-        pool->AsArrowMemoryPool(), std::make_shared<arrow::StructType>(target_schema->fields()),
+        AsArrowMemoryPool(*pool), std::make_shared<arrow::StructType>(target_schema->fields()),
         &array_builder));
 
     auto struct_builder =

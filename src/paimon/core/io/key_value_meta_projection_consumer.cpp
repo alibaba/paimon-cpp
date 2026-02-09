@@ -30,6 +30,7 @@
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/status.h"
@@ -42,7 +43,7 @@ Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionCo
     // target fields of output array: special fields + value fields
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(
-        pool->AsArrowMemoryPool(), arrow::struct_(target_schema->fields()), &array_builder));
+        AsArrowMemoryPool(*pool), arrow::struct_(target_schema->fields()), &array_builder));
 
     auto struct_builder =
         arrow::internal::checked_pointer_cast<arrow::StructBuilder>(std::move(array_builder));

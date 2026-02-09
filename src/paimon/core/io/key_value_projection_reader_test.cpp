@@ -33,6 +33,7 @@
 #include "arrow/util/checked_cast.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/io/async_key_value_projection_reader.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
@@ -166,7 +167,7 @@ TEST_P(KeyValueProjectionReaderTest, TestBulkData) {
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
 
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
-    ASSERT_TRUE(arrow::MakeBuilder(pool_->AsArrowMemoryPool(), src_type, &array_builder).ok());
+    ASSERT_TRUE(arrow::MakeBuilder(AsArrowMemoryPool(*pool_), src_type, &array_builder).ok());
 
     auto struct_builder =
         arrow::internal::checked_pointer_cast<arrow::StructBuilder>(std::move(array_builder));

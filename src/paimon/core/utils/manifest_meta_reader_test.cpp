@@ -23,6 +23,7 @@
 #include "arrow/ipc/json_simple.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -48,7 +49,7 @@ TEST(ManifestMetaReaderTest, TestNoNeedCompleteNonExistField) {
                          .ValueOrDie();
     arrow::FieldVector target_fields = fields;
     auto target_arrow_type = arrow::struct_(target_fields);
-    auto arrow_pool = GetDefaultPool()->AsArrowMemoryPool();
+    auto arrow_pool = AsArrowMemoryPool(*GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(auto ret, ManifestMetaReader::AlignArrayWithSchema(
                                        src_array, target_arrow_type, arrow_pool));
     ASSERT_TRUE(src_array->Equals(ret)) << ret->ToString();
@@ -80,7 +81,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldSimple) {
                                   field("sub3", arrow::boolean()), field("sub4", arrow::int8())})),
     };
     auto target_arrow_type = arrow::struct_(target_fields);
-    auto arrow_pool = GetDefaultPool()->AsArrowMemoryPool();
+    auto arrow_pool = AsArrowMemoryPool(*GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(auto ret, ManifestMetaReader::AlignArrayWithSchema(
                                        src_array, target_arrow_type, arrow_pool));
 
@@ -121,7 +122,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldNested) {
                                                       field("c", arrow::int64())}),
                                       arrow::boolean()))};
     auto target_arrow_type = arrow::struct_(target_fields);
-    auto arrow_pool = GetDefaultPool()->AsArrowMemoryPool();
+    auto arrow_pool = AsArrowMemoryPool(*GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(auto ret, ManifestMetaReader::AlignArrayWithSchema(
                                        src_array, target_arrow_type, arrow_pool));
 
@@ -169,7 +170,7 @@ TEST(ManifestMetaReaderTest, TestCastInt32Type) {
     auto target_arrow_type = arrow::struct_(target_fields);
     auto target_array =
         arrow::ipc::internal::json::ArrayFromJSON(target_arrow_type, array_json).ValueOrDie();
-    auto arrow_pool = GetDefaultPool()->AsArrowMemoryPool();
+    auto arrow_pool = AsArrowMemoryPool(*GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(auto result_array, ManifestMetaReader::AlignArrayWithSchema(
                                                 src_array, target_arrow_type, arrow_pool));
     ASSERT_TRUE(target_array->Equals(result_array)) << result_array->ToString();

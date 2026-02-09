@@ -29,6 +29,7 @@
 #include "paimon/common/executor/future.h"
 #include "paimon/common/io/offset_input_stream.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/delta_varint_compressor.h"
 #include "paimon/common/utils/stream_utils.h"
@@ -157,7 +158,7 @@ Status BlobFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
 
 Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobOffsets(
     int32_t rows_to_read) const {
-    arrow::TypedBufferBuilder<int64_t> buffer_builder(pool_->AsArrowMemoryPool());
+    arrow::TypedBufferBuilder<int64_t> buffer_builder(AsArrowMemoryPool(*pool_));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(buffer_builder.Reserve(rows_to_read + 1));
     PAIMON_RETURN_NOT_OK_FROM_ARROW(buffer_builder.Append(0));
     int64_t data_length = 0;
@@ -180,7 +181,7 @@ Result<std::shared_ptr<arrow::Buffer>> BlobFileBatchReader::NextBlobContents(
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::shared_ptr<arrow::Buffer> data_buffer,
-        arrow::AllocateBuffer(total_length, pool_->AsArrowMemoryPool()));
+        arrow::AllocateBuffer(total_length, AsArrowMemoryPool(*pool_)));
     uint8_t* buffer = data_buffer->mutable_data();
     for (int32_t k = 0; k < rows_to_read; ++k) {
         const size_t i = current_pos_ + k;
@@ -259,7 +260,7 @@ Result<std::shared_ptr<arrow::Array>> BlobFileBatchReader::ToArrowArray(
         return Status::Invalid("target type is nullptr, call SetReadSchema first");
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::unique_ptr<arrow::ArrayBuilder> array_builder,
-                                      arrow::MakeBuilder(target_type_, pool_->AsArrowMemoryPool()));
+                                      arrow::MakeBuilder(target_type_, AsArrowMemoryPool(*pool_)));
     auto builder = dynamic_cast<arrow::StructBuilder*>(array_builder.get());
     if (builder == nullptr) {
         return Status::Invalid("cast to struct builder failed");

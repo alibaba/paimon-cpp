@@ -97,15 +97,10 @@ uint64_t MemoryPoolImpl::CurrentUsage() const {
 
 MemoryPool::~MemoryPool() = default;
 
-void* MemoryPool::GetAdaptor(const std::string& identifier) {
+void* MemoryPool::GetAdaptor(const std::string& identifier, const AdaptorCreator& creator) {
     std::call_once(flag_, [this]() { holder_ = std::make_unique<MemoryPoolAdaptorHolder>(); });
-    MemoryPoolAdaptorSlot& slot = holder_->GetOrCreateSlot(identifier);
-    assert(slot.Identifier() == identifier);
+    MemoryPoolAdaptorSlot& slot = holder_->GetOrCreateSlot(identifier, creator);
     return slot.GetOrCreateAdaptor(*this);
-}
-
-arrow::MemoryPool* MemoryPool::AsArrowMemoryPool() {
-    return AsSpecifiedMemoryPool<arrow::MemoryPool>();
 }
 
 PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool() {

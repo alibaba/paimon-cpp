@@ -18,38 +18,36 @@
 
 #include <atomic>
 #include <unordered_map>
+#include <utility>
 
-#include "paimon/memory/memory_pool_adaptor_factor.h"
+#include "paimon/memory/memory_pool.h"
 
 namespace paimon {
 class MemoryPoolAdaptorSlot {
  public:
-    explicit MemoryPoolAdaptorSlot(const std::string& identifier) : identifier_(identifier) {}
-
-    std::string& Identifier() {
-        return identifier_;
-    }
+    explicit MemoryPoolAdaptorSlot(MemoryPool::AdaptorCreator creator)
+        : creator_(std::move(creator)) {}
 
     void* GetOrCreateAdaptor(MemoryPool& pool) {
-        std::call_once(once_flag_,
-                       [this, &pool] { ptr_ = MemoryPoolAdaptorFactory::Get(identifier_, pool); });
+        std::call_once(once_flag_, [this, &pool] { ptr_ = creator_(pool); });
         return ptr_.get();
     }
 
  private:
-    std::string identifier_;
-    MemoryPoolAdaptorPtr ptr_{nullptr, [](void*) {}};
+    MemoryPool::AdaptorCreator creator_;
+    MemoryPool::AdaptorPtr ptr_{nullptr, [](void*) {}};
     std::once_flag once_flag_;
 };
 
 class MemoryPoolAdaptorHolder {
  public:
-    MemoryPoolAdaptorSlot& GetOrCreateSlot(const std::string& identifier) {
+    MemoryPoolAdaptorSlot& GetOrCreateSlot(const std::string& identifier,
+                                           const MemoryPool::AdaptorCreator& creator) {
         auto snapshot = std::atomic_load(&slot_map_);
         if (auto it = snapshot->find(identifier); it != snapshot->end()) {
             return *it->second;
         }
-        auto new_slot = std::make_shared<MemoryPoolAdaptorSlot>(identifier);
+        auto new_slot = std::make_shared<MemoryPoolAdaptorSlot>(creator);
         while (true) {
             auto new_snapshot = std::make_shared<SlotMap>(*snapshot);
             auto [slot, inserted] = new_snapshot->emplace(identifier, new_slot);

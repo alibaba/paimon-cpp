@@ -28,8 +28,10 @@
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/status.h"
+
 namespace paimon {
 CompleteIndexScoreBatchReader::CompleteIndexScoreBatchReader(
     std::unique_ptr<BatchReader>&& reader, const std::vector<float>& scores,
@@ -40,7 +42,7 @@ Result<BatchReader::ReadBatch> CompleteIndexScoreBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
     return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
-                                               memory_pool_->AsArrowMemoryPool());
+                                               AsArrowMemoryPool(*memory_pool_));
 }
 
 void CompleteIndexScoreBatchReader::UpdateScoreFieldIndex(const arrow::StructType* struct_type) {
@@ -77,7 +79,7 @@ Result<BatchReader::ReadBatchWithBitmap> CompleteIndexScoreBatchReader::NextBatc
 
     // prepare index score array
     std::unique_ptr<arrow::ArrayBuilder> index_score_builder;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(memory_pool_->AsArrowMemoryPool(),
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(AsArrowMemoryPool(*memory_pool_),
                                                        SpecialFields::IndexScore().Type(),
                                                        &index_score_builder));
     auto typed_builder = dynamic_cast<arrow::FloatBuilder*>(index_score_builder.get());

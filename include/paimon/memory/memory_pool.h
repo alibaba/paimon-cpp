@@ -26,12 +26,7 @@
 #include <utility>
 
 #include "paimon/macros.h"
-#include "paimon/memory/memory_pool_adaptor_traits.h"
 #include "paimon/visibility.h"
-
-namespace arrow {
-class MemoryPool;
-}
 
 namespace paimon {
 
@@ -117,34 +112,19 @@ class PAIMON_EXPORT MemoryPool {
     /// @return Peak memory usage in bytes.
     virtual uint64_t MaxMemoryUsage() const = 0;
 
-    /// Adapts this memory pool to the Arrow memory pool interface.
+    /// Adapts this memory pool to a specified memory pool adaptor type.
     ///
-    /// Returns a pointer to an Arrow memory pool adapter that wraps this memory pool.
-    /// The returned pointer is lazily created on first call and its lifetime is managed
-    /// internally by this memory pool instance.
+    /// Returns a pointer to the memory pool adaptor of the specified type. The adaptor
+    /// is lazily created on first access and cached by this memory pool instance for
+    /// subsequent calls.
     /// This method is thread-safe.
     ///
-    /// @return Pointer to the Arrow memory pool adapter.
-    /// @note Subclasses can override this method to provide custom Arrow integration.
-    virtual arrow::MemoryPool* AsArrowMemoryPool();
-
-    /// Adapts this memory pool to a specified memory pool type.
-    ///
-    /// Returns a pointer to a memory pool adapter of the specified type if it exists,
-    /// otherwise returns nullptr. The returned pointer is lazily created on first call
-    /// and its lifetime is managed internally by this memory pool instance.
-    /// This method is thread-safe.
-    ///
-    /// @tparam MemoryPoolAdaptor Type of memory pool adapter to retrieve.
-    /// @return Pointer to the requested memory pool adapter, or nullptr if not found.
-    /// @note To use this method, the specified MemoryPoolAdaptor must be registered
-    ///       by creating a subclass of MemoryPoolAdaptorFactory. Additionally, a
-    ///       MemoryPoolAdaptorTraits specialization must be provided that defines
-    ///       an identifier consistent with the one used in the MemoryPoolAdaptorFactory
-    ///       subclass.
+    /// @tparam MemoryPoolAdaptor Type of memory pool adaptor to retrieve. Must inherit
+    ///                           from paimon::MemoryPoolAdaptor.
+    /// @return Pointer to the requested memory pool adaptor.
     template <typename MemoryPoolAdaptor>
     MemoryPoolAdaptor* AsSpecifiedMemoryPool() {
-        void* adaptor = GetAdaptor(MemoryPoolAdaptorTraits<MemoryPoolAdaptor>::identifier);
+        void* adaptor = GetAdaptor(MemoryPoolAdaptor::Identifier(), MemoryPoolAdaptor::Create);
         return static_cast<MemoryPoolAdaptor*>(adaptor);
     }
 
@@ -247,8 +227,11 @@ class PAIMON_EXPORT MemoryPool {
                                                       AllocatorDelete<T>(*this, sizeof(T)));
     }
 
+    using AdaptorPtr = std::unique_ptr<void, void (*)(void*)>;
+    using AdaptorCreator = std::function<AdaptorPtr(MemoryPool&)>;
+
  private:
-    void* GetAdaptor(const std::string& identifier);
+    void* GetAdaptor(const std::string& identifier, const AdaptorCreator& creator);
 
     std::unique_ptr<MemoryPoolAdaptorHolder> holder_;
     std::once_flag flag_;

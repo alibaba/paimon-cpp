@@ -22,6 +22,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/record_batch.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_output_stream_impl.h"
@@ -52,7 +53,7 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
         arrow_properties_builder.enable_deprecated_int96_timestamps()->build();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::unique_ptr<::parquet::arrow::FileWriter> file_writer,
-        ::parquet::arrow::FileWriter::Open(*schema, pool->AsArrowMemoryPool(), out,
+        ::parquet::arrow::FileWriter::Open(*schema, AsArrowMemoryPool(*pool), out,
                                            writer_properties, arrow_writer_properties));
     return std::unique_ptr<ParquetFormatWriter>(
         new ParquetFormatWriter(std::move(file_writer), out, schema, pool));

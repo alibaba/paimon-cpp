@@ -20,16 +20,17 @@
 
 #include "orc/MemoryPool.hh"
 #include "paimon/memory/memory_pool.h"
-
-template <>
-struct paimon::MemoryPoolAdaptorTraits<::orc::MemoryPool> {
-    static constexpr auto identifier = "orc_memory_pool_adaptor";
-};
+#include "paimon/memory/memory_pool_adaptor.h"
 
 namespace paimon::orc {
 
-class OrcMemoryPoolAdaptor : public ::orc::MemoryPool {
+class OrcMemoryPoolAdaptor : public ::orc::MemoryPool,
+                             public MemoryPoolAdaptor<OrcMemoryPoolAdaptor> {
  public:
+    static std::string Identifier() {
+        return "OrcMemoryPoolAdaptor";
+    }
+
     using SizeType = uint64_t;
     explicit OrcMemoryPoolAdaptor(paimon::MemoryPool& pool) : pool_(pool) {}
     char* malloc(SizeType size) override {
@@ -63,7 +64,7 @@ class OrcMemoryPoolAdaptor : public ::orc::MemoryPool {
 };
 
 inline ::orc::MemoryPool* AsOrcMemoryPool(paimon::MemoryPool& pool) {
-    return pool.AsSpecifiedMemoryPool<::orc::MemoryPool>();
+    return pool.AsSpecifiedMemoryPool<OrcMemoryPoolAdaptor>();
 }
 
 }  // namespace paimon::orc

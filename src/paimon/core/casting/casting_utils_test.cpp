@@ -20,12 +20,13 @@
 
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 class CastingUtilsTest : public ::testing::Test {
-    arrow::MemoryPool* arrow_pool_ = GetDefaultPool()->AsArrowMemoryPool();
+    arrow::MemoryPool* arrow_pool_ = AsArrowMemoryPool(*GetDefaultPool());
 };
 
 TEST_F(CastingUtilsTest, TestDictionaryToString) {
@@ -41,7 +42,7 @@ TEST_F(CastingUtilsTest, TestDictionaryToString) {
                             arrow::utf8(), R"(["bar", "bazr", "foo", "bazr", "foo"])")
                             .ValueOrDie();
 
-    auto pool = GetDefaultPool()->AsArrowMemoryPool();
+    auto pool = AsArrowMemoryPool(*GetDefaultPool());
     arrow::compute::CastOptions options = arrow::compute::CastOptions::Safe();
     ASSERT_OK_AND_ASSIGN(
         auto result_array,

@@ -24,7 +24,7 @@ namespace paimon::test {
 TEST(MemUtilsTest, TestSimple) {
     const int64_t alignment = 64;
     auto pool = GetMemoryPool();
-    auto arrow_pool = pool->AsArrowMemoryPool();
+    auto arrow_pool = AsArrowMemoryPool(*pool);
     ASSERT_EQ("Paimon Pool", arrow_pool->backend_name());
     ASSERT_EQ(0, arrow_pool->total_bytes_allocated());
     ASSERT_EQ(0, arrow_pool->num_allocations());

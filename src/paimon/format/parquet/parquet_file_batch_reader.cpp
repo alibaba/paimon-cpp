@@ -35,6 +35,7 @@
 #include "arrow/util/range.h"
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
@@ -80,7 +81,7 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
 
     std::unique_ptr<::parquet::arrow::FileReader> file_reader;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool->AsArrowMemoryPool())
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(AsArrowMemoryPool(*pool))
                                         ->properties(arrow_reader_properties)
                                         ->Build(&file_reader));
 

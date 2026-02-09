@@ -30,6 +30,7 @@
 #include "arrow/array/builder_dict.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
@@ -203,7 +204,7 @@ class CastExecutorTest : public ::testing::Test {
     static constexpr double MIN_DOUBLE = std::numeric_limits<double>::lowest();
 
  private:
-    arrow::MemoryPool* arrow_pool_ = GetDefaultPool()->AsArrowMemoryPool();
+    arrow::MemoryPool* arrow_pool_ = AsArrowMemoryPool(*GetDefaultPool());
 };
 
 TEST_F(CastExecutorTest, TestNumericPrimitiveCastExecutorCastLiteral) {

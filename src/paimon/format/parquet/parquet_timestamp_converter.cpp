@@ -22,6 +22,7 @@
 
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/casting/timestamp_to_timestamp_cast_executor.h"
@@ -211,7 +212,7 @@ Result<std::shared_ptr<arrow::Array>> ParquetTimestampConverter::CastArrayForTim
                 auto cast_executor = std::make_shared<TimestampToTimestampCastExecutor>();
                 PAIMON_ASSIGN_OR_RAISE(
                     std::shared_ptr<arrow::Array> target_array,
-                    cast_executor->Cast(array, target_data_type, memory_pool->AsArrowMemoryPool()));
+                    cast_executor->Cast(array, target_data_type, AsArrowMemoryPool(*memory_pool)));
                 return target_array;
             }
             if (src_type->timezone() != ts_target_type->timezone()) {

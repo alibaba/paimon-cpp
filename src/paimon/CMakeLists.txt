@@ -67,7 +67,6 @@ set(PAIMON_COMMON_SRCS
     common/logging/logging.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
-    common/memory/memory_pool_adaptor_factor.cpp
     common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
     common/memory/memory_slice.cpp
@@ -114,7 +113,6 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
-    common/utils/arrow/arrow_memory_pool_adaptor_factor.cpp
     common/utils/binary_row_partition_computer.cpp
     common/utils/bit_set.cpp
     common/utils/bloom_filter.cpp

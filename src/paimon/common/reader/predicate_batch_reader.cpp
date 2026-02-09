@@ -30,6 +30,7 @@
 #include "fmt/format.h"
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/common/reader/reader_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/status.h"
@@ -61,7 +62,7 @@ Result<BatchReader::ReadBatch> PredicateBatchReader::NextBatch() {
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            NextBatchWithBitmap());
     return ReaderUtils::ApplyBitmapToReadBatch(std::move(batch_with_bitmap),
-                                               memory_pool_->AsArrowMemoryPool());
+                                               AsArrowMemoryPool(*memory_pool_));
 }
 
 Result<BatchReader::ReadBatchWithBitmap> PredicateBatchReader::NextBatchWithBitmap() {

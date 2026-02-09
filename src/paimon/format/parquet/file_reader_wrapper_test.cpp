@@ -128,7 +128,7 @@ class FileReaderWrapperTest : public ::testing::Test {
         arrow_reader_props.set_use_threads(true);
         arrow_reader_props.set_cache_options(arrow::io::CacheOptions::Defaults());
         std::unique_ptr<::parquet::arrow::FileReader> file_reader;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool_->AsArrowMemoryPool())
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(AsArrowMemoryPool(*pool_))
                                             ->properties(arrow_reader_props)
                                             ->Build(&file_reader));
         return FileReaderWrapper::Create(std::move(file_reader));
