@@ -373,3 +373,33 @@ Home page: https://roaringbitmap.org/
 License: https://www.apache.org/licenses/LICENSE-2.0
 
 --------------------------------------------------------------------------------
+
+This product includes code from boost.
+
+* Boost source code in third_party/boost/ directory
+
+Copyright: (c) 2003-2023 The Boost Authors
+Home page: https://www.boost.org/
+License: https://www.boost.org/LICENSE_1_0.txt
+   
+--------------------------------------------------------------------------------
+
+This product includes code from luceneplusplus LucenePlusPlus.
+
+* LucenePlusPlus utility in src/paimon/global_index/lucene/ directory
+
+Copyright: 2009-2014 Alan Wright.
+Home page: https://github.com/luceneplusplus/
+License: https://www.apache.org/licenses/LICENSE-2.0
+
+--------------------------------------------------------------------------------
+
+This product includes code from yanyiwu cppjieba.
+
+* cppjieba utility in src/paimon/global_index/lucene/ directory
+
+Copyright: 2013
+Home page: https://github.com/yanyiwu/
+License: https://opensource.org/licenses/MIT
+                
+--------------------------------------------------------------------------------
