@@ -107,4 +107,7 @@ DEPENDENCIES=(
   "PAIMON_RAPIDJSON_URL ${PAIMON_RAPIDJSON_PKG_NAME} ${THIRDPARTY_MIRROR_URL}https://github.com/miloyip/rapidjson/archive/${PAIMON_RAPIDJSON_BUILD_VERSION}.tar.gz"
   "PAIMON_JINDOSDK_C_URL ${PAIMON_JINDOSDK_C_PKG_NAME} https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux.tar.gz"
   "PAIMON_LUCENE_URL ${PAIMON_LUCENE_PKG_NAME} ${THIRDPARTY_MIRROR_URL}https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/${PAIMON_LUCENE_PKG_NAME}"
+  "PAIMON_LIMONP_URL ${PAIMON_LIMONP_PKG_NAME} ${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/limonp/archive/refs/tags/${PAIMON_LIMONP_PKG_NAME}"
+  "PAIMON_JIEBA_URL ${PAIMON_JIEBA_PKG_NAME} ${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/cppjieba/archive/refs/tags/${PAIMON_JIEBA_PKG_NAME}"
+  "PAIMON_BOOST_URL ${PAIMON_BOOST_PKG_NAME} ${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
 )

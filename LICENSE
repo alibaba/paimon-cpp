@@ -378,10 +378,10 @@ This product includes code from boost.
 
 * Boost source code in third_party/boost/ directory
 
-Copyright: (c) 2003-2023 The Boost Authors
+Copyright: 2003-2023 The Boost Authors
 Home page: https://www.boost.org/
 License: https://www.boost.org/LICENSE_1_0.txt
-   
+
 --------------------------------------------------------------------------------
 
 This product includes code from luceneplusplus LucenePlusPlus.
@@ -401,5 +401,5 @@ This product includes code from yanyiwu cppjieba.
 Copyright: 2013
 Home page: https://github.com/yanyiwu/
 License: https://opensource.org/licenses/MIT
-                
+
 --------------------------------------------------------------------------------

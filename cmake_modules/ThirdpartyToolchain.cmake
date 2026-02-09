@@ -374,8 +374,7 @@ macro(build_jieba)
     externalproject_add(limonp_ep
                         URL ${LIMONP_SOURCE_URL}
                         URL_HASH "SHA256=${PAIMON_LIMONP_BUILD_SHA256_CHECKSUM}"
-                        INSTALL_COMMAND ""
-                        )
+                        INSTALL_COMMAND "")
 
     message(STATUS "Building jieba from source")
     set(JIEBA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/jieba_ep-prefix")
