@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <new>
 #include <utility>
 
@@ -30,6 +31,7 @@
 namespace paimon {
 
 class MemoryPool;
+class MemoryPoolAdaptorHolder;
 
 /// Create a default implementation of memory pool.
 /// @return Unique pointer to a newly created `MemoryPool` instance.
@@ -42,7 +44,7 @@ PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool();
 /// Abstract base class for memory pool implementations that provides controlled memory management.
 class PAIMON_EXPORT MemoryPool {
  public:
-    virtual ~MemoryPool() = default;
+    virtual ~MemoryPool();
     MemoryPool& operator=(const MemoryPool& other) = delete;
     MemoryPool& operator=(MemoryPool& other) = delete;
     MemoryPool& operator=(MemoryPool&& other) = delete;
@@ -110,6 +112,22 @@ class PAIMON_EXPORT MemoryPool {
     /// @return Peak memory usage in bytes.
     virtual uint64_t MaxMemoryUsage() const = 0;
 
+    /// Adapts this memory pool to a specified memory pool adaptor type.
+    ///
+    /// Returns a pointer to the memory pool adaptor of the specified type. The adaptor
+    /// is lazily created on first access and cached by this memory pool instance for
+    /// subsequent calls.
+    /// This method is thread-safe.
+    ///
+    /// @tparam MemoryPoolAdaptor Type of memory pool adaptor to retrieve. Must inherit
+    ///                           from paimon::MemoryPoolAdaptor.
+    /// @return Pointer to the requested memory pool adaptor.
+    template <typename MemoryPoolAdaptor>
+    MemoryPoolAdaptor* AsSpecifiedMemoryPool() {
+        void* adaptor = GetAdaptor(MemoryPoolAdaptor::Identifier(), MemoryPoolAdaptor::Create);
+        return static_cast<MemoryPoolAdaptor*>(adaptor);
+    }
+
     /// Custom deleter for use with std::unique_ptr that integrates with memory pools.
     ///
     /// AllocatorDelete provides automatic memory deallocation through the memory pool
@@ -141,7 +159,7 @@ class PAIMON_EXPORT MemoryPool {
             return *this;
         }
 
-        AllocatorDelete& operator=(AllocatorDelete&& other) {
+        AllocatorDelete& operator=(AllocatorDelete&& other) noexcept {
             pool = other.GetPool();
             size = other.GetSize();
             return *this;
@@ -208,6 +226,15 @@ class PAIMON_EXPORT MemoryPool {
         return std::unique_ptr<T, AllocatorDelete<T>>(reinterpret_cast<T*>(p),
                                                       AllocatorDelete<T>(*this, sizeof(T)));
     }
+
+    using AdaptorPtr = std::unique_ptr<void, void (*)(void*)>;
+    using AdaptorCreator = std::function<AdaptorPtr(MemoryPool&)>;
+
+ private:
+    void* GetAdaptor(const std::string& identifier, const AdaptorCreator& creator);
+
+    std::unique_ptr<MemoryPoolAdaptorHolder> holder_;
+    std::once_flag flag_;
 };
 
 template <class T>

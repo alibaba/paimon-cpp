@@ -22,9 +22,11 @@
 #include "arrow/c/bridge.h"
 #include "arrow/record_batch.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_output_stream_impl.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/metrics.h"
 #include "parquet/arrow/writer.h"
 #include "parquet/properties.h"
@@ -44,15 +46,15 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
     const std::shared_ptr<OutputStream>& output_stream,
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<::parquet::WriterProperties>& writer_properties,
-    const std::shared_ptr<arrow::MemoryPool>& pool) {
+    const std::shared_ptr<MemoryPool>& pool) {
     auto out = std::make_shared<ParquetOutputStreamImpl>(output_stream);
     ::parquet::ArrowWriterProperties::Builder arrow_properties_builder;
     auto arrow_writer_properties =
         arrow_properties_builder.enable_deprecated_int96_timestamps()->build();
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
         std::unique_ptr<::parquet::arrow::FileWriter> file_writer,
-        ::parquet::arrow::FileWriter::Open(*schema, pool.get(), out, writer_properties,
-                                           arrow_writer_properties));
+        ::parquet::arrow::FileWriter::Open(*schema, AsArrowMemoryPool(*pool), out,
+                                           writer_properties, arrow_writer_properties));
     return std::unique_ptr<ParquetFormatWriter>(
         new ParquetFormatWriter(std::move(file_writer), out, schema, pool));
 }
@@ -92,7 +94,7 @@ Result<uint64_t> ParquetFormatWriter::GetEstimateLength() const {
 ParquetFormatWriter::ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
                                          const std::shared_ptr<ParquetOutputStreamImpl>& out,
                                          const std::shared_ptr<arrow::Schema>& schema,
-                                         const std::shared_ptr<arrow::MemoryPool>& pool)
+                                         const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       out_(out),
       writer_(std::move(writer)),

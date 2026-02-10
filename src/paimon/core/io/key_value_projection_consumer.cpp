@@ -26,7 +26,7 @@
 #include "arrow/c/abi.h"
 #include "arrow/util/checked_cast.h"
 #include "paimon/common/data/internal_row.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/key_value.h"
 #include "paimon/status.h"
@@ -41,10 +41,9 @@ Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::
         return Status::Invalid(
             "target_schema and target_to_src_mapping mismatch in KeyValueProjectionConsumer");
     }
-    auto arrow_pool = GetArrowPool(pool);
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::MakeBuilder(
-        arrow_pool.get(), std::make_shared<arrow::StructType>(target_schema->fields()),
+        AsArrowMemoryPool(*pool), std::make_shared<arrow::StructType>(target_schema->fields()),
         &array_builder));
 
     auto struct_builder =
@@ -60,9 +59,9 @@ Result<std::unique_ptr<KeyValueProjectionConsumer>> KeyValueProjectionConsumer::
             AppendField(/*use_view=*/true, struct_builder->field_builder(i), &reserve_count));
         appenders.emplace_back(func);
     }
-    return std::unique_ptr<KeyValueProjectionConsumer>(new KeyValueProjectionConsumer(
-        reserve_count, std::move(appenders), std::move(struct_builder), std::move(arrow_pool),
-        target_to_src_mapping));
+    return std::unique_ptr<KeyValueProjectionConsumer>(
+        new KeyValueProjectionConsumer(reserve_count, std::move(appenders),
+                                       std::move(struct_builder), pool, target_to_src_mapping));
 }
 
 Result<BatchReader::ReadBatch> KeyValueProjectionConsumer::NextBatch(

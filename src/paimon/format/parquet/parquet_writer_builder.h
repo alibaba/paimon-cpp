@@ -26,7 +26,6 @@
 #include "arrow/type.h"
 #include "arrow/util/compression.h"
 #include "arrow/util/type_fwd.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/format_writer.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/fs/file_system.h"
@@ -51,14 +50,14 @@ class ParquetWriterBuilder : public WriterBuilder {
     ParquetWriterBuilder(const std::shared_ptr<arrow::Schema>& schema, int32_t batch_size,
                          const std::map<std::string, std::string>& options)
         : batch_size_(batch_size),
-          pool_(GetArrowPool(GetDefaultPool())),
+          memory_pool_(GetDefaultPool()),
           schema_(schema),
           options_(options) {
         assert(schema);
     }
 
     WriterBuilder* WithMemoryPool(const std::shared_ptr<MemoryPool>& pool) override {
-        pool_ = GetArrowPool(pool);
+        memory_pool_ = pool;
         return this;
     }
 
@@ -75,7 +74,7 @@ class ParquetWriterBuilder : public WriterBuilder {
         const std::string& compression);
 
     int32_t batch_size_ = -1;
-    std::shared_ptr<arrow::MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<arrow::Schema> schema_;
     std::map<std::string, std::string> options_;
 };

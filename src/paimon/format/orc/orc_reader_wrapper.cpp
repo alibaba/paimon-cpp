@@ -23,6 +23,7 @@
 
 #include "fmt/format.h"
 #include "orc/OrcFile.hh"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 
@@ -76,9 +77,9 @@ Result<BatchReader::ReadBatch> OrcReaderWrapper::Next() {
         }
         ScopeGuard guard([this]() { has_error_ = true; });
         assert(orc_batch->numElements > 0);
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<arrow::Array> array,
-            OrcAdapter::AppendBatch(target_type_, orc_batch.get(), arrow_pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Array> array,
+                               OrcAdapter::AppendBatch(target_type_, orc_batch.get(),
+                                                       AsArrowMemoryPool(*memory_pool_)));
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, c_array.get(), c_schema.get()));
         next_row_ = GetRowNumber() + orc_batch->numElements;
         guard.Release();

@@ -22,7 +22,6 @@
 #include "arrow/io/type_fwd.h"
 #include "arrow/util/future.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/format/parquet/parquet_output_stream_impl.h"
 #include "paimon/fs/file_system.h"
@@ -63,8 +62,7 @@ TEST(ParquetInputOutputStreamTest, TestInOutStream) {
     // in stream
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, file_system->Open(file_name));
     ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-    auto in_stream =
-        std::make_unique<ParquetInputStreamImpl>(in, GetArrowPool(GetDefaultPool()), length);
+    auto in_stream = std::make_unique<ParquetInputStreamImpl>(in, GetDefaultPool(), length);
     int64_t file_length = in_stream->GetSize().ValueOr(-1);
     ASSERT_EQ(file_length, data.length());
     int64_t in_tell1 = in_stream->Tell().ValueOr(-1);

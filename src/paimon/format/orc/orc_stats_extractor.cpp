@@ -35,7 +35,7 @@
 #include "paimon/format/column_stats.h"
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
-#include "paimon/format/orc/orc_memory_pool.h"
+#include "paimon/format/orc/orc_memory_pool_adaptor.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/status.h"
@@ -58,8 +58,7 @@ OrcStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& file_s
                            OrcInputStreamImpl::Create(input_stream, DEFAULT_NATURAL_READ_SIZE));
     try {
         ::orc::ReaderOptions reader_options;
-        auto orc_pool = std::make_shared<OrcMemoryPool>(pool);
-        reader_options.setMemoryPool(*orc_pool);
+        reader_options.setMemoryPool(*AsOrcMemoryPool(*pool));
         std::unique_ptr<::orc::Reader> reader =
             ::orc::createReader(std::move(orc_input_stream), reader_options);
         assert(reader);

@@ -25,7 +25,6 @@
 #include "arrow/ipc/api.h"
 #include "arrow/util/range.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -109,7 +108,7 @@ class DataEvolutionFileReaderTest : public ::testing::Test,
         readers.push_back(std::move(file_batch_reader));
         DataEvolutionFileReader fake_data_evolution_reader(
             std::move(readers), /*read_schema=*/arrow::schema({}), read_batch_size,
-            /*reader_offsets=*/{}, /*field_offsets=*/{}, GetArrowPool(pool_));
+            /*reader_offsets=*/{}, /*field_offsets=*/{}, pool_);
         arrow::ArrayVector result_array_vec;
         while (true) {
             ASSERT_OK_AND_ASSIGN(auto result_array,

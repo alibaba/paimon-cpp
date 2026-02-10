@@ -49,14 +49,12 @@ class OrcReaderWrapper {
     static Result<std::unique_ptr<OrcReaderWrapper>> Create(
         std::unique_ptr<::orc::Reader> reader, const std::string& file_name, int32_t batch_size,
         uint64_t natural_read_size, const std::map<std::string, std::string>& options,
-        const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
-        const std::shared_ptr<::orc::MemoryPool>& orc_pool) {
+        const std::shared_ptr<MemoryPool>& memory_pool) {
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<ReadRangeGenerator> range_generator,
             ReadRangeGenerator::Create(reader.get(), natural_read_size, options));
-        return std::unique_ptr<OrcReaderWrapper>(
-            new OrcReaderWrapper(std::move(reader), std::move(range_generator), file_name,
-                                 batch_size, arrow_pool, orc_pool));
+        return std::unique_ptr<OrcReaderWrapper>(new OrcReaderWrapper(
+            std::move(reader), std::move(range_generator), file_name, batch_size, memory_pool));
     }
 
     Status SeekToRow(uint64_t row_number);
@@ -115,14 +113,12 @@ class OrcReaderWrapper {
     OrcReaderWrapper(std::unique_ptr<::orc::Reader> reader,
                      std::unique_ptr<ReadRangeGenerator> range_generator,
                      const std::string& file_name, int32_t batch_size,
-                     const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
-                     const std::shared_ptr<::orc::MemoryPool>& orc_pool)
+                     const std::shared_ptr<MemoryPool>& memory_pool)
         : reader_(std::move(reader)),
           range_generator_(std::move(range_generator)),
           file_name_(file_name),
           batch_size_(batch_size),
-          arrow_pool_(arrow_pool),
-          orc_pool_(orc_pool) {}
+          memory_pool_(memory_pool) {}
 
     std::unique_ptr<::orc::Reader> reader_;
     std::unique_ptr<::orc::RowReader> row_reader_;
@@ -132,8 +128,7 @@ class OrcReaderWrapper {
     const std::string file_name_;
     const int32_t batch_size_;
 
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
-    std::shared_ptr<::orc::MemoryPool> orc_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
 
     std::shared_ptr<arrow::DataType> target_type_;
 

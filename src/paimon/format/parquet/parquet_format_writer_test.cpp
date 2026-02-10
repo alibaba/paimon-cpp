@@ -33,7 +33,7 @@
 #include "arrow/ipc/api.h"
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
@@ -63,7 +63,6 @@ class ParquetFormatWriterTest : public ::testing::Test {
         ASSERT_TRUE(dir_);
         fs_ = std::make_shared<LocalFileSystem>();
         pool_ = GetDefaultPool();
-        arrow_pool_ = GetArrowPool(pool_);
     }
     void TearDown() override {}
 
@@ -122,10 +121,11 @@ class ParquetFormatWriterTest : public ::testing::Test {
     }
 
     void CheckResult(const std::string& file_path, int32_t row_count) const {
-        auto file = arrow::io::ReadableFile::Open(file_path, arrow_pool_.get());
+        auto file = arrow::io::ReadableFile::Open(file_path, AsArrowMemoryPool(*pool_));
         ASSERT_TRUE(file.ok());
         std::unique_ptr<::parquet::arrow::FileReader> reader;
-        auto status = ::parquet::arrow::OpenFile(file.ValueOrDie(), arrow_pool_.get(), &reader);
+        auto status =
+            ::parquet::arrow::OpenFile(file.ValueOrDie(), AsArrowMemoryPool(*pool_), &reader);
         ASSERT_TRUE(status.ok()) << status.ToString();
         const ::parquet::FileMetaData* metadata = reader->parquet_reader()->metadata().get();
         const ::parquet::SchemaDescriptor* schema = metadata->schema();
@@ -176,7 +176,6 @@ class ParquetFormatWriterTest : public ::testing::Test {
     std::unique_ptr<paimon::test::UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 TEST_F(ParquetFormatWriterTest, TestWriteWithVariousBatchSize) {
@@ -196,7 +195,7 @@ TEST_F(ParquetFormatWriterTest, TestWriteWithVariousBatchSize) {
             auto writer_properties = builder.build();
             ASSERT_OK_AND_ASSIGN(
                 auto format_writer,
-                ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+                ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
             auto array = PrepareArray(struct_type, record_batch_size);
             auto arrow_array = std::make_unique<ArrowArray>();
             ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
@@ -227,9 +226,8 @@ TEST_F(ParquetFormatWriterTest, TestWriteMultipleTimes) {
     ::parquet::WriterProperties::Builder builder;
     builder.write_batch_size(10);
     auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
+                         ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
 
     // add batch first time, 6 rows
     AddRecordBatchOnce(format_writer, struct_type, 6, 0);
@@ -269,9 +267,8 @@ TEST_F(ParquetFormatWriterTest, TestGetEstimateLength) {
                          fs_->Create(file_path, /*overwrite=*/false));
     ::parquet::WriterProperties::Builder builder;
     auto writer_properties = builder.build();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<ParquetFormatWriter> format_writer,
-        ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
+                         ParquetFormatWriter::Create(out, arrow_schema, writer_properties, pool_));
 
     // add batch first time, 1 row
     AddRecordBatchOnce(format_writer, struct_type, 1, 0);
@@ -306,7 +303,7 @@ TEST_F(ParquetFormatWriterTest, TestTimestampType) {
     auto writer_properties = builder.build();
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<ParquetFormatWriter> format_writer,
                          ParquetFormatWriter::Create(out, std::make_shared<arrow::Schema>(fields),
-                                                     writer_properties, arrow_pool_));
+                                                     writer_properties, pool_));
 
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([

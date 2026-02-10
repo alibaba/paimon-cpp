@@ -24,7 +24,7 @@
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "paimon/common/table/special_fields.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 
 namespace paimon {
@@ -33,7 +33,7 @@ CompleteRowTrackingFieldsBatchReader::CompleteRowTrackingFieldsBatchReader(
     int64_t snapshot_id, const std::shared_ptr<MemoryPool>& pool)
     : first_row_id_(first_row_id),
       snapshot_id_(snapshot_id),
-      arrow_pool_(GetArrowPool(pool)),
+      memory_pool_(pool),
       reader_(std::move(reader)) {}
 
 Status CompleteRowTrackingFieldsBatchReader::SetReadSchema(
@@ -148,7 +148,8 @@ Status CompleteRowTrackingFieldsBatchReader::ConvertRowTrackingField(
         // condition2: special field all null
         auto scalar = std::make_shared<arrow::Int64Scalar>(init_value);
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-            special_array, arrow::MakeArrayFromScalar(*scalar, array_length, arrow_pool_.get()));
+            special_array,
+            arrow::MakeArrayFromScalar(*scalar, array_length, AsArrowMemoryPool(*memory_pool_)));
         auto typed_special_array =
             arrow::internal::checked_pointer_cast<arrow::NumericArray<arrow::Int64Type>>(
                 special_array);

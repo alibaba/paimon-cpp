@@ -32,7 +32,6 @@
 #include "paimon/format/orc/orc_format_defs.h"
 #include "paimon/format/orc/orc_format_writer.h"
 #include "paimon/format/orc/orc_input_stream_impl.h"
-#include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/format/orc/orc_metrics.h"
 #include "paimon/format/orc/orc_output_stream_impl.h"
 #include "paimon/fs/local/local_file_system.h"
@@ -249,7 +248,6 @@ TEST_F(OrcFileBatchReaderTest, TestSetReadSchema) {
 }
 
 TEST_F(OrcFileBatchReaderTest, TestCreateRowReaderOptions) {
-    auto orc_pool = std::make_shared<OrcMemoryPool>(pool_);
     std::vector<uint64_t> target_column_ids;
     {
         // read all fields && default options

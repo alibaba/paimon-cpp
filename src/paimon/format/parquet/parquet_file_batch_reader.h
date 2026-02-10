@@ -61,8 +61,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
  public:
     static Result<std::unique_ptr<ParquetFileBatchReader>> Create(
         std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+        int32_t batch_size);
 
     // For timestamp type, we return the schema stored in file, e.g., second in parquet file will
     // store as milli.
@@ -76,9 +76,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
         return reader_->SeekToRow(row_number);
     }
 
-    // Important: output ArrowArray is allocated on arrow_pool_ whose lifecycle holds in
-    // ParquetFileBatchReader. Therefore, we need to hold BatchReader when using output
-    // ArrowArray.
     Result<ReadBatch> NextBatch() override;
 
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GenReadRanges(
@@ -128,15 +125,14 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     ParquetFileBatchReader(std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
                            std::unique_ptr<FileReaderWrapper>&& reader,
                            const std::map<std::string, std::string>& options,
-                           const std::shared_ptr<arrow::MemoryPool>& arrow_pool);
+                           const std::shared_ptr<MemoryPool>& memory_pool);
 
     static Result<::parquet::ReaderProperties> CreateReaderProperties(
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options);
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
-        const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+        int32_t batch_size);
 
     static void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
                               std::vector<int32_t>* index_vector) {
@@ -163,8 +159,7 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
  private:
     std::map<std::string, std::string> options_;
-    // hold the lifecycle of arrow memory pool.
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
 
     std::shared_ptr<arrow::io::RandomAccessFile> input_stream_;
     std::unique_ptr<FileReaderWrapper> reader_;

@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "arrow/api.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/manifest/manifest_file_meta.h"
 #include "paimon/core/utils/versioned_object_serializer.h"
@@ -41,7 +40,7 @@ class MemoryPool;
 class ManifestFileMetaSerializer : public VersionedObjectSerializer<ManifestFileMeta> {
  public:
     explicit ManifestFileMetaSerializer(const std::shared_ptr<MemoryPool>& pool)
-        : VersionedObjectSerializer<ManifestFileMeta>(pool), arrow_pool_(GetArrowPool(pool_)) {}
+        : VersionedObjectSerializer<ManifestFileMeta>(pool) {}
 
     int32_t GetVersion() const override {
         return VERSION_2;
@@ -54,8 +53,6 @@ class ManifestFileMetaSerializer : public VersionedObjectSerializer<ManifestFile
  private:
     static constexpr int32_t VERSION_2 = 2;
     static constexpr int32_t VERSION_1 = 1;
-
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
 };
 
 }  // namespace paimon

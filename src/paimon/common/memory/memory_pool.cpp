@@ -22,6 +22,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <string>
+
+#include "paimon/common/memory/memory_pool_adaptor_holder.h"
 
 namespace paimon {
 
@@ -90,6 +93,14 @@ void MemoryPoolImpl::Free(void* p, uint64_t size) {
 
 uint64_t MemoryPoolImpl::CurrentUsage() const {
     return total_allocated_size.load();
+}
+
+MemoryPool::~MemoryPool() = default;
+
+void* MemoryPool::GetAdaptor(const std::string& identifier, const AdaptorCreator& creator) {
+    std::call_once(flag_, [this]() { holder_ = std::make_unique<MemoryPoolAdaptorHolder>(); });
+    MemoryPoolAdaptorSlot& slot = holder_->GetOrCreateSlot(identifier, creator);
+    return slot.GetOrCreateAdaptor(*this);
 }
 
 PAIMON_EXPORT std::shared_ptr<MemoryPool> GetDefaultPool() {

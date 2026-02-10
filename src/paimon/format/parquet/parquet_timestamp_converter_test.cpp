@@ -21,7 +21,6 @@
 #include "arrow/api.h"
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
@@ -119,10 +118,9 @@ TEST(ParquetTimestampConverterTest, TestCastArrayForTimestamp) {
     ])")
             .ValueOrDie());
 
-    std::shared_ptr<arrow::MemoryPool> pool = GetArrowPool(GetDefaultPool());
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> result_array,
                          ParquetTimestampConverter::CastArrayForTimestamp(
-                             array, arrow::struct_(target_fields), pool));
+                             array, arrow::struct_(target_fields), GetDefaultPool()));
 
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(target_fields), R"([

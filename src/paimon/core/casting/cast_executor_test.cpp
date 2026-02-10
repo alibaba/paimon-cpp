@@ -30,7 +30,7 @@
 #include "arrow/array/builder_dict.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
@@ -89,7 +89,7 @@ class CastExecutorTest : public ::testing::Test {
                           const std::shared_ptr<arrow::Array>& src_array,
                           const std::shared_ptr<arrow::Array>& expected_array) const {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> target_array,
-                             cast_executor->Cast(src_array, target_type, arrow_pool_.get()));
+                             cast_executor->Cast(src_array, target_type, arrow_pool_));
         ASSERT_TRUE(
             target_array->Equals(expected_array, arrow::EqualOptions::Defaults().nans_equal(true)))
             << "target:" << target_array->ToString() << "expected:" << expected_array->ToString();
@@ -100,7 +100,7 @@ class CastExecutorTest : public ::testing::Test {
                                 const std::shared_ptr<arrow::Array>& src_array,
                                 const std::shared_ptr<arrow::Array>& expected_array) const {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> target_array,
-                             cast_executor->Cast(src_array, target_type, arrow_pool_.get()));
+                             cast_executor->Cast(src_array, target_type, arrow_pool_));
         ASSERT_TRUE(target_array->ApproxEquals(expected_array,
                                                arrow::EqualOptions::Defaults().nans_equal(true)))
             << "target:" << target_array->ToString() << "expected:" << expected_array->ToString();
@@ -113,7 +113,7 @@ class CastExecutorTest : public ::testing::Test {
         auto src_array =
             arrow::ipc::internal::json::ArrayFromJSON(src_type, src_array_str).ValueOrDie();
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Array> target_array,
-                             cast_executor->Cast(src_array, target_type, arrow_pool_.get()));
+                             cast_executor->Cast(src_array, target_type, arrow_pool_));
         auto expected_array =
             arrow::ipc::internal::json::ArrayFromJSON(target_type, target_array_str).ValueOrDie();
         ASSERT_TRUE(target_array->Equals(expected_array))
@@ -125,7 +125,7 @@ class CastExecutorTest : public ::testing::Test {
                                         const std::string& src_array_str) const {
         auto src_array =
             arrow::ipc::internal::json::ArrayFromJSON(src_type, src_array_str).ValueOrDie();
-        auto target_array = cast_executor->Cast(src_array, target_type, arrow_pool_.get());
+        auto target_array = cast_executor->Cast(src_array, target_type, arrow_pool_);
         EXPECT_FALSE(target_array.ok()) << target_array.value()->ToString();
         return target_array.status().ToString();
     }
@@ -204,7 +204,7 @@ class CastExecutorTest : public ::testing::Test {
     static constexpr double MIN_DOUBLE = std::numeric_limits<double>::lowest();
 
  private:
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_ = GetArrowPool(GetDefaultPool());
+    arrow::MemoryPool* arrow_pool_ = AsArrowMemoryPool(*GetDefaultPool());
 };
 
 TEST_F(CastExecutorTest, TestNumericPrimitiveCastExecutorCastLiteral) {

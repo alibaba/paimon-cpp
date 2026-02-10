@@ -35,6 +35,7 @@
 #include "arrow/util/range.h"
 #include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
@@ -58,9 +59,9 @@ namespace paimon::parquet {
 ParquetFileBatchReader::ParquetFileBatchReader(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     std::unique_ptr<FileReaderWrapper>&& reader, const std::map<std::string, std::string>& options,
-    const std::shared_ptr<arrow::MemoryPool>& arrow_pool)
+    const std::shared_ptr<MemoryPool>& memory_pool)
     : options_(options),
-      arrow_pool_(arrow_pool),
+      memory_pool_(memory_pool),
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
       read_ranges_(reader_->GetAllRowGroupRanges()),
@@ -68,8 +69,8 @@ ParquetFileBatchReader::ParquetFileBatchReader(
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
-    const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+    int32_t batch_size) {
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
                            CreateReaderProperties(pool, options));
@@ -80,7 +81,7 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
 
     std::unique_ptr<::parquet::arrow::FileReader> file_reader;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(AsArrowMemoryPool(*pool))
                                         ->properties(arrow_reader_properties)
                                         ->Build(&file_reader));
 
@@ -230,7 +231,7 @@ Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {
                                                array->type(), read_data_type_));
     if (need_cast) {
         PAIMON_ASSIGN_OR_RAISE(array, ParquetTimestampConverter::CastArrayForTimestamp(
-                                          array, read_data_type_, arrow_pool_));
+                                          array, read_data_type_, memory_pool_));
     }
     PAIMON_ASSIGN_OR_RAISE(need_cast, ParquetTimestampConverter::NeedCastArrayForTimestamp(
                                           array->type(), read_data_type_));
@@ -253,8 +254,7 @@ Result<std::vector<std::pair<uint64_t, uint64_t>>> ParquetFileBatchReader::GenRe
 }
 
 Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperties(
-    const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options) {
     ::parquet::ReaderProperties reader_properties;
     // TODO(jinli.zjw): set more ReaderProperties (compare with java)
     reader_properties.enable_buffered_stream();
@@ -262,8 +262,8 @@ Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperti
 }
 
 Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowReaderProperties(
-    const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::shared_ptr<MemoryPool>& pool, const std::map<std::string, std::string>& options,
+    int32_t batch_size) {
     PAIMON_ASSIGN_OR_RAISE(bool use_threads,
                            OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_USE_THREADS,
                                                                DEFAULT_PARQUET_READ_USE_THREADS));

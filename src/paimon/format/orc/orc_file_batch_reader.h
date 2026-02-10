@@ -58,8 +58,6 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
         return reader_->SetReadRanges(read_ranges);
     }
 
-    // Important: output ArrowArray is allocated on arrow_pool_ whose lifecycle holds in
-    // OrcFileBatchReader. Therefore, we need to hold BatchReader when using output ArrowArray.
     Result<ReadBatch> NextBatch() override;
 
     uint64_t GetPreviousBatchFirstRowNumber() const override {
@@ -98,8 +96,7 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
     OrcFileBatchReader(std::unique_ptr<::orc::ReaderMetrics>&& reader_metrics,
                        std::unique_ptr<OrcReaderWrapper>&& reader,
                        const std::map<std::string, std::string>& options,
-                       const std::shared_ptr<arrow::MemoryPool>& arrow_pool,
-                       const std::shared_ptr<::orc::MemoryPool>& orc_pool);
+                       const std::shared_ptr<MemoryPool>& memory_pool);
 
     static void GetSubColumnIds(const ::orc::Type* type, std::vector<uint64_t>* col_ids);
 
@@ -115,8 +112,7 @@ class OrcFileBatchReader : public PrefetchFileBatchReader {
 
     std::map<std::string, std::string> options_;
 
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_;
-    std::shared_ptr<::orc::MemoryPool> orc_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
 
     std::unique_ptr<::orc::ReaderMetrics> reader_metrics_;
     std::unique_ptr<OrcReaderWrapper> reader_;

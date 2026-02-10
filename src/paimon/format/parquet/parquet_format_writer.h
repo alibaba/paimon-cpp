@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <memory>
 
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/format_writer.h"
 #include "paimon/format/parquet/parquet_output_stream_impl.h"
 #include "paimon/fs/file_system.h"
@@ -54,7 +53,7 @@ class ParquetFormatWriter : public FormatWriter {
         const std::shared_ptr<OutputStream>& output_stream,
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<::parquet::WriterProperties>& writer_properties,
-        const std::shared_ptr<arrow::MemoryPool>& pool);
+        const std::shared_ptr<MemoryPool>& pool);
 
     Status AddBatch(ArrowArray* batch) override;
 
@@ -72,11 +71,11 @@ class ParquetFormatWriter : public FormatWriter {
     ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
                         const std::shared_ptr<ParquetOutputStreamImpl>& out,
                         const std::shared_ptr<arrow::Schema>& schema,
-                        const std::shared_ptr<arrow::MemoryPool>& pool);
+                        const std::shared_ptr<MemoryPool>& pool);
 
     Result<uint64_t> GetEstimateLength() const;
 
-    std::shared_ptr<arrow::MemoryPool> pool_;
+    std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<ParquetOutputStreamImpl> out_;
     std::unique_ptr<::parquet::arrow::FileWriter> writer_;
     std::shared_ptr<arrow::Schema> schema_;

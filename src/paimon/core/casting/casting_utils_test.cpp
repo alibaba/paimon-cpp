@@ -20,12 +20,13 @@
 
 #include "arrow/ipc/api.h"
 #include "gtest/gtest.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
+#include "paimon/common/utils/arrow/arrow_memory_pool_adaptor.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 class CastingUtilsTest : public ::testing::Test {
-    std::shared_ptr<arrow::MemoryPool> arrow_pool_ = GetArrowPool(GetDefaultPool());
+    arrow::MemoryPool* arrow_pool_ = AsArrowMemoryPool(*GetDefaultPool());
 };
 
 TEST_F(CastingUtilsTest, TestDictionaryToString) {
@@ -41,11 +42,11 @@ TEST_F(CastingUtilsTest, TestDictionaryToString) {
                             arrow::utf8(), R"(["bar", "bazr", "foo", "bazr", "foo"])")
                             .ValueOrDie();
 
-    auto pool = GetArrowPool(GetDefaultPool());
+    auto pool = AsArrowMemoryPool(*GetDefaultPool());
     arrow::compute::CastOptions options = arrow::compute::CastOptions::Safe();
     ASSERT_OK_AND_ASSIGN(
         auto result_array,
-        CastingUtils::Cast(dict_array, /*target_type=*/arrow::utf8(), options, pool.get()));
+        CastingUtils::Cast(dict_array, /*target_type=*/arrow::utf8(), options, pool));
     ASSERT_TRUE(result_array->Equals(string_array));
 }
 
@@ -62,7 +63,7 @@ TEST_F(CastingUtilsTest, TestTimestampToTimestampWithTimezone) {
             .ValueOr(nullptr);
     ASSERT_TRUE(target_array);
     ASSERT_OK_AND_ASSIGN(auto result_array, CastingUtils::TimestampToTimestampWithTimezone(
-                                                src_array, target_ts_type, arrow_pool_.get()));
+                                                src_array, target_ts_type, arrow_pool_));
     ASSERT_TRUE(target_array->Equals(result_array));
 }
 
@@ -77,9 +78,9 @@ TEST_F(CastingUtilsTest, TestTimestampToTimestampWithTimezoneInvalid) {
         auto target_type = arrow::timestamp(arrow::TimeUnit::NANO, "Asia/Shanghai");
         auto target_ts_type =
             arrow::internal::checked_pointer_cast<arrow::TimestampType>(target_type);
-        ASSERT_NOK_WITH_MSG(CastingUtils::TimestampToTimestampWithTimezone(
-                                src_array, target_ts_type, arrow_pool_.get()),
-                            "time unit of src and target type mismatch");
+        ASSERT_NOK_WITH_MSG(
+            CastingUtils::TimestampToTimestampWithTimezone(src_array, target_ts_type, arrow_pool_),
+            "time unit of src and target type mismatch");
     }
     {
         auto src_array =
@@ -91,8 +92,7 @@ TEST_F(CastingUtilsTest, TestTimestampToTimestampWithTimezoneInvalid) {
         auto target_ts_type =
             arrow::internal::checked_pointer_cast<arrow::TimestampType>(target_type);
         ASSERT_NOK_WITH_MSG(
-            CastingUtils::TimestampToTimestampWithTimezone(src_array, target_ts_type,
-                                                           arrow_pool_.get()),
+            CastingUtils::TimestampToTimestampWithTimezone(src_array, target_ts_type, arrow_pool_),
             "src value must be local time (no tz), target value must be UTC (with tz)");
     }
     {
@@ -104,10 +104,10 @@ TEST_F(CastingUtilsTest, TestTimestampToTimestampWithTimezoneInvalid) {
         auto target_type = arrow::timestamp(arrow::TimeUnit::SECOND, "Europe/Warsaw");
         auto target_ts_type =
             arrow::internal::checked_pointer_cast<arrow::TimestampType>(target_type);
-        ASSERT_NOK_WITH_MSG(CastingUtils::TimestampToTimestampWithTimezone(
-                                src_array, target_ts_type, arrow_pool_.get()),
-                            "Timestamp doesn't exist in timezone 'Europe/Warsaw': 2015-03-29 "
-                            "02:30:00 is in a gap between");
+        ASSERT_NOK_WITH_MSG(
+            CastingUtils::TimestampToTimestampWithTimezone(src_array, target_ts_type, arrow_pool_),
+            "Timestamp doesn't exist in timezone 'Europe/Warsaw': 2015-03-29 "
+            "02:30:00 is in a gap between");
     }
 }
 
@@ -125,7 +125,7 @@ TEST_F(CastingUtilsTest, TestTimestampWithTimezoneToTimestamp) {
             .ValueOr(nullptr);
     ASSERT_TRUE(target_array);
     ASSERT_OK_AND_ASSIGN(auto result_array, CastingUtils::TimestampWithTimezoneToTimestamp(
-                                                src_array, target_ts_type, arrow_pool_.get()));
+                                                src_array, target_ts_type, arrow_pool_));
     ASSERT_TRUE(target_array->Equals(result_array));
 }
 
@@ -140,9 +140,9 @@ TEST_F(CastingUtilsTest, TestTimestampWithTimezoneToTimestampInvalid) {
         auto target_type = arrow::timestamp(arrow::TimeUnit::SECOND);
         auto target_ts_type =
             arrow::internal::checked_pointer_cast<arrow::TimestampType>(target_type);
-        ASSERT_NOK_WITH_MSG(CastingUtils::TimestampWithTimezoneToTimestamp(
-                                src_array, target_ts_type, arrow_pool_.get()),
-                            "in timezone converter, time unit of src and target type mismatch");
+        ASSERT_NOK_WITH_MSG(
+            CastingUtils::TimestampWithTimezoneToTimestamp(src_array, target_ts_type, arrow_pool_),
+            "in timezone converter, time unit of src and target type mismatch");
     }
     {
         auto src_array = arrow::ipc::internal::json::ArrayFromJSON(
@@ -153,9 +153,9 @@ TEST_F(CastingUtilsTest, TestTimestampWithTimezoneToTimestampInvalid) {
         auto target_type = arrow::timestamp(arrow::TimeUnit::SECOND, "Asia/Tokyo");
         auto target_ts_type =
             arrow::internal::checked_pointer_cast<arrow::TimestampType>(target_type);
-        ASSERT_NOK_WITH_MSG(CastingUtils::TimestampWithTimezoneToTimestamp(
-                                src_array, target_ts_type, arrow_pool_.get()),
-                            "target value must be local time (no tz)");
+        ASSERT_NOK_WITH_MSG(
+            CastingUtils::TimestampWithTimezoneToTimestamp(src_array, target_ts_type, arrow_pool_),
+            "target value must be local time (no tz)");
     }
 }
 

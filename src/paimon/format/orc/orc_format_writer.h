@@ -28,7 +28,6 @@
 #include "orc/Vector.hh"
 #include "orc/Writer.hh"
 #include "paimon/format/format_writer.h"
-#include "paimon/format/orc/orc_memory_pool.h"
 #include "paimon/metrics.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -39,9 +38,6 @@ class Schema;
 }  // namespace arrow
 namespace paimon {
 class MemoryPool;
-namespace orc {
-class OrcMemoryPool;
-}  // namespace orc
 }  // namespace paimon
 struct ArrowArray;
 
@@ -65,7 +61,7 @@ class OrcFormatWriter : public FormatWriter {
     std::shared_ptr<Metrics> GetWriterMetrics() const override;
 
  private:
-    OrcFormatWriter(const std::shared_ptr<OrcMemoryPool>& orc_memory_pool,
+    OrcFormatWriter(const std::shared_ptr<MemoryPool>& memory_pool,
                     std::unique_ptr<::orc::OutputStream>&& output_stream,
                     std::unique_ptr<::orc::WriterMetrics>&& writer_metrics,
                     std::unique_ptr<::orc::Writer>&& writer,
@@ -83,7 +79,7 @@ class OrcFormatWriter : public FormatWriter {
     static Result<::orc::CompressionKind> ToOrcCompressionKind(const std::string& file_compression);
 
  private:
-    std::shared_ptr<OrcMemoryPool> orc_memory_pool_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::unique_ptr<::orc::OutputStream> output_stream_;
     std::unique_ptr<::orc::WriterMetrics> writer_metrics_;
     std::unique_ptr<::orc::Writer> writer_;

@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "arrow/status.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/manifest/index_manifest_entry.h"
 #include "paimon/core/utils/versioned_object_serializer.h"
 #include "paimon/result.h"
@@ -36,7 +35,7 @@ class MemoryPool;
 class IndexManifestEntrySerializer : public VersionedObjectSerializer<IndexManifestEntry> {
  public:
     explicit IndexManifestEntrySerializer(const std::shared_ptr<MemoryPool>& pool)
-        : VersionedObjectSerializer<IndexManifestEntry>(pool), arrow_pool_(GetArrowPool(pool_)) {}
+        : VersionedObjectSerializer<IndexManifestEntry>(pool) {}
 
     int32_t GetVersion() const override {
         return VERSION;
@@ -48,6 +47,5 @@ class IndexManifestEntrySerializer : public VersionedObjectSerializer<IndexManif
 
  private:
     static constexpr int32_t VERSION = 1;
-    std::unique_ptr<arrow::MemoryPool> arrow_pool_;
 };
 }  // namespace paimon

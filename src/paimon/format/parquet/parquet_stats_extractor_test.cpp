@@ -32,7 +32,6 @@
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/uuid.h"
@@ -63,7 +62,6 @@ class ParquetStatsExtractorTest : public ::testing::Test {
         auto arrow_schema = arrow::schema(fields);
         auto struct_type = arrow::struct_(fields);
         std::map<std::string, std::string> options;
-        std::shared_ptr<arrow::MemoryPool> pool = GetArrowPool(GetDefaultPool());
         std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
         std::string file_name;
         ASSERT_TRUE(UUID::Generate(&file_name));
@@ -72,8 +70,9 @@ class ParquetStatsExtractorTest : public ::testing::Test {
                              fs->Create(file_path, /*overwrite=*/false));
         ::parquet::WriterProperties::Builder builder;
         builder.enable_store_decimal_as_integer();
-        ASSERT_OK_AND_ASSIGN(auto format_writer,
-                             ParquetFormatWriter::Create(out, arrow_schema, builder.build(), pool));
+        ASSERT_OK_AND_ASSIGN(
+            auto format_writer,
+            ParquetFormatWriter::Create(out, arrow_schema, builder.build(), GetDefaultPool()));
         auto array = arrow::ipc::internal::json::ArrayFromJSON(struct_type, input).ValueOrDie();
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
@@ -268,11 +267,10 @@ TEST_F(ParquetStatsExtractorTest, TestNullForAllType) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
                          fs->Create(file_name, /*overwrite=*/false));
     auto pool = GetDefaultPool();
-    std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool);
     ::parquet::WriterProperties::Builder builder;
     builder.enable_store_decimal_as_integer();
     ASSERT_OK_AND_ASSIGN(auto format_writer,
-                         ParquetFormatWriter::Create(out, schema, builder.build(), arrow_pool));
+                         ParquetFormatWriter::Create(out, schema, builder.build(), pool));
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
         [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]

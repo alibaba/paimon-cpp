@@ -21,7 +21,6 @@
 #include "gtest/gtest.h"
 #include "orc/OrcFile.hh"
 #include "paimon/common/reader/reader_utils.h"
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::orc::test {
@@ -72,8 +71,7 @@ TEST_F(OrcReaderWrapperTest, NextRowToRead) {
                                            /*batch_size=*/2,
                                            /*natural_read_size=*/0,
                                            /*options=*/options,
-                                           /*arrow_pool=*/GetArrowPool(GetDefaultPool()),
-                                           /*orc_pool=*/nullptr));
+                                           /*memory_pool=*/GetDefaultPool()));
     auto data_types =
         arrow::struct_({arrow::field("col1", arrow::int64()), arrow::field("col2", arrow::utf8())});
     ::orc::RowReaderOptions row_opts;
