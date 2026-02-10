@@ -313,6 +313,10 @@ set(EP_COMMON_CMAKE_ARGS
 
 macro(build_lucene)
     message(STATUS "Building lucene from source")
+
+    get_target_property(LUCENE_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(LUCENE_ZLIB_ROOT "${LUCENE_ZLIB_INCLUDE_DIR}" DIRECTORY)
+
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
@@ -326,6 +330,9 @@ macro(build_lucene)
         "-DBOOST_ROOT=${BOOST_INSTALL}"
         "-DBoost_CHRONO_FOUND=TRUE"
         "-DBoost_THREAD_FOUND=TRUE"
+#        "-DZLIB_INCLUDE_DIRS=${ZLIB_INCLUDE_DIR}"
+#        "-DZLIB_LIBRARY_RELEASE=${ZLIB_LIBRARIES}"
+        "-DZLIB_ROOT=${LUCENE_ZLIB_ROOT}"
         "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
 
     set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.a")
@@ -335,7 +342,8 @@ macro(build_lucene)
                         URL_HASH "SHA256=${PAIMON_LUCENE_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${LUCENE_CMAKE_ARGS}
                         BUILD_BYPRODUCTS ${LUCENE_LIB}
-                        DEPENDS boost_date_time
+                        DEPENDS zlib
+                                boost_date_time
                                 boost_filesystem
                                 boost_regex
                                 boost_thread
@@ -355,7 +363,8 @@ macro(build_lucene)
                                      "${LUCENE_INCLUDE_DIR}")
 
     target_link_libraries(lucene
-                          INTERFACE boost_date_time
+                          INTERFACE zlib
+                                    boost_date_time
                                     boost_filesystem
                                     boost_regex
                                     boost_thread

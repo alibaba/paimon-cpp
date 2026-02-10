@@ -408,22 +408,22 @@ DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 
-This product includes code from luceneplusplus LucenePlusPlus.
+This product includes code from LucenePlusPlus.
 
 * LucenePlusPlus utility in src/paimon/global_index/lucene/ directory
 
 Copyright: 2009-2014 Alan Wright.
-Home page: https://github.com/luceneplusplus/
+Home page: https://github.com/luceneplusplus/LucenePlusPlus
 License: https://www.apache.org/licenses/LICENSE-2.0
 
 --------------------------------------------------------------------------------
 
-This product includes code from yanyiwu cppjieba.
+This product includes code from cppjieba.
 
 * cppjieba utility in src/paimon/global_index/lucene/ directory
 
 Copyright: 2013
-Home page: https://github.com/yanyiwu/
+Home page: https://github.com/yanyiwu/cppjieba
 License: https://opensource.org/licenses/MIT
 
 The MIT License (MIT)
