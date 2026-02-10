@@ -127,6 +127,43 @@ TEST(PredicateConverterTest, TestSimple) {
         ASSERT_EQ("(((f0 != 1) and (f0 != 3)) and (f0 != 5))", expression.ToString());
     }
     {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::StartsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                         Literal(FieldType::STRING, "aab", 3)));
+        ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
+                                                  predicate, /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("starts_with(f0, {pattern=\"aab\", ignore_case=false})", expression.ToString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::EndsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                       Literal(FieldType::STRING, "bcc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
+                                                  predicate, /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("ends_with(f0, {pattern=\"bcc\", ignore_case=false})", expression.ToString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::Contains(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                       Literal(FieldType::STRING, "abc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
+                                                  predicate, /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("match_substring(f0, {pattern=\"abc\", ignore_case=false})",
+                  expression.ToString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::Like(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                   Literal(FieldType::STRING, "abc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto expression, PredicateConverter::Convert(
+                                                  predicate, /*predicate_node_count_limit=*/100));
+        ASSERT_EQ("match_like(f0, {pattern=\"abc\", ignore_case=false})", expression.ToString());
+    }
+    {
         // support decimal precision and scale mismatches between literal and data
         auto predicate = PredicateBuilder::In(/*field_index=*/7, /*field_name=*/"f7",
                                               FieldType::DECIMAL, {Literal(Decimal(5, 1, 12345))});

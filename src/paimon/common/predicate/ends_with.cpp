@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,13 @@
  * limitations under the License.
  */
 
-#include "paimon/common/predicate/greater_than.h"
+#include "paimon/common/predicate/ends_with.h"
 
-#include "paimon/common/predicate/less_or_equal.h"
+#include "paimon/common/utils/string_utils.h"
 
 namespace paimon {
-class LeafFunction;
 
-const GreaterThan& GreaterThan::Instance() {
-    static const GreaterThan kInstance{};
-    return kInstance;
-}
-
-const LeafFunction* GreaterThan::Negate() const {
-    return &LessOrEqual::Instance();
+Result<bool> EndsWith::TestString(const std::string& field, const std::string& pattern) const {
+    return StringUtils::EndsWith(field, pattern);
 }
 }  // namespace paimon

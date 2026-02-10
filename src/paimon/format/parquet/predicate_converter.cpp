@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <utility>
 
+#include "arrow/compute/api.h"
 #include "arrow/compute/expression.h"
 #include "arrow/scalar.h"
 #include "arrow/type_fwd.h"
@@ -205,6 +206,34 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertLeaf(
                                                               arrow_literal));
             }
             return arrow::compute::and_(sub_exprs);
+        }
+        case Function::Type::STARTS_WITH: {
+            PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
+            auto options = std::make_shared<arrow::compute::MatchSubstringOptions>(
+                literals[0].GetValue<std::string>());
+            return arrow::compute::call("starts_with", {arrow::compute::field_ref(field_name)},
+                                        options);
+        }
+        case Function::Type::ENDS_WITH: {
+            PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
+            auto options = std::make_shared<arrow::compute::MatchSubstringOptions>(
+                literals[0].GetValue<std::string>());
+            return arrow::compute::call("ends_with", {arrow::compute::field_ref(field_name)},
+                                        options);
+        }
+        case Function::Type::CONTAINS: {
+            PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
+            auto options = std::make_shared<arrow::compute::MatchSubstringOptions>(
+                literals[0].GetValue<std::string>());
+            return arrow::compute::call("match_substring", {arrow::compute::field_ref(field_name)},
+                                        options);
+        }
+        case Function::Type::LIKE: {
+            PAIMON_RETURN_NOT_OK(CheckLiteralNotEmpty(literals, function, field_name));
+            auto options = std::make_shared<arrow::compute::MatchSubstringOptions>(
+                literals[0].GetValue<std::string>());
+            return arrow::compute::call("match_like", {arrow::compute::field_ref(field_name)},
+                                        options);
         }
         default:
             return Status::Invalid(
