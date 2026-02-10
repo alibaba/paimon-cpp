@@ -32,6 +32,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
+#include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
 #include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/fs/file_system.h"
@@ -150,7 +151,8 @@ class FileReaderWrapperTest : public ::testing::Test {
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<ParquetFormatWriter> format_writer,
-            ParquetFormatWriter::Create(out, arrow_schema, writer_properties, arrow_pool_));
+            ParquetFormatWriter::Create(out, arrow_schema, writer_properties,
+                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
 
         AddRecordBatchOnce(format_writer, struct_type, /*record_batch_size=*/row_count,
                            /*offset=*/0);

@@ -42,7 +42,11 @@ Result<std::unique_ptr<FormatWriter>> ParquetWriterBuilder::Build(
     const std::shared_ptr<OutputStream>& out, const std::string& compression) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<::parquet::WriterProperties> writer_properties,
                            PrepareWriterProperties(compression));
-    return ParquetFormatWriter::Create(out, schema_, writer_properties, pool_);
+    PAIMON_ASSIGN_OR_RAISE(uint64_t max_memory_use, OptionsUtils::GetValueFromMap<uint64_t>(
+                                                        options_, PARQUET_WRITER_MAX_MEMORY_USE,
+                                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE));
+
+    return ParquetFormatWriter::Create(out, schema_, writer_properties, max_memory_use, pool_);
 }
 
 Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::PrepareWriterProperties(
