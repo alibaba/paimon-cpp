@@ -138,11 +138,11 @@ Result<int32_t> StringUtils::StringToDate(const std::string& str) {
     std::istringstream ss(str);
     ss >> std::get_time(&timeinfo, "%Y-%m-%d");
     if (ss.fail()) {
-        return Status::Invalid(fmt::format("failed to convert string {} to date", str));
+        return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
     std::time_t time = timegm(&timeinfo);
     if (time == -1) {
-        return Status::Invalid(fmt::format("failed to convert string {} to date", str));
+        return Status::Invalid(fmt::format("failed to convert string '{}' to date", str));
     }
     static const int64_t SECONDS_PER_DAY = 86400l;  // = 24 * 60 * 60
     return time / SECONDS_PER_DAY;

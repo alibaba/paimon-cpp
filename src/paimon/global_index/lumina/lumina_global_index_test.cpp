@@ -303,7 +303,7 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
                                                   .ValueOrDie();
         ASSERT_NOK_WITH_MSG(
             WriteGlobalIndex(index_root, data_type_, options_, array, Range(0, 2)),
-            "invalid input array in LuminaIndexWriter, length of field  array [2] multiplied "
+            "invalid input array in LuminaIndexWriter, length of field array [2] multiplied "
             "dimension [4] must match length of field value array [7]");
     }
 
