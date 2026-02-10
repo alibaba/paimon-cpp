@@ -119,7 +119,7 @@ else()
         set_urls(LUCENE_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LUCENE_PKG_NAME}")
     else()
         set_urls(LUCENE_SOURCE_URL
-                 "${THIRDPARTY_MIRROR_URL}https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/${PAIMON_LUCENE_PKG_NAME}"
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/luceneplusplus/LucenePlusPlus/archive/refs/tags/rel_${PAIMON_LUCENE_BUILD_VERSION}.tar.gz"
         )
     endif()
 endif()
@@ -131,7 +131,7 @@ else()
         set_urls(LIMONP_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LIMONP_PKG_NAME}")
     else()
         set_urls(LIMONP_SOURCE_URL
-                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/limonp/archive/refs/tags/${PAIMON_LIMONP_PKG_NAME}"
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/limonp/archive/refs/tags/v${PAIMON_LIMONP_BUILD_VERSION}.tar.gz"
         )
     endif()
 endif()
@@ -143,7 +143,7 @@ else()
         set_urls(JIEBA_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_JIEBA_PKG_NAME}")
     else()
         set_urls(JIEBA_SOURCE_URL
-                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/cppjieba/archive/refs/tags/${PAIMON_JIEBA_PKG_NAME}"
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/cppjieba/archive/refs/tags/${PAIMON_JIEBA_BUILD_VERSION}.tar.gz"
         )
     endif()
 endif()
