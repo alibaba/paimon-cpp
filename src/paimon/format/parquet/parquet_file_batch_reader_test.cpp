@@ -29,7 +29,6 @@
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
 #include "arrow/ipc/json_simple.h"
-#include "arrow/util/thread_pool.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
@@ -112,7 +111,8 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         enable_dictionary ? builder.enable_dictionary() : builder.disable_dictionary();
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(auto format_writer, ParquetFormatWriter::Create(
-                                                     out, arrow_schema, writer_properties, pool_));
+                                                     out, arrow_schema, writer_properties,
+                                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, pool_));
 
         auto arrow_array = std::make_unique<ArrowArray>();
         ASSERT_TRUE(arrow::ExportArray(*src_array, arrow_array.get()).ok());
@@ -398,7 +398,7 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
         ASSERT_EQ(arrow_reader_properties.cache_options(), arrow::io::CacheOptions::Defaults());
     }
     {
-        std::map<std::string, std::string> options = {{PARQUET_READ_USE_THREADS, "false"}};
+        std::map<std::string, std::string> options = {{PARQUET_USE_MULTI_THREAD, "false"}};
         int32_t batch_size = 1024;
         ASSERT_OK_AND_ASSIGN(
             auto arrow_reader_properties,
@@ -408,7 +408,7 @@ TEST_F(ParquetFileBatchReaderTest, TestCreateArrowReaderProperties) {
     {
         int original_capacity = GetArrowCpuThreadPoolCapacity();
         ASSERT_OK(SetArrowCpuThreadPoolCapacity(6));
-        std::map<std::string, std::string> options = {{PARQUET_READ_USE_THREADS, "true"}};
+        std::map<std::string, std::string> options = {{PARQUET_USE_MULTI_THREAD, "true"}};
         int32_t batch_size = 1024;
         ASSERT_OK_AND_ASSIGN(
             auto arrow_reader_properties,

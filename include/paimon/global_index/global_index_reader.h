@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "paimon/global_index/global_index_result.h"
+#include "paimon/predicate/full_text_search.h"
 #include "paimon/predicate/function_visitor.h"
 #include "paimon/predicate/vector_search.h"
 #include "paimon/visibility.h"
@@ -40,8 +41,12 @@ class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<G
     /// VisitVectorSearch performs approximate vector similarity search.
     /// @warning `VisitVectorSearch` may return error status when it is incorrectly invoked (e.g.,
     /// BitmapGlobalIndexReader call `VisitVectorSearch`).
-    virtual Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+    virtual Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) = 0;
+
+    /// VisitFullTextSearch performs full text search.
+    virtual Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
+        const std::shared_ptr<FullTextSearch>& full_text_search) = 0;
 
     /// @return true if the reader is thread-safe; false otherwise.
     virtual bool IsThreadSafe() const = 0;

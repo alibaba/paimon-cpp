@@ -56,13 +56,12 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     batch_scan_->WithRowRanges(row_ranges.value());
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Plan> data_plan, batch_scan_->CreatePlan());
     std::map<int64_t, float> id_to_score;
-    if (auto vector_search_result =
-            std::dynamic_pointer_cast<VectorSearchGlobalIndexResult>(final_global_index_result)) {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<VectorSearchGlobalIndexResult::VectorSearchIterator> vector_search_iter,
-            vector_search_result->CreateVectorSearchIterator());
-        while (vector_search_iter->HasNext()) {
-            auto [id, score] = vector_search_iter->NextWithScore();
+    if (auto scored_result =
+            std::dynamic_pointer_cast<ScoredGlobalIndexResult>(final_global_index_result)) {
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ScoredGlobalIndexResult::ScoredIterator> scored_iter,
+                               scored_result->CreateScoredIterator());
+        while (scored_iter->HasNext()) {
+            auto [id, score] = scored_iter->NextWithScore();
             id_to_score[id] = score;
         }
     }

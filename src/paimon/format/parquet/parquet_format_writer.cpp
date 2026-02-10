@@ -43,7 +43,7 @@ namespace paimon::parquet {
 Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
     const std::shared_ptr<OutputStream>& output_stream,
     const std::shared_ptr<arrow::Schema>& schema,
-    const std::shared_ptr<::parquet::WriterProperties>& writer_properties,
+    const std::shared_ptr<::parquet::WriterProperties>& writer_properties, uint64_t max_memory_use,
     const std::shared_ptr<arrow::MemoryPool>& pool) {
     auto out = std::make_shared<ParquetOutputStreamImpl>(output_stream);
     ::parquet::ArrowWriterProperties::Builder arrow_properties_builder;
@@ -54,12 +54,15 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
         ::parquet::arrow::FileWriter::Open(*schema, pool.get(), out, writer_properties,
                                            arrow_writer_properties));
     return std::unique_ptr<ParquetFormatWriter>(
-        new ParquetFormatWriter(std::move(file_writer), out, schema, pool));
+        new ParquetFormatWriter(std::move(file_writer), out, schema, max_memory_use, pool));
 }
 
 Status ParquetFormatWriter::AddBatch(ArrowArray* batch) {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<::arrow::RecordBatch> record_batch,
                                       arrow::ImportRecordBatch(batch, schema_));
+    if (static_cast<uint64_t>(pool_->bytes_allocated()) > max_memory_use_) {
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->NewBufferedRowGroup());
+    }
     PAIMON_RETURN_NOT_OK_FROM_ARROW(writer_->WriteRecordBatch(*record_batch));
     total_records_written_ += (*record_batch).num_rows();
     return Status::OK();
@@ -92,11 +95,13 @@ Result<uint64_t> ParquetFormatWriter::GetEstimateLength() const {
 ParquetFormatWriter::ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
                                          const std::shared_ptr<ParquetOutputStreamImpl>& out,
                                          const std::shared_ptr<arrow::Schema>& schema,
+                                         uint64_t max_memory_use,
                                          const std::shared_ptr<arrow::MemoryPool>& pool)
     : pool_(pool),
       out_(out),
       writer_(std::move(writer)),
       schema_(schema),
-      metrics_(std::make_shared<MetricsImpl>()) {}
+      metrics_(std::make_shared<MetricsImpl>()),
+      max_memory_use_(max_memory_use) {}
 
 }  // namespace paimon::parquet
