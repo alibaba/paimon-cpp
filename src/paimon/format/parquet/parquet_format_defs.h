@@ -24,7 +24,7 @@ namespace paimon::parquet {
 static inline const char PARQUET_BLOCK_SIZE[] = "parquet.block.size";
 static inline const char PARQUET_PAGE_SIZE[] = "parquet.page.size";
 static inline const char PARQUET_DICTIONARY_PAGE_SIZE[] = "parquet.dictionary.page.size";
-static inline const char PARQUET_ENABLE_DICTIONARY[] = "parquet.enable.dictionary";
+static inline const char PARQUET_ENABLE_DICTIONARY[] = "parquet.enable-dictionary";
 static inline const char PARQUET_WRITER_VERSION[] = "parquet.writer.version";
 static inline const char PARQUET_WRITE_MAX_ROW_GROUP_LENGTH[] =
     "parquet.write.max-row-group-length";
@@ -34,10 +34,12 @@ static inline const char PARQUET_COMPRESSION_CODEC_ZSTD_LEVEL[] =
     "parquet.compression.codec.zstd.level";
 static inline const char PARQUET_COMPRESSION_CODEC_ZLIB_LEVEL[] = "zlib.compress.level";
 static inline const char PARQUET_COMPRESSION_CODEC_BROTLI_LEVEL[] = "compression.brotli.quality";
+static inline const char PARQUET_WRITER_MAX_MEMORY_USE[] = "parquet.writer.max.memory.use";
+static constexpr uint64_t DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE = 512 * 1024 * 1024;  // 512MB
 
 // read
-static inline const char PARQUET_READ_USE_THREADS[] = "parquet.read.use-threads";
-static inline const bool DEFAULT_PARQUET_READ_USE_THREADS = true;
+static inline const char PARQUET_USE_MULTI_THREAD[] = "parquet.use-multi-thread";
+static inline const bool DEFAULT_PARQUET_USE_MULTI_THREAD = true;
 static inline const char PARQUET_READ_CACHE_OPTION_LAZY[] = "parquet.read.cache-option.lazy";
 static inline const char PARQUET_READ_CACHE_OPTION_PREFETCH_LIMIT[] =
     "parquet.read.cache-option.prefetch-limit";

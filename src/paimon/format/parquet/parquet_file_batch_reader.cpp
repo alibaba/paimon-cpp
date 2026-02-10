@@ -265,8 +265,8 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
     const std::shared_ptr<arrow::MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size) {
     PAIMON_ASSIGN_OR_RAISE(bool use_threads,
-                           OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_USE_THREADS,
-                                                               DEFAULT_PARQUET_READ_USE_THREADS));
+                           OptionsUtils::GetValueFromMap<bool>(options, PARQUET_USE_MULTI_THREAD,
+                                                               DEFAULT_PARQUET_USE_MULTI_THREAD));
 
     ::parquet::ArrowReaderProperties arrow_reader_props;
     // TODO(jinli.zjw): set more ArrowReaderProperties (compare with java)
