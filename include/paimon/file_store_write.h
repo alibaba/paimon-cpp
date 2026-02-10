@@ -47,6 +47,8 @@ class PAIMON_EXPORT FileStoreWrite {
     virtual ~FileStoreWrite() = default;
 
     /// Support write an input `RecordBatch` to internal buffer or file.
+    /// @note If a field in table schema is marked as non-nullable (`nullable = false`),
+    ///       the corresponding array in `batch` must have zero null entries.
     virtual Status Write(std::unique_ptr<RecordBatch>&& batch) = 0;
 
     /// Generate a list of commit messages with the latest generated data file meta

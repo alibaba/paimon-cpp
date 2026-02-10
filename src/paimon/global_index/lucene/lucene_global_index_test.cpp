@@ -24,7 +24,7 @@
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/lucene/lucene_global_index_reader.h"
 #include "paimon/global_index/lucene/lucene_global_index_writer.h"
 #include "paimon/testing/utils/testharness.h"
@@ -105,10 +105,9 @@ class LuceneGlobalIndexTest : public ::testing::Test,
     void CheckResult(const std::shared_ptr<GlobalIndexResult>& result,
                      const std::vector<int64_t>& expected_ids) const {
         const RoaringBitmap64* bitmap = nullptr;
-        if (auto vector_search_result =
-                std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result)) {
-            ASSERT_OK_AND_ASSIGN(bitmap, vector_search_result->GetBitmap());
-            ASSERT_EQ(vector_search_result->GetScores().size(), expected_ids.size());
+        if (auto scored_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result)) {
+            ASSERT_OK_AND_ASSIGN(bitmap, scored_result->GetBitmap());
+            ASSERT_EQ(scored_result->GetScores().size(), expected_ids.size());
         } else if (auto bitmap_result =
                        std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
             ASSERT_OK_AND_ASSIGN(bitmap, bitmap_result->GetBitmap());

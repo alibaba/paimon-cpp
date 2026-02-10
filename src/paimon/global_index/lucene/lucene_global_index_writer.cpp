@@ -167,7 +167,7 @@ Status LuceneGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     return Status::OK();
 }
 
-Result<std::string> LuceneGlobalIndexWriter::FlushIndexToFinal() const {
+Result<std::string> LuceneGlobalIndexWriter::FlushIndexToFinal() {
     try {
         // flush index to tmp dir
         write_context_.index_writer->optimize();

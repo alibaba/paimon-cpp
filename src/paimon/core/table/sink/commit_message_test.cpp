@@ -1120,13 +1120,8 @@ TEST(CommitMessageTest, TestCompatibleWithComplexDataType) {
 
 TEST(CommitMessageTest, TestSerialize) {
     arrow::FieldVector fields = {
-        arrow::field("f0", arrow::boolean()),  arrow::field("f1", arrow::int8()),
-        arrow::field("f2", arrow::int8()),     arrow::field("f3", arrow::int16()),
-        arrow::field("f4", arrow::int16()),    arrow::field("f5", arrow::int32()),
-        arrow::field("f6", arrow::int32()),    arrow::field("f7", arrow::int64()),
-        arrow::field("f8", arrow::int64()),    arrow::field("f9", arrow::float32()),
-        arrow::field("f10", arrow::float64()), arrow::field("f11", arrow::utf8()),
-        arrow::field("f12", arrow::binary()),  arrow::field("non-partition-field", arrow::int32())};
+        arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int8()),
+        arrow::field("f3", arrow::int16()), arrow::field("non-partition-field", arrow::utf8())};
 
     arrow::Schema typed_schema(fields);
     ::ArrowSchema schema;
@@ -1157,14 +1152,29 @@ TEST(CommitMessageTest, TestSerialize) {
                          FileStoreWrite::Create(std::move(write_context)));
 
     for (size_t i = 0; i < 10240; i++) {
-        auto array = std::make_shared<arrow::Array>();
-        arrow::StringBuilder builder;
+        auto f0_array = std::make_shared<arrow::Array>();
+        auto f1_array = std::make_shared<arrow::Array>();
+        auto f3_array = std::make_shared<arrow::Array>();
+        auto non_partition_array = std::make_shared<arrow::Array>();
+        arrow::BooleanBuilder f0_builder;
+        arrow::Int8Builder f1_builder;
+        arrow::Int16Builder f3_builder;
+        arrow::StringBuilder non_partition_builder;
         for (size_t j = 0; j < 100; j++) {
-            ASSERT_TRUE(builder.Append(std::to_string(j)).ok());
+            ASSERT_TRUE(f0_builder.Append(true).ok());
+            ASSERT_TRUE(f1_builder.Append(j).ok());
+            ASSERT_TRUE(f3_builder.Append(1).ok());
+            ASSERT_TRUE(non_partition_builder.Append(std::to_string(j)).ok());
         }
-        ASSERT_TRUE(builder.Finish(&array).ok());
+        ASSERT_TRUE(f0_builder.Finish(&f0_array).ok());
+        ASSERT_TRUE(f1_builder.Finish(&f1_array).ok());
+        ASSERT_TRUE(f3_builder.Finish(&f3_array).ok());
+        ASSERT_TRUE(non_partition_builder.Finish(&non_partition_array).ok());
+        auto struct_array =
+            arrow::StructArray::Make({f0_array, f1_array, f3_array, non_partition_array}, fields)
+                .ValueOrDie();
         ::ArrowArray arrow_array;
-        ASSERT_TRUE(arrow::ExportArray(*array, &arrow_array).ok());
+        ASSERT_TRUE(arrow::ExportArray(*struct_array, &arrow_array).ok());
         RecordBatchBuilder batch_builder(&arrow_array);
         ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
                              batch_builder.SetPartition({{"f0", "true"}, {"f3", "1"}}).Finish());

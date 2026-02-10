@@ -292,6 +292,7 @@ macro(build_lucene)
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
+        "-DLUCENE_BUILD_SHARED=OFF"
         "-DENABLE_TEST=OFF"
         "-DCMAKE_C_FLAGS=-pthread"
         "-DCMAKE_CXX_FLAGS=-pthread"
@@ -303,7 +304,7 @@ macro(build_lucene)
         "-DBoost_THREAD_FOUND=TRUE"
         "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
 
-    set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.so.0")
+    set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.a")
     externalproject_add(lucene_ep
                         ${EP_COMMON_OPTIONS}
                         URL ${LUCENE_SOURCE_URL}
@@ -323,13 +324,14 @@ macro(build_lucene)
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${LUCENE_INCLUDE_DIR}")
     include_directories(SYSTEM ${LUCENE_INCLUDE_DIR} ${BOOST_INCLUDE_DIR})
-    add_library(lucene INTERFACE IMPORTED)
-    target_include_directories(lucene SYSTEM INTERFACE "${LUCENE_INCLUDE_DIR}")
-    target_compile_options(lucene INTERFACE -pthread)
+    add_library(lucene STATIC IMPORTED)
+    set_target_properties(lucene
+                          PROPERTIES IMPORTED_LOCATION "${LUCENE_LIB}"
+                                     INTERFACE_INCLUDE_DIRECTORIES
+                                     "${LUCENE_INCLUDE_DIR}")
 
     target_link_libraries(lucene
-                          INTERFACE "${LUCENE_LIB}"
-                                    boost_date_time
+                          INTERFACE boost_date_time
                                     boost_filesystem
                                     boost_regex
                                     boost_thread

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,10 +120,16 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
         return transform_(file_index_result);
     }
 
-    Result<std::shared_ptr<VectorSearchGlobalIndexResult>> VisitVectorSearch(
+    Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
         return Status::Invalid(
             "FileIndexReaderWrapper is not supposed to handle vector search query");
+    }
+
+    Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
+        const std::shared_ptr<FullTextSearch>& full_text_search) override {
+        std::shared_ptr<FileIndexResult> remain = FileIndexResult::Remain();
+        return transform_(remain);
     }
 
  private:

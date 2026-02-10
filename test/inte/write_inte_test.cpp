@@ -3893,4 +3893,50 @@ TEST_P(WriteInteTest, TestAppendTableWithDateFieldAsPartitionField) {
     ASSERT_TRUE(success);
 }
 
+TEST_P(WriteInteTest, TestNullabilityCheck) {
+    auto dir = UniqueTestDirectory::Create();
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/true),
+                                 arrow::field("f1", arrow::int32(), /*nullable=*/false)};
+    auto schema = arrow::schema(fields);
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, StringUtils::ToUpperCase(file_format)},
+        {Options::TARGET_FILE_SIZE, "1024"},
+        {Options::BUCKET, "-1"},
+    };
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(dir->Str(), schema, /*partition_keys=*/{},
+                                        /*primary_keys=*/{}, options, /*is_streaming_mode=*/false));
+    int64_t commit_identifier = 0;
+
+    // write invalid data
+    std::string data = R"([
+            ["banana", 2],
+            ["dog", 1],
+            [null, 14],
+            ["mouse", null]
+    ])";
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_NOK_WITH_MSG(
+        helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                               /*expected_commit_messages=*/std::nullopt),
+        "CheckNullabilityMatch failed, field f1 not nullable while data have null value");
+
+    // write valid data
+    data = R"([
+            ["banana", 2],
+            ["dog", 1],
+            [null, 14],
+            ["mouse", 100]
+    ])";
+    ASSERT_OK_AND_ASSIGN(batch,
+                         TestHelper::MakeRecordBatch(arrow::struct_(fields), data,
+                                                     /*partition_map=*/{}, /*bucket=*/0, {}));
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs,
+                         helper->WriteAndCommit(std::move(batch), commit_identifier++,
+                                                /*expected_commit_messages=*/std::nullopt));
+}
+
 }  // namespace paimon::test

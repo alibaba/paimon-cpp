@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
@@ -25,7 +26,7 @@
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/global_index_scan.h"
 #include "paimon/global_index/global_index_write_task.h"
 #include "paimon/predicate/literal.h"
@@ -180,8 +181,8 @@ class GlobalIndexTest : public ::testing::Test, public ::testing::WithParamInter
             for (auto iter = bitmap.Begin(); iter != bitmap.End(); ++iter) {
                 scores.push_back(id_to_score.at(*iter));
             }
-            index_result = std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
-                                                                                 std::move(scores));
+            index_result = std::make_shared<BitmapScoredGlobalIndexResult>(std::move(bitmap),
+                                                                           std::move(scores));
         }
         return ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr, /*vector_search=*/nullptr,
                                       /*options=*/{}, index_result);
@@ -1006,9 +1007,8 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         auto vector_search = std::make_shared<VectorSearch>(
             "f1", limit, query, filter,
             /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options);
-        ASSERT_OK_AND_ASSIGN(auto vector_search_result,
-                             lumina_reader->VisitVectorSearch(vector_search));
-        ASSERT_EQ(vector_search_result->ToString(), lumina_result);
+        ASSERT_OK_AND_ASSIGN(auto scored_result, lumina_reader->VisitVectorSearch(vector_search));
+        ASSERT_EQ(scored_result->ToString(), lumina_result);
 
         // check evaluate predicate and vector search
         auto vector_search_without_filter = vector_search->ReplacePreFilter(nullptr);
@@ -2002,11 +2002,11 @@ TEST_P(GlobalIndexTest, TestScanIndexWithTwoIndexes) {
     ASSERT_EQ(index_readers.size(), 1);
     std::vector<float> query = {11.0f, 11.0f, 11.0f, 11.0f};
     ASSERT_OK_AND_ASSIGN(
-        auto vector_search_result,
+        auto scored_result,
         index_readers[0]->VisitVectorSearch(std::make_shared<VectorSearch>(
             "f1", 1, query, /*filter=*/nullptr,
             /*predicate=*/nullptr, /*distance_type=*/std::nullopt, /*options=*/lumina_options)));
-    ASSERT_EQ(vector_search_result->ToString(), "row ids: {7}, scores: {0.00}");
+    ASSERT_EQ(scored_result->ToString(), "row ids: {7}, scores: {0.00}");
 
     // query f2
     ASSERT_OK_AND_ASSIGN(index_readers, range_scanner->CreateReaders("f2"));
@@ -2177,6 +2177,69 @@ TEST_P(GlobalIndexTest, TestIOException) {
         break;
     }
     ASSERT_TRUE(read_run_complete);
+}
+#endif
+
+#ifdef PAIMON_ENABLE_LUCENE
+TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
+                                 arrow::field("f1", arrow::int32())};
+    std::map<std::string, std::string> lucene_options = {
+        {"lucene-fts.write.omit-term-freq-and-position", "false"}};
+    auto schema = arrow::schema(fields);
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format_},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::ROW_TRACKING_ENABLED, "true"},
+                                                  {Options::DATA_EVOLUTION_ENABLED, "true"}};
+    CreateTable(/*partition_keys=*/{}, schema, options);
+
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    std::vector<std::string> write_cols = schema->field_names();
+
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
+["This is an test document.", 0],
+["This is an new document document document.", 1],
+["Document document document document test.", 2],
+["unordered user-defined doc id", 3]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    // write and commit lucene index
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "lucene-fts",
+                         /*options=*/lucene_options, Range(0, 3)));
+
+    ASSERT_OK_AND_ASSIGN(
+        auto global_index_scan,
+        GlobalIndexScan::Create(table_path, /*snapshot_id=*/std::nullopt,
+                                /*partitions=*/std::nullopt, /*options=*/{}, fs_, pool_));
+    ASSERT_OK_AND_ASSIGN(std::vector<Range> ranges, global_index_scan->GetRowRangeList());
+    ASSERT_EQ(ranges, std::vector<Range>({Range(0, 3)}));
+    ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(0, 3)));
+    auto scanner_impl = std::dynamic_pointer_cast<RowRangeGlobalIndexScannerImpl>(range_scanner);
+    ASSERT_TRUE(scanner_impl);
+
+    // test f0 field
+    ASSERT_OK_AND_ASSIGN(auto index_reader, range_scanner->CreateReader("f0", "lucene-fts"));
+    {
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL,
+                                 /*pre_filter=*/std::nullopt)));
+        ASSERT_TRUE(index_result->ToString().find("row ids: {0,1,2}") != std::string::npos);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto index_result,
+                             index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                                 "f0",
+                                 /*limit=*/10, "*or*er*", FullTextSearch::SearchType::WILDCARD,
+                                 /*pre_filter=*/std::nullopt)));
+        ASSERT_TRUE(index_result->ToString().find("row ids: {3}") != std::string::npos);
+    }
 }
 #endif
 

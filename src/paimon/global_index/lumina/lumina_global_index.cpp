@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/common/utils/string_utils.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/lumina/lumina_file_reader.h"
 #include "paimon/global_index/lumina/lumina_file_writer.h"
 #include "paimon/global_index/lumina/lumina_utils.h"
@@ -320,7 +320,7 @@ LuminaIndexReader::LuminaIndexReader(
       searcher_(std::move(searcher)),
       searcher_with_filter_(std::move(searcher_with_filter)) {}
 
-Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitVectorSearch(
+Result<std::shared_ptr<ScoredGlobalIndexResult>> LuminaIndexReader::VisitVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search) {
     if (vector_search->predicate) {
         return Status::NotImplemented("lumina index not support predicate in VisitVectorSearch");
@@ -362,7 +362,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
                                                                    search_options, *pool_));
     }
 
-    // prepare BitmapVectorSearchGlobalIndexResult
+    // prepare BitmapScoredGlobalIndexResult
     std::map<int64_t, float> id_to_score;
     for (const auto& [id, score] : search_result.topk) {
         id_to_score[id] = score;
@@ -375,8 +375,7 @@ Result<std::shared_ptr<VectorSearchGlobalIndexResult>> LuminaIndexReader::VisitV
         bitmap.Add(id);
         scores.push_back(score);
     }
-    return std::make_shared<BitmapVectorSearchGlobalIndexResult>(std::move(bitmap),
-                                                                 std::move(scores));
+    return std::make_shared<BitmapScoredGlobalIndexResult>(std::move(bitmap), std::move(scores));
 }
 
 }  // namespace paimon::lumina

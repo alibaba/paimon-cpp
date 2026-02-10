@@ -24,7 +24,7 @@
 namespace paimon::lucene {
 struct JiebaTokenizerContext {
     JiebaTokenizerContext(const std::string& _tokenize_mode, bool _with_position,
-                          const std::shared_ptr<cppjieba::Jieba> _jieba,
+                          const std::shared_ptr<cppjieba::Jieba>& _jieba,
                           const std::shared_ptr<MemoryPool>& _pool,
                           int32_t _buffer_size = kReadBufferSize);
 

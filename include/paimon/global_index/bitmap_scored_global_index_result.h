@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,25 +26,24 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Represents a vector search global index result that combines a Roaring bitmap of candidate row
+/// Represents a scored global index result that combines a Roaring bitmap of candidate row
 /// ids with an array of associated relevance scores.
 ///
-/// **Important Ordering Note**: Despite inheriting from VectorSearchGlobalIndexResult, the results
-/// are
+/// **Important Ordering Note**: Inheriting from ScoredGlobalIndexResult, the results are
 /// **NOT sorted by score**. Instead, both the bitmap and the score vector are ordered by
 /// **ascending row id**. This design enables efficient merging and set operations while preserving
 /// row id-to-score mapping.
-class PAIMON_EXPORT BitmapVectorSearchGlobalIndexResult : public VectorSearchGlobalIndexResult {
+class PAIMON_EXPORT BitmapScoredGlobalIndexResult : public ScoredGlobalIndexResult {
  public:
-    BitmapVectorSearchGlobalIndexResult(RoaringBitmap64&& bitmap, std::vector<float>&& scores)
+    BitmapScoredGlobalIndexResult(RoaringBitmap64&& bitmap, std::vector<float>&& scores)
         : bitmap_(std::move(bitmap)), scores_(std::move(scores)) {
         assert(static_cast<size_t>(bitmap_.Cardinality()) == scores_.size());
     }
 
-    class VectorSearchIterator : public VectorSearchGlobalIndexResult::VectorSearchIterator {
+    class ScoredIterator : public ScoredGlobalIndexResult::ScoredIterator {
      public:
-        VectorSearchIterator(const RoaringBitmap64* bitmap, RoaringBitmap64::Iterator&& iter,
-                             const float* scores)
+        ScoredIterator(const RoaringBitmap64* bitmap, RoaringBitmap64::Iterator&& iter,
+                       const float* scores)
             : bitmap_(bitmap), iter_(std::move(iter)), scores_(scores) {}
 
         bool HasNext() const override {
@@ -66,8 +65,8 @@ class PAIMON_EXPORT BitmapVectorSearchGlobalIndexResult : public VectorSearchGlo
 
     Result<std::unique_ptr<GlobalIndexResult::Iterator>> CreateIterator() const override;
 
-    Result<std::unique_ptr<VectorSearchGlobalIndexResult::VectorSearchIterator>>
-    CreateVectorSearchIterator() const override;
+    Result<std::unique_ptr<ScoredGlobalIndexResult::ScoredIterator>> CreateScoredIterator()
+        const override;
 
     Result<std::shared_ptr<GlobalIndexResult>> And(
         const std::shared_ptr<GlobalIndexResult>& other) override;
@@ -90,7 +89,6 @@ class PAIMON_EXPORT BitmapVectorSearchGlobalIndexResult : public VectorSearchGlo
     const std::vector<float>& GetScores() const;
 
  private:
-    // TODO(xinyu.lxy): may use pair<int64_t, float>
     RoaringBitmap64 bitmap_;
     // ordered by row id
     std::vector<float> scores_;

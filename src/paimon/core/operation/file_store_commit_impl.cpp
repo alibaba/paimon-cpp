@@ -62,6 +62,7 @@
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/sink/commit_message_impl.h"
+#include "paimon/core/utils/duration.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/fs/file_system.h"
@@ -379,7 +380,7 @@ Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& c
 
     int32_t attempt = 0;
     int32_t generated_snapshot = 0;
-    const auto started = std::chrono::high_resolution_clock::now();
+    Duration duration;
     if (!ignore_empty_commit_ || !append_table_files.empty() || !append_table_index_files.empty()) {
         PAIMON_ASSIGN_OR_RAISE(int32_t cnt,
                                TryCommit(append_table_files, append_table_index_files,
@@ -403,10 +404,7 @@ Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& c
             compaction_input_file_size += entry.File()->file_size;
         }
     }
-    metrics_->SetCounter(CommitMetrics::LAST_COMMIT_DURATION,
-                         std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::high_resolution_clock::now() - started)
-                             .count());
+    metrics_->SetCounter(CommitMetrics::LAST_COMMIT_DURATION, duration.Get());
     metrics_->SetCounter(CommitMetrics::LAST_COMMIT_ATTEMPTS, attempt);
     metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_ADDED, table_files_added);
     metrics_->SetCounter(CommitMetrics::LAST_TABLE_FILES_DELETED, table_files_deleted);

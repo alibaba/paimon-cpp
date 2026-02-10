@@ -105,6 +105,13 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
                             options_.GetBucket()));
         }
     }
+    // check nullability
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+        std::shared_ptr<arrow::Array> data,
+        arrow::ImportArray(batch->GetData(), arrow::struct_(write_schema_->fields())));
+    PAIMON_RETURN_NOT_OK(ArrowUtils::CheckNullabilityMatch(write_schema_, data));
+    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*data, batch->GetData()));
+
     PAIMON_ASSIGN_OR_RAISE(BinaryRow partition,
                            file_store_path_factory_->ToBinaryRow(batch->GetPartition()))
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer,

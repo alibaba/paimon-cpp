@@ -593,22 +593,6 @@ TEST_P(BlobTableInteTest, TestOnlySomeColumns) {
                         "Can't infer struct array length with 0 child arrays");
 }
 
-TEST_P(BlobTableInteTest, TestNullValues) {
-    CreateTable();
-    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
-    auto schema = arrow::schema(fields_);
-
-    // write field: f0, f1
-    std::vector<std::string> write_cols1 = {"f0", "f1"};
-    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields_[0], fields_[1]}), R"([
-        [1, null]
-    ])")
-            .ValueOrDie());
-    ASSERT_NOK_WITH_MSG(WriteArray(table_path, {}, write_cols1, {src_array1}),
-                        "BlobFormatWriter only support non-null blob.");
-}
-
 TEST_P(BlobTableInteTest, TestMultipleAppendsDifferentFirstRowIds) {
     CreateTable();
     std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
