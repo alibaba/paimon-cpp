@@ -457,7 +457,7 @@ TEST_F(AvroDirectEncoderDecoderTest, TestArrayBasedMapType) {
         "type" : "array",
         "items" : {
             "type" : "record",
-            "name" : "record_f1", 
+            "name" : "record_f1",
             "fields" : [ {
                 "name" : "key",
                 "type" : "int"
@@ -619,7 +619,7 @@ TEST_F(AvroDirectEncoderDecoderTest, TestInvalidArrayBasedMapType) {
         "type" : "array",
         "items" : {
             "type" : "record",
-            "name" : "record_f1", 
+            "name" : "record_f1",
             "fields" : [ {
                 "name" : "key",
                 "type" : "int"
