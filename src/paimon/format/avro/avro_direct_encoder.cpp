@@ -227,9 +227,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
             const auto& binary_array =
                 arrow::internal::checked_cast<const arrow::BinaryArray&>(array);
             std::string_view value = binary_array.GetView(row_index);
-            // TODO(jinli.zjw): need to copy to ctx?
-            ctx->assign(value.begin(), value.end());
-            encoder->encodeBytes(ctx->data(), ctx->size());
+            encoder->encodeBytes(reinterpret_cast<const uint8_t*>(value.data()), value.size());
             return Status::OK();
         }
 
