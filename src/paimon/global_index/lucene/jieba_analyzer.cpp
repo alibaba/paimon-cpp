@@ -83,7 +83,7 @@ void JiebaTokenizer::CutWithMode(const std::string& tokenize_mode, const cppjieb
 }
 
 bool JiebaTokenizer::IsWhitespaceOnly(const std::string& term) {
-    return !term.empty() &&
+    return term.empty() ||
            std::all_of(term.begin(), term.end(), [](unsigned char c) { return std::isspace(c); });
 }
 
