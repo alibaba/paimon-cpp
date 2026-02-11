@@ -29,8 +29,7 @@ class LuceneGlobalIndexWriter : public GlobalIndexWriter {
         LuceneWriteContext(const std::string& _tmp_index_path,
                            const Lucene::FSDirectoryPtr& _lucene_dir,
                            const Lucene::IndexWriterPtr& _index_writer,
-                           const Lucene::DocumentPtr& _doc, const Lucene::FieldPtr& _field,
-                           const Lucene::FieldPtr& _row_id_field);
+                           const Lucene::DocumentPtr& _doc, const Lucene::FieldPtr& _field);
 
         LuceneWriteContext(LuceneWriteContext&&) = default;
         LuceneWriteContext& operator=(LuceneWriteContext&&) = default;
@@ -40,7 +39,6 @@ class LuceneGlobalIndexWriter : public GlobalIndexWriter {
         Lucene::IndexWriterPtr index_writer;
         Lucene::DocumentPtr doc;
         Lucene::FieldPtr field;
-        Lucene::FieldPtr row_id_field;
     };
 
     static Result<std::shared_ptr<LuceneGlobalIndexWriter>> Create(

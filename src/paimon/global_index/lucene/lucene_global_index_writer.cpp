@@ -40,13 +40,12 @@ namespace paimon::lucene {
 LuceneGlobalIndexWriter::LuceneWriteContext::LuceneWriteContext(
     const std::string& _tmp_index_path, const Lucene::FSDirectoryPtr& _lucene_dir,
     const Lucene::IndexWriterPtr& _index_writer, const Lucene::DocumentPtr& _doc,
-    const Lucene::FieldPtr& _field, const Lucene::FieldPtr& _row_id_field)
+    const Lucene::FieldPtr& _field)
     : tmp_index_path(_tmp_index_path),
       lucene_dir(_lucene_dir),
       index_writer(_index_writer),
       doc(_doc),
-      field(_field),
-      row_id_field(_row_id_field) {}
+      field(_field) {}
 
 Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create(
     const std::string& field_name, const std::shared_ptr<arrow::DataType>& arrow_type,
@@ -89,17 +88,11 @@ Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create
         auto field = Lucene::newLucene<Lucene::Field>(LuceneUtils::StringToWstring(field_name),
                                                       kEmptyWstring, Lucene::Field::STORE_NO,
                                                       Lucene::Field::INDEX_ANALYZED_NO_NORMS);
-        auto row_id_field = Lucene::newLucene<Lucene::Field>(
-            kRowIdFieldWstring, kEmptyWstring, Lucene::Field::STORE_YES,
-            Lucene::Field::INDEX_NOT_ANALYZED_NO_NORMS);
         field->setOmitTermFreqAndPositions(omit_term_freq_and_positions);
-        row_id_field->setOmitTermFreqAndPositions(true);
         doc->add(field);
-        doc->add(row_id_field);
         return std::shared_ptr<LuceneGlobalIndexWriter>(new LuceneGlobalIndexWriter(
-            field_name, arrow_type,
-            LuceneWriteContext(tmp_path, lucene_dir, writer, doc, field, row_id_field), file_writer,
-            options, pool));
+            field_name, arrow_type, LuceneWriteContext(tmp_path, lucene_dir, writer, doc, field),
+            file_writer, options, pool));
     } catch (const std::exception& e) {
         return Status::Invalid(
             fmt::format("create lucene global index writer failed, with {} error.", e.what()));
@@ -153,8 +146,7 @@ Status LuceneGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
                 auto view = string_array->Value(i);
                 write_context_.field->setValue(LuceneUtils::StringToWstring(view));
             }
-            write_context_.row_id_field->setValue(
-                LuceneUtils::StringToWstring(std::to_string(row_id_++)));
+            row_id_++;
             write_context_.index_writer->addDocument(write_context_.doc);
         }
     } catch (const std::exception& e) {
@@ -170,6 +162,11 @@ Status LuceneGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
 Result<std::string> LuceneGlobalIndexWriter::FlushIndexToFinal() {
     try {
         // flush index to tmp dir
+        if (write_context_.index_writer->numDocs() != row_id_) {
+            return Status::Invalid(
+                fmt::format("lucene writer row count {} mismatch paimon inner row count {}",
+                            write_context_.index_writer->numDocs(), row_id_));
+        }
         write_context_.index_writer->optimize();
         write_context_.index_writer->close();
 
