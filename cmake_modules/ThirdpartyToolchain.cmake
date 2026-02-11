@@ -318,13 +318,20 @@ macro(build_lucene)
     get_filename_component(LUCENE_ZLIB_ROOT "${LUCENE_ZLIB_INCLUDE_DIR}" DIRECTORY)
 
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
+
+    set(LUCENE_CMAKE_C_FLAGS "${EP_C_FLAGS} -pthread")
+    set(LUCENE_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -pthread")
+
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DLUCENE_BUILD_SHARED=OFF"
         "-DENABLE_TEST=OFF"
-        "-DCMAKE_C_FLAGS=-pthread"
-        "-DCMAKE_CXX_FLAGS=-pthread"
+        "-DCMAKE_C_FLAGS=${LUCENE_CMAKE_C_FLAGS}"
+        "-DCMAKE_CXX_FLAGS=${LUCENE_CMAKE_CXX_FLAGS}"
         "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
+        "-DBoost_NO_BOOST_CMAKE=ON"
+        "-DBoost_NO_SYSTEM_PATHS=ON"
+        "-DBoost_USE_STATIC_LIBS=ON"
         "-DBoost_INCLUDE_DIR=${BOOST_INCLUDE_DIR}"
         "-DBoost_LIBRARY_DIR=${BOOST_LIBRARY_DIR}"
         "-DBOOST_ROOT=${BOOST_INSTALL}"
@@ -505,6 +512,8 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_chrono.a
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
 
+    set(BOOST_CXX_FLAGS "${EP_CXX_FLAGS} -fPIC")
+
     externalproject_add(boost_ep
                         URL "${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
                         URL_HASH "SHA256=${PAIMON_BOOST_BUILD_SHA256_CHECKSUM}"
@@ -515,7 +524,7 @@ macro(build_boost)
                                       --prefix=${BOOST_INSTALL}
                                       --libdir=${BOOST_LIBRARY_DIR} link=static
                                       runtime-link=shared threading=multi variant=release
-                                      cxxflags=-fPIC install
+                                      cxxflags=${BOOST_CXX_FLAGS} install
                         INSTALL_COMMAND bash -c
                                         "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
