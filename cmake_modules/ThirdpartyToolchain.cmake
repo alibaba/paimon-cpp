@@ -512,7 +512,12 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_chrono.a
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
 
-    set(BOOST_CXX_FLAGS "${EP_CXX_FLAGS} -fPIC")
+    set(BOOST_CXX_FLAGS "-fPIC")
+    if(PAIMON_USE_CXX11_ABI)
+        string(APPEND BOOST_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
+    else()
+        string(APPEND BOOST_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=0")
+    endif()
 
     externalproject_add(boost_ep
                         URL "${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
