@@ -150,7 +150,7 @@ class ConfigParser {
     Status ParseSortOrder(SortOrder* sort_order) const {
         auto iter = config_map_.find(Options::SEQUENCE_FIELD_SORT_ORDER);
         if (iter != config_map_.end()) {
-            const auto& str = iter->second;
+            std::string str = StringUtils::ToLowerCase(iter->second);
             if (str == "ascending") {
                 *sort_order = SortOrder::ASCENDING;
             } else if (str == "descending") {
@@ -166,7 +166,7 @@ class ConfigParser {
     Status ParseSortEngine(SortEngine* sort_engine) const {
         auto iter = config_map_.find(Options::SORT_ENGINE);
         if (iter != config_map_.end()) {
-            const auto& str = iter->second;
+            std::string str = StringUtils::ToLowerCase(iter->second);
             if (str == "min-heap") {
                 *sort_engine = SortEngine::MIN_HEAP;
             } else if (str == "loser-tree") {
@@ -182,7 +182,7 @@ class ConfigParser {
     Status ParseMergeEngine(MergeEngine* merge_engine) const {
         auto iter = config_map_.find(Options::MERGE_ENGINE);
         if (iter != config_map_.end()) {
-            const auto& str = iter->second;
+            std::string str = StringUtils::ToLowerCase(iter->second);
             if (str == "deduplicate") {
                 *merge_engine = MergeEngine::DEDUPLICATE;
             } else if (str == "partial-update") {
@@ -202,7 +202,7 @@ class ConfigParser {
     Status ParseChangelogProducer(ChangelogProducer* changelog_producer) const {
         auto iter = config_map_.find(Options::CHANGELOG_PRODUCER);
         if (iter != config_map_.end()) {
-            const auto& str = iter->second;
+            std::string str = StringUtils::ToLowerCase(iter->second);
             if (str == "none") {
                 *changelog_producer = ChangelogProducer::NONE;
             } else if (str == "input") {
@@ -222,7 +222,7 @@ class ConfigParser {
     Status ParseExternalPathStrategy(ExternalPathStrategy* external_path_strategy) const {
         auto iter = config_map_.find(Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY);
         if (iter != config_map_.end()) {
-            const auto& str = iter->second;
+            std::string str = StringUtils::ToLowerCase(iter->second);
             if (str == "none") {
                 *external_path_strategy = ExternalPathStrategy::NONE;
             } else if (str == "specific-fs") {
@@ -232,6 +232,16 @@ class ConfigParser {
             } else {
                 return Status::Invalid(fmt::format("invalid external path strategy: {}", str));
             }
+        }
+        return Status::OK();
+    }
+
+    // Parse StartupMode
+    Status ParseStartupMode(StartupMode* startup_mode) const {
+        auto iter = config_map_.find(Options::SCAN_MODE);
+        if (iter != config_map_.end()) {
+            std::string str = StringUtils::ToLowerCase(iter->second);
+            PAIMON_ASSIGN_OR_RAISE(*startup_mode, StartupMode::FromString(str));
         }
         return Status::OK();
     }
@@ -361,12 +371,7 @@ Result<CoreOptions> CoreOptions::FromMap(
                                                 &impl->file_system));
 
     // Parse startup mode
-    std::string startup_mode_str;
-    if (options_map.find(Options::SCAN_MODE) != options_map.end()) {
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_MODE, &startup_mode_str));
-        PAIMON_ASSIGN_OR_RAISE(auto startup_mode, StartupMode::FromString(startup_mode_str));
-        impl->startup_mode = startup_mode;
-    }
+    PAIMON_RETURN_NOT_OK(parser.ParseStartupMode(&impl->startup_mode));
 
     // Special handling for ExpireConfig
     int32_t snapshot_num_retain_min = 10;
