@@ -319,14 +319,18 @@ macro(build_lucene)
 
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
 
-    set(LUCENE_CMAKE_C_FLAGS "${EP_C_FLAGS} -pthread")
-    set(LUCENE_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -pthread")
+    set(LUCENE_CMAKE_CXX_FLAGS "-pthread")
+    if(PAIMON_USE_CXX11_ABI)
+        string(APPEND LUCENE_CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=1")
+    else()
+        string(APPEND LUCENE_CMAKE_CXX_FLAGS " -D_GLIBCXX_USE_CXX11_ABI=0")
+    endif()
 
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
         "-DLUCENE_BUILD_SHARED=OFF"
         "-DENABLE_TEST=OFF"
-        "-DCMAKE_C_FLAGS=${LUCENE_CMAKE_C_FLAGS}"
+        "-DCMAKE_C_FLAGS=-pthread"
         "-DCMAKE_CXX_FLAGS=${LUCENE_CMAKE_CXX_FLAGS}"
         "-DCMAKE_EXE_LINKER_FLAGS=-pthread"
         "-DBoost_NO_BOOST_CMAKE=ON"
