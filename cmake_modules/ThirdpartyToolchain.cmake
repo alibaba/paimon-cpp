@@ -124,6 +124,30 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_LIMONP_URL})
+    set(LIMONP_SOURCE_URL "$ENV{PAIMON_LIMONP_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_LIMONP_PKG_NAME}")
+        set_urls(LIMONP_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_LIMONP_PKG_NAME}")
+    else()
+        set_urls(LIMONP_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/limonp/archive/refs/tags/${PAIMON_LIMONP_PKG_NAME}"
+        )
+    endif()
+endif()
+
+if(DEFINED ENV{PAIMON_JIEBA_URL})
+    set(JIEBA_SOURCE_URL "$ENV{PAIMON_JIEBA_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_JIEBA_PKG_NAME}")
+        set_urls(JIEBA_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_JIEBA_PKG_NAME}")
+    else()
+        set_urls(JIEBA_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/cppjieba/archive/refs/tags/${PAIMON_JIEBA_PKG_NAME}"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_GLOG_URL})
     set(GLOG_SOURCE_URL "$ENV{PAIMON_GLOG_URL}")
 else()
@@ -289,6 +313,10 @@ set(EP_COMMON_CMAKE_ARGS
 
 macro(build_lucene)
     message(STATUS "Building lucene from source")
+
+    get_target_property(LUCENE_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(LUCENE_ZLIB_ROOT "${LUCENE_ZLIB_INCLUDE_DIR}" DIRECTORY)
+
     set(LUCENE_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/lucene_ep-install")
     set(LUCENE_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
@@ -302,6 +330,9 @@ macro(build_lucene)
         "-DBOOST_ROOT=${BOOST_INSTALL}"
         "-DBoost_CHRONO_FOUND=TRUE"
         "-DBoost_THREAD_FOUND=TRUE"
+        "-DZLIB_INCLUDE_DIRS=${ZLIB_INCLUDE_DIR}"
+        "-DZLIB_LIBRARY_RELEASE=${ZLIB_LIBRARIES}"
+        "-DZLIB_ROOT=${LUCENE_ZLIB_ROOT}"
         "-DCMAKE_INSTALL_PREFIX=${LUCENE_PREFIX}")
 
     set(LUCENE_LIB "${LUCENE_PREFIX}/lib/liblucene++.a")
@@ -311,7 +342,8 @@ macro(build_lucene)
                         URL_HASH "SHA256=${PAIMON_LUCENE_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${LUCENE_CMAKE_ARGS}
                         BUILD_BYPRODUCTS ${LUCENE_LIB}
-                        DEPENDS boost_date_time
+                        DEPENDS zlib
+                                boost_date_time
                                 boost_filesystem
                                 boost_regex
                                 boost_thread
@@ -331,7 +363,8 @@ macro(build_lucene)
                                      "${LUCENE_INCLUDE_DIR}")
 
     target_link_libraries(lucene
-                          INTERFACE boost_date_time
+                          INTERFACE zlib
+                                    boost_date_time
                                     boost_filesystem
                                     boost_regex
                                     boost_thread
@@ -345,6 +378,13 @@ macro(build_lucene)
 endmacro()
 
 macro(build_jieba)
+    message(STATUS "Building limonp from source")
+    set(LIMONP_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/limonp_ep-prefix")
+    externalproject_add(limonp_ep
+                        URL ${LIMONP_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_LIMONP_BUILD_SHA256_CHECKSUM}"
+                        INSTALL_COMMAND "")
+
     message(STATUS "Building jieba from source")
     set(JIEBA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/jieba_ep-prefix")
     set(JIEBA_INSTALL "${CMAKE_CURRENT_BINARY_DIR}/jieba_ep-install")
@@ -360,17 +400,14 @@ macro(build_jieba)
     set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/jieba.diff")
     externalproject_add(jieba_ep
                         ${EP_COMMON_OPTIONS}
-                        GIT_REPOSITORY https://github.com/yanyiwu/cppjieba.git
-                        GIT_TAG ${PAIMON_JIEBA_BUILD_VERSION}
-                        GIT_SHALLOW FALSE
-                        GIT_PROGRESS TRUE
-                        GIT_SUBMODULES_RECURSE TRUE
+                        URL ${JIEBA_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_JIEBA_BUILD_SHA256_CHECKSUM}"
                         CMAKE_ARGS ${JIEBA_CMAKE_ARGS}
                         LOG_PATCH ON
                         PATCH_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> bash -c
                                       "[ -f .patched ] && echo '<SOURCE_DIR> patch already applied, ignore...' || patch -s -N -p1 -i '${PATCH_FILE}' && touch .patched"
                         INSTALL_COMMAND bash -c
-                                        "cp -r ${JIEBA_PREFIX}/src/jieba_ep/include/* ${JIEBA_INSTALL}/include/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/dict/* ${JIEBA_INSTALL}/dict/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/deps/limonp/include/* ${JIEBA_INSTALL}/include/"
+                                        "cp -r ${JIEBA_PREFIX}/src/jieba_ep/include/* ${JIEBA_INSTALL}/include/ && cp -r ${JIEBA_PREFIX}/src/jieba_ep/dict/* ${JIEBA_INSTALL}/dict/ && cp -r ${LIMONP_PREFIX}/src/limonp_ep/include/* ${JIEBA_INSTALL}/include/"
     )
 
     # The include directory must exist before it is referenced by a target.
@@ -378,6 +415,7 @@ macro(build_jieba)
     add_library(jieba INTERFACE IMPORTED)
     target_include_directories(jieba SYSTEM
                                INTERFACE "${JIEBA_INCLUDE_DIR} ${JIEBA_DICT_DIR}")
+    add_dependencies(jieba_ep limonp_ep)
     add_dependencies(jieba jieba_ep)
 endmacro()
 
@@ -468,11 +506,8 @@ macro(build_boost)
         ${BOOST_LIBRARY_DIR}/libboost_iostreams.a)
 
     externalproject_add(boost_ep
-                        GIT_REPOSITORY https://github.com/boostorg/boost.git
-                        GIT_TAG boost-${PAIMON_BOOST_BUILD_VERSION}
-                        GIT_SHALLOW FALSE
-                        GIT_PROGRESS TRUE
-                        GIT_SUBMODULES_RECURSE TRUE
+                        URL "${THIRDPARTY_DIR}/boost/${PAIMON_BOOST_PKG_NAME}"
+                        URL_HASH "SHA256=${PAIMON_BOOST_BUILD_SHA256_CHECKSUM}"
                         CONFIGURE_COMMAND ${BOOST_PREFIX}/src/boost_ep/bootstrap.sh
                                           --with-libraries=date_time,filesystem,iostreams,regex,system,thread,chrono,atomic
                         BUILD_IN_SOURCE TRUE

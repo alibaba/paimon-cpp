@@ -63,7 +63,7 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
    * - ``BINARY``
 
        ``BINARY(n)``
-     - Binary
+     - Not Supported
      - Data type of a fixed-length binary string (=a sequence of bytes).
 
        The type can be declared using ``BINARY(n)`` where n is the number of

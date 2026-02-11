@@ -336,4 +336,23 @@ TEST(CoreOptionsTest, TestFileSystem) {
             typed_fs->GetRealFileSystem("oss:///tmp/").value_or(nullptr)));
     }
 }
+
+TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
+    std::map<std::string, std::string> options = {
+        {Options::SEQUENCE_FIELD_SORT_ORDER, "ASCENDING"},
+        {Options::SORT_ENGINE, "MIN-heap"},
+        {Options::MERGE_ENGINE, "first-ROW"},
+        {Options::CHANGELOG_PRODUCER, "LOOKUP"},
+        {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"},
+        {Options::SCAN_MODE, "DEFAULT"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+
+    ASSERT_EQ(StartupMode::LatestFull(), core_options.GetStartupMode());
+    ASSERT_EQ(ExternalPathStrategy::ROUND_ROBIN, core_options.GetExternalPathStrategy());
+    ASSERT_EQ(ChangelogProducer::LOOKUP, core_options.GetChangelogProducer());
+    ASSERT_EQ(MergeEngine::FIRST_ROW, core_options.GetMergeEngine());
+    ASSERT_EQ(SortEngine::MIN_HEAP, core_options.GetSortEngine());
+    ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
+}
 }  // namespace paimon::test
