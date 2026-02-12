@@ -52,7 +52,7 @@ Result<Literal> StringToBooleanCastExecutor::Cast(
     std::optional<bool> bool_value = StringUtils::StringToValue<bool>(value);
     if (bool_value == std::nullopt) {
         return Status::Invalid(fmt::format(
-            "StringToBooleanCastExecutor cast failed: STRING {} cannot cast to BOOLEAN", value));
+            "StringToBooleanCastExecutor cast failed: STRING '{}' cannot cast to BOOLEAN", value));
     }
     return Literal(bool_value.value());
 }
@@ -71,7 +71,7 @@ Result<std::shared_ptr<arrow::Array>> StringToBooleanCastExecutor::Cast(
                 StringUtils::StringToValue<bool>(string_array->GetString(i));
             if (bool_value == std::nullopt) {
                 return Status::Invalid(fmt::format(
-                    "StringToBooleanCastExecutor cast failed: STRING {} cannot cast to BOOLEAN",
+                    "StringToBooleanCastExecutor cast failed: STRING '{}' cannot cast to BOOLEAN",
                     string_array->GetString(i)));
             }
             PAIMON_RETURN_NOT_OK_FROM_ARROW(bool_builder->Append(bool_value.value()));

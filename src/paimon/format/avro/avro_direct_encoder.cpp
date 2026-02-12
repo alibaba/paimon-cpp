@@ -57,7 +57,8 @@ Result<UnionBranches> ValidateUnion(const ::avro::NodePtr& union_node) {
         return UnionBranches{.null_index = 0, .value_index = 1, .value_node = branch_1};
     }
     if (branch_1->type() == ::avro::AVRO_NULL && branch_0->type() != ::avro::AVRO_NULL) {
-        return UnionBranches{.null_index = 1, .value_index = 0, .value_node = branch_0};
+        return Status::Invalid(
+            "Unexpected: In paimon, we expect the null branch to be the first branch in a union.");
     }
     return Status::Invalid("Union must have exactly one null branch");
 }
@@ -92,10 +93,6 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
     }
 
     switch (avro_node->type()) {
-        case ::avro::AVRO_NULL:
-            encoder->encodeNull();
-            return Status::OK();
-
         case ::avro::AVRO_BOOL: {
             const auto& bool_array =
                 arrow::internal::checked_cast<const arrow::BooleanArray&>(array);
@@ -230,9 +227,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
             const auto& binary_array =
                 arrow::internal::checked_cast<const arrow::BinaryArray&>(array);
             std::string_view value = binary_array.GetView(row_index);
-            // TODO(jinli.zjw): need to copy to ctx?
-            ctx->assign(value.begin(), value.end());
-            encoder->encodeBytes(ctx->data(), ctx->size());
+            encoder->encodeBytes(reinterpret_cast<const uint8_t*>(value.data()), value.size());
             return Status::OK();
         }
 
@@ -294,7 +289,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                                     element_node->leaves() != 2)) {
                     return Status::Invalid(
                         fmt::format("Expected AVRO_RECORD for map key-value pair, got {}",
-                                    ::avro::toString(element_node->type())));
+                                    AvroUtils::ToString(avro_node)));
                 }
 
                 const auto& map_array =
@@ -366,9 +361,11 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
             return Status::OK();
         }
 
+        case ::avro::AVRO_NULL:
         case ::avro::AVRO_UNION:
             // Already handled above
-            return Status::Invalid("Unexpected union handling");
+            return Status::Invalid(fmt::format("Unexpected Avro type handling: {}",
+                                               ::avro::toString(avro_node->type())));
         default:
             return Status::Invalid(
                 fmt::format("Unsupported Avro type: {}", ::avro::toString(avro_node->type())));

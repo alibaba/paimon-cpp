@@ -837,7 +837,7 @@ TEST_F(CastExecutorTest, TestStringToBooleanCastExecutorCastLiteral) {
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::boolean());
         ASSERT_TRUE(
-            msg.find("StringToBooleanCastExecutor cast failed: STRING  cannot cast to BOOLEAN") !=
+            msg.find("StringToBooleanCastExecutor cast failed: STRING '' cannot cast to BOOLEAN") !=
             std::string::npos);
     }
     {
@@ -847,7 +847,7 @@ TEST_F(CastExecutorTest, TestStringToBooleanCastExecutorCastLiteral) {
                                                           src_data, arrow::boolean());
         ASSERT_TRUE(
             msg.find(
-                "StringToBooleanCastExecutor cast failed: STRING ttrue cannot cast to BOOLEAN") !=
+                "StringToBooleanCastExecutor cast failed: STRING 'ttrue' cannot cast to BOOLEAN") !=
             std::string::npos);
     }
 }
@@ -864,7 +864,7 @@ TEST_F(CastExecutorTest, TestStringToBooleanCastExecutorCastArray) {
         auto msg =
             CheckArrayInvalidResult(cast_executor, arrow::utf8(), arrow::boolean(), R"([""])");
         ASSERT_TRUE(
-            msg.find("StringToBooleanCastExecutor cast failed: STRING  cannot cast to BOOLEAN") !=
+            msg.find("StringToBooleanCastExecutor cast failed: STRING '' cannot cast to BOOLEAN") !=
             std::string::npos);
     }
     {
@@ -873,7 +873,7 @@ TEST_F(CastExecutorTest, TestStringToBooleanCastExecutorCastArray) {
                                            R"(["true", "ttrue"])");
         ASSERT_TRUE(
             msg.find(
-                "StringToBooleanCastExecutor cast failed: STRING ttrue cannot cast to BOOLEAN") !=
+                "StringToBooleanCastExecutor cast failed: STRING 'ttrue' cannot cast to BOOLEAN") !=
             std::string::npos);
     }
 }
@@ -940,49 +940,49 @@ TEST_F(CastExecutorTest, TestStringToNumericPrimitiveCastExecutorCastLiteral) {
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int8());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast 128 from STRING to TINYINT") != std::string::npos);
+                             "cast '128' from STRING to TINYINT") != std::string::npos);
     }
     {
         std::string src_data = "-129";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int8());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast -129 from STRING to TINYINT") != std::string::npos);
+                             "cast '-129' from STRING to TINYINT") != std::string::npos);
     }
     {
         std::string src_data = "32768";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int16());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast 32768 from STRING to SMALLINT") != std::string::npos);
+                             "cast '32768' from STRING to SMALLINT") != std::string::npos);
     }
     {
         std::string src_data = "-32769";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int16());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast -32769 from STRING to SMALLINT") != std::string::npos);
+                             "cast '-32769' from STRING to SMALLINT") != std::string::npos);
     }
     {
         std::string src_data = "2147483648";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int32());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast 2147483648 from STRING to INT") != std::string::npos);
+                             "cast '2147483648' from STRING to INT") != std::string::npos);
     }
     {
         std::string src_data = "-2147483649";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int32());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast -2147483649 from STRING to INT") != std::string::npos);
+                             "cast '-2147483649' from STRING to INT") != std::string::npos);
     }
     {
         std::string src_data = "9223372036854775808";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int64());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast 9223372036854775808 from STRING to BIGINT") !=
+                             "cast '9223372036854775808' from STRING to BIGINT") !=
                     std::string::npos);
     }
     {
@@ -990,7 +990,7 @@ TEST_F(CastExecutorTest, TestStringToNumericPrimitiveCastExecutorCastLiteral) {
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int64());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast -9223372036854775809 from STRING to BIGINT") !=
+                             "cast '-9223372036854775809' from STRING to BIGINT") !=
                     std::string::npos);
     }
     {
@@ -1011,14 +1011,14 @@ TEST_F(CastExecutorTest, TestStringToNumericPrimitiveCastExecutorCastLiteral) {
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int16());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast  from STRING to SMALLINT") != std::string::npos);
+                             "cast '' from STRING to SMALLINT") != std::string::npos);
     }
     {
         std::string src_data = "abc";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::int32());
         ASSERT_TRUE(msg.find("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                             "cast abc from STRING to INT") != std::string::npos);
+                             "cast 'abc' from STRING to INT") != std::string::npos);
     }
 }
 
@@ -1421,7 +1421,7 @@ TEST_F(CastExecutorTest, TestStringToDateCastExecutorCastLiteral) {
         std::string src_data = "9223372036854775807";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::date32());
-        ASSERT_TRUE(msg.find("failed to convert string 9223372036854775807 to date") !=
+        ASSERT_TRUE(msg.find("failed to convert string '9223372036854775807' to date") !=
                     std::string::npos);
     }
     {
@@ -1429,28 +1429,30 @@ TEST_F(CastExecutorTest, TestStringToDateCastExecutorCastLiteral) {
         std::string src_data = "11970-01-02";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::date32());
-        ASSERT_TRUE(msg.find("failed to convert string 11970-01-02 to date") != std::string::npos);
+        ASSERT_TRUE(msg.find("failed to convert string '11970-01-02' to date") !=
+                    std::string::npos);
     }
     {
         // invalid date str
         std::string src_data = "-1970-01-02";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::date32());
-        ASSERT_TRUE(msg.find("failed to convert string -1970-01-02 to date") != std::string::npos);
+        ASSERT_TRUE(msg.find("failed to convert string '-1970-01-02' to date") !=
+                    std::string::npos);
     }
     {
         // invalid date str
         std::string src_data = "";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::date32());
-        ASSERT_TRUE(msg.find("failed to convert string  to date") != std::string::npos);
+        ASSERT_TRUE(msg.find("failed to convert string '' to date") != std::string::npos);
     }
     {
         // invalid date str
         std::string src_data = "0x1";
         auto msg = CheckLiteralInvalidResult<std::string>(cast_executor, FieldType::STRING,
                                                           src_data, arrow::date32());
-        ASSERT_TRUE(msg.find("failed to convert string 0x1 to date") != std::string::npos);
+        ASSERT_TRUE(msg.find("failed to convert string '0x1' to date") != std::string::npos);
     }
 }
 

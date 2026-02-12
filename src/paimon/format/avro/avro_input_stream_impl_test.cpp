@@ -110,6 +110,43 @@ TEST(AvroInputStreamImplTest, TestSkip) {
     ASSERT_FALSE(stream->next(&data, &size));
 }
 
+TEST(AvroInputStreamImplTest, TestSkipWithAvailableData) {
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    std::filesystem::path file_path = dir->Str() + "/file";
+    std::ofstream output_file(file_path);
+    ASSERT_TRUE(output_file.is_open());
+    std::string test_data = "abcdefghij";
+    output_file << test_data;
+    output_file.close();
+
+    size_t buffer_size = 10;
+    std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(file_path));
+    ASSERT_OK_AND_ASSIGN(auto stream,
+                         AvroInputStreamImpl::Create(in, buffer_size, GetDefaultPool()));
+
+    const uint8_t* data;
+    size_t size;
+    // First, load data into buffer by calling next()
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 10);
+    ASSERT_EQ(stream->byteCount(), 10);
+
+    // Now backup some data to make it available in buffer
+    stream->backup(7);
+    ASSERT_EQ(stream->byteCount(), 3);
+
+    // Skip 3 bytes from the available buffer data
+    stream->skip(3);
+    ASSERT_EQ(stream->byteCount(), 6);
+
+    // Verify we can read the remaining 4 bytes from buffer
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 4);
+    ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "ghij");
+    ASSERT_EQ(stream->byteCount(), 10);
+}
+
 TEST(AvroInputStreamImplTest, TestSeek) {
     auto dir = paimon::test::UniqueTestDirectory::Create();
     std::filesystem::path file_path = dir->Str() + "/file";

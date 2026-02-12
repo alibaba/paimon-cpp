@@ -233,21 +233,21 @@ TEST_F(AvroFormatWriterTest, TestGetEstimateLength) {
 
     // add batch first time, 1 row
     AddRecordBatchOnce(format_writer, struct_type, 1, 0);
-    ASSERT_OK_AND_ASSIGN(bool reach_targe_size,
+    ASSERT_OK_AND_ASSIGN(bool reach_target_size,
                          format_writer->ReachTargetSize(/*suggested_check=*/true,
                                                         /*target_size=*/102400));
-    ASSERT_FALSE(reach_targe_size);
+    ASSERT_FALSE(reach_target_size);
 
     // add batch second times, 9998 rows
     AddRecordBatchOnce(format_writer, struct_type, 9998, 1);
-    ASSERT_OK_AND_ASSIGN(reach_targe_size, format_writer->ReachTargetSize(/*suggested_check=*/true,
-                                                                          /*target_size=*/102400));
-    ASSERT_FALSE(reach_targe_size);
+    ASSERT_OK_AND_ASSIGN(reach_target_size, format_writer->ReachTargetSize(/*suggested_check=*/true,
+                                                                           /*target_size=*/102400));
+    ASSERT_FALSE(reach_target_size);
 
     AddRecordBatchOnce(format_writer, struct_type, 100000, 9999);
-    ASSERT_OK_AND_ASSIGN(reach_targe_size, format_writer->ReachTargetSize(/*suggested_check=*/true,
-                                                                          /*target_size=*/102400));
-    ASSERT_TRUE(reach_targe_size);
+    ASSERT_OK_AND_ASSIGN(reach_target_size, format_writer->ReachTargetSize(/*suggested_check=*/true,
+                                                                           /*target_size=*/102400));
+    ASSERT_TRUE(reach_target_size);
     ASSERT_OK(format_writer->Finish());
 }
 

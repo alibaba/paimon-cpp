@@ -80,9 +80,9 @@ Result<std::unique_ptr<ColumnStats>> AvroStatsExtractor::FetchColumnStatistics(
         case arrow::Type::type::BOOL:
             return ColumnStats::CreateBooleanColumnStats(std::nullopt, std::nullopt, std::nullopt);
         case arrow::Type::type::INT8:
-            return ColumnStats::CreateTinyIntColumnStats(std::nullopt, std::nullopt, std::nullopt);
         case arrow::Type::type::INT16:
-            return ColumnStats::CreateSmallIntColumnStats(std::nullopt, std::nullopt, std::nullopt);
+            return Status::Invalid(
+                fmt::format("Unexpected: {} type cannot appear in avro files.", type->ToString()));
         case arrow::Type::type::INT32:
             return ColumnStats::CreateIntColumnStats(std::nullopt, std::nullopt, std::nullopt);
         case arrow::Type::type::INT64:
