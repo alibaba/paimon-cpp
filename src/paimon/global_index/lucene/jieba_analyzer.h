@@ -60,8 +60,6 @@ class JiebaTokenizer : public Lucene::Tokenizer {
  private:
     void InnerReset();
 
-    static bool IsWhitespaceOnly(const std::string& term);
-
  private:
     JiebaTokenizerContext context_;
     size_t term_index_ = 0;
