@@ -68,7 +68,8 @@ class AvroFormatWriterTest : public ::testing::Test {
                                                      int32_t batch_size) {
         ::ArrowSchema c_schema;
         EXPECT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
-        EXPECT_OK_AND_ASSIGN(auto file_format, FileFormatFactory::Get("avro", {}));
+        EXPECT_OK_AND_ASSIGN(auto file_format,
+                             FileFormatFactory::Get("avro", {{Options::FILE_FORMAT, "avro"}}));
         EXPECT_OK_AND_ASSIGN(auto writer_builder,
                              file_format->CreateWriterBuilder(&c_schema, batch_size));
         EXPECT_OK_AND_ASSIGN(std::shared_ptr<FormatWriter> writer,

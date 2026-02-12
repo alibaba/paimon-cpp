@@ -53,13 +53,14 @@ AvroFormatWriter::AvroFormatWriter(std::unique_ptr<::avro::DataFileWriterBase>&&
 
 Result<std::unique_ptr<AvroFormatWriter>> AvroFormatWriter::Create(
     std::unique_ptr<AvroOutputStreamImpl> out, const std::shared_ptr<arrow::Schema>& schema,
-    const ::avro::Codec codec) {
+    const ::avro::Codec codec, std::optional<int32_t> compression_level) {
     try {
         PAIMON_ASSIGN_OR_RAISE(::avro::ValidSchema avro_schema,
                                AvroSchemaConverter::ArrowSchemaToAvroSchema(schema));
         AvroOutputStreamImpl* avro_output_stream = out.get();
-        auto writer = std::make_unique<::avro::DataFileWriterBase>(std::move(out), avro_schema,
-                                                                   DEFAULT_SYNC_INTERVAL, codec);
+        auto writer = std::make_unique<::avro::DataFileWriterBase>(
+            std::move(out), avro_schema, DEFAULT_SYNC_INTERVAL, codec, ::avro::Metadata(),
+            compression_level);
         auto data_type = arrow::struct_(schema->fields());
         return std::unique_ptr<AvroFormatWriter>(
             new AvroFormatWriter(std::move(writer), avro_schema, data_type, avro_output_stream));
