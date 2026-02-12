@@ -15,6 +15,7 @@
  */
 #include "paimon/global_index/lucene/jieba_analyzer.h"
 
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/global_index/lucene/lucene_utils.h"
 
 namespace paimon::lucene {
@@ -90,11 +91,13 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
     output.clear();
     output.reserve(input.size());
     for (auto& term : input) {
+        if (StringUtils::IsNullOrWhitespaceOnly(term)) {
+            continue;
+        }
         // remove stop words
         if (stop_words.find(term) != stop_words.end()) {
             continue;
         }
-
         // to lower case
         bool is_alphanumeric = true;
         for (const auto& c : term) {

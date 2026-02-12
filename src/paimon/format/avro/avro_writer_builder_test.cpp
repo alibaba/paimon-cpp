@@ -22,7 +22,7 @@
 
 namespace paimon::avro::test {
 
-TEST(ToAvroCompressionKindTest, HandlesValidCompressions) {
+TEST(AvroWriterBuilderTest, HandlesValidCompressions) {
     ASSERT_OK_AND_ASSIGN(::avro::Codec zstd_codec,
                          AvroWriterBuilder::ToAvroCompressionKind("zstd"));
     ASSERT_EQ(zstd_codec, ::avro::Codec::ZSTD_CODEC);
@@ -44,11 +44,105 @@ TEST(ToAvroCompressionKindTest, HandlesValidCompressions) {
     ASSERT_EQ(deflate_codec, ::avro::Codec::DEFLATE_CODEC);
 }
 
-TEST(ToAvroCompressionKindTest, HandlesInvalidCompression) {
+TEST(AvroWriterBuilderTest, HandlesInvalidCompression) {
     ASSERT_NOK(AvroWriterBuilder::ToAvroCompressionKind("unknown_compression"));
 }
 
-TEST(ToAvroCompressionKindTest, HandlesEmptyString) {
+TEST(AvroWriterBuilderTest, HandlesEmptyString) {
     ASSERT_NOK(AvroWriterBuilder::ToAvroCompressionKind(""));
 }
+
+TEST(AvroWriterBuilderTest, CheckAvroCodec) {
+    arrow::FieldVector fields = {arrow::field("f0", arrow::int32())};
+    auto schema = std::make_shared<arrow::Schema>(fields);
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"}, {"avro.codec", "snappy"}});
+        ASSERT_OK_AND_ASSIGN(auto file_writer, builder.Build(nullptr, "zstd"));
+        auto* avro_file_writer = dynamic_cast<AvroFormatWriter*>(file_writer.get());
+        ASSERT_EQ(avro_file_writer->writer_->codec_, ::avro::Codec::SNAPPY_CODEC);
+        ASSERT_EQ(avro_file_writer->writer_->compressionLevel_, std::nullopt);
+    }
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"}, {"avro.codec", "deflate"}});
+        ASSERT_OK_AND_ASSIGN(auto file_writer, builder.Build(nullptr, "zstd"));
+        auto* avro_file_writer = dynamic_cast<AvroFormatWriter*>(file_writer.get());
+        ASSERT_EQ(avro_file_writer->writer_->codec_, ::avro::Codec::DEFLATE_CODEC);
+        ASSERT_EQ(avro_file_writer->writer_->compressionLevel_, std::nullopt);
+    }
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"}, {"avro.codec", "zstd"}});
+        ASSERT_OK_AND_ASSIGN(auto file_writer, builder.Build(nullptr, "zstd"));
+        auto* avro_file_writer = dynamic_cast<AvroFormatWriter*>(file_writer.get());
+        ASSERT_EQ(avro_file_writer->writer_->codec_, ::avro::Codec::ZSTD_CODEC);
+        ASSERT_EQ(avro_file_writer->writer_->compressionLevel_, 1);
+    }
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"},
+                                   {"avro.codec", "zstd"},
+                                   {Options::FILE_COMPRESSION_ZSTD_LEVEL, "3"}});
+        ASSERT_OK_AND_ASSIGN(auto file_writer, builder.Build(nullptr, "zstd"));
+        auto* avro_file_writer = dynamic_cast<AvroFormatWriter*>(file_writer.get());
+        ASSERT_EQ(avro_file_writer->writer_->codec_, ::avro::Codec::ZSTD_CODEC);
+        ASSERT_EQ(avro_file_writer->writer_->compressionLevel_, 3);
+    }
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"},
+                                   {"avro.codec", "null"},
+                                   {Options::FILE_COMPRESSION_ZSTD_LEVEL, "3"}});
+        ASSERT_OK_AND_ASSIGN(auto file_writer, builder.Build(nullptr, "zstd"));
+        auto* avro_file_writer = dynamic_cast<AvroFormatWriter*>(file_writer.get());
+        ASSERT_EQ(avro_file_writer->writer_->codec_, ::avro::Codec::NULL_CODEC);
+        ASSERT_EQ(avro_file_writer->writer_->compressionLevel_, std::nullopt);
+    }
+    {
+        AvroWriterBuilder builder(schema, -1,
+                                  {{Options::FILE_FORMAT, "avro"},
+                                   {"avro.codec", "test"},
+                                   {Options::FILE_COMPRESSION_ZSTD_LEVEL, "3"}});
+        ASSERT_NOK(builder.Build(nullptr, "zstd"));
+    }
+}
+
+TEST(AvroWriterBuilderTest, CheckAvroCompressionLevel) {
+    {
+        AvroWriterBuilder builder(nullptr, -1, {{Options::FILE_FORMAT, "avro"}});
+        ASSERT_OK_AND_ASSIGN(std::optional<int32_t> zstd_level,
+                             builder.GetAvroCompressionLevel(::avro::Codec::ZSTD_CODEC));
+        ASSERT_TRUE(zstd_level.has_value());
+        ASSERT_EQ(zstd_level.value(), 1);
+    }
+    {
+        AvroWriterBuilder builder(nullptr, -1, {{Options::FILE_FORMAT, "avro"}});
+        ASSERT_OK_AND_ASSIGN(std::optional<int32_t> compression_level,
+                             builder.GetAvroCompressionLevel(::avro::Codec::SNAPPY_CODEC));
+        ASSERT_FALSE(compression_level.has_value());
+    }
+    {
+        AvroWriterBuilder builder(nullptr, -1, {{Options::FILE_FORMAT, "avro"}});
+        ASSERT_OK_AND_ASSIGN(std::optional<int32_t> compression_level,
+                             builder.GetAvroCompressionLevel(::avro::Codec::DEFLATE_CODEC));
+        ASSERT_FALSE(compression_level.has_value());
+    }
+    {
+        AvroWriterBuilder builder(nullptr, -1, {{Options::FILE_FORMAT, "avro"}});
+        ASSERT_OK_AND_ASSIGN(std::optional<int32_t> compression_level,
+                             builder.GetAvroCompressionLevel(::avro::Codec::NULL_CODEC));
+        ASSERT_FALSE(compression_level.has_value());
+    }
+    {
+        AvroWriterBuilder builder(
+            nullptr, -1,
+            {{Options::FILE_FORMAT, "avro"}, {Options::FILE_COMPRESSION_ZSTD_LEVEL, "3"}});
+        ASSERT_OK_AND_ASSIGN(std::optional<int32_t> zstd_level,
+                             builder.GetAvroCompressionLevel(::avro::Codec::ZSTD_CODEC));
+        ASSERT_TRUE(zstd_level.has_value());
+        ASSERT_EQ(zstd_level.value(), 3);
+    }
+}
+
 }  // namespace paimon::avro::test

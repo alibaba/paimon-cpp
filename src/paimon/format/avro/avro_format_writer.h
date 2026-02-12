@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 #include "arrow/api.h"
 #include "avro/DataFile.hh"
@@ -49,7 +50,7 @@ class AvroFormatWriter : public FormatWriter {
  public:
     static Result<std::unique_ptr<AvroFormatWriter>> Create(
         std::unique_ptr<AvroOutputStreamImpl> out, const std::shared_ptr<arrow::Schema>& schema,
-        const ::avro::Codec codec);
+        const ::avro::Codec codec, std::optional<int32_t> compression_level);
 
     Status AddBatch(ArrowArray* batch) override;
 

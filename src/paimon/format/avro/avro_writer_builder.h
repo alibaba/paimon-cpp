@@ -24,7 +24,10 @@
 
 #include "avro/DataFile.hh"
 #include "avro/Stream.hh"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/core_options.h"
+#include "paimon/format/avro/avro_format_defs.h"
 #include "paimon/format/avro/avro_format_writer.h"
 #include "paimon/format/avro/avro_output_stream_impl.h"
 #include "paimon/format/writer_builder.h"
@@ -56,9 +59,15 @@ class AvroWriterBuilder : public WriterBuilder {
     Result<std::unique_ptr<FormatWriter>> Build(const std::shared_ptr<OutputStream>& out,
                                                 const std::string& compression) override {
         auto output_stream = std::make_unique<AvroOutputStreamImpl>(out, BUFFER_SIZE, pool_);
+        PAIMON_ASSIGN_OR_RAISE(
+            std::string file_compression,
+            OptionsUtils::GetValueFromMap<std::string>(options_, AVRO_CODEC, compression));
         PAIMON_ASSIGN_OR_RAISE(::avro::Codec codec,
-                               ToAvroCompressionKind(StringUtils::ToLowerCase(compression)));
-        return AvroFormatWriter::Create(std::move(output_stream), schema_, codec);
+                               ToAvroCompressionKind(StringUtils::ToLowerCase(file_compression)));
+        PAIMON_ASSIGN_OR_RAISE(std::optional<int32_t> compression_level,
+                               GetAvroCompressionLevel(codec));
+        return AvroFormatWriter::Create(std::move(output_stream), schema_, codec,
+                                        compression_level);
     }
 
  private:
@@ -76,6 +85,14 @@ class AvroWriterBuilder : public WriterBuilder {
         } else {
             return Status::Invalid("unknown compression " + file_compression);
         }
+    }
+    Result<std::optional<int32_t>> GetAvroCompressionLevel(const ::avro::Codec& codec) {
+        std::optional<int32_t> compression_level;
+        if (codec == ::avro::Codec::ZSTD_CODEC) {
+            PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
+            compression_level = core_options.GetFileCompressionZstdLevel();
+        }
+        return compression_level;
     }
 
     std::shared_ptr<MemoryPool> pool_;

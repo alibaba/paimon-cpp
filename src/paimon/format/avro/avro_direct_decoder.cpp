@@ -418,6 +418,7 @@ Status DecodeFieldToBuilder(const ::avro::NodePtr& avro_node,
 
         const auto& branch_node = avro_node->leafAt(branch_index);
         if (branch_node->type() == ::avro::AVRO_NULL) {
+            decoder->decodeNull();
             PAIMON_RETURN_NOT_OK_FROM_ARROW(array_builder->AppendNull());
             return Status::OK();
         } else {

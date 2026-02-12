@@ -90,7 +90,7 @@ TEST_P(JiebaAnalyzerTest, TestWithPosition) {
 TEST_P(JiebaAnalyzerTest, TestNormalize) {
     auto tokenizer = CreateJiebaTokenizer(
         /*with_position=*/false,
-        L"由于购买了Iphone14，我越来越热爱网上学习了！Happy work, happy day!");
+        L"由于购买了Iphone14，我越来越热爱网上学习了！Happy work, happy day! \n\t");
 
     auto term_att = tokenizer->addAttribute<Lucene::TermAttribute>();
 

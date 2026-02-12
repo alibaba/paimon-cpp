@@ -50,6 +50,7 @@ if(PAIMON_ENABLE_AVRO)
     if(PAIMON_BUILD_TESTS)
         add_paimon_test(avro_format_test
                         SOURCES
+                        avro_direct_encoder_decoder_test.cpp
                         avro_file_batch_reader_test.cpp
                         avro_file_format_test.cpp
                         avro_format_writer_test.cpp

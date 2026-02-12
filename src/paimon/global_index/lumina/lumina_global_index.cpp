@@ -268,7 +268,7 @@ Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     }
     if (value_array->length() != field_length * dimension_) {
         return Status::Invalid(fmt::format(
-            "invalid input array in LuminaIndexWriter, length of field  array [{}] multiplied "
+            "invalid input array in LuminaIndexWriter, length of field array [{}] multiplied "
             "dimension [{}] must match length of field value array [{}]",
             field_length, dimension_, value_array->length()));
     }

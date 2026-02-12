@@ -158,7 +158,7 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
 
        This type fills the gap between time zone free and time zone mandatory
        timestamp types by allowing the interpretation of UTC timestamps according
-       to the configured session time zone. A  conversion from and to int describes
+       to the configured session time zone. A conversion from and to int describes
        the number of seconds since epoch. A conversion from and to long describes the number of milliseconds since epoch.
 
    * - ``ARRAY<t>``

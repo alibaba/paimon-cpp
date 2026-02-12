@@ -377,18 +377,18 @@ TEST_F(LanceFileReaderWriterTest, TestReachTargetSize) {
     std::string file_path = dir->Str() + "/test.lance";
 
     ASSERT_OK_AND_ASSIGN(auto writer, LanceFormatWriter::Create(file_path, schema));
-    bool reach_targe_size = false;
+    bool reach_target_size = false;
     for (auto& array : src_chunk_array->chunks()) {
         ArrowArray c_array;
         ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         ASSERT_OK(writer->AddBatch(&c_array));
-        ASSERT_OK_AND_ASSIGN(reach_targe_size, writer->ReachTargetSize(/*suggested_check=*/true,
-                                                                       /*target_size=*/4096));
+        ASSERT_OK_AND_ASSIGN(reach_target_size, writer->ReachTargetSize(/*suggested_check=*/true,
+                                                                        /*target_size=*/4096));
     }
     ASSERT_OK(writer->Flush());
     ASSERT_OK(writer->Finish());
     // test reach targe size
-    ASSERT_TRUE(reach_targe_size);
+    ASSERT_TRUE(reach_target_size);
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto file_status, fs->GetFileStatus(file_path));
     ASSERT_GT(file_status->GetLen(), 0);
