@@ -52,7 +52,7 @@ Interface
 .. doxygenclass:: paimon::BitmapScoredGlobalIndexResult
    :members:
    :undoc-members:
-   
+
 .. doxygenclass:: paimon::GlobalIndexScan
    :members:
    :undoc-members:
@@ -64,11 +64,11 @@ Interface
 .. doxygenclass:: paimon::IndexedSplit
    :members:
    :undoc-members:
-   
+
 .. doxygenclass:: paimon::GlobalIndexWriteTask
    :members:
    :undoc-members:
-      
+
 .. doxygenclass:: paimon::GlobalIndexWriter
    :members:
    :undoc-members:
