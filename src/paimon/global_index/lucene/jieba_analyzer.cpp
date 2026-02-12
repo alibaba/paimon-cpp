@@ -82,6 +82,11 @@ void JiebaTokenizer::CutWithMode(const std::string& tokenize_mode, const cppjieb
     }
 }
 
+bool JiebaTokenizer::IsWhitespaceOnly(const std::string& term) {
+    return term.empty() ||
+           std::all_of(term.begin(), term.end(), [](unsigned char c) { return std::isspace(c); });
+}
+
 void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words,
                                std::vector<std::string>* input_ptr,
                                std::vector<std::string_view>* output_ptr) {
@@ -90,11 +95,13 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
     output.clear();
     output.reserve(input.size());
     for (auto& term : input) {
+        if (IsWhitespaceOnly(term)) {
+            continue;
+        }
         // remove stop words
         if (stop_words.find(term) != stop_words.end()) {
             continue;
         }
-
         // to lower case
         bool is_alphanumeric = true;
         for (const auto& c : term) {

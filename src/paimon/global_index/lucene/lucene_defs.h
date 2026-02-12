@@ -23,7 +23,6 @@ namespace paimon::lucene {
 static inline const int32_t kVersion = 1;
 static inline const char kIdentifier[] = "lucene-fts";
 static inline const wchar_t kEmptyWstring[] = L"";
-static inline const wchar_t kRowIdFieldWstring[] = L"_ROW_ID";
 
 static inline const char kOptionKeyPrefix[] = "lucene-fts.";
 

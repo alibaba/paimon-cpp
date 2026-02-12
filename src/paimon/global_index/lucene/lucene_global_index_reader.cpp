@@ -179,13 +179,7 @@ Result<std::shared_ptr<GlobalIndexResult>> LuceneGlobalIndexReader::SearchWithLi
     // prepare BitmapScoredGlobalIndexResult
     std::map<int64_t, float> id_to_score;
     for (auto score_doc : results->scoreDocs) {
-        Lucene::DocumentPtr result_doc = searcher_->doc(score_doc->doc);
-        std::string row_id_str = LuceneUtils::WstringToString(result_doc->get(kRowIdFieldWstring));
-        std::optional<int32_t> row_id = StringUtils::StringToValue<int32_t>(row_id_str);
-        if (!row_id) {
-            return Status::Invalid(fmt::format("parse row id str {} to int failed", row_id_str));
-        }
-        id_to_score[static_cast<int64_t>(row_id.value())] = static_cast<float>(score_doc->score);
+        id_to_score[static_cast<int64_t>(score_doc->doc)] = static_cast<float>(score_doc->score);
     }
     RoaringBitmap64 bitmap;
     std::vector<float> scores;
