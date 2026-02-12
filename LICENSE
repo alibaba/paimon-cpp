@@ -268,6 +268,7 @@ This product includes code from Apache Iceberg C++.
   * src/paimon/format/avro/avro_direct_decoder.h
   * src/paimon/format/avro/avro_direct_encoder.cpp
   * src/paimon/format/avro/avro_direct_encoder.h
+* Avro input stream in src/paimon/format/avro/avro_direct_decoder.cpp
 
 Copyright: 2024-2025 The Apache Software Foundation.
 Home page: https://iceberg.apache.org/
