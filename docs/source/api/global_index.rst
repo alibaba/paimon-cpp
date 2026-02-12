@@ -76,5 +76,3 @@ Interface
 .. doxygenclass:: paimon::GlobalIndexFileWriter
    :members:
    :undoc-members:
-
-
