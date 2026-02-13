@@ -37,6 +37,7 @@ class Array;
 }  // namespace arrow
 
 namespace paimon {
+struct ColumnarBatchContext;
 class FieldsComparator;
 class MemoryPool;
 class Metrics;
@@ -91,5 +92,7 @@ class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
     arrow::ArrayVector key_fields_;
     arrow::ArrayVector value_fields_;
     std::shared_ptr<arrow::NumericArray<arrow::UInt64Type>> sort_indices_;
+    std::shared_ptr<ColumnarBatchContext> key_ctx_;
+    std::shared_ptr<ColumnarBatchContext> value_ctx_;
 };
 }  // namespace paimon
