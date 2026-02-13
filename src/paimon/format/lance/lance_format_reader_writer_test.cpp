@@ -387,7 +387,7 @@ TEST_F(LanceFileReaderWriterTest, TestReachTargetSize) {
     }
     ASSERT_OK(writer->Flush());
     ASSERT_OK(writer->Finish());
-    // test reach targe size
+    // test reach target size
     ASSERT_TRUE(reach_target_size);
     auto fs = std::make_shared<LocalFileSystem>();
     ASSERT_OK_AND_ASSIGN(auto file_status, fs->GetFileStatus(file_path));
