@@ -26,8 +26,9 @@
 #include "arrow/util/checked_cast.h"
 #include "arrow/util/decimal.h"
 #include "fmt/format.h"
+#include "paimon/common/data/columnar/columnar_batch_context.h"
 #include "paimon/common/data/columnar/columnar_map.h"
-#include "paimon/common/data/columnar/columnar_row.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/utils/date_time_utils.h"
 
 namespace paimon {
@@ -84,7 +85,8 @@ std::shared_ptr<InternalMap> ColumnarArray::GetMap(int32_t pos) const {
 std::shared_ptr<InternalRow> ColumnarArray::GetRow(int32_t pos, int32_t num_fields) const {
     auto struct_array = arrow::internal::checked_cast<const arrow::StructArray*>(array_);
     assert(struct_array);
-    return std::make_shared<ColumnarRow>(struct_array->fields(), pool_, offset_ + pos);
+    auto row_ctx = std::make_shared<ColumnarBatchContext>(nullptr, struct_array->fields(), pool_);
+    return std::make_shared<ColumnarRowRef>(std::move(row_ctx), offset_ + pos);
 }
 
 Result<std::vector<char>> ColumnarArray::ToBooleanArray() const {

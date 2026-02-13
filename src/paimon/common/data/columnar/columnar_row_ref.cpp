@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@
 namespace paimon {
 Decimal ColumnarRowRef::GetDecimal(int32_t pos, int32_t precision, int32_t scale) const {
     using ArrayType = typename arrow::TypeTraits<arrow::Decimal128Type>::ArrayType;
-    auto array = arrow::internal::checked_cast<const ArrayType*>(ctx_->array_vec[pos]);
+    auto array = arrow::internal::checked_cast<const ArrayType*>(ctx_->array_ptrs[pos]);
     assert(array);
     arrow::Decimal128 decimal(array->GetValue(row_id_));
     return Decimal(precision, scale,
@@ -40,7 +40,7 @@ Decimal ColumnarRowRef::GetDecimal(int32_t pos, int32_t precision, int32_t scale
 
 Timestamp ColumnarRowRef::GetTimestamp(int32_t pos, int32_t precision) const {
     using ArrayType = typename arrow::TypeTraits<arrow::TimestampType>::ArrayType;
-    auto array = arrow::internal::checked_cast<const ArrayType*>(ctx_->array_vec[pos]);
+    auto array = arrow::internal::checked_cast<const ArrayType*>(ctx_->array_ptrs[pos]);
     assert(array);
     int64_t data = array->Value(row_id_);
     auto timestamp_type =
@@ -55,7 +55,7 @@ Timestamp ColumnarRowRef::GetTimestamp(int32_t pos, int32_t precision) const {
 
 std::shared_ptr<InternalRow> ColumnarRowRef::GetRow(int32_t pos, int32_t num_fields) const {
     auto struct_array =
-        arrow::internal::checked_pointer_cast<arrow::StructArray>(ctx_->array_vec_holder[pos]);
+        arrow::internal::checked_pointer_cast<arrow::StructArray>(ctx_->field_arrays[pos]);
     assert(struct_array);
     auto nested_ctx =
         std::make_shared<ColumnarBatchContext>(struct_array, struct_array->fields(), ctx_->pool);
@@ -63,7 +63,7 @@ std::shared_ptr<InternalRow> ColumnarRowRef::GetRow(int32_t pos, int32_t num_fie
 }
 
 std::shared_ptr<InternalArray> ColumnarRowRef::GetArray(int32_t pos) const {
-    auto list_array = arrow::internal::checked_cast<const arrow::ListArray*>(ctx_->array_vec[pos]);
+    auto list_array = arrow::internal::checked_cast<const arrow::ListArray*>(ctx_->array_ptrs[pos]);
     assert(list_array);
     int32_t offset = list_array->value_offset(row_id_);
     int32_t length = list_array->value_length(row_id_);
@@ -71,7 +71,7 @@ std::shared_ptr<InternalArray> ColumnarRowRef::GetArray(int32_t pos) const {
 }
 
 std::shared_ptr<InternalMap> ColumnarRowRef::GetMap(int32_t pos) const {
-    auto map_array = arrow::internal::checked_cast<const arrow::MapArray*>(ctx_->array_vec[pos]);
+    auto map_array = arrow::internal::checked_cast<const arrow::MapArray*>(ctx_->array_ptrs[pos]);
     assert(map_array);
     int32_t offset = map_array->value_offset(row_id_);
     int32_t length = map_array->value_length(row_id_);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,21 +29,19 @@ namespace paimon {
 class MemoryPool;
 
 struct ColumnarBatchContext {
-    ColumnarBatchContext(std::shared_ptr<arrow::StructArray> struct_array_in,
-                         const arrow::ArrayVector& array_vec_in,
-                         std::shared_ptr<MemoryPool> pool_in)
-        : struct_array(std::move(struct_array_in)),
-          pool(std::move(pool_in)),
-          array_vec_holder(array_vec_in) {
-        array_vec.reserve(array_vec_holder.size());
-        for (const auto& array : array_vec_holder) {
-            array_vec.push_back(array.get());
+    ColumnarBatchContext(const std::shared_ptr<arrow::StructArray>& struct_array_in,
+                         const arrow::ArrayVector& field_arrays_in,
+                         const std::shared_ptr<MemoryPool>& pool_in)
+        : struct_array(struct_array_in), pool(pool_in), field_arrays(field_arrays_in) {
+        array_ptrs.reserve(field_arrays.size());
+        for (const auto& array : field_arrays) {
+            array_ptrs.push_back(array.get());
         }
     }
 
     std::shared_ptr<arrow::StructArray> struct_array;
     std::shared_ptr<MemoryPool> pool;
-    arrow::ArrayVector array_vec_holder;
-    std::vector<const arrow::Array*> array_vec;
+    arrow::ArrayVector field_arrays;
+    std::vector<const arrow::Array*> array_ptrs;
 };
 }  // namespace paimon

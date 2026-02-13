@@ -68,10 +68,10 @@ bool KeyValueDataFileRecordReader::Iterator::HasNext() const {
 
 Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
     assert(HasNext());
-    // as key is only used in merge sort, do not hold the data in ColumnarRowRef
+    // key is only used in merge sort; key context does not hold parent struct array
     auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
-    // as value is used in merge sort and projection (maybe async and multi-thread), hold the data
-    // in ColumnarRowRef
+    // value is used in merge sort and projection (maybe async and multi-thread), so value context
+    // holds parent struct array to ensure data remains valid
     auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, cursor_);
     PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                            RowKind::FromByteValue(reader_->row_kind_array_->Value(cursor_)));
