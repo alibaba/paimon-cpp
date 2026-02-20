@@ -289,7 +289,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                                     element_node->leaves() != 2)) {
                     return Status::Invalid(
                         fmt::format("Expected AVRO_RECORD for map key-value pair, got {}",
-                                    AvroUtils::ToString(avro_node)));
+                                    AvroUtils::ToString(element_node)));
                 }
 
                 const auto& map_array =
