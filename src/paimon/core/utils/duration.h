@@ -32,9 +32,9 @@ class Duration {
     }
 
     uint64_t Reset() {
-        uint64_t dura = Get();
+        uint64_t duration = Get();
         start_ = std::chrono::high_resolution_clock::now();
-        return dura;
+        return duration;
     }
 
  private:

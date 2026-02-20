@@ -39,29 +39,26 @@ class AvroInputStreamImpl : public ::avro::SeekableInputStream {
 
     ~AvroInputStreamImpl() override;
 
-    bool next(const uint8_t** data, size_t* size) override;
+    bool next(const uint8_t** data, size_t* len) override;
     void backup(size_t len) override;
     void skip(size_t len) override;
-    size_t byteCount() const override {
-        return byte_count_;
-    }
+    size_t byteCount() const override;
     void seek(int64_t position) override;
 
  private:
     AvroInputStreamImpl(const std::shared_ptr<paimon::InputStream>& input_stream,
                         size_t buffer_size, const uint64_t length,
                         const std::shared_ptr<MemoryPool>& pool);
-    bool fill();
 
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<paimon::InputStream> in_;
     const size_t buffer_size_;
     const uint64_t total_length_;
     uint8_t* const buffer_;
-    std::shared_ptr<paimon::InputStream> in_;
-    size_t byte_count_;
-    uint8_t* next_;
-    size_t available_;
-    int32_t total_read_len_ = 0;
+    size_t byte_count_ = 0;       // bytes position in the avro input stream
+    size_t stream_pos_ = 0;       // current position in the paimon input stream
+    size_t buffer_pos_ = 0;       // next position to read in the buffer
+    size_t available_bytes_ = 0;  // bytes available in the buffer
 };
 
 }  // namespace paimon::avro

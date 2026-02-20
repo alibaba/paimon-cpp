@@ -105,9 +105,21 @@ TEST(AvroInputStreamImplTest, TestSkip) {
     ASSERT_TRUE(stream->next(&data, &size));
     ASSERT_EQ(size, 5);
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "fghij");
-    stream->skip(5);
-    ASSERT_EQ(stream->byteCount(), 15);
-    ASSERT_FALSE(stream->next(&data, &size));
+    ASSERT_THROW(stream->skip(5), ::avro::Exception);  // already eof, cannot skip more
+    ASSERT_EQ(stream->byteCount(), 10);
+    ASSERT_FALSE(stream->next(&data, &size));  // reach eof
+
+    ASSERT_THROW(stream->backup(7), ::avro::Exception);  // buffer item is 5, cannot backup 7
+    stream->backup(4);
+    ASSERT_EQ(stream->byteCount(), 6);
+    stream->skip(2);  // skip 2 bytes from the available buffer data
+    ASSERT_EQ(stream->byteCount(), 8);
+
+    // verify we can read the remaining 2 bytes from buffer
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 2);
+    ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "ij");
+    ASSERT_EQ(stream->byteCount(), 10);
 }
 
 TEST(AvroInputStreamImplTest, TestSkipWithAvailableData) {
@@ -169,6 +181,10 @@ TEST(AvroInputStreamImplTest, TestSeek) {
     ASSERT_EQ(size, 5);
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "abcde");
     stream->seek(2);
+    ASSERT_EQ(stream->byteCount(), 2);
+
+    // after seek, buffer will be cleared, cannot backup
+    ASSERT_THROW(stream->backup(2), ::avro::Exception);
     ASSERT_TRUE(stream->next(&data, &size));
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "cdefg");
     ASSERT_EQ(stream->byteCount(), 7);
