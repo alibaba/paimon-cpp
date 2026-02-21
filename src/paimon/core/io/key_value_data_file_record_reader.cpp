@@ -143,13 +143,13 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
 
 void KeyValueDataFileRecordReader::Reset() {
     selection_bitmap_ = RoaringBitmap32();
+    key_ctx_.reset();
+    value_ctx_.reset();
     key_fields_.clear();
     value_fields_.clear();
     value_struct_array_.reset();
     sequence_number_array_.reset();
     row_kind_array_.reset();
-    key_ctx_.reset();
-    value_ctx_.reset();
 }
 
 void KeyValueDataFileRecordReader::TraverseArray(const std::shared_ptr<arrow::Array>& array) {

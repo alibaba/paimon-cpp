@@ -30,18 +30,18 @@ class MemoryPool;
 
 struct ColumnarBatchContext {
     ColumnarBatchContext(const std::shared_ptr<arrow::StructArray>& struct_array_in,
-                         const arrow::ArrayVector& field_arrays_in,
+                         const arrow::ArrayVector& array_vec_holder_in,
                          const std::shared_ptr<MemoryPool>& pool_in)
-        : struct_array(struct_array_in), pool(pool_in), field_arrays(field_arrays_in) {
-        array_ptrs.reserve(field_arrays.size());
-        for (const auto& array : field_arrays) {
+        : struct_array(struct_array_in), pool(pool_in), array_vec_holder(array_vec_holder_in) {
+        array_ptrs.reserve(array_vec_holder.size());
+        for (const auto& array : array_vec_holder) {
             array_ptrs.push_back(array.get());
         }
     }
 
     std::shared_ptr<arrow::StructArray> struct_array;
     std::shared_ptr<MemoryPool> pool;
-    arrow::ArrayVector field_arrays;
+    arrow::ArrayVector array_vec_holder;
     std::vector<const arrow::Array*> array_ptrs;
 };
 }  // namespace paimon
