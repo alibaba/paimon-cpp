@@ -165,3 +165,7 @@ If you make improvements that could benefit all developers, please update the te
 ## License
 
 Licensed under the [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
+## Maintainership and Contributions
+
+This project is maintained by a core team from the Storage Service team at Alibaba, including @lxy-9602 (maintainer), @lucasfang, @lszskye, and @zjw1111. We sincerely appreciate contributions from the community — your feedback and patches are welcome and highly valued. For any questions, feature proposals, or code reviews, please feel free to reach out to us directly.
