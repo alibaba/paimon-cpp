@@ -400,4 +400,166 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
     ArrowSchemaRelease(&schema);
 }
 
+TEST(FileSystemCatalogTest, TestDropDatabase) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+
+    // Test 1: Drop non-existent database with ignore_if_not_exists=true
+    ASSERT_OK(catalog.DropDatabase("non_existent_db", /*ignore_if_not_exists=*/true,
+                                   /*cascade=*/false));
+
+    // Test 2: Drop non-existent database with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase("non_existent_db", /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "database non_existent_db does not exist");
+
+    // Test 3: Drop empty database
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+    ASSERT_OK(catalog.DropDatabase("test_db", /*ignore_if_not_exists=*/false,
+                                   /*cascade=*/false));
+    ASSERT_OK_AND_ASSIGN(bool exist, catalog.DatabaseExists("test_db"));
+    ASSERT_FALSE(exist);
+
+    // Test 4: Drop non-empty database without cascade
+    ASSERT_OK(catalog.CreateDatabase("test_db2", options, /*ignore_if_exists=*/false));
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db2", "tbl1"), &schema, {}, {}, options, false));
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase("test_db2", /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "Cannot drop non-empty database test_db2. Use cascade=true to force.");
+
+    // Test 5: Drop non-empty database with cascade
+    ASSERT_OK(catalog.DropDatabase("test_db2", /*ignore_if_not_exists=*/false,
+                                   /*cascade=*/true));
+    ASSERT_OK_AND_ASSIGN(exist, catalog.DatabaseExists("test_db2"));
+    ASSERT_FALSE(exist);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::string> tables, catalog.ListTables("test_db2"));
+    ASSERT_TRUE(tables.empty());
+
+    // Test 6: Drop system database
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase(Catalog::SYSTEM_DATABASE_NAME,
+                                             /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "Cannot drop system database sys.");
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTable) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Test 1: Drop non-existent table with ignore_if_not_exists=true
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "non_existent_tbl"),
+                                /*ignore_if_not_exists=*/true));
+
+    // Test 2: Drop non-existent table with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(
+        catalog.DropTable(Identifier("test_db", "non_existent_tbl"),
+                          /*ignore_if_not_exists=*/false),
+        "table Identifier{database='test_db', table='non_existent_tbl'} does not exist");
+
+    // Test 3: Drop existing table
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl1"), &schema, {}, {}, options, false));
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl1"), /*ignore_if_not_exists=*/false));
+    ASSERT_OK_AND_ASSIGN(bool exist, catalog.TableExists(Identifier("test_db", "tbl1")));
+    ASSERT_FALSE(exist);
+
+    // Test 4: Drop system table
+    ASSERT_NOK_WITH_MSG(
+        catalog.DropTable(Identifier("test_db", "tbl$system"),
+                          /*ignore_if_not_exists=*/false),
+        "Cannot drop system table Identifier{database='test_db', table='tbl$system'}.");
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestRenameTable) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Test 1: Rename non-existent table with ignore_if_not_exists=true
+    ASSERT_OK(catalog.RenameTable(Identifier("test_db", "non_existent_tbl"),
+                                  Identifier("test_db", "new_tbl"),
+                                  /*ignore_if_not_exists=*/true));
+
+    // Test 2: Rename non-existent table with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "non_existent_tbl"),
+                            Identifier("test_db", "new_tbl"),
+                            /*ignore_if_not_exists=*/false),
+        "source table Identifier{database='test_db', table='non_existent_tbl'} does not exist");
+
+    // Test 3: Normal rename
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(
+        catalog.CreateTable(Identifier("test_db", "old_tbl"), &schema, {}, {}, options, false));
+    ASSERT_OK(catalog.RenameTable(Identifier("test_db", "old_tbl"),
+                                  Identifier("test_db", "new_tbl"),
+                                  /*ignore_if_not_exists=*/false));
+    ASSERT_OK_AND_ASSIGN(bool old_exist, catalog.TableExists(Identifier("test_db", "old_tbl")));
+    ASSERT_FALSE(old_exist);
+    ASSERT_OK_AND_ASSIGN(bool new_exist, catalog.TableExists(Identifier("test_db", "new_tbl")));
+    ASSERT_TRUE(new_exist);
+
+    // Test 4: Rename to existing table
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl2"), &schema, {}, {}, options, false));
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "new_tbl"), Identifier("test_db", "tbl2"),
+                            /*ignore_if_not_exists=*/false),
+        "target table Identifier{database='test_db', table='tbl2'} already exists");
+
+    // Test 5: Cross-database rename
+    ASSERT_OK(catalog.CreateDatabase("test_db2", options, /*ignore_if_exists=*/false));
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "new_tbl"),
+                            Identifier("test_db2", "cross_db_tbl"),
+                            /*ignore_if_not_exists=*/false),
+        "Cannot rename table across databases. Cross-database rename is not supported.");
+
+    // Test 6: Rename system table
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
+                                            Identifier("test_db", "new_system_tbl"),
+                                            /*ignore_if_not_exists=*/false),
+                        "Cannot rename system table");
+
+    ArrowSchemaRelease(&schema);
+}
+
 }  // namespace paimon::test

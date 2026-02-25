@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "paimon/catalog/identifier.h"
@@ -31,6 +32,9 @@
 struct ArrowSchema;
 
 namespace paimon {
+// Tag name or snapshot id
+using Instant = std::variant<std::string, int64_t>;
+
 class Database;
 class Table;
 class View;
@@ -177,7 +181,10 @@ class PAIMON_EXPORT Catalog {
     /// Invalidates cached table metadata.
     ///
     /// @param identifier Identifier of the table to invalidate.
-    virtual void InvalidateTable(const Identifier& identifier) {}
+    /// @return A status indicating success or failure.
+    virtual Status InvalidateTable(const Identifier& identifier) {
+        return Status::NotImplemented("InvalidateTable not implemented");
+    }
 
     /// Marks partitions as done.
     ///
@@ -386,8 +393,7 @@ class PAIMON_EXPORT Catalog {
     /// @param identifier Path of the table
     /// @param instant Like snapshotId or tagName
     /// @return A status indicating success or failure.
-    virtual Status RollbackTo(const Identifier& identifier,
-                              const std::chrono::system_clock::time_point& instant) {
+    virtual Status RollbackTo(const Identifier& identifier, const Instant& instant) {
         return RollbackTo(identifier, instant, std::nullopt);
     }
 
@@ -398,8 +404,7 @@ class PAIMON_EXPORT Catalog {
     /// @param from_snapshot Snapshot from, success only occurs when the latest snapshot is this
     /// snapshot
     /// @return A status indicating success or failure.
-    virtual Status RollbackTo(const Identifier& identifier,
-                              const std::chrono::system_clock::time_point& instant,
+    virtual Status RollbackTo(const Identifier& identifier, const Instant& instant,
                               const std::optional<int64_t>& from_snapshot) {
         return Status::NotImplemented("RollbackTo not implemented");
     }

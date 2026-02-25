@@ -38,10 +38,10 @@ class PAIMON_EXPORT View {
     virtual ~View() = default;
 
     /// A name to identify this view.
-    virtual std::string Name() = 0;
+    virtual std::string Name() const = 0;
 
     /// Full name of the view, default is database.tableName.
-    virtual std::string FullName() {
+    virtual std::string FullName() const {
         return Name();
     }
 

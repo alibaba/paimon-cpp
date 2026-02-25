@@ -36,7 +36,7 @@ class PAIMON_EXPORT Database {
     /// ================== Table Metadata =====================
 
     /// A name to identify this database.
-    virtual std::string Name() = 0;
+    virtual std::string Name() const = 0;
 
     /// Get the table-level options associated with this schema.
     /// @return Options

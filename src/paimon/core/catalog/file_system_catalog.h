@@ -48,7 +48,10 @@ class FileSystemCatalog : public Catalog {
                        const std::vector<std::string>& primary_keys,
                        const std::map<std::string, std::string>& options,
                        bool ignore_if_exists) override;
-
+    Status DropDatabase(const std::string& name, bool ignore_if_not_exists, bool cascade) override;
+    Status DropTable(const Identifier& identifier, bool ignore_if_not_exists) override;
+    Status RenameTable(const Identifier& from_table, const Identifier& to_table,
+                       bool ignore_if_not_exists) override;
     Result<std::vector<std::string>> ListDatabases() const override;
     Result<std::vector<std::string>> ListTables(const std::string& db_name) const override;
     Result<bool> DatabaseExists(const std::string& db_name) const override;

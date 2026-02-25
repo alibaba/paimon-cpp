@@ -255,4 +255,94 @@ Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& ide
     return std::make_shared<Table>(schema, identifier.GetDatabaseName(), identifier.GetTableName());
 }
 
+Status FileSystemCatalog::DropDatabase(const std::string& name, bool ignore_if_not_exists,
+                                       bool cascade) {
+    if (IsSystemDatabase(name)) {
+        return Status::Invalid(fmt::format("Cannot drop system database {}.", name));
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool exist, DatabaseExists(name));
+    if (!exist) {
+        if (ignore_if_not_exists) {
+            return Status::OK();
+        } else {
+            return Status::NotExist(fmt::format("database {} does not exist", name));
+        }
+    }
+
+    std::string db_path = NewDatabasePath(warehouse_, name);
+
+    if (cascade) {
+        // List all tables in the database and drop them
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, ListTables(name));
+        for (const std::string& table_name : tables) {
+            Identifier table_id(name, table_name);
+            PAIMON_RETURN_NOT_OK(DropTable(table_id, false));
+        }
+    } else {
+        // Check if database is empty
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> tables, ListTables(name));
+        if (!tables.empty()) {
+            return Status::Invalid(
+                fmt::format("Cannot drop non-empty database {}. Use cascade=true to force.", name));
+        }
+    }
+
+    // Delete the database directory
+    PAIMON_RETURN_NOT_OK(fs_->Delete(db_path));
+    return Status::OK();
+}
+
+Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if_not_exists) {
+    if (IsSystemTable(identifier)) {
+        return Status::Invalid(fmt::format("Cannot drop system table {}.", identifier.ToString()));
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool exist, TableExists(identifier));
+    if (!exist) {
+        if (ignore_if_not_exists) {
+            return Status::OK();
+        } else {
+            return Status::NotExist(fmt::format("table {} does not exist", identifier.ToString()));
+        }
+    }
+
+    std::string table_path = GetTableLocation(identifier);
+    PAIMON_RETURN_NOT_OK(fs_->Delete(table_path));
+    return Status::OK();
+}
+
+Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identifier& to_table,
+                                      bool ignore_if_not_exists) {
+    if (IsSystemTable(from_table) || IsSystemTable(to_table)) {
+        return Status::Invalid(fmt::format("Cannot rename system table {} or {}.",
+                                           from_table.ToString(), to_table.ToString()));
+    }
+
+    if (from_table.GetDatabaseName() != to_table.GetDatabaseName()) {
+        return Status::Invalid(
+            "Cannot rename table across databases. Cross-database rename is not supported.");
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool from_exist, TableExists(from_table));
+    if (!from_exist) {
+        if (ignore_if_not_exists) {
+            return Status::OK();
+        } else {
+            return Status::NotExist(
+                fmt::format("source table {} does not exist", from_table.ToString()));
+        }
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(bool to_exist, TableExists(to_table));
+    if (to_exist) {
+        return Status::Invalid(fmt::format("target table {} already exists", to_table.ToString()));
+    }
+
+    std::string from_path = GetTableLocation(from_table);
+    std::string to_path = GetTableLocation(to_table);
+    PAIMON_RETURN_NOT_OK(fs_->Rename(from_path, to_path));
+    return Status::OK();
+}
+
 }  // namespace paimon
