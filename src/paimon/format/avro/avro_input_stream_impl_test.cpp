@@ -105,9 +105,58 @@ TEST(AvroInputStreamImplTest, TestSkip) {
     ASSERT_TRUE(stream->next(&data, &size));
     ASSERT_EQ(size, 5);
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "fghij");
-    stream->skip(5);
-    ASSERT_EQ(stream->byteCount(), 15);
-    ASSERT_FALSE(stream->next(&data, &size));
+    ASSERT_THROW(stream->skip(5), ::avro::Exception);  // already eof, cannot skip more
+    ASSERT_EQ(stream->byteCount(), 10);
+    ASSERT_FALSE(stream->next(&data, &size));  // reach eof
+
+    ASSERT_THROW(stream->backup(7), ::avro::Exception);  // buffer item is 5, cannot backup 7
+    stream->backup(4);
+    ASSERT_EQ(stream->byteCount(), 6);
+    stream->skip(2);  // skip 2 bytes from the available buffer data
+    ASSERT_EQ(stream->byteCount(), 8);
+
+    // verify we can read the remaining 2 bytes from buffer
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 2);
+    ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "ij");
+    ASSERT_EQ(stream->byteCount(), 10);
+}
+
+TEST(AvroInputStreamImplTest, TestSkipWithAvailableData) {
+    auto dir = paimon::test::UniqueTestDirectory::Create();
+    std::filesystem::path file_path = dir->Str() + "/file";
+    std::ofstream output_file(file_path);
+    ASSERT_TRUE(output_file.is_open());
+    std::string test_data = "abcdefghij";
+    output_file << test_data;
+    output_file.close();
+
+    size_t buffer_size = 10;
+    std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs->Open(file_path));
+    ASSERT_OK_AND_ASSIGN(auto stream,
+                         AvroInputStreamImpl::Create(in, buffer_size, GetDefaultPool()));
+
+    const uint8_t* data;
+    size_t size;
+    // First, load data into buffer by calling next()
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 10);
+    ASSERT_EQ(stream->byteCount(), 10);
+
+    // Now backup some data to make it available in buffer
+    stream->backup(7);
+    ASSERT_EQ(stream->byteCount(), 3);
+
+    // Skip 3 bytes from the available buffer data
+    stream->skip(3);
+    ASSERT_EQ(stream->byteCount(), 6);
+
+    // Verify we can read the remaining 4 bytes from buffer
+    ASSERT_TRUE(stream->next(&data, &size));
+    ASSERT_EQ(size, 4);
+    ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "ghij");
+    ASSERT_EQ(stream->byteCount(), 10);
 }
 
 TEST(AvroInputStreamImplTest, TestSeek) {
@@ -132,6 +181,10 @@ TEST(AvroInputStreamImplTest, TestSeek) {
     ASSERT_EQ(size, 5);
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "abcde");
     stream->seek(2);
+    ASSERT_EQ(stream->byteCount(), 2);
+
+    // after seek, buffer will be cleared, cannot backup
+    ASSERT_THROW(stream->backup(2), ::avro::Exception);
     ASSERT_TRUE(stream->next(&data, &size));
     ASSERT_EQ(std::string(reinterpret_cast<const char*>(data), size), "cdefg");
     ASSERT_EQ(stream->byteCount(), 7);

@@ -31,7 +31,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/reader/batch_reader.h"
 namespace paimon {
-// convert row T to output R (R maybe BatchReader::ReadBatch or  KeyValueBatch)
+// convert row T to output R (R maybe BatchReader::ReadBatch or KeyValueBatch)
 template <typename T, typename R>
 class RowToArrowArrayConverter {
  public:

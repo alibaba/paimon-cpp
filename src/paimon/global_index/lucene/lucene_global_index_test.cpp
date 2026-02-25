@@ -24,7 +24,7 @@
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/core/index/index_path_factory.h"
 #include "paimon/fs/local/local_file_system.h"
-#include "paimon/global_index/bitmap_vector_search_global_index_result.h"
+#include "paimon/global_index/bitmap_scored_global_index_result.h"
 #include "paimon/global_index/lucene/lucene_global_index_reader.h"
 #include "paimon/global_index/lucene/lucene_global_index_writer.h"
 #include "paimon/testing/utils/testharness.h"
@@ -105,10 +105,9 @@ class LuceneGlobalIndexTest : public ::testing::Test,
     void CheckResult(const std::shared_ptr<GlobalIndexResult>& result,
                      const std::vector<int64_t>& expected_ids) const {
         const RoaringBitmap64* bitmap = nullptr;
-        if (auto vector_search_result =
-                std::dynamic_pointer_cast<BitmapVectorSearchGlobalIndexResult>(result)) {
-            ASSERT_OK_AND_ASSIGN(bitmap, vector_search_result->GetBitmap());
-            ASSERT_EQ(vector_search_result->GetScores().size(), expected_ids.size());
+        if (auto scored_result = std::dynamic_pointer_cast<BitmapScoredGlobalIndexResult>(result)) {
+            ASSERT_OK_AND_ASSIGN(bitmap, scored_result->GetBitmap());
+            ASSERT_EQ(scored_result->GetScores().size(), expected_ids.size());
         } else if (auto bitmap_result =
                        std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result)) {
             ASSERT_OK_AND_ASSIGN(bitmap, bitmap_result->GetBitmap());
@@ -307,7 +306,7 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
 ["最近开源了一个新项目叫ｑｉａｎｗｅｎ（全角字符），功能类似之前的 Qianwen，是一个面向 AI 应用的智能助手。它不仅支持 Machine Learning 和 NLP 技术，还提供了可扩展的开发框架，便于开发者构建自己的智能助手系统。"],
 ["我们在测试 qianwen-core v1.2 和 ai-engine-alpha 中的 bug，重点优化了 qianwen 的响应速度和稳定性。本次更新增强了核心模块的功能，提升了智能助手的开发效率，并修复了与 NLP 模块相关的多个问题。"],
 ["AI 助手开发中常用的技术包括 Speech Recognition、Natural Language Processing 和 Recommendation System。我们使用 TensorFlow 和 PyTorch 构建模型，开发了多个智能助手原型，支持语音交互和上下文理解功能，是当前热门的人工智能发展应用方向。"],
-["新一代的 AI 助手代号为「千问」，内部命名为 QianwenX-2024，计划在 next quarter 发布。QianwenX 将集成更强的 multimodal 能力，支持图像和文本联合处理，进一步提升智能助手的理解能力和交互体验，是未来智能助手的重要发展方向。"]
+["新一代的 AI 助手代号为「千问」，内部命名为 QianwenX-2024，计划在 next quarter 发布。QianwenX 将集成更强的 multimodel 能力，支持图像和文本联合处理，进一步提升智能助手的理解能力和交互体验，是未来智能助手的重要发展方向。"]
     ])")
                                               .ValueOrDie();
 

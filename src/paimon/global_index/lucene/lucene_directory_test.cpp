@@ -32,7 +32,7 @@ class LuceneDirectoryTest : public ::testing::Test, public ::testing::WithParamI
 
 TEST_P(LuceneDirectoryTest, TestSimple) {
     int32_t read_buffer_size = GetParam();
-    // write 3 files in a single concact file
+    // write 3 files in a single concat file
     std::vector<std::string> data = {"helloworld", "abcdefg", "paimoncpp"};
     auto dir = paimon::test::UniqueTestDirectory::Create("local");
     auto lucene_directory = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(dir->Str()),

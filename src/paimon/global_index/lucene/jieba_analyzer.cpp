@@ -15,11 +15,12 @@
  */
 #include "paimon/global_index/lucene/jieba_analyzer.h"
 
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/global_index/lucene/lucene_utils.h"
 
 namespace paimon::lucene {
 JiebaTokenizerContext::JiebaTokenizerContext(const std::string& _tokenize_mode, bool _with_position,
-                                             const std::shared_ptr<cppjieba::Jieba> _jieba,
+                                             const std::shared_ptr<cppjieba::Jieba>& _jieba,
                                              const std::shared_ptr<MemoryPool>& _pool,
                                              int32_t _buffer_size)
     : pool(_pool),
@@ -90,11 +91,13 @@ void JiebaTokenizer::Normalize(const std::unordered_set<std::string>& stop_words
     output.clear();
     output.reserve(input.size());
     for (auto& term : input) {
+        if (StringUtils::IsNullOrWhitespaceOnly(term)) {
+            continue;
+        }
         // remove stop words
         if (stop_words.find(term) != stop_words.end()) {
             continue;
         }
-
         // to lower case
         bool is_alphanumeric = true;
         for (const auto& c : term) {

@@ -53,7 +53,7 @@ Status CompleteRowTrackingFieldsBatchReader::SetReadSchema(
     int32_t sequence_id_idx = arrow_schema->GetFieldIndex(SpecialFields::SequenceNumber().Name());
     if (sequence_id_idx != -1 &&
         file_schema->GetFieldIndex(SpecialFields::SequenceNumber().Name()) == -1) {
-        // read special fields but file not exist, remove  special fields to format reader
+        // read special fields but file not exist, remove special fields to format reader
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(arrow_schema, arrow_schema->RemoveField(sequence_id_idx));
     }
     ArrowSchema c_schema;

@@ -29,7 +29,6 @@ LanceFileBatchReader::LanceFileBatchReader(LanceFileReader* file_reader, int32_t
       num_rows_(num_rows),
       error_message_(std::move(error_message)),
       file_reader_(file_reader),
-
       metrics_(std::make_shared<MetricsImpl>()) {}
 
 Result<std::unique_ptr<LanceFileBatchReader>> LanceFileBatchReader::Create(

@@ -21,19 +21,19 @@ Global Index
 Interface
 =========
 
-.. doxygenclass:: paimon::GlobalIndexFileReader
+.. doxygenclass:: paimon::GlobalIndexerFactory
    :members:
    :undoc-members:
 
-.. doxygenclass:: paimon::GlobalIndexFileWriter
-   :members:
-   :undoc-members:
-
-.. doxygenclass:: paimon::GlobalIndexEvaluator
+.. doxygenclass:: paimon::GlobalIndexer
    :members:
    :undoc-members:
 
 .. doxygenclass:: paimon::GlobalIndexReader
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::GlobalIndexFileReader
    :members:
    :undoc-members:
 
@@ -45,19 +45,15 @@ Interface
    :members:
    :undoc-members:
 
+.. doxygenclass:: paimon::BitmapGlobalIndexResult
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::BitmapScoredGlobalIndexResult
+   :members:
+   :undoc-members:
+
 .. doxygenclass:: paimon::GlobalIndexScan
-   :members:
-   :undoc-members:
-
-.. doxygenclass:: paimon::GlobalIndexWriter
-   :members:
-   :undoc-members:
-
-.. doxygenclass:: paimon::GlobalIndexerFactory
-   :members:
-   :undoc-members:
-
-.. doxygenclass:: paimon::GlobalIndexer
    :members:
    :undoc-members:
 
@@ -65,6 +61,18 @@ Interface
    :members:
    :undoc-members:
 
-.. doxygenclass:: paimon::RowRangeGlobalIndexWriter
+.. doxygenclass:: paimon::IndexedSplit
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::GlobalIndexWriteTask
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::GlobalIndexWriter
+   :members:
+   :undoc-members:
+
+.. doxygenclass:: paimon::GlobalIndexFileWriter
    :members:
    :undoc-members:

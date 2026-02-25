@@ -39,7 +39,8 @@ namespace paimon::avro::test {
 class AvroFileBatchReaderTest : public ::testing::Test, public ::testing::WithParamInterface<bool> {
  public:
     void SetUp() override {
-        ASSERT_OK_AND_ASSIGN(file_format_, FileFormatFactory::Get("avro", {}));
+        ASSERT_OK_AND_ASSIGN(file_format_,
+                             FileFormatFactory::Get("avro", {{Options::FILE_FORMAT, "avro"}}));
         fs_ = std::make_shared<LocalFileSystem>();
         dir_ = ::paimon::test::UniqueTestDirectory::Create();
         ASSERT_TRUE(dir_);

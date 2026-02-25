@@ -1282,7 +1282,7 @@ TEST_F(ScanInteTest, TestScanAppendComplexDataWithSnapshot4WithPredicateFilter2)
     auto predicate1 = PredicateBuilder::GreaterThan(/*field_index=*/2, /*field_name=*/"f3",
                                                     FieldType::DATE, Literal(FieldType::DATE, 0));
     // BINARY does not have stats in manifest, min/max in value stats is null
-    // if row_count != null_count and  min/max is null, file will not be filtered
+    // if row_count != null_count and min/max is null, file will not be filtered
     auto predicate2 = PredicateBuilder::GreaterThan(
         /*field_index=*/5, /*field_name=*/"f6", FieldType::BINARY,
         Literal(FieldType::BINARY, "zoo", 3));

@@ -71,7 +71,7 @@ Result<Literal> StringToNumericPrimitiveCastExecutor::CastLiteral(const Literal&
         if (!success) {
             return Status::Invalid(
                 fmt::format("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                            "cast {} from STRING to {}",
+                            "cast '{}' from STRING to {}",
                             value, FieldTypeUtils::FieldTypeToString(target_type)));
         }
         return Literal(out);
@@ -80,7 +80,7 @@ Result<Literal> StringToNumericPrimitiveCastExecutor::CastLiteral(const Literal&
         if (!casted_value) {
             return Status::Invalid(
                 fmt::format("cast literal in StringToNumericPrimitiveCastExecutor failed: cannot "
-                            "cast {} from STRING to {}",
+                            "cast '{}' from STRING to {}",
                             value, FieldTypeUtils::FieldTypeToString(target_type)));
         }
         return Literal(casted_value.value());

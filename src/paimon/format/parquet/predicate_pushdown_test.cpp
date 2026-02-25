@@ -93,7 +93,8 @@ class PredicatePushdownTest : public ::testing::Test {
         auto writer_properties = builder.build();
         ASSERT_OK_AND_ASSIGN(
             auto format_writer,
-            ParquetFormatWriter::Create(out, data_schema, writer_properties, arrow_pool_));
+            ParquetFormatWriter::Create(out, data_schema, writer_properties,
+                                        DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
         ASSERT_OK(format_writer->AddBatch(data_arrow_array.get()));
         ASSERT_OK(format_writer->Finish());
         ASSERT_OK(out->Close());
