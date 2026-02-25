@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <paimon/fs/file_system.h>
-
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,6 +24,7 @@
 #include "paimon/core/catalog/snapshot_commit.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/snapshot_manager.h"
+#include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
