@@ -401,7 +401,6 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithConflictSnapshotAndRetryTenTimes) 
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
     std::string latest_hint = PathUtil::JoinPath(table_path, "snapshot/LATEST");
 
     auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
@@ -442,7 +441,6 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithConflictSnapshotAndRetryOnce) {
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
     std::string latest_hint = PathUtil::JoinPath(table_path, "snapshot/LATEST");
     auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
     EXPECT_CALL(*mock_fs, ReadFile(testing::StrEq(latest_hint), testing::_))
@@ -504,7 +502,6 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActua
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
     std::string new_snapshot_6 = PathUtil::JoinPath(table_path, "snapshot/snapshot-6");
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
     auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
     EXPECT_CALL(*mock_fs, AtomicStore(testing::StrEq(new_snapshot_6), testing::_))
         .WillOnce(testing::Invoke([&](const std::string& path, const std::string& content) {
@@ -534,7 +531,6 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActua
     ASSERT_OK_AND_ASSIGN(auto commit_2, FileStoreCommit::Create(std::move(commit_context_2)));
     ASSERT_OK_AND_ASSIGN(int32_t num_committed, commit_2->FilterAndCommit({{1, msgs}}));
     ASSERT_EQ(0, num_committed);
-    auto commit_impl_2 = dynamic_cast<FileStoreCommitImpl*>(commit_2.get());
     std::string new_snapshot_7 = PathUtil::JoinPath(table_path, "snapshot/snapshot-7");
     EXPECT_CALL(*mock_fs, AtomicStore(testing::StrEq(new_snapshot_7), testing::_))
         .WillOnce(testing::Invoke([&](const std::string& path, const std::string& content) {
