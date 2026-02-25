@@ -86,7 +86,6 @@ class GmockFileSystemFactory : public LocalFileSystemFactory {
 
     Result<std::unique_ptr<FileSystem>> Create(
         const std::string& path, const std::map<std::string, std::string>& options) const override {
-        return std::make_unique<testing::NiceMock<GmockFileSystem>>();
         auto fs = std::make_unique<testing::NiceMock<GmockFileSystem>>();
         auto fs_ptr = fs.get();
         using ::testing::A;
