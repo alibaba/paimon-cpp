@@ -501,7 +501,7 @@ TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActua
 
     CommitContextBuilder context_builder_2(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context_2,
-                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                         context_builder_2.AddOption(Options::MANIFEST_FORMAT, "orc")
                              .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
                              .WithFileSystem(fs)
                              .Finish());
