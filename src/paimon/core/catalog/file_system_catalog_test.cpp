@@ -526,10 +526,10 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
         arrow::field("f1", arrow::utf8()),
     };
     arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ::ArrowSchema schema1;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema1).ok());
     ASSERT_OK(
-        catalog.CreateTable(Identifier("test_db", "old_tbl"), &schema, {}, {}, options, false));
+        catalog.CreateTable(Identifier("test_db", "old_tbl"), &schema1, {}, {}, options, false));
     ASSERT_OK(catalog.RenameTable(Identifier("test_db", "old_tbl"),
                                   Identifier("test_db", "new_tbl"),
                                   /*ignore_if_not_exists=*/false));
@@ -539,7 +539,9 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
     ASSERT_TRUE(new_exist);
 
     // Test 4: Rename to existing table
-    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl2"), &schema, {}, {}, options, false));
+    ::ArrowSchema schema2;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema2).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl2"), &schema2, {}, {}, options, false));
     ASSERT_NOK_WITH_MSG(
         catalog.RenameTable(Identifier("test_db", "new_tbl"), Identifier("test_db", "tbl2"),
                             /*ignore_if_not_exists=*/false),
@@ -559,7 +561,8 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
                                             /*ignore_if_not_exists=*/false),
                         "Cannot rename system table");
 
-    ArrowSchemaRelease(&schema);
+    ArrowSchemaRelease(&schema1);
+    ArrowSchemaRelease(&schema2);
 }
 
 }  // namespace paimon::test
