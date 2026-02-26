@@ -254,7 +254,7 @@ TEST_F(UniversalCompactionTest, TestSizeAmplification) {
         auto unit = compaction.PickForSizeAmp(3, CreateRunsWithSize(sizes));
         if (unit) {
             auto files = GetFileSizeVecFromCompactUnit(unit.value());
-            int64_t total_size = std::accumulate(files.begin(), files.end(), int64_t(0));
+            int64_t total_size = std::accumulate(files.begin(), files.end(), 0l);
             sizes = {total_size};
         }
         ASSERT_EQ(sizes, expected_sizes);
@@ -306,7 +306,7 @@ TEST_F(UniversalCompactionTest, TestSizeRatio) {
                     result.erase(it);
                 }
             }
-            int64_t sum = std::accumulate(compact.begin(), compact.end(), static_cast<int64_t>(0));
+            int64_t sum = std::accumulate(compact.begin(), compact.end(), 0l);
             result.insert(result.begin(), sum);
             sizes = result;
         }
