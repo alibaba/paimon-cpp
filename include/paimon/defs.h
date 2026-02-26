@@ -105,8 +105,8 @@ struct PAIMON_EXPORT Options {
     /// Default value is local.
     static const char FILE_SYSTEM[];
 
-    /// "target-file-size" - Target size of a file. Default value is 256MB.
-    // TODO(xinyu.lxy): change the default value to 128MB for primary key table.
+    /// "target-file-size" - Target size of a file. primary key table: the default value is 128 MB.
+    /// append table: the default value is 256 MB.
     static const char TARGET_FILE_SIZE[];
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
