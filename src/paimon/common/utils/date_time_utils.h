@@ -118,7 +118,7 @@ class DateTimeUtils {
 
     static inline Result<int32_t> GetCurrentLocalHour() {
         PAIMON_ASSIGN_OR_RAISE(uint64_t local_us, GetCurrentLocalTimeUs());
-        time_t local_seconds = static_cast<time_t>(local_us / 1000000);
+        auto local_seconds = static_cast<time_t>(local_us / 1000000);
         std::tm local_tm{};
         gmtime_r(&local_seconds, &local_tm);
         return local_tm.tm_hour;
