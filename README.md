@@ -119,6 +119,16 @@ The reading is divided into two stages:
 
 ## Development
 
+### Clone the Repository
+
+If you don't have `git-lfs` installed, please install it first.
+
+```
+$ git clone https://github.com/alibaba/paimon-cpp.git
+$ cd paimon-cpp
+$ git lfs pull
+```
+
 ### CMake
 
 ```
