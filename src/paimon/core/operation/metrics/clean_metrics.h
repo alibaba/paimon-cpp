@@ -27,6 +27,7 @@ class CleanMetrics {
     static constexpr char CLEAN_LIST_FILE_STATUS_DURATION[] = "listFileStatusDuration";
     static constexpr char CLEAN_LIST_FILE_STATUS_TASKS[] = "listFileStatusTasks";
     static constexpr char CLEAN_LIST_USED_FILES_DURATION[] = "listUsedFilesDuration";
+    static constexpr char CLEAN_SNAPSHOT_FILES[] = "snapshotFiles";
     static constexpr char CLEAN_USED_FILES[] = "usedFiles";
     static constexpr char CLEAN_SCAN_ORPHAN_FILES_DURATION[] = "scanOrphanFilesDuration";
     static constexpr char CLEAN_ORPHAN_FILES[] = "orphanFiles";

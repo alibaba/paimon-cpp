@@ -74,6 +74,7 @@ class OrphanFilesCleanerImpl : public OrphanFilesCleaner {
         const std::string& path) const;
     std::set<std::string> ListFileDirs(const std::string& path, int32_t max_level) const;
     Result<std::set<std::string>> GetUsedFiles() const;
+    Result<std::set<std::string>> GetUsedFilesBySnapshot(const Snapshot& snapshot) const;
     static bool SupportToClean(const std::string& file_name);
 
  private:
