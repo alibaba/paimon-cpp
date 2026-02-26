@@ -16,8 +16,6 @@
 
 #include "paimon/core/utils/tag_manager.h"
 
-#include <paimon/fs/file_system.h>
-
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -26,6 +24,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/tag/tag.h"
 #include "paimon/core/utils/branch_manager.h"
+#include "paimon/fs/file_system.h"
 
 namespace paimon {
 
