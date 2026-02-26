@@ -58,6 +58,15 @@ class SortedRun {
         return true;
     }
 
+    std::string ToString() const {
+        std::vector<std::string> files_str;
+        files_str.reserve(files_.size());
+        for (const auto& file : files_) {
+            files_str.push_back(file->ToString());
+        }
+        return fmt::format("{}", fmt::join(files_str, ", "));
+    }
+
  private:
     explicit SortedRun(const std::vector<std::shared_ptr<DataFileMeta>>& files) : files_(files) {
         for (const auto& file : files) {

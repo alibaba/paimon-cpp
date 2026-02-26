@@ -125,6 +125,14 @@ class PAIMON_EXPORT CoreOptions {
 
     std::optional<std::string> GetScanTagName() const;
 
+    std::optional<int64_t> GetOptimizedCompactionInterval() const;
+    std::optional<int64_t> GetCompactionTotalSizeThreshold() const;
+    std::optional<int64_t> GetCompactionIncrementalSizeThreshold() const;
+
+    int32_t GetCompactOffPeakStartHour() const;
+    int32_t GetCompactOffPeakEndHour() const;
+    int32_t GetCompactOffPeakRatio() const;
+
     const std::map<std::string, std::string>& ToMap() const;
 
  private:
