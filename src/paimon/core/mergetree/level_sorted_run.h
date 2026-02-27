@@ -16,9 +16,9 @@
 
 #pragma once
 
+#include "fmt/format.h"
 #include "paimon/core/mergetree/sorted_run.h"
 #include "paimon/core/utils/fields_comparator.h"
-
 namespace paimon {
 /// A `SortedRun` with level.
 struct LevelSortedRun {
