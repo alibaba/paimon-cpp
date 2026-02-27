@@ -22,10 +22,11 @@
 #include <utility>
 #include <vector>
 
+#include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/utils/fields_comparator.h"
-
 namespace paimon {
 /// A `SortedRun` is a list of files sorted by their keys. The key intervals [minKey, maxKey]
 /// of these files do not overlap.

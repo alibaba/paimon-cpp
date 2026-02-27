@@ -16,6 +16,7 @@
 
 #include "paimon/core/mergetree/compact/universal_compaction.h"
 
+#include "paimon/common/utils/date_time_utils.h"
 namespace paimon {
 UniversalCompaction::UniversalCompaction(
     int32_t max_size_amp, int32_t size_ratio, int32_t num_run_compaction_trigger,
@@ -25,7 +26,9 @@ UniversalCompaction::UniversalCompaction(
       size_ratio_(size_ratio),
       num_run_compaction_trigger_(num_run_compaction_trigger),
       early_full_compaction_(early_full_compaction),
-      off_peak_hours_(off_peak_hours) {}
+      off_peak_hours_(off_peak_hours) {
+    assert(num_run_compaction_trigger_ >= 1);
+}
 
 Result<std::optional<CompactUnit>> UniversalCompaction::Pick(
     int32_t num_levels, const std::vector<LevelSortedRun>& runs) {

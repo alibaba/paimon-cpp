@@ -1050,8 +1050,9 @@ TEST_P(ScanAndReadInteTest, TestWithPKWithNestedType) {
 // test pk with mor
 TEST_P(ScanAndReadInteTest, TestWithPKWithMorBatchScanLatestSnapshot) {
     auto [file_format, enable_prefetch] = GetParam();
-    std::string table_path = paimon::test::GetDataDir() + file_format +
-                             "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
+    std::string table_path =  // paimon::test::GetDataDir() + file_format +
+        "/home/lxy264173//open_source/test/fork3/paimon-cpp/test/test_data/orc/"
+        "/pk_table_scan_and_read_mor.db/pk_table_scan_and_read_mor/";
 
     // normal batch scan case for pk+mor, use latest snapshot if not specified
     ScanContextBuilder scan_context_builder(table_path);

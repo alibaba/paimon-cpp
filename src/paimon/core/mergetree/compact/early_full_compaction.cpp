@@ -15,6 +15,8 @@
  */
 
 #include "paimon/core/mergetree/compact/early_full_compaction.h"
+
+#include "paimon/common/utils/date_time_utils.h"
 namespace paimon {
 std::shared_ptr<EarlyFullCompaction> EarlyFullCompaction::Create(const CoreOptions& options) {
     std::optional<int64_t> interval = options.GetOptimizedCompactionInterval();
@@ -45,7 +47,7 @@ EarlyFullCompaction::EarlyFullCompaction(const std::optional<int64_t>& full_comp
 
 std::optional<CompactUnit> EarlyFullCompaction::TryFullCompact(
     int32_t num_levels, const std::vector<LevelSortedRun>& runs) {
-    if (runs.size() == 1) {
+    if (runs.empty() || runs.size() == 1) {
         return std::nullopt;
     }
     int32_t max_level = num_levels - 1;

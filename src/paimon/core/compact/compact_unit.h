@@ -28,7 +28,7 @@ struct CompactUnit {
             const auto& files_in_run = run.run.Files();
             files.insert(files.end(), files_in_run.begin(), files_in_run.end());
         }
-        return FromFiles(output_level, files, /*file_rewrite*/ false);
+        return FromFiles(output_level, files, /*file_rewrite=*/false);
     }
 
     static CompactUnit FromFiles(int32_t output_level,

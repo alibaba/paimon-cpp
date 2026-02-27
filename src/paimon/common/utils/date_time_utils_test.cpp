@@ -286,11 +286,11 @@ TEST(DateTimeUtilsTest, TestGetCurrentLocalHour) {
     int32_t utc_hour = 0;
     {
         TimezoneGuard guard("Asia/Shanghai");
-        shanghai_hour = DateTimeUtils::GetCurrentLocalHour().value();
+        ASSERT_OK_AND_ASSIGN(shanghai_hour, DateTimeUtils::GetCurrentLocalHour());
     }
     {
         TimezoneGuard guard("UTC");
-        utc_hour = DateTimeUtils::GetCurrentLocalHour().value();
+        ASSERT_OK_AND_ASSIGN(utc_hour, DateTimeUtils::GetCurrentLocalHour());
     }
     ASSERT_EQ((shanghai_hour - utc_hour + 24) % 24, 8);
 }
