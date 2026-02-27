@@ -25,8 +25,8 @@ const LessThan& LessThan::Instance() {
     static const LessThan kInstance{};
     return kInstance;
 }
-const LeafFunction& LessThan::Negate() const {
-    return GreaterOrEqual::Instance();
+const LeafFunction* LessThan::Negate() const {
+    return &GreaterOrEqual::Instance();
 }
 
 }  // namespace paimon

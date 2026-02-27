@@ -50,7 +50,7 @@ class NotEqual : public NullFalseLeafBinaryFunction {
     Type GetType() const override {
         return Type::NOT_EQUAL;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
     std::string ToString() const override {
         return "NotEqual";
     }

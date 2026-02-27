@@ -92,7 +92,7 @@ class PredicateTest : public ::testing::Test {
         return ret;
     }
 
-    BinaryRow CreateBinaryRow(const std::vector<std::optional<int64_t>>& value) const {
+    BinaryRow CreateBigIntRow(const std::vector<std::optional<int64_t>>& value) const {
         auto pool = GetDefaultPool();
         BinaryRow row(/*arity=*/value.size());
         BinaryRowWriter row_writer(&row, 0, pool.get());
@@ -101,6 +101,21 @@ class PredicateTest : public ::testing::Test {
                 row_writer.SetNullAt(i);
             } else {
                 row_writer.WriteLong(i, value[i].value());
+            }
+        }
+        row_writer.Complete();
+        return row;
+    }
+
+    BinaryRow CreateStringRow(const std::vector<std::optional<std::string>>& value) const {
+        auto pool = GetDefaultPool();
+        BinaryRow row(/*arity=*/value.size());
+        BinaryRowWriter row_writer(&row, 0, pool.get());
+        for (size_t i = 0; i < value.size(); ++i) {
+            if (value[i] == std::nullopt) {
+                row_writer.SetNullAt(i);
+            } else {
+                row_writer.WriteString(i, BinaryString::FromString(value[i].value(), pool.get()));
             }
         }
         row_writer.Complete();
@@ -129,7 +144,7 @@ TEST_F(PredicateTest, TestInvalidFieldIndex) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_NOK_WITH_MSG(predicate->Test(arrow_schema, CreateBinaryRow({4})),
+    ASSERT_NOK_WITH_MSG(predicate->Test(arrow_schema, CreateBigIntRow({4})),
                         "field index 2 exceed field count 1 in row");
 }
 
@@ -162,9 +177,9 @@ TEST_F(PredicateTest, TestEqual) {
                                                                   FieldType::BIGINT, Literal(10l)));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
@@ -192,8 +207,8 @@ TEST_F(PredicateTest, TestEqualNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
@@ -224,10 +239,10 @@ TEST_F(PredicateTest, TestNotEqual) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
-    ASSERT_TRUE(predicate_negate->Test(arrow_schema, CreateBinaryRow({5})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate_negate->Test(arrow_schema, CreateBigIntRow({5})).value());
 
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
@@ -255,8 +270,8 @@ TEST_F(PredicateTest, TestNotEqualNull) {
     ASSERT_EQ(is_valid, std::vector<char>({0, 0}));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
@@ -287,10 +302,10 @@ TEST_F(PredicateTest, TestGreater) {
                                              FieldType::BIGINT, Literal(5l)));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({6})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({6})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 4ll, 0ll)}));
@@ -319,8 +334,8 @@ TEST_F(PredicateTest, TestGreaterNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 4ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 1ll, {FieldStats(std::nullopt, std::nullopt, 1ll)}));
@@ -351,10 +366,10 @@ TEST_F(PredicateTest, TestGreaterOrEqual) {
                                           Literal(5l)));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({6})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({6})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 4ll, 0ll)}));
@@ -383,8 +398,8 @@ TEST_F(PredicateTest, TestGreaterOrEqualNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 4ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 1ll, {FieldStats(std::nullopt, std::nullopt, 1ll)}));
@@ -415,10 +430,10 @@ TEST_F(PredicateTest, TestLess) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({6})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({6})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(5ll, 7ll, 0ll)}));
@@ -445,8 +460,8 @@ TEST_F(PredicateTest, TestLessNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 1ll, {FieldStats(std::nullopt, std::nullopt, 1ll)}));
@@ -477,10 +492,10 @@ TEST_F(PredicateTest, TestLessOrEqual) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({6})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({6})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(5ll, 7ll, 0ll)}));
@@ -507,8 +522,8 @@ TEST_F(PredicateTest, TestLessOrEqualNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 1ll, {FieldStats(std::nullopt, std::nullopt, 1ll)}));
@@ -536,8 +551,8 @@ TEST_F(PredicateTest, TestIsNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(5ll, 7ll, 1ll)}));
@@ -565,8 +580,8 @@ TEST_F(PredicateTest, TestIsNotNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(5ll, 7ll, 1ll)}));
@@ -598,10 +613,10 @@ TEST_F(PredicateTest, TestIn) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
@@ -630,10 +645,10 @@ TEST_F(PredicateTest, TestInNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
@@ -665,10 +680,10 @@ TEST_F(PredicateTest, TestNotIn) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 1ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(3ll, 3ll, 0ll)}));
@@ -700,10 +715,10 @@ TEST_F(PredicateTest, TestNotInNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 1ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(3ll, 3ll, 0ll)}));
@@ -741,10 +756,10 @@ TEST_F(PredicateTest, TestLargeIn) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
@@ -781,10 +796,10 @@ TEST_F(PredicateTest, TestLargeInNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(0ll, 5ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(6ll, 7ll, 0ll)}));
@@ -820,10 +835,10 @@ TEST_F(PredicateTest, TestLargeNotIn) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 1ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(3ll, 3ll, 0ll)}));
@@ -863,10 +878,10 @@ TEST_F(PredicateTest, TestLargeNotInNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({2})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({3})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({2})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({3})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 1ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(3ll, 3ll, 0ll)}));
@@ -910,10 +925,10 @@ TEST_F(PredicateTest, TestAnd) {
     // with internal row
     auto arrow_schema = arrow::schema(
         arrow::FieldVector({arrow::field("f0", bigint_type), arrow::field("f1", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4, 5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({3, 6})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3, 5})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt, 5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4, 5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({3, 6})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3, 5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt, 5})).value());
     // with stats
     ASSERT_TRUE(
         StatsCheck(*predicate, 3ll, {FieldStats(3ll, 6ll, 0ll), FieldStats(4ll, 6ll, 0ll)}));
@@ -956,10 +971,10 @@ TEST_F(PredicateTest, TestOr) {
     // with internal row
     auto arrow_schema = arrow::schema(
         arrow::FieldVector({arrow::field("f0", bigint_type), arrow::field("f1", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4, 6})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3, 6})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({3, 5})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt, 5})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4, 6})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3, 6})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({3, 5})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt, 5})).value());
     // with stats
     ASSERT_TRUE(
         StatsCheck(*predicate, 3ll, {FieldStats(3ll, 6ll, 0ll), FieldStats(4ll, 6ll, 0ll)}));
@@ -999,10 +1014,10 @@ TEST_F(PredicateTest, TestBetween) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({1})).value());
-    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
-    ASSERT_TRUE(predicate_negate->Test(arrow_schema, CreateBinaryRow({1})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({1})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
+    ASSERT_TRUE(predicate_negate->Test(arrow_schema, CreateBigIntRow({1})).value());
 
     // with stats
     ASSERT_TRUE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 10ll, 0ll)}));
@@ -1031,12 +1046,290 @@ TEST_F(PredicateTest, TestBetweenNull) {
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({4})).value());
-    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBinaryRow({std::nullopt})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({std::nullopt})).value());
 
     // with stats
     ASSERT_FALSE(StatsCheck(*predicate, 3ll, {FieldStats(1ll, 10ll, 0ll)}));
     ASSERT_FALSE(StatsCheck(*predicate, 1ll, {FieldStats(std::nullopt, std::nullopt, 1ll)}));
+}
+
+TEST_F(PredicateTest, TestStartsWith) {
+    auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::StartsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                     Literal(FieldType::STRING, "aab", 3)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 = arrow::ipc::internal::json::ArrayFromJSON(string_type,
+                                                        R"(["ccddee", "bbccdd", "aabbcc", null])")
+                  .ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(
+                  string_type, R"(["gghhii", "ffgghh", "eeffgg", "ddeeff"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0, 1, 0}));
+
+    ASSERT_EQ(predicate->Negate(), nullptr);
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"ccddee"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"aabbcc"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestStartsWithNull) {
+    const auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::StartsWith(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING, Literal(FieldType::STRING)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 =
+        arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["bbccdd", null])").ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["ffgghh", "ccddee"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0}));
+
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestEndsWith) {
+    auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::EndsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                   Literal(FieldType::STRING, "bcc", 3)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 = arrow::ipc::internal::json::ArrayFromJSON(string_type,
+                                                        R"(["ccddee", "bbccdd", "aabbcc", null])")
+                  .ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(
+                  string_type, R"(["gghhii", "ffgghh", "eeffgg", "ddeeff"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0, 1, 0}));
+
+    ASSERT_EQ(predicate->Negate(), nullptr);
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"ccddee"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"aabbcc"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestEndsWithNull) {
+    const auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::EndsWith(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING, Literal(FieldType::STRING)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 =
+        arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["bbccdd", null])").ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["ffgghh", "ccddee"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0}));
+
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestContains) {
+    auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::Contains(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                   Literal(FieldType::STRING, "cde", 3)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 = arrow::ipc::internal::json::ArrayFromJSON(string_type,
+                                                        R"(["ghijkl", "defghi", "abcdef", null])")
+                  .ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(
+                  string_type, R"(["stuvwx", "pqrstu", "mnopqr", "jklmno"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0, 1, 0}));
+
+    ASSERT_EQ(predicate->Negate(), nullptr);
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"ghijkl"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"defghi"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"abcdef"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestContainsNull) {
+    const auto string_type = arrow::utf8();
+    ASSERT_OK_AND_ASSIGN(
+        const auto predicate_base,
+        PredicateBuilder::Contains(
+            /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING, Literal(FieldType::STRING)));
+    const auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    auto f0 =
+        arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["defghi", null])").ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(string_type, R"(["pqrstu", "jklmno"])")
+                  .ValueOrDie();
+    std::shared_ptr<arrow::DataType> src_type =
+        arrow::struct_({arrow::field("f0", string_type), arrow::field("f1", string_type)});
+
+    std::shared_ptr<arrow::Array> struct_array =
+        arrow::StructArray::Make({f0, f1}, src_type->fields()).ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
+    ASSERT_EQ(is_valid, std::vector<char>({0, 0}));
+
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"defghi"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+}
+
+TEST_F(PredicateTest, TestLike) {
+    ASSERT_OK_AND_ASSIGN(auto predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a.c", 3)));
+    auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate);
+    ASSERT_EQ(predicate->Negate(), nullptr);
+    // with internal row
+    auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", arrow::utf8())}));
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"abc"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"a.c"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a.*d", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"abcd"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%c.e", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"abcde"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "a\\_c", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"a-c"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"a_c"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "start%", 6)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"startX"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"not_startX"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%middle%", 8)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"xxmiddleyy"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"xxmidxdleyy"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "%end", 4)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"xxend"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"xxendyy"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "equal", 5)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"equal"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"equalxx"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "st_rt%", 6)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"startxx"})).value());
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"stbrtxx"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"xxstbrtxx"})).value());
+
+    ASSERT_OK_AND_ASSIGN(predicate_base,
+                         PredicateBuilder::Like(
+                             /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                             Literal(FieldType::STRING, "abc%def%", 8)));
+    predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
+    ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"abchahadefxx"})).value());
+    ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"abchahadafxx"})).value());
+}
+
+TEST_F(PredicateTest, TestCompound) {
+    ASSERT_OK_AND_ASSIGN(
+        const auto startswith_predicate,
+        PredicateBuilder::StartsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                     Literal(FieldType::STRING, "aab", 3)));
+    ASSERT_OK_AND_ASSIGN(
+        const auto endswith_predicate,
+        PredicateBuilder::EndsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                   Literal(FieldType::STRING, "bcc", 3)));
+    ASSERT_OK_AND_ASSIGN(const auto compound_predicate,
+                         PredicateBuilder::And({startswith_predicate, endswith_predicate}));
+    ASSERT_NOK_WITH_MSG(
+        PredicateBuilder::Not(compound_predicate),
+        "Could not construct A NOT predicate from And([StartsWith(f0, aab), EndsWith(f0, bcc)])");
 }
 
 TEST_F(PredicateTest, TestPredicateToString) {
