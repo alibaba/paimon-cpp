@@ -525,7 +525,7 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse compaction.force-rewrite-all-files
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::COMPACTION_FORCE_REWRITE_ALL_FILES,
                                             &impl->compaction_force_rewrite_all_files));
-    
+
     // Parse compaction.optimization-interval
     std::string optimized_compaction_interval_str;
     PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_OPTIMIZATION_INTERVAL,
