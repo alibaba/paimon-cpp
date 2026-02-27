@@ -28,8 +28,7 @@
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
-#include "paimon/common/data/columnar/columnar_row.h"
-#include "paimon/common/data/internal_row.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -69,12 +68,11 @@ bool KeyValueDataFileRecordReader::Iterator::HasNext() const {
 
 Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
     assert(HasNext());
-    // as key is only used in merge sort, do not hold the data in ColumnarRow
-    auto key = std::make_unique<ColumnarRow>(reader_->key_fields_, reader_->pool_, cursor_);
-    // as value is used in merge sort and projection (maybe async and multi-thread), hold the data
-    // in ColumnarRow
-    auto value = std::make_unique<ColumnarRow>(reader_->value_struct_array_, reader_->value_fields_,
-                                               reader_->pool_, cursor_);
+    // key is only used in merge sort; key context does not hold parent struct array
+    auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
+    // value is used in merge sort and projection (maybe async and multi-thread), so value context
+    // holds parent struct array to ensure data remains valid
+    auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, cursor_);
     PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                            RowKind::FromByteValue(reader_->row_kind_array_->Value(cursor_)));
     int64_t sequence_number = reader_->sequence_number_array_->Value(cursor_);
@@ -137,12 +135,16 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
                                       arrow::StructArray::Make(value_fields_, value_names_));
     selection_bitmap_ = std::move(bitmap);
     value_fields_ = value_struct_array_->fields();
+    key_ctx_ = std::make_shared<ColumnarBatchContext>(nullptr, key_fields_, pool_);
+    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_struct_array_, value_fields_, pool_);
     TraverseArray(value_struct_array_);
     return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
 }
 
 void KeyValueDataFileRecordReader::Reset() {
     selection_bitmap_ = RoaringBitmap32();
+    key_ctx_.reset();
+    value_ctx_.reset();
     key_fields_.clear();
     value_fields_.clear();
     value_struct_array_.reset();

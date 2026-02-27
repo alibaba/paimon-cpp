@@ -24,6 +24,7 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
@@ -68,6 +69,32 @@ TEST(ColumnarRowTest, TestSimple) {
     ASSERT_EQ(row.GetDouble(6), 5.5);
     ASSERT_EQ(row.GetString(7).ToString(), "Hello");
     ASSERT_EQ(std::string(row.GetStringView(7)), "Hello");
+}
+
+TEST(ColumnarRowRefTest, TestSimple) {
+    auto pool = GetDefaultPool();
+    std::shared_ptr<arrow::DataType> target_type =
+        arrow::struct_({arrow::field("f1", arrow::int32()), arrow::field("f2", arrow::utf8())});
+    auto f1 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), R"([1, 2, 3])").ValueOrDie();
+    auto f2 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::utf8(), R"(["alpha", "beta", "gamma"])")
+            .ValueOrDie();
+    auto data = arrow::StructArray::Make({f1, f2}, target_type->fields()).ValueOrDie();
+
+    auto ctx = std::make_shared<ColumnarBatchContext>(data, data->fields(), pool);
+    ColumnarRowRef row(ctx, 1);
+    ASSERT_EQ(row.GetFieldCount(), 2);
+    ASSERT_EQ(row.GetInt(0), 2);
+    ASSERT_EQ(std::string(row.GetStringView(1)), "beta");
+
+    auto row_kind = row.GetRowKind();
+    ASSERT_TRUE(row_kind.ok());
+    ASSERT_EQ(row_kind.value(), RowKind::Insert());
+    row.SetRowKind(RowKind::Delete());
+    auto updated_kind = row.GetRowKind();
+    ASSERT_TRUE(updated_kind.ok());
+    ASSERT_EQ(updated_kind.value(), RowKind::Delete());
 }
 
 TEST(ColumnarRowTest, TestComplexAndNestedType) {

@@ -16,12 +16,11 @@
 
 #include "paimon/core/casting/string_to_timestamp_cast_executor.h"
 
-#include <arrow/compute/cast.h>
-
 #include <cassert>
 #include <string>
 #include <utility>
 
+#include "arrow/compute/cast.h"
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "paimon/core/casting/casting_utils.h"

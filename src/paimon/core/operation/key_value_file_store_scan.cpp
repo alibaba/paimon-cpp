@@ -113,8 +113,29 @@ Status KeyValueFileStoreScan::SplitAndSetKeyValueFilter(
         }
         WithKeyFilter(key_filter);
     }
-    // support value filter in bucket level
-    WithValueFilter(predicates_);
+
+    // Only set value filtering when there are predicates on non-primary-key fields.
+    //
+    // For primary key tables, we cannot safely push down arbitrary value predicates to each
+    // individual file (see the comment above). When value filtering is enabled, we will filter
+    // by stats either per file (when no overlapping) or by whole bucket (when overlapping).
+    //
+    // For key-only predicates, key_stats based filtering is enough and enabling value filtering
+    // may trigger unsupported paths (e.g. DataFileMeta::value_stats_cols).
+    std::set<std::string> field_names;
+    PAIMON_RETURN_NOT_OK(PredicateUtils::GetAllNames(predicates_, &field_names));
+    std::set<std::string> pk_names(trimmed_pk.begin(), trimmed_pk.end());
+    bool has_non_pk_predicate = false;
+    for (const auto& name : field_names) {
+        if (pk_names.find(name) == pk_names.end()) {
+            has_non_pk_predicate = true;
+            break;
+        }
+    }
+    if (has_non_pk_predicate) {
+        // support value filter in bucket level
+        WithValueFilter(predicates_);
+    }
     return Status::OK();
 }
 

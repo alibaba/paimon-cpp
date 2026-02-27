@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
-#include "paimon/common/data/columnar/columnar_row.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/key_value.h"
 #include "paimon/reader/batch_reader.h"
@@ -42,6 +41,7 @@ class NumericArray;
 namespace paimon {
 class MemoryPool;
 class Metrics;
+struct ColumnarBatchContext;
 
 // Convert the arrow array of data file into a KeyValue object iterator (parsing SEQUENCE_NUMBER and
 // VALUE_KIND columns)
@@ -95,5 +95,7 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     arrow::ArrayVector value_fields_;
     std::shared_ptr<arrow::NumericArray<arrow::Int64Type>> sequence_number_array_;
     std::shared_ptr<arrow::NumericArray<arrow::Int8Type>> row_kind_array_;
+    std::shared_ptr<ColumnarBatchContext> key_ctx_;
+    std::shared_ptr<ColumnarBatchContext> value_ctx_;
 };
 }  // namespace paimon

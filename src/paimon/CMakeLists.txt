@@ -29,6 +29,7 @@ set(PAIMON_COMMON_SRCS
     common/data/columnar/columnar_array.cpp
     common/data/columnar/columnar_map.cpp
     common/data/columnar/columnar_row.cpp
+    common/data/columnar/columnar_row_ref.cpp
     common/data/decimal.cpp
     common/data/internal_row.cpp
     common/data/record_batch.cpp
