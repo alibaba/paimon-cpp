@@ -245,39 +245,67 @@ Result<std::set<std::string>> OrphanFilesCleanerImpl::GetUsedFiles() const {
     used_files.insert(SnapshotManager::LATEST);
     Duration duration;
     PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, snapshot_manager_->GetAllSnapshots());
-    for (const auto& snapshot : snapshots) {
-        used_files.insert(SnapshotManager::SNAPSHOT_PREFIX + std::to_string(snapshot.Id()));
-        used_files.insert(snapshot.BaseManifestList());
-        used_files.insert(snapshot.DeltaManifestList());
-        std::vector<ManifestFileMeta> manifests;
-        PAIMON_RETURN_NOT_OK(manifest_list_->ReadIfFileExist(snapshot.BaseManifestList(),
-                                                             /*filter=*/nullptr, &manifests));
-        PAIMON_RETURN_NOT_OK(manifest_list_->ReadIfFileExist(snapshot.DeltaManifestList(),
-                                                             /*filter=*/nullptr, &manifests));
-        const std::optional<std::string>& changelog_manifest_list =
-            snapshot.ChangelogManifestList();
-        if (changelog_manifest_list) {
-            used_files.insert(changelog_manifest_list.value());
-            return Status::NotImplemented("OrphanFilesCleaner do not support clean changelog");
-        }
-        const std::optional<std::string>& index_manifest_name = snapshot.IndexManifest();
-        if (index_manifest_name) {
-            return Status::NotImplemented("OrphanFilesCleaner do not support clean index manifest");
-            // TODO(jinli.zjw): support IndexManifestEntry and add tests
-            // used_files.insert(index_manifest_name.value());
-        }
-        for (const auto& manifest : manifests) {
-            used_files.insert(manifest.FileName());
-            std::vector<ManifestEntry> manifest_entries;
-            PAIMON_RETURN_NOT_OK(manifest_file_->ReadIfFileExist(
-                manifest.FileName(), /*filter=*/nullptr, &manifest_entries));
-            for (const auto& manifest_entry : manifest_entries) {
-                used_files.insert(manifest_entry.FileName());
+    std::vector<std::future<Result<std::set<std::string>>>> used_files_futures;
+    std::vector<Result<std::set<std::string>>> used_files_results;
+    {
+        ScopeGuard guard([&used_files_futures, &used_files_results]() {
+            used_files_results = CollectAll(used_files_futures);
+        });
+        for (const auto& snapshot : snapshots) {
+            const std::optional<std::string>& changelog_manifest_list =
+                snapshot.ChangelogManifestList();
+            if (changelog_manifest_list) {
+                used_files.insert(changelog_manifest_list.value());
+                return Status::NotImplemented("OrphanFilesCleaner do not support clean changelog");
             }
+            const std::optional<std::string>& index_manifest_name = snapshot.IndexManifest();
+            if (index_manifest_name) {
+                return Status::NotImplemented(
+                    "OrphanFilesCleaner do not support clean index manifest");
+                // TODO(jinli.zjw): support IndexManifestEntry and add tests
+                // used_files.insert(index_manifest_name.value());
+            }
+
+            used_files_futures.emplace_back(Via(
+                executor_.get(), [this, snapshot] { return GetUsedFilesBySnapshot(snapshot); }));
         }
     }
+
+    for (const auto& used_files_result : used_files_results) {
+        PAIMON_RETURN_NOT_OK(used_files_result);
+        used_files.insert(used_files_result.value().begin(), used_files_result.value().end());
+    }
+
     metrics_->SetCounter(CleanMetrics::CLEAN_LIST_USED_FILES_DURATION, duration.Get());
     metrics_->SetCounter(CleanMetrics::CLEAN_USED_FILES, static_cast<uint64_t>(used_files.size()));
+    metrics_->SetCounter(CleanMetrics::CLEAN_SNAPSHOT_FILES,
+                         static_cast<uint64_t>(snapshots.size()));
+    return used_files;
+}
+
+Result<std::set<std::string>> OrphanFilesCleanerImpl::GetUsedFilesBySnapshot(
+    const Snapshot& snapshot) const {
+    std::set<std::string> used_files;
+
+    used_files.insert(SnapshotManager::SNAPSHOT_PREFIX + std::to_string(snapshot.Id()));
+    used_files.insert(snapshot.BaseManifestList());
+    used_files.insert(snapshot.DeltaManifestList());
+    std::vector<ManifestFileMeta> manifests;
+    PAIMON_RETURN_NOT_OK(manifest_list_->ReadIfFileExist(snapshot.BaseManifestList(),
+                                                         /*filter=*/nullptr, &manifests));
+    PAIMON_RETURN_NOT_OK(manifest_list_->ReadIfFileExist(snapshot.DeltaManifestList(),
+                                                         /*filter=*/nullptr, &manifests));
+
+    for (const auto& manifest : manifests) {
+        used_files.insert(manifest.FileName());
+        std::vector<ManifestEntry> manifest_entries;
+        PAIMON_RETURN_NOT_OK(manifest_file_->ReadIfFileExist(
+            manifest.FileName(), /*filter=*/nullptr, &manifest_entries));
+        for (const auto& manifest_entry : manifest_entries) {
+            used_files.insert(manifest_entry.FileName());
+        }
+    }
+
     return used_files;
 }
 
