@@ -308,7 +308,7 @@ struct CoreOptions::Impl {
     int32_t file_compression_zstd_level = 1;
 
     bool ignore_delete = false;
-    bool write_only = true;
+    bool write_only = false;
     bool deletion_vectors_enabled = false;
     bool force_lookup = false;
     bool partial_update_remove_record_on_delete = false;
