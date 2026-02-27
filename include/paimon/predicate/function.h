@@ -37,7 +37,11 @@ class PAIMON_EXPORT Function {
         IN = 9,
         NOT_IN = 10,
         AND = 11,
-        OR = 12
+        OR = 12,
+        STARTS_WITH = 13,
+        ENDS_WITH = 14,
+        CONTAINS = 15,
+        LIKE = 16
     };
     virtual ~Function() = default;
     virtual Type GetType() const = 0;

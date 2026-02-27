@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,43 +16,27 @@
 
 #pragma once
 
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <utility>
-
 #include "paimon/common/predicate/null_false_leaf_binary_function.h"
-#include "paimon/predicate/literal.h"
-#include "paimon/result.h"
 
 namespace paimon {
 class LeafFunction;
 
-/// A `NullFalseLeafBinaryFunction` to eval greater.
-class GreaterThan : public NullFalseLeafBinaryFunction {
+class StringLeafBinaryFunction : public NullFalseLeafBinaryFunction {
  public:
-    static const GreaterThan& Instance();
+    virtual Result<bool> TestString(const std::string& field, const std::string& pattern) const = 0;
 
-    Result<bool> Test(const Literal& field, const Literal& literal) const override {
-        PAIMON_ASSIGN_OR_RAISE(int32_t compare_res, field.CompareTo(literal));
-        return compare_res > 0;
+    Result<bool> Test(const Literal& field, const Literal& pattern_literal) const override {
+        return TestString(field.GetValue<std::string>(), pattern_literal.GetValue<std::string>());
     }
+
     Result<bool> Test(int64_t row_count, const Literal& min_value, const Literal& max_value,
                       const std::optional<int64_t>& null_count,
                       const Literal& literal) const override {
-        PAIMON_ASSIGN_OR_RAISE(int32_t res, literal.CompareTo(max_value));
-        return res < 0;
-    }
-    Type GetType() const override {
-        return Type::GREATER_THAN;
-    }
-    const LeafFunction* Negate() const override;
-
-    std::string ToString() const override {
-        return "GreaterThan";
+        return true;
     }
 
- private:
-    GreaterThan() = default;
+    const LeafFunction* Negate() const override {
+        return nullptr;
+    }
 };
 }  // namespace paimon

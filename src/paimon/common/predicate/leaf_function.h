@@ -35,6 +35,6 @@ class LeafFunction : public Function {
                               const std::optional<int64_t>& null_count,
                               const std::vector<Literal>& literals) const = 0;
 
-    virtual const LeafFunction& Negate() const = 0;
+    virtual const LeafFunction* Negate() const = 0;
 };
 }  // namespace paimon

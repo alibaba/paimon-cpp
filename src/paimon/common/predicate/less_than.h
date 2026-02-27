@@ -45,7 +45,7 @@ class LessThan : public NullFalseLeafBinaryFunction {
     Type GetType() const override {
         return Type::LESS_THAN;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
     std::string ToString() const override {
         return "LessThan";
     }

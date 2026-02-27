@@ -320,6 +320,38 @@ TEST_F(PredicatePushdownTest, TestStringData) {
             Literal(FieldType::STRING, "zooooooo", 8));
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
+    {
+        // f0 like 'ba%', has data
+        ASSERT_OK_AND_ASSIGN(const auto predicate,
+                             PredicateBuilder::StartsWith(
+                                 /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                 Literal(FieldType::STRING, "ba", 2)));
+        CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
+    }
+    {
+        // f0 like '%ta', has data
+        ASSERT_OK_AND_ASSIGN(const auto predicate,
+                             PredicateBuilder::EndsWith(
+                                 /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                 Literal(FieldType::STRING, "ta", 2)));
+        CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
+    }
+    {
+        // f0 like '%me%', has data
+        ASSERT_OK_AND_ASSIGN(const auto predicate,
+                             PredicateBuilder::Contains(
+                                 /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                 Literal(FieldType::STRING, "me", 2)));
+        CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
+    }
+    {
+        // f0 like 'me', no data
+        ASSERT_OK_AND_ASSIGN(const auto predicate,
+                             PredicateBuilder::Like(
+                                 /*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                 Literal(FieldType::STRING, "me", 2)));
+        CheckResult(read_schema, predicate, /*expected_array=*/expected_array);
+    }
 }
 
 TEST_F(PredicatePushdownTest, TestBinaryData) {

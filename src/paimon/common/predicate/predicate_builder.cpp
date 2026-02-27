@@ -20,6 +20,8 @@
 
 #include "paimon/common/predicate/and.h"
 #include "paimon/common/predicate/compound_predicate_impl.h"
+#include "paimon/common/predicate/contains.h"
+#include "paimon/common/predicate/ends_with.h"
 #include "paimon/common/predicate/equal.h"
 #include "paimon/common/predicate/greater_or_equal.h"
 #include "paimon/common/predicate/greater_than.h"
@@ -29,9 +31,11 @@
 #include "paimon/common/predicate/leaf_predicate_impl.h"
 #include "paimon/common/predicate/less_or_equal.h"
 #include "paimon/common/predicate/less_than.h"
+#include "paimon/common/predicate/like.h"
 #include "paimon/common/predicate/not_equal.h"
 #include "paimon/common/predicate/not_in.h"
 #include "paimon/common/predicate/or.h"
+#include "paimon/common/predicate/starts_with.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/status.h"
 
@@ -158,6 +162,58 @@ Result<std::shared_ptr<Predicate>> PredicateBuilder::Not(
     if (!predicate) {
         return Status::Invalid("There must not be nullptr to construct a NOT predicate");
     }
-    return predicate->Negate();
+    auto negate_predicate = predicate->Negate();
+    if (!negate_predicate) {
+        return Status::Invalid("Could not construct A NOT predicate from " + predicate->ToString());
+    }
+    return negate_predicate;
+}
+
+Result<std::shared_ptr<Predicate>> PredicateBuilder::StartsWith(int32_t field_index,
+                                                                const std::string& field_name,
+                                                                const FieldType& field_type,
+                                                                const Literal& literal) {
+    if (field_type != FieldType::STRING || literal.GetType() != FieldType::STRING) {
+        return Status::Invalid(
+            "There must be STRING type field and literal to construct a StartsWith predicate");
+    }
+    return std::make_shared<LeafPredicateImpl>(StartsWith::Instance(), field_index, field_name,
+                                               field_type, std::vector<Literal>({literal}));
+}
+
+Result<std::shared_ptr<Predicate>> PredicateBuilder::EndsWith(int32_t field_index,
+                                                              const std::string& field_name,
+                                                              const FieldType& field_type,
+                                                              const Literal& literal) {
+    if (field_type != FieldType::STRING || literal.GetType() != FieldType::STRING) {
+        return Status::Invalid(
+            "There must be STRING type field and literal to construct an EndsWith predicate");
+    }
+    return std::make_shared<LeafPredicateImpl>(EndsWith::Instance(), field_index, field_name,
+                                               field_type, std::vector<Literal>({literal}));
+}
+
+Result<std::shared_ptr<Predicate>> PredicateBuilder::Contains(int32_t field_index,
+                                                              const std::string& field_name,
+                                                              const FieldType& field_type,
+                                                              const Literal& literal) {
+    if (field_type != FieldType::STRING || literal.GetType() != FieldType::STRING) {
+        return Status::Invalid(
+            "There must be STRING type field and literal to construct a Contains predicate");
+    }
+    return std::make_shared<LeafPredicateImpl>(Contains::Instance(), field_index, field_name,
+                                               field_type, std::vector<Literal>({literal}));
+}
+
+Result<std::shared_ptr<Predicate>> PredicateBuilder::Like(int32_t field_index,
+                                                          const std::string& field_name,
+                                                          const FieldType& field_type,
+                                                          const Literal& literal) {
+    if (field_type != FieldType::STRING || literal.GetType() != FieldType::STRING) {
+        return Status::Invalid(
+            "There must be STRING type field and literal to construct a Like predicate");
+    }
+    return std::make_shared<LeafPredicateImpl>(Like::Instance(), field_index, field_name,
+                                               field_type, std::vector<Literal>({literal}));
 }
 }  // namespace paimon

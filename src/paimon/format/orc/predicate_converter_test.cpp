@@ -112,6 +112,38 @@ TEST(PredicateConverterTest, TestSimple) {
         ASSERT_EQ("leaf-0 = (column(id=1) in [1, 3, 5]), expr = leaf-0", search_arg->toString());
     }
     {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::StartsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                         Literal(FieldType::STRING, "aab", 3)));
+        ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
+        ASSERT_EQ("expr = YES", search_arg->toString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::EndsWith(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                       Literal(FieldType::STRING, "bcc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
+        ASSERT_EQ("expr = YES", search_arg->toString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::Contains(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                       Literal(FieldType::STRING, "abc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
+        ASSERT_EQ("expr = YES", search_arg->toString());
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(
+            const auto predicate,
+            PredicateBuilder::Like(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                   Literal(FieldType::STRING, "abc", 3)));
+        ASSERT_OK_AND_ASSIGN(auto search_arg, PredicateConverter::Convert(*orc_type, predicate));
+        ASSERT_EQ("expr = YES", search_arg->toString());
+    }
+    {
         auto predicate =
             PredicateBuilder::NotIn(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
                                     {Literal(1l), Literal(3l), Literal(5l)});

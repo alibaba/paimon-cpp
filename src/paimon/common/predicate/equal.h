@@ -52,7 +52,7 @@ class Equal : public NullFalseLeafBinaryFunction {
     Type GetType() const override {
         return Type::EQUAL;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
     std::string ToString() const override {
         return "Equal";
     }

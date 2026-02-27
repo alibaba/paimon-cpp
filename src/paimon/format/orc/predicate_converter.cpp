@@ -203,6 +203,14 @@ Status PredicateConverter::ConvertLeaf(
             builder->end();
             break;
         }
+        case Function::Type::STARTS_WITH:
+        case Function::Type::ENDS_WITH:
+        case Function::Type::CONTAINS:
+        case Function::Type::LIKE:
+            // SearchArgument does not support predicates including StartsWith, EndsWith, Contains
+            // and Like that should skip.
+            builder->literal(::orc::TruthValue::YES);
+            break;
         default:
             return Status::Invalid(
                 fmt::format("invalid predicate type {}", static_cast<int32_t>(function_type)));
