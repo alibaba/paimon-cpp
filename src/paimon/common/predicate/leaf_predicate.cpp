@@ -39,8 +39,11 @@ const Function& LeafPredicate::GetFunction() const {
 }
 
 std::shared_ptr<Predicate> LeafPredicate::Negate() const {
-    const auto& negate_func = leaf_function_.Negate();
-    return std::make_shared<LeafPredicateImpl>(negate_func, field_index_, field_name_, field_type_,
+    const auto* negate_func = leaf_function_.Negate();
+    if (!negate_func) {
+        return nullptr;
+    }
+    return std::make_shared<LeafPredicateImpl>(*negate_func, field_index_, field_name_, field_type_,
                                                literals_);
 }
 

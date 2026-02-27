@@ -78,6 +78,8 @@ set(PAIMON_COMMON_SRCS
     common/options/time_duration.cpp
     common/predicate/and.cpp
     common/predicate/compound_predicate.cpp
+    common/predicate/contains.cpp
+    common/predicate/ends_with.cpp
     common/predicate/equal.cpp
     common/predicate/greater_or_equal.cpp
     common/predicate/greater_than.cpp
@@ -87,6 +89,7 @@ set(PAIMON_COMMON_SRCS
     common/predicate/leaf_predicate.cpp
     common/predicate/less_or_equal.cpp
     common/predicate/less_than.cpp
+    common/predicate/like.cpp
     common/predicate/literal_converter.cpp
     common/predicate/literal.cpp
     common/predicate/not_equal.cpp
@@ -94,6 +97,7 @@ set(PAIMON_COMMON_SRCS
     common/predicate/or.cpp
     common/predicate/predicate_builder.cpp
     common/predicate/predicate_utils.cpp
+    common/predicate/starts_with.cpp
     common/reader/batch_reader.cpp
     common/reader/concat_batch_reader.cpp
     common/reader/predicate_batch_reader.cpp

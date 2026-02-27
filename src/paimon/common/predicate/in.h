@@ -68,7 +68,7 @@ class In : public MultiLiteralsLeafFunction {
         return Type::IN;
     }
 
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
 
     std::string ToString() const override {
         return "In";
