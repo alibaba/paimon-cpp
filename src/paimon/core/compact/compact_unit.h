@@ -37,12 +37,10 @@ struct CompactUnit {
         return CompactUnit(output_level, files, file_rewrite);
     }
 
- private:
     CompactUnit(int32_t _output_level, const std::vector<std::shared_ptr<DataFileMeta>>& _files,
                 bool _file_rewrite)
         : output_level(_output_level), files(_files), file_rewrite(_file_rewrite) {}
 
- public:
     int32_t output_level;
     std::vector<std::shared_ptr<DataFileMeta>> files;
     bool file_rewrite;
