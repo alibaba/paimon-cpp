@@ -105,8 +105,8 @@ struct PAIMON_EXPORT Options {
     /// Default value is local.
     static const char FILE_SYSTEM[];
 
-    /// "target-file-size" - Target size of a file. Default value is 256MB.
-    // TODO(xinyu.lxy): change the default value to 128MB for primary key table.
+    /// "target-file-size" - Target size of a file. primary key table: the default value is 128 MB.
+    /// append table: the default value is 256 MB.
     static const char TARGET_FILE_SIZE[];
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
@@ -192,6 +192,10 @@ struct PAIMON_EXPORT Options {
     /// snapshots, if enabled, please note: hdfs: may print exceptions in NameNode. oss/s3: may
     /// cause performance issue. Default value is false.
     static const char SNAPSHOT_CLEAN_EMPTY_DIRECTORIES[];
+
+    /// "commit.force-compact" - Whether to force a compaction before commit. Default value is
+    /// "false".
+    static const char COMMIT_FORCE_COMPACT[];
 
     /// "commit.timeout" - Timeout duration of retry when commit failed. No default value.
     static const char COMMIT_TIMEOUT[];
@@ -289,6 +293,16 @@ struct PAIMON_EXPORT Options {
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
+    /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
+    /// option is used along with dedicated compact jobs. Default value is "false".
+    /// @note: This option will be ignore until compaction is supported.
+    static const char WRITE_ONLY[];
+    /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
+    /// compaction for append-only table. Default value is 5.
+    static const char COMPACTION_MIN_FILE_NUM[];
+    /// "compaction.force-rewrite-all-files" - Whether to force pick all files for a full
+    /// compaction. Usually seen in a compaction task to external paths. Default value is "false".
+    static const char COMPACTION_FORCE_REWRITE_ALL_FILES[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

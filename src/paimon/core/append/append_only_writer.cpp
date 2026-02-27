@@ -113,7 +113,8 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingRowWrit
         return CreateRollingBlobWriter(schemas);
     } else {
         return std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
-            options_.GetTargetFileSize(), GetDataFileWriterCreator(write_schema_, write_cols_));
+            options_.GetTargetFileSize(/*has_primary_key=*/false),
+            GetDataFileWriterCreator(write_schema_, write_cols_));
     }
 }
 
@@ -192,7 +193,7 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
             options_.GetBlobTargetFileSize(), single_blob_file_writer_creator);
     };
     return std::make_unique<RollingBlobFileWriter>(
-        options_.GetTargetFileSize(),
+        options_.GetTargetFileSize(/*has_primary_key=*/false),
         GetDataFileWriterCreator(schemas.main_schema, schemas.main_schema->field_names()),
         rolling_blob_file_writer_creator, arrow::struct_(write_schema_->fields()));
 }

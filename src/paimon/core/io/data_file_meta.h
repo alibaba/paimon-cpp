@@ -136,8 +136,8 @@ struct DataFileMeta {
     std::vector<std::optional<std::string>> extra_files;
     Timestamp creation_time;
 
-    // row_count = addRowCount + deleteRowCount
-    // Why don't we keep addRowCount and deleteRowCount?
+    // row_count = add_row_count + delete_row_count
+    // Why don't we keep add_row_count and delete_row_count?
     // Because in previous versions of DataFileMeta, we only keep row_count.
     // We have to keep the compatibility.
     std::optional<int64_t> delete_row_count;

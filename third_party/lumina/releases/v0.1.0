@@ -1,0 +1,36 @@
+# v0.1.0
+
+## Overview
+
+v0.1.0 is the first tagged release of Lumina. It establishes the public C++ API surface, and a baseline set of backends, formats, and extensions.
+
+## Audience
+
+- Users integrating Lumina via the public C++ API.
+- Users building indexes and serving online search.
+
+## Status
+
+Stable (initial release).
+
+## Changes
+
+- Features:
+  - Public "narrow waist" APIs: `LuminaBuilder` and `LuminaSearcher` with unified `Options` and `IO` abstraction.
+  - Backends: `diskann`, `ivf`, `bruteforce`.
+  - Extensions:
+    - Search-time filtering via `SearchWithFilterExtension` (DiskANN/Bruteforce).
+    - Experimental build-time checkpoint extension (DiskANN/Bruteforce builders).
+  - Persisted artifacts: `.lmi` section-based container format with CRC32C (optional per-section verification).
+  - Memory management: per-instance memory resource config and session pool support for avoiding heap allocations.
+
+## Migration Notes
+
+- This is the initial tagged release. If upgrading from an earlier untagged snapshot, rebuild indexes and checkpoints.
+
+## Known Issues
+
+- IVF: only `L2` metric is supported currently.
+- DiskANN: dynamic updates (incremental insert/delete) are not supported.
+- Builder: `LuminaBuilder` instances are not thread-safe.
+- IO: `.lmi` and backend layouts may change; upgrades may require rebuilding indexes.

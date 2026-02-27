@@ -57,8 +57,9 @@ class PAIMON_EXPORT CoreOptions {
     const std::string& GetFileCompression() const;
     int32_t GetFileCompressionZstdLevel() const;
     int64_t GetPageSize() const;
-    int64_t GetTargetFileSize() const;
+    int64_t GetTargetFileSize(bool has_primary_key) const;
     int64_t GetBlobTargetFileSize() const;
+    int64_t GetCompactionFileSize(bool has_primary_key) const;
     std::string GetPartitionDefaultName() const;
 
     std::shared_ptr<FileFormat> GetManifestFormat() const;
@@ -78,14 +79,18 @@ class PAIMON_EXPORT CoreOptions {
 
     const ExpireConfig& GetExpireConfig() const;
 
+    bool CommitForceCompact() const;
+    bool CompactionForceRewriteAllFiles() const;
     int64_t GetCommitTimeout() const;
     int32_t GetCommitMaxRetries() const;
+    int32_t GetCompactionMinFileNum() const;
 
     const std::vector<std::string>& GetSequenceField() const;
     bool SequenceFieldSortOrderIsAscending() const;
     MergeEngine GetMergeEngine() const;
     SortEngine GetSortEngine() const;
     bool IgnoreDelete() const;
+    bool WriteOnly() const;
 
     std::optional<std::string> GetFieldsDefaultFunc() const;
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;

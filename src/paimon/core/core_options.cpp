@@ -19,6 +19,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include "fmt/format.h"
@@ -246,6 +247,10 @@ class ConfigParser {
         return Status::OK();
     }
 
+    bool ContainsKey(const std::string& key) const {
+        return config_map_.find(key) != config_map_.end();
+    }
+
  private:
     const std::map<std::string, std::string> config_map_;
 };
@@ -254,9 +259,8 @@ class ConfigParser {
 // storing various configurable fields and their default values.
 struct CoreOptions::Impl {
     int64_t page_size = 64 * 1024;
-    int64_t target_file_size = 256 * 1024 * 1024;  // TODO(xinyu.lxy): target_file_size of primary
-                                                   // key table is 128 MB and append table is 256 MB
-    int64_t blob_target_file_size = 256 * 1024 * 1024;
+    std::optional<int64_t> target_file_size;
+    std::optional<int64_t> blob_target_file_size;
     int64_t source_split_target_size = 128 * 1024 * 1024;
     int64_t source_split_open_file_cost = 4 * 1024 * 1024;
     int64_t manifest_target_file_size = 8 * 1024 * 1024;
@@ -293,6 +297,7 @@ struct CoreOptions::Impl {
     int32_t read_batch_size = 1024;
     int32_t write_batch_size = 1024;
     int32_t commit_max_retries = 10;
+    int32_t compaction_min_file_num = 5;
 
     SortOrder sequence_field_sort_order = SortOrder::ASCENDING;
     MergeEngine merge_engine = MergeEngine::DEDUPLICATE;
@@ -303,6 +308,7 @@ struct CoreOptions::Impl {
     int32_t file_compression_zstd_level = 1;
 
     bool ignore_delete = false;
+    bool write_only = false;
     bool deletion_vectors_enabled = false;
     bool force_lookup = false;
     bool partial_update_remove_record_on_delete = false;
@@ -313,6 +319,8 @@ struct CoreOptions::Impl {
     bool data_evolution_enabled = false;
     bool legacy_partition_name_enabled = true;
     bool global_index_enabled = true;
+    bool commit_force_compact = false;
+    bool compaction_force_rewrite_all_files = false;
     std::optional<std::string> global_index_external_path;
 
     std::optional<std::string> scan_tag_name;
@@ -348,11 +356,17 @@ Result<CoreOptions> CoreOptions::FromMap(
 
     // Parse memory size configurations
     PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::PAGE_SIZE, &impl->page_size));
-    PAIMON_RETURN_NOT_OK(
-        parser.ParseMemorySize(Options::TARGET_FILE_SIZE, &impl->target_file_size));
-    impl->blob_target_file_size = impl->target_file_size;
-    PAIMON_RETURN_NOT_OK(
-        parser.ParseMemorySize(Options::BLOB_TARGET_FILE_SIZE, &impl->blob_target_file_size));
+    if (parser.ContainsKey(Options::TARGET_FILE_SIZE)) {
+        int64_t target_file_size;
+        PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::TARGET_FILE_SIZE, &target_file_size));
+        impl->target_file_size = target_file_size;
+    }
+    if (parser.ContainsKey(Options::BLOB_TARGET_FILE_SIZE)) {
+        int64_t blob_target_file_size;
+        PAIMON_RETURN_NOT_OK(
+            parser.ParseMemorySize(Options::BLOB_TARGET_FILE_SIZE, &blob_target_file_size));
+        impl->blob_target_file_size = blob_target_file_size;
+    }
     PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::MANIFEST_TARGET_FILE_SIZE,
                                                 &impl->manifest_target_file_size));
     PAIMON_RETURN_NOT_OK(
@@ -410,6 +424,9 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(parser.ParseMergeEngine(&impl->merge_engine));
     // Parse ignore delete
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::IGNORE_DELETE, &impl->ignore_delete));
+
+    // Parse write-only
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::WRITE_ONLY, &impl->write_only));
 
     // Parse default agg function
     std::string field_default_func;
@@ -490,6 +507,18 @@ Result<CoreOptions> CoreOptions::FromMap(
         impl->scan_tag_name = scan_tag_name;
     }
 
+    // Parse commit.force-compact
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<bool>(Options::COMMIT_FORCE_COMPACT, &impl->commit_force_compact));
+
+    // Parse compaction.min.file-num
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse(Options::COMPACTION_MIN_FILE_NUM, &impl->compaction_min_file_num));
+
+    // Parse compaction.force-rewrite-all-files
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::COMPACTION_FORCE_REWRITE_ALL_FILES,
+                                            &impl->compaction_force_rewrite_all_files));
+
     return options;
 }
 
@@ -531,12 +560,25 @@ int64_t CoreOptions::GetPageSize() const {
     return impl_->page_size;
 }
 
-int64_t CoreOptions::GetTargetFileSize() const {
-    return impl_->target_file_size;
+int64_t CoreOptions::GetTargetFileSize(bool has_primary_key) const {
+    if (impl_->target_file_size == std::nullopt) {
+        return has_primary_key ? 128 * 1024 * 1024 : 256 * 1024 * 1024;
+    }
+    return impl_->target_file_size.value();
 }
 
 int64_t CoreOptions::GetBlobTargetFileSize() const {
-    return impl_->blob_target_file_size;
+    if (impl_->blob_target_file_size == std::nullopt) {
+        return GetTargetFileSize(/*has_primary_key=*/false);
+    }
+    return impl_->blob_target_file_size.value();
+}
+
+int64_t CoreOptions::GetCompactionFileSize(bool has_primary_key) const {
+    // file size to join the compaction, we don't process on middle file size to avoid
+    // compact a same file twice (the compression is not calculate so accurately. the output
+    // file maybe be less than target file generated by rolling file write).
+    return GetTargetFileSize(has_primary_key) / 10 * 7;
 }
 
 std::string CoreOptions::GetPartitionDefaultName() const {
@@ -594,12 +636,20 @@ int64_t CoreOptions::GetWriteBufferSize() const {
     return impl_->write_buffer_size;
 }
 
+bool CoreOptions::CommitForceCompact() const {
+    return impl_->commit_force_compact;
+}
+
 int64_t CoreOptions::GetCommitTimeout() const {
     return impl_->commit_timeout;
 }
 
 int32_t CoreOptions::GetCommitMaxRetries() const {
     return impl_->commit_max_retries;
+}
+
+int32_t CoreOptions::GetCompactionMinFileNum() const {
+    return impl_->compaction_min_file_num;
 }
 
 const ExpireConfig& CoreOptions::GetExpireConfig() const {
@@ -624,6 +674,10 @@ SortEngine CoreOptions::GetSortEngine() const {
 
 bool CoreOptions::IgnoreDelete() const {
     return impl_->ignore_delete;
+}
+
+bool CoreOptions::WriteOnly() const {
+    return impl_->write_only;
 }
 
 std::optional<std::string> CoreOptions::GetFieldsDefaultFunc() const {
@@ -672,6 +726,10 @@ bool CoreOptions::NeedLookup() const {
     return GetMergeEngine() == MergeEngine::FIRST_ROW ||
            GetChangelogProducer() == ChangelogProducer::LOOKUP || DeletionVectorsEnabled() ||
            impl_->force_lookup;
+}
+
+bool CoreOptions::CompactionForceRewriteAllFiles() const {
+    return impl_->compaction_force_rewrite_all_files;
 }
 
 std::map<std::string, std::string> CoreOptions::GetFieldsSequenceGroups() const {
