@@ -165,7 +165,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::SCAN_TAG_NAME, "test-tag"},
         {Options::WRITE_ONLY, "true"},
         {Options::COMPACTION_MIN_FILE_NUM, "10"},
-        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"}};
+        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
         {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
         {Options::COMPACTION_TOTAL_SIZE_THRESHOLD, "5 GB"},
         {Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD, "12 kB"},
