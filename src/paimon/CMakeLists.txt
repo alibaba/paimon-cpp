@@ -356,6 +356,7 @@ if(PAIMON_BUILD_TESTS)
                     common/file_index/bsi/bit_slice_index_roaring_bitmap_test.cpp
                     common/file_index/bloomfilter/bloom_filter_file_index_test.cpp
                     common/file_index/bloomfilter/fast_hash_test.cpp
+                    common/file_index/rangebitmap/range_bitmap_file_index_test.cpp
                     common/global_index/complete_index_score_batch_reader_test.cpp
                     common/global_index/global_index_result_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
