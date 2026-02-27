@@ -30,11 +30,11 @@
 #include "paimon/common/data/columnar/columnar_row.h"
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
 #include "paimon/core/utils/fields_comparator.h"
 #include "paimon/status.h"
-
 namespace paimon {
 class MemoryPool;
 
@@ -85,6 +85,7 @@ KeyValueInMemoryRecordReader::KeyValueInMemoryRecordReader(
       key_comparator_(key_comparator),
       merge_function_wrapper_(merge_function_wrapper) {
     assert(value_struct_array_);
+    ArrowUtils::TraverseArray(value_struct_array_);
 }
 
 Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueInMemoryRecordReader::NextBatch() {
