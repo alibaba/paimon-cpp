@@ -64,6 +64,7 @@ std::optional<CompactUnit> EarlyFullCompaction::TryFullCompact(
             total_size += run.run.TotalSize();
         }
         if (total_size < total_size_threshold_.value()) {
+            UpdateLastFullCompaction();
             return CompactUnit::FromLevelRuns(max_level, runs);
         }
     }
@@ -75,6 +76,7 @@ std::optional<CompactUnit> EarlyFullCompaction::TryFullCompact(
             }
         }
         if (incremental_size > incremental_size_threshold_.value()) {
+            UpdateLastFullCompaction();
             return CompactUnit::FromLevelRuns(max_level, runs);
         }
     }

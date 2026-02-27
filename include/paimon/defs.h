@@ -305,13 +305,13 @@ struct PAIMON_EXPORT Options {
     static const char COMPACTION_FORCE_REWRITE_ALL_FILES[];
     /// "compaction.optimization-interval" - Implying how often to perform an optimization
     /// compaction, this configuration is used to ensure the query timeliness of the read-optimized
-    /// system table.
+    /// system table. No default value.
     static const char COMPACTION_OPTIMIZATION_INTERVAL[];
     /// "compaction.total-size-threshold" - When total size is smaller than this threshold, force a
-    /// full compaction.
+    /// full compaction. No default value.
     static const char COMPACTION_TOTAL_SIZE_THRESHOLD[];
     /// "compaction.incremental-size-threshold" - When incremental size is bigger than this
-    /// threshold, force a full compaction.
+    /// threshold, force a full compaction. No default value.
     static const char COMPACTION_INCREMENTAL_SIZE_THRESHOLD[];
     /// "compaction.offpeak.start.hour" - The start of off-peak hours, expressed as an integer
     /// between 0 and 23, inclusive. Set to -1 to disable off-peak. Default is -1.

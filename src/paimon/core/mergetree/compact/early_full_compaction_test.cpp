@@ -208,4 +208,58 @@ TEST_F(EarlyFullCompactionTest, TestThresholdTriggersWhenIntervalFails) {
     ASSERT_FALSE(early_full_compaction.TryFullCompact(/*num_levels=*/5, runs));
 }
 
+TEST_F(EarlyFullCompactionTest, TestUpdateLastWhenFullCompactIsTriggeredByTotalSize) {
+    int64_t current_time = 10000l;
+
+    TestableEarlyFullCompaction early_full_compaction(/*full_compaction_interval=*/1000l,
+                                                      /*total_size_threshold=*/500l,
+                                                      /*incremental_size_threshold=*/std::nullopt,
+                                                      &current_time);
+    // First time, interval should trigger even if size (600) > threshold (500)
+    auto runs = CreateRuns({300l, 300l});
+    auto compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_TRUE(compact_unit);
+    ASSERT_EQ(compact_unit->output_level, 4);
+
+    current_time = 10100l;
+    // Second time, compaction triggered by total_size_threshold
+    runs = CreateRuns({300l, 100l});
+    compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_TRUE(compact_unit);
+    ASSERT_EQ(compact_unit->output_level, 4);
+
+    current_time = 11001l;
+    // Third time, compaction cannot be triggered as 11001 - 10100 < 1000 full_compaction_interval
+    runs = CreateRuns({300l, 300l});
+    compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_FALSE(compact_unit);
+}
+
+TEST_F(EarlyFullCompactionTest, TestUpdateLastWhenFullCompactIsTriggeredByIncSize) {
+    int64_t current_time = 10000l;
+
+    TestableEarlyFullCompaction early_full_compaction(/*full_compaction_interval=*/1000l,
+                                                      /*total_size_threshold=*/std::nullopt,
+                                                      /*incremental_size_threshold=*/500,
+                                                      &current_time);
+    // First time, interval should trigger even if size (400) < threshold (500)
+    std::vector<LevelSortedRun> runs = {CreateLevelSortedRun(0, 300), CreateLevelSortedRun(0, 100)};
+    auto compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_TRUE(compact_unit);
+    ASSERT_EQ(compact_unit->output_level, 4);
+
+    current_time = 10100l;
+    // Second time, compaction triggered by total_size_threshold
+    runs = {CreateLevelSortedRun(0, 300), CreateLevelSortedRun(0, 300)};
+    compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_TRUE(compact_unit);
+    ASSERT_EQ(compact_unit->output_level, 4);
+
+    current_time = 11001l;
+    // Third time, compaction cannot be triggered as 11001 - 10100 < 1000 full_compaction_interval
+    runs = {CreateLevelSortedRun(0, 300), CreateLevelSortedRun(0, 100)};
+    compact_unit = early_full_compaction.TryFullCompact(/*num_levels=*/5, runs);
+    ASSERT_FALSE(compact_unit);
+}
+
 }  // namespace paimon::test
