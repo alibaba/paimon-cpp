@@ -71,7 +71,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(MergeEngine::DEDUPLICATE, core_options.GetMergeEngine());
     ASSERT_EQ(SortEngine::LOSER_TREE, core_options.GetSortEngine());
     ASSERT_FALSE(core_options.IgnoreDelete());
-    ASSERT_TRUE(core_options.WriteOnly());
+    ASSERT_FALSE(core_options.WriteOnly());
     ASSERT_EQ(5, core_options.GetCompactionMinFileNum());
     ASSERT_FALSE(core_options.CompactionForceRewriteAllFiles());
     ASSERT_EQ(std::nullopt, core_options.GetFieldsDefaultFunc());
@@ -157,6 +157,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
         {Options::SCAN_TAG_NAME, "test-tag"},
+        {Options::WRITE_ONLY, "true"},
         {Options::COMPACTION_MIN_FILE_NUM, "10"},
         {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"}};
 
@@ -234,9 +235,10 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(StartupMode::FromSnapshot(), core_options.GetStartupMode());
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
+    ASSERT_TRUE(core_options.WriteOnly());
     ASSERT_EQ(10, core_options.GetCompactionMinFileNum());
     ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());
-}
+}  // namespace paimon::test
 
 TEST(CoreOptionsTest, TestInvalidCase) {
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET, "3.5"}}),

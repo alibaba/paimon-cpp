@@ -507,10 +507,6 @@ Result<CoreOptions> CoreOptions::FromMap(
         impl->scan_tag_name = scan_tag_name;
     }
 
-    // Parse global-index.enabled
-    PAIMON_RETURN_NOT_OK(
-        parser.Parse<bool>(Options::GLOBAL_INDEX_ENABLED, &impl->global_index_enabled));
-
     // Parse commit.force-compact
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::COMMIT_FORCE_COMPACT, &impl->commit_force_compact));

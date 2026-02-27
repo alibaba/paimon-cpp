@@ -294,7 +294,8 @@ struct PAIMON_EXPORT Options {
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
-    /// option is used along with dedicated compact jobs. Default value is "true".
+    /// option is used along with dedicated compact jobs. Default value is "false".
+    /// @note: This option will be ignore until compaction is supported.
     static const char WRITE_ONLY[];
     /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
     /// compaction for append-only table. Default value is 5.
