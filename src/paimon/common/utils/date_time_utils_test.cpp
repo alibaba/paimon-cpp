@@ -292,7 +292,7 @@ TEST(DateTimeUtilsTest, TestGetCurrentLocalHour) {
         TimezoneGuard guard("UTC");
         utc_hour = DateTimeUtils::GetCurrentLocalHour().value();
     }
-    ASSERT_EQ(shanghai_hour - utc_hour, 8);
+    ASSERT_EQ((shanghai_hour - utc_hour + 24) % 24, 8);
 }
 
 TEST(DateTimeUtilsTest, TestToUTCTimestamp) {
