@@ -35,6 +35,9 @@ class UniversalCompaction : public CompactStrategy {
     Result<std::optional<CompactUnit>> Pick(int32_t num_levels,
                                             const std::vector<LevelSortedRun>& runs) override;
 
+    Result<std::optional<CompactUnit>> ForcePickL0(int32_t num_levels,
+                                                   const std::vector<LevelSortedRun>& runs);
+
  private:
     std::optional<CompactUnit> PickForSizeAmp(int32_t max_level,
                                               const std::vector<LevelSortedRun>& runs);

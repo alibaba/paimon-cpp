@@ -528,6 +528,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/off_peak_hours_test.cpp
                     core/mergetree/compact/early_full_compaction_test.cpp
                     core/mergetree/compact/universal_compaction_test.cpp
+                    core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp

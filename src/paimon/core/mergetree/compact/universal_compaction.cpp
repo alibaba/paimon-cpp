@@ -62,6 +62,21 @@ Result<std::optional<CompactUnit>> UniversalCompaction::Pick(
     return std::optional<CompactUnit>();
 }
 
+Result<std::optional<CompactUnit>> UniversalCompaction::ForcePickL0(
+    int32_t num_levels, const std::vector<LevelSortedRun>& runs) {
+    // collect all level 0 files
+    int32_t candidate_count = 0;
+    for (; static_cast<size_t>(candidate_count) < runs.size(); ++candidate_count) {
+        if (runs[candidate_count].level > 0) {
+            break;
+        }
+    }
+    if (candidate_count == 0) {
+        return std::optional<CompactUnit>();
+    }
+    return PickForSizeRatio(num_levels - 1, runs, candidate_count, /*force_pick=*/true);
+}
+
 std::optional<CompactUnit> UniversalCompaction::PickForSizeAmp(
     int32_t max_level, const std::vector<LevelSortedRun>& runs) {
     if (runs.size() < static_cast<size_t>(num_run_compaction_trigger_)) {

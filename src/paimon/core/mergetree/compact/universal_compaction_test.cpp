@@ -16,6 +16,7 @@
 
 #include "paimon/core/mergetree/compact/universal_compaction.h"
 
+#include "paimon/core/mergetree/compact/force_up_level0_compaction.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -356,6 +357,91 @@ TEST_F(UniversalCompactionTest, TestSizeRatioThreshold) {
                            CreateRunsWithLevelAndSize(/*levels=*/{0, 1, 2}, /*sizes=*/{8, 9, 10})));
         ASSERT_TRUE(unit);
         ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({8, 9, 10}));
+    }
+}
+
+TEST_F(UniversalCompactionTest, TestLookup) {
+    auto universal =
+        std::make_shared<UniversalCompaction>(/*max_size_amp=*/25, /*size_ratio=*/1,
+                                              /*num_run_compaction_trigger=*/3, nullptr, nullptr);
+    ForceUpLevel0Compaction compaction(universal, /*max_compact_interval=*/std::nullopt);
+
+    // level 0 to max level
+    ASSERT_OK_AND_ASSIGN(auto unit,
+                         compaction.Pick(/*num_levels=*/3, CreateRunsWithSize({1, 2, 2, 2})));
+    ASSERT_TRUE(unit);
+    ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({1, 2, 2, 2}));
+    ASSERT_EQ(unit.value().output_level, 2);
+
+    // level 0 force pick
+    ASSERT_OK_AND_ASSIGN(
+        unit, compaction.Pick(/*num_levels=*/3, CreateRunsWithLevelAndSize(/*levels=*/{0, 1, 2},
+                                                                           /*sizes=*/{1, 2, 2})));
+    ASSERT_TRUE(unit);
+    ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({1, 2, 2}));
+    ASSERT_EQ(unit.value().output_level, 2);
+
+    // level 0 to empty level
+    ASSERT_OK_AND_ASSIGN(
+        unit, compaction.Pick(/*num_levels=*/3,
+                              CreateRunsWithLevelAndSize(/*levels=*/{0, 2}, /*sizes=*/{1, 2})));
+    ASSERT_TRUE(unit);
+    ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({1}));
+    ASSERT_EQ(unit.value().output_level, 1);
+}
+
+TEST_F(UniversalCompactionTest, TestForcePickL0) {
+    int32_t max_compact_interval = 5;
+    auto universal =
+        std::make_shared<UniversalCompaction>(/*max_size_amp=*/25, /*size_ratio=*/1,
+                                              /*num_run_compaction_trigger=*/5, nullptr, nullptr);
+    ForceUpLevel0Compaction compaction(universal, max_compact_interval);
+
+    // level 0 to max level
+    auto level0_to_max = CreateRunsWithSize({1, 2, 2, 2});
+    std::optional<CompactUnit> unit;
+    for (int32_t i = 1; i <= max_compact_interval; i++) {
+        // level 0 to max level triggered
+        ASSERT_OK_AND_ASSIGN(unit, compaction.Pick(/*num_levels=*/3, level0_to_max));
+        if (i == max_compact_interval) {
+            ASSERT_TRUE(unit);
+            ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()),
+                      std::vector<int64_t>({1, 2, 2, 2}));
+            ASSERT_EQ(unit.value().output_level, 2);
+        } else {
+            // compact skipped
+            ASSERT_FALSE(unit);
+        }
+    }
+
+    // level 0 force pick
+    auto level0_force_pick = CreateRunsWithLevelAndSize(/*levels=*/{0, 1, 2}, /*sizes=*/{2, 2, 2});
+    for (int32_t i = 1; i <= max_compact_interval; i++) {
+        ASSERT_OK_AND_ASSIGN(unit, compaction.Pick(/*num_levels=*/3, level0_force_pick));
+        if (i == max_compact_interval) {
+            // level 0 force pick triggered
+            ASSERT_TRUE(unit);
+            ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({2, 2, 2}));
+            ASSERT_EQ(unit.value().output_level, 2);
+        } else {
+            // compact skipped
+            ASSERT_FALSE(unit);
+        }
+    }
+
+    // level 0 to empty level
+    auto level0_to_empty = CreateRunsWithLevelAndSize(/*levels=*/{0, 2}, /*sizes=*/{1, 2});
+    for (int32_t i = 1; i <= max_compact_interval; i++) {
+        ASSERT_OK_AND_ASSIGN(unit, compaction.Pick(/*num_levels=*/3, level0_to_empty));
+        if (i == max_compact_interval) {
+            // level 0 force pick triggered
+            ASSERT_TRUE(unit);
+            ASSERT_EQ(GetFileSizeVecFromCompactUnit(unit.value()), std::vector<int64_t>({1}));
+            ASSERT_EQ(unit.value().output_level, 1);
+        } else {
+            // compact skipped
+            ASSERT_FALSE(unit);
+        }
     }
 }
 }  // namespace paimon::test
