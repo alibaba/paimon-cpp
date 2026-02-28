@@ -169,6 +169,7 @@ set(PAIMON_CORE_SRCS
     core/catalog/identifier.cpp
     core/core_options.cpp
     core/deletionvectors/deletion_vector.cpp
+    core/deletionvectors/deletion_file_writer.cpp
     core/deletionvectors/bitmap_deletion_vector.cpp
     core/deletionvectors/deletion_vectors_index_file.cpp
     core/deletionvectors/deletion_vector_index_file_writer.cpp

@@ -15,11 +15,17 @@
  */
 
 #pragma once
+
+#include <cassert>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <type_traits>
 
+#include "paimon/common/utils/math.h"
+#include "paimon/fs/file_system.h"
 #include "paimon/io/byte_order.h"
+#include "paimon/result.h"
 #include "paimon/status.h"
 
 namespace paimon {
@@ -33,7 +39,19 @@ class PAIMON_EXPORT DataOutputStream {
     explicit DataOutputStream(const std::shared_ptr<OutputStream>& output_stream);
 
     template <typename T>
-    Status WriteValue(const T& value);
+    Status WriteValue(const T& value) {
+        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
+        T write_value = value;
+        if (NeedSwap()) {
+            write_value = EndianSwapValue(value);
+        }
+        int32_t write_length = sizeof(T);
+        PAIMON_ASSIGN_OR_RAISE(
+            int32_t actual_write_length,
+            output_stream_->Write(reinterpret_cast<char*>(&write_value), write_length));
+        PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
+        return Status::OK();
+    }
 
     Status WriteBytes(const std::shared_ptr<Bytes>& bytes);
 
