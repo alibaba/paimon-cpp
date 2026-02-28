@@ -46,6 +46,9 @@ class KeyFactory : public std::enable_shared_from_this<KeyFactory> {
         int32_t chunk_offest, int32_t keys_base_offset) = 0;
 
     static Result<std::shared_ptr<KeyFactory>> Create(FieldType field_type);
+
+ public:
+    static constexpr char DEFAULT_CHUNK_SIZE[] = "16kb";
 };
 
 class FixedLengthKeyFactory : public KeyFactory {

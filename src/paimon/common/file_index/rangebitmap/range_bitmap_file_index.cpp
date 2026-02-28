@@ -75,7 +75,7 @@ Result<std::shared_ptr<RangeBitmapFileIndexWriter>> RangeBitmapFileIndexWriter::
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<KeyFactory> shared_key_factory,
                            KeyFactory::Create(field_type));
     PAIMON_ASSIGN_OR_RAISE(int64_t parsed_chunk_size,
-                           MemorySize::ParseBytes(RangeBitmapFileIndexWriter::DEFAULT_CHUNK_SIZE));
+                           MemorySize::ParseBytes(KeyFactory::DEFAULT_CHUNK_SIZE));
     if (const auto chunk_size_it = options.find(RangeBitmapFileIndex::CHUNK_SIZE);
         chunk_size_it != options.end()) {
         PAIMON_ASSIGN_OR_RAISE(parsed_chunk_size, MemorySize::ParseBytes(chunk_size_it->second));

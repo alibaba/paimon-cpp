@@ -48,6 +48,7 @@ class RangeBitmapFileIndex final : public FileIndexer {
     Result<std::shared_ptr<FileIndexWriter>> CreateWriter(
         ::ArrowSchema* arrow_schema, const std::shared_ptr<MemoryPool>& pool) const override;
 
+ public:
     static constexpr char CHUNK_SIZE[] = "chunk-size";
 
  private:
@@ -56,8 +57,6 @@ class RangeBitmapFileIndex final : public FileIndexer {
 
 class RangeBitmapFileIndexWriter final : public FileIndexWriter {
  public:
-    static constexpr char DEFAULT_CHUNK_SIZE[] = "16kb";
-
     static Result<std::shared_ptr<RangeBitmapFileIndexWriter>> Create(
         const std::shared_ptr<arrow::Schema>& arrow_schema, const std::string& field_name,
         const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool);
