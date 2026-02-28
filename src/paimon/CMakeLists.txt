@@ -210,6 +210,8 @@ set(PAIMON_CORE_SRCS
     core/manifest/manifest_list.cpp
     core/manifest/partition_entry.cpp
     core/manifest/index_manifest_file_handler.cpp
+    core/mergetree/compact/universal_compaction.cpp
+    core/mergetree/compact/early_full_compaction.cpp
     core/mergetree/compact/aggregate/aggregate_merge_function.cpp
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
@@ -527,6 +529,11 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/partial_update_merge_function_test.cpp
                     core/mergetree/compact/reducer_merge_function_wrapper_test.cpp
                     core/mergetree/compact/sort_merge_reader_test.cpp
+                    core/mergetree/compact/off_peak_hours_test.cpp
+                    core/mergetree/compact/early_full_compaction_test.cpp
+                    core/mergetree/compact/universal_compaction_test.cpp
+                    core/mergetree/compact/force_up_level0_compaction_test.cpp
+                    core/mergetree/compact/compact_strategy_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/sorted_run_test.cpp

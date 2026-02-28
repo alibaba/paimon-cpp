@@ -24,6 +24,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/manifest/file_source.h"
+#include "paimon/core/mergetree/level_sorted_run.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
@@ -31,7 +32,6 @@
 #include "paimon/status.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 class SortedRunTest : public testing::Test {
  public:
@@ -87,4 +87,15 @@ TEST_F(SortedRunTest, TestSortedRunIsValid) {
     }
 }
 
+TEST_F(SortedRunTest, TestSortedRunToString) {
+    auto m1 = CreateDataFileMeta(10, 20);
+    auto m2 = CreateDataFileMeta(30, 40);
+    auto sorted_run = SortedRun::FromSorted({m1, m2});
+    auto sorted_run_str = sorted_run.ToString();
+    LevelSortedRun level_sorted_run(/*level=*/10, sorted_run);
+    auto level_sorted_run_str = level_sorted_run.ToString();
+    ASSERT_TRUE(level_sorted_run_str.find("LevelSortedRun{ level=10, run={fileName:") !=
+                std::string::npos);
+    ASSERT_TRUE(level_sorted_run_str.find(sorted_run_str) != std::string::npos);
+}
 }  // namespace paimon::test

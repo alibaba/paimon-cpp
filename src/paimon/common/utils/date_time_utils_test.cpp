@@ -273,12 +273,26 @@ TEST(DateTimeUtilsTest, TestGetLocalTimezoneName) {
     ASSERT_EQ(DateTimeUtils::GetLocalTimezoneName(), timezone);
 }
 
-TEST(DateTimeUtilsTest, TestGetCurrentTime) {
+TEST(DateTimeUtilsTest, TestGetCurrentLocalTimeUs) {
     TimezoneGuard guard("Asia/Shanghai");
     uint64_t utc_ts = DateTimeUtils::GetCurrentUTCTimeUs();
     uint64_t local_ts = DateTimeUtils::GetCurrentLocalTimeUs().value();
     ASSERT_GT(local_ts, utc_ts);
     ASSERT_GE(local_ts - utc_ts, 28800000000l);
+}
+
+TEST(DateTimeUtilsTest, TestGetCurrentLocalHour) {
+    int32_t shanghai_hour = 0;
+    int32_t utc_hour = 0;
+    {
+        TimezoneGuard guard("Asia/Shanghai");
+        ASSERT_OK_AND_ASSIGN(shanghai_hour, DateTimeUtils::GetCurrentLocalHour());
+    }
+    {
+        TimezoneGuard guard("UTC");
+        ASSERT_OK_AND_ASSIGN(utc_hour, DateTimeUtils::GetCurrentLocalHour());
+    }
+    ASSERT_EQ((shanghai_hour - utc_hour + 24) % 24, 8);
 }
 
 TEST(DateTimeUtilsTest, TestToUTCTimestamp) {

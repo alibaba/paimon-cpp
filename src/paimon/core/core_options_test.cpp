@@ -97,6 +97,12 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
+    ASSERT_EQ(std::nullopt, core_options.GetOptimizedCompactionInterval());
+    ASSERT_EQ(std::nullopt, core_options.GetCompactionTotalSizeThreshold());
+    ASSERT_EQ(std::nullopt, core_options.GetCompactionIncrementalSizeThreshold());
+    ASSERT_EQ(-1, core_options.GetCompactOffPeakStartHour());
+    ASSERT_EQ(-1, core_options.GetCompactOffPeakEndHour());
+    ASSERT_EQ(0, core_options.GetCompactOffPeakRatio());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -159,7 +165,13 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::SCAN_TAG_NAME, "test-tag"},
         {Options::WRITE_ONLY, "true"},
         {Options::COMPACTION_MIN_FILE_NUM, "10"},
-        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"}};
+        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
+        {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
+        {Options::COMPACTION_TOTAL_SIZE_THRESHOLD, "5 GB"},
+        {Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD, "12 kB"},
+        {Options::COMPACT_OFFPEAK_START_HOUR, "3"},
+        {Options::COMPACT_OFFPEAK_END_HOUR, "16"},
+        {Options::COMPACTION_OFFPEAK_RATIO, "8"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -238,7 +250,13 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.WriteOnly());
     ASSERT_EQ(10, core_options.GetCompactionMinFileNum());
     ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());
-}  // namespace paimon::test
+    ASSERT_EQ(2000, core_options.GetOptimizedCompactionInterval().value());
+    ASSERT_EQ(5l * 1024 * 1024 * 1024, core_options.GetCompactionTotalSizeThreshold().value());
+    ASSERT_EQ(12l * 1024, core_options.GetCompactionIncrementalSizeThreshold().value());
+    ASSERT_EQ(3, core_options.GetCompactOffPeakStartHour());
+    ASSERT_EQ(16, core_options.GetCompactOffPeakEndHour());
+    ASSERT_EQ(8, core_options.GetCompactOffPeakRatio());
+}
 
 TEST(CoreOptionsTest, TestInvalidCase) {
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET, "3.5"}}),
