@@ -57,6 +57,7 @@ repository:
 
    $ git clone https://github.com/alibaba/paimon-cpp.git
    $ cd paimon-cpp
+   $ git lfs pull
 
 Manual configuration
 --------------------
