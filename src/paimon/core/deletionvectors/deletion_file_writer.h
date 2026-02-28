@@ -50,11 +50,14 @@ class DeletionFileWriter {
     }
 
     Status Write(const std::string& key, const std::shared_ptr<DeletionVector>& deletion_vector) {
-        PAIMON_ASSIGN_OR_RAISE(int32_t start, out_->GetPos());
+        PAIMON_ASSIGN_OR_RAISE(int64_t start, out_->GetPos());
+        if (start < 0 || start > std::numeric_limits<int32_t>::max()) {
+            return Status::Invalid("Output position out of int32 range: ", start);
+        }
         DataOutputStream output_stream(out_);
         PAIMON_ASSIGN_OR_RAISE(int32_t length, deletion_vector->SerializeTo(pool_, &output_stream));
-        dv_metas_.insert(key,
-                         DeletionVectorMeta(key, start, length, deletion_vector->GetCardinality()));
+        dv_metas_.insert(key, DeletionVectorMeta(key, static_cast<int32_t>(start), length,
+                                                 deletion_vector->GetCardinality()));
         return Status::OK();
     }
 
