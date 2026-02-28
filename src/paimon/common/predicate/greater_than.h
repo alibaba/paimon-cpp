@@ -46,7 +46,7 @@ class GreaterThan : public NullFalseLeafBinaryFunction {
     Type GetType() const override {
         return Type::GREATER_THAN;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
 
     std::string ToString() const override {
         return "GreaterThan";

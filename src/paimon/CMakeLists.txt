@@ -78,6 +78,8 @@ set(PAIMON_COMMON_SRCS
     common/options/time_duration.cpp
     common/predicate/and.cpp
     common/predicate/compound_predicate.cpp
+    common/predicate/contains.cpp
+    common/predicate/ends_with.cpp
     common/predicate/equal.cpp
     common/predicate/greater_or_equal.cpp
     common/predicate/greater_than.cpp
@@ -87,6 +89,7 @@ set(PAIMON_COMMON_SRCS
     common/predicate/leaf_predicate.cpp
     common/predicate/less_or_equal.cpp
     common/predicate/less_than.cpp
+    common/predicate/like.cpp
     common/predicate/literal_converter.cpp
     common/predicate/literal.cpp
     common/predicate/not_equal.cpp
@@ -94,6 +97,7 @@ set(PAIMON_COMMON_SRCS
     common/predicate/or.cpp
     common/predicate/predicate_builder.cpp
     common/predicate/predicate_utils.cpp
+    common/predicate/starts_with.cpp
     common/reader/batch_reader.cpp
     common/reader/concat_batch_reader.cpp
     common/reader/predicate_batch_reader.cpp
@@ -207,6 +211,8 @@ set(PAIMON_CORE_SRCS
     core/manifest/manifest_list.cpp
     core/manifest/partition_entry.cpp
     core/manifest/index_manifest_file_handler.cpp
+    core/mergetree/compact/universal_compaction.cpp
+    core/mergetree/compact/early_full_compaction.cpp
     core/mergetree/compact/aggregate/aggregate_merge_function.cpp
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
@@ -524,6 +530,11 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/partial_update_merge_function_test.cpp
                     core/mergetree/compact/reducer_merge_function_wrapper_test.cpp
                     core/mergetree/compact/sort_merge_reader_test.cpp
+                    core/mergetree/compact/off_peak_hours_test.cpp
+                    core/mergetree/compact/early_full_compaction_test.cpp
+                    core/mergetree/compact/universal_compaction_test.cpp
+                    core/mergetree/compact/force_up_level0_compaction_test.cpp
+                    core/mergetree/compact/compact_strategy_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/sorted_run_test.cpp

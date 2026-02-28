@@ -97,8 +97,23 @@ class PAIMON_EXPORT PredicateUtils {
                 return visitor->VisitIn(predicate->Literals());
             case Function::Type::NOT_IN:
                 return visitor->VisitNotIn(predicate->Literals());
+            case Function::Type::STARTS_WITH: {
+                assert(predicate->Literals().size() == 1);
+                return visitor->VisitStartsWith(predicate->Literals()[0]);
+            }
+            case Function::Type::ENDS_WITH: {
+                assert(predicate->Literals().size() == 1);
+                return visitor->VisitEndsWith(predicate->Literals()[0]);
+            }
+            case Function::Type::CONTAINS: {
+                assert(predicate->Literals().size() == 1);
+                return visitor->VisitContains(predicate->Literals()[0]);
+            }
+            case Function::Type::LIKE: {
+                assert(predicate->Literals().size() == 1);
+                return visitor->VisitLike(predicate->Literals()[0]);
+            }
             default:
-                // TODO(xinyu.lxy): support StartsWith/EndsWith/Contains
                 return Status::Invalid(fmt::format("invalid {} function in leaf predicate",
                                                    predicate->GetFunction().ToString()));
         }

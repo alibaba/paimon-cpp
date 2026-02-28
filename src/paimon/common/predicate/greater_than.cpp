@@ -26,7 +26,7 @@ const GreaterThan& GreaterThan::Instance() {
     return kInstance;
 }
 
-const LeafFunction& GreaterThan::Negate() const {
-    return LessOrEqual::Instance();
+const LeafFunction* GreaterThan::Negate() const {
+    return &LessOrEqual::Instance();
 }
 }  // namespace paimon

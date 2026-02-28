@@ -69,7 +69,7 @@ class NotIn : public MultiLiteralsLeafFunction {
     Type GetType() const override {
         return Type::NOT_IN;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
     std::string ToString() const override {
         return "NotIn";
     }

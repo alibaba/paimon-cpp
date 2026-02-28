@@ -116,6 +116,14 @@ class DateTimeUtils {
         return *(static_cast<const int64_t*>(local_ts_scalar->data()));
     }
 
+    static inline Result<int32_t> GetCurrentLocalHour() {
+        PAIMON_ASSIGN_OR_RAISE(uint64_t local_us, GetCurrentLocalTimeUs());
+        auto local_seconds = static_cast<time_t>(local_us / 1000000);
+        std::tm local_tm{};
+        gmtime_r(&local_seconds, &local_tm);
+        return local_tm.tm_hour;
+    }
+
     static inline int32_t GetPrecisionFromType(
         const std::shared_ptr<arrow::TimestampType>& timestamp_type) {
         int32_t precision = Timestamp::MAX_PRECISION;
