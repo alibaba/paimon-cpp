@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "fmt/format.h"
 #include "paimon/common/io/data_output_stream.h"
 #include "paimon/common/utils/linked_hash_map.h"
 #include "paimon/common/utils/path_util.h"
@@ -52,7 +53,7 @@ class DeletionFileWriter {
     Status Write(const std::string& key, const std::shared_ptr<DeletionVector>& deletion_vector) {
         PAIMON_ASSIGN_OR_RAISE(int64_t start, out_->GetPos());
         if (start < 0 || start > std::numeric_limits<int32_t>::max()) {
-            return Status::Invalid("Output position out of int32 range: ", start);
+            return Status::Invalid(fmt::format("Output position {} out of int32 range.", start));
         }
         DataOutputStream output_stream(out_);
         PAIMON_ASSIGN_OR_RAISE(int32_t length, deletion_vector->SerializeTo(pool_, &output_stream));
@@ -66,7 +67,11 @@ class DeletionFileWriter {
     }
 
     Result<std::unique_ptr<IndexFileMeta>> GetResult() const {
-        PAIMON_ASSIGN_OR_RAISE(int32_t length, GetPos());
+        PAIMON_ASSIGN_OR_RAISE(int64_t length, GetPos());
+        if (length < 0 || length > std::numeric_limits<int32_t>::max()) {
+            return Status::Invalid(
+                fmt::format("Deletion file result length {} out of int32 range.", length));
+        }
         return std::make_unique<IndexFileMeta>(
             DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, PathUtil::GetName(path_), length,
             dv_metas_.size(), dv_metas_,
