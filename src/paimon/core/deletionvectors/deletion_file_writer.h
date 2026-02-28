@@ -62,7 +62,7 @@ class DeletionFileWriter {
         return out_->Close();
     }
 
-    Result<std::unique_ptr<IndexFileMeta>> Result() const {
+    Result<std::unique_ptr<IndexFileMeta>> GetResult() const {
         PAIMON_ASSIGN_OR_RAISE(int32_t length, GetPos());
         return std::make_unique<IndexFileMeta>(
             DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, PathUtil::GetName(path_), length,

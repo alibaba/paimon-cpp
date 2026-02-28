@@ -73,7 +73,7 @@ class DeletionVector {
     /// @return true if the deletion vector is empty, false if it contains deletions.
     virtual bool IsEmpty() const = 0;
 
-    /// @return the number of distinct integers added to the DeletionVector. */
+    /// @return the number of distinct integers added to the DeletionVector.
     virtual int64_t GetCardinality() const = 0;
 
     /// Serializes the deletion vector.

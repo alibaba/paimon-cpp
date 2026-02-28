@@ -16,6 +16,7 @@
 
 #include "paimon/core/deletionvectors/deletion_vector_index_file_writer.h"
 
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/deletionvectors/deletion_file_writer.h"
 
 namespace paimon {
@@ -24,12 +25,17 @@ Result<std::shared_ptr<IndexFileMeta>> DeletionVectorIndexFileWriter::WriteSingl
     const std::map<std::string, std::shared_ptr<DeletionVector>>& input) {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<DeletionFileWriter> writer,
                            DeletionFileWriter::Create(index_path_factory_, fs_, pool_));
+    ScopeGuard guard([&]() {
+        if (writer) {
+            (void)writer->Close();
+        }
+    });
     for (const auto& [key, value] : input) {
         PAIMON_RETURN_NOT_OK(writer->Write(key, value));
     }
-    // TODO(yonghao.fyh): java close in try final
+    guard.Release();
     PAIMON_RETURN_NOT_OK(writer->Close());
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<IndexFileMeta> result, writer->Result());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<IndexFileMeta> result, writer->GetResult());
     return result;
 }
 

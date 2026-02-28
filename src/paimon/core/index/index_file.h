@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "paimon/core/index/index_path_factory.h"
@@ -47,7 +48,9 @@ class IndexFile {
     }
 
     virtual void Delete(const std::shared_ptr<IndexFileMeta>& file) const {
-        [[maybe_unused]] auto s = fs_->Delete(Path(file), /*recursive=*/false);
+        // Deletion is best-effort
+        auto status = fs_->Delete(Path(file), /*recursive=*/false);
+        (void)status;
     }
 
     virtual Result<bool> Exists(const std::shared_ptr<IndexFileMeta>& file) const {
