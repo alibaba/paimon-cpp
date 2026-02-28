@@ -20,6 +20,7 @@
 #include <future>
 #include <list>
 #include <numeric>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -28,6 +29,7 @@
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/common/predicate/literal_converter.h"
+#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -39,6 +41,7 @@
 #include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/stats/simple_stats.h"
+#include "paimon/core/stats/simple_stats_evolution.h"
 #include "paimon/core/utils/duration.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/core/utils/snapshot_manager.h"
@@ -49,6 +52,32 @@
 
 namespace paimon {
 enum class FieldType;
+
+Result<std::shared_ptr<Predicate>> FileStoreScan::ReconstructPredicateWithNonCastedFields(
+    const std::shared_ptr<Predicate>& predicate,
+    const std::shared_ptr<SimpleStatsEvolution>& evolution) {
+    const auto& id_to_data_fields = evolution->GetFieldIdToDataField();
+    const auto& name_to_table_fields = evolution->GetFieldNameToTableField();
+
+    std::set<std::string> field_names_in_predicate;
+    PAIMON_RETURN_NOT_OK(PredicateUtils::GetAllNames(predicate, &field_names_in_predicate));
+    std::set<std::string> excluded_field_names;
+    for (const auto& field_name : field_names_in_predicate) {
+        auto table_iter = name_to_table_fields.find(field_name);
+        if (table_iter == name_to_table_fields.end()) {
+            return Status::Invalid(
+                fmt::format("field {} in predicate is not included in table schema", field_name));
+        }
+        auto data_iter = id_to_data_fields.find(table_iter->second.Id());
+        if (data_iter != id_to_data_fields.end()) {
+            // Exclude fields requiring casting to avoid false negatives in stats filtering.
+            if (!data_iter->second.second.Type()->Equals(table_iter->second.Type())) {
+                excluded_field_names.insert(field_name);
+            }
+        }
+    }
+    return PredicateUtils::ExcludePredicateWithFields(predicate, excluded_field_names);
+}
 
 std::vector<ManifestEntry> FileStoreScan::RawPlan::Files(const FileKind& kind) {
     std::vector<ManifestEntry> entries = Files();
