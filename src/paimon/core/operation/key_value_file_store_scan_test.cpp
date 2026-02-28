@@ -47,6 +47,7 @@
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/scan_context.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace arrow {
@@ -322,5 +323,82 @@ TEST_F(KeyValueFileStoreScanTest, TestNoOverlapping) {
     ASSERT_TRUE(KeyValueFileStoreScan::NoOverlapping(generate_manifest_entries({1, 1, 1})));
     ASSERT_FALSE(KeyValueFileStoreScan::NoOverlapping(generate_manifest_entries({0, 1, 1})));
     ASSERT_FALSE(KeyValueFileStoreScan::NoOverlapping(generate_manifest_entries({2, 1, 1})));
+}
+
+TEST_F(KeyValueFileStoreScanTest, TestFilterByValueFilterWithValueStatsCols) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "orc/pk_table_with_mor.db/pk_table_with_mor";
+    std::vector<std::map<std::string, std::string>> partition_filters = {};
+
+    // `v0` is at index 6 in schema-0 of pk_table_with_mor.
+    auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/6, /*field_name=*/"v0",
+                                                      FieldType::DOUBLE, Literal(30.1));
+    auto scan_filter = std::make_shared<ScanFilter>(/*predicate=*/greater_than,
+                                                    /*partition_filters=*/partition_filters,
+                                                    /*bucket_filter=*/0,
+                                                    /*vector_search=*/nullptr);
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<KeyValueFileStoreScan> scan,
+                         CreateFileStoreScan(table_path, scan_filter,
+                                             /*table_schema_id=*/0, /*snapshot_id=*/1));
+    scan->EnableValueFilter();
+
+    // Build dense stats for only one column `v0`.
+    auto pool = GetDefaultPool();
+    SimpleStats value_stats = BinaryRowGenerator::GenerateStats(
+        /*min=*/{10.0}, /*max=*/{20.0}, /*null=*/{0}, pool.get());
+    std::vector<std::string> value_stats_cols = {"v0"};
+    ManifestEntry entry(
+        /*kind=*/FileKind::Add(), /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0,
+        /*total_buckets=*/1,
+        std::make_shared<DataFileMeta>(
+            /*file_name=*/"name", /*file_size=*/1024, /*row_count=*/10,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/value_stats,
+            /*min_sequence_number=*/0,
+            /*max_sequence_number=*/10,
+            /*schema_id=*/0,
+            /*level=*/1,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr,
+            /*file_source=*/FileSource::Append(),
+            /*value_stats_cols=*/value_stats_cols,
+            /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt));
+
+    // max(v0)=50 > 30.1, should be kept.
+    SimpleStats value_stats_keep = BinaryRowGenerator::GenerateStats(
+        /*min=*/{40.0}, /*max=*/{50.0}, /*null=*/{0}, pool.get());
+    ManifestEntry entry_keep(
+        /*kind=*/FileKind::Add(), /*partition=*/BinaryRow::EmptyRow(), /*bucket=*/0,
+        /*total_buckets=*/1,
+        std::make_shared<DataFileMeta>(
+            /*file_name=*/"name_keep", /*file_size=*/1024, /*row_count=*/10,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(),
+            /*value_stats=*/value_stats_keep,
+            /*min_sequence_number=*/0,
+            /*max_sequence_number=*/10,
+            /*schema_id=*/0,
+            /*level=*/1,
+            /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0, 0),
+            /*delete_row_count=*/std::nullopt,
+            /*embedded_index=*/nullptr,
+            /*file_source=*/FileSource::Append(),
+            /*value_stats_cols=*/value_stats_cols,
+            /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt,
+            /*write_cols=*/std::nullopt));
+
+    // max(v0)=20 <= 30.1, should be filtered out.
+    ASSERT_OK_AND_ASSIGN(bool keep, scan->FilterByStats(entry));
+    ASSERT_FALSE(keep);
+
+    ASSERT_OK_AND_ASSIGN(keep, scan->FilterByStats(entry_keep));
+    ASSERT_TRUE(keep);
 }
 }  // namespace paimon::test

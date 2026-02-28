@@ -62,8 +62,10 @@ class ManifestFile;
 class ManifestFileMeta;
 class ManifestList;
 class MemoryPool;
+class Predicate;
 class ScanFilter;
 class SchemaManager;
+class SimpleStatsEvolution;
 class SnapshotManager;
 class TableSchema;
 
@@ -213,6 +215,12 @@ class FileStoreScan {
     Status SplitAndSetFilter(const std::vector<std::string>& partition_keys,
                              const std::shared_ptr<arrow::Schema>& arrow_schema,
                              const std::shared_ptr<ScanFilter>& scan_filters);
+
+    // When schema evolves, predicates might contain fields requiring casting. To avoid false
+    // negatives when filtering by stats, we exclude those fields from predicate.
+    static Result<std::shared_ptr<Predicate>> ReconstructPredicateWithNonCastedFields(
+        const std::shared_ptr<Predicate>& predicate,
+        const std::shared_ptr<SimpleStatsEvolution>& evolution);
 
  private:
     Status ReadManifests(std::optional<Snapshot>* snapshot_ptr,

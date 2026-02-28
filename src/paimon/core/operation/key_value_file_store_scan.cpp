@@ -17,11 +17,13 @@
 #include "paimon/core/operation/key_value_file_store_scan.h"
 
 #include <cstdint>
+#include <exception>
 #include <map>
 #include <optional>
 #include <set>
 #include <utility>
 
+#include "fmt/format.h"
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/predicate/predicate_filter.h"
@@ -32,6 +34,8 @@
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats.h"
+#include "paimon/core/stats/simple_stats_evolution.h"
+#include "paimon/core/stats/simple_stats_evolutions.h"
 #include "paimon/predicate/predicate.h"
 
 namespace arrow {
@@ -44,7 +48,6 @@ class ManifestFile;
 class ManifestList;
 class MemoryPool;
 class ScanFilter;
-class SchemaManager;
 class SnapshotManager;
 
 Result<std::unique_ptr<KeyValueFileStoreScan>> KeyValueFileStoreScan::Create(
@@ -154,15 +157,41 @@ Result<bool> KeyValueFileStoreScan::IsValueFilterEnabled() const {
 }
 
 Result<bool> KeyValueFileStoreScan::FilterByValueFilter(const ManifestEntry& entry) const {
-    if (entry.File()->value_stats_cols != std::nullopt) {
-        return Status::NotImplemented("do not support value stats cols in DataFileMeta");
+    if (!value_filter_) {
+        return true;
     }
     if (entry.File()->embedded_index != nullptr) {
         return Status::NotImplemented("do not support embedded index in DataFileMeta");
     }
-    const auto& stats = entry.File()->value_stats;
-    return value_filter_->Test(schema_, entry.File()->row_count, stats.MinValues(),
-                               stats.MaxValues(), stats.NullCounts());
+
+    const auto& meta = entry.File();
+
+    // Primary key table currently does not support schema evolution for value filtering.
+    // Here we only handle `value_stats_cols` (dense stats) projection.
+    if (meta->schema_id != table_schema_->Id()) {
+        return Status::NotImplemented(
+            "Primary key table does not support schema evolution in FilterByValueFilter");
+    }
+
+    auto evolution = evolutions_->GetOrCreate(table_schema_);
+
+    PAIMON_ASSIGN_OR_RAISE(
+        SimpleStatsEvolution::EvolutionStats new_stats,
+        evolution->Evolution(meta->value_stats, meta->row_count, meta->value_stats_cols));
+
+    try {
+        PAIMON_ASSIGN_OR_RAISE(
+            bool predicate_result,
+            value_filter_->Test(schema_, meta->row_count, *(new_stats.min_values),
+                                *(new_stats.max_values), *(new_stats.null_counts)));
+        return predicate_result;
+    } catch (const std::exception& e) {
+        return Status::Invalid(fmt::format("FilterByValueFilter failed for file {}, with {} error",
+                                           meta->file_name, e.what()));
+    } catch (...) {
+        return Status::Invalid(fmt::format(
+            "FilterByValueFilter failed for file {}, with unknown error", meta->file_name));
+    }
 }
 
 bool KeyValueFileStoreScan::NoOverlapping(const std::vector<ManifestEntry>& entries) {
@@ -210,6 +239,19 @@ Result<std::vector<ManifestEntry>> KeyValueFileStoreScan::FilterWholeBucketAllFi
         }
     }
     return std::vector<ManifestEntry>();
+}
+
+KeyValueFileStoreScan::KeyValueFileStoreScan(
+    const std::shared_ptr<SnapshotManager>& snapshot_manager,
+    const std::shared_ptr<SchemaManager>& schema_manager,
+    const std::shared_ptr<ManifestList>& manifest_list,
+    const std::shared_ptr<ManifestFile>& manifest_file,
+    const std::shared_ptr<TableSchema>& table_schema, const std::shared_ptr<arrow::Schema>& schema,
+    const CoreOptions& core_options, const std::shared_ptr<Executor>& executor,
+    const std::shared_ptr<MemoryPool>& pool)
+    : FileStoreScan(snapshot_manager, schema_manager, manifest_list, manifest_file, table_schema,
+                    schema, core_options, executor, pool) {
+    evolutions_ = std::make_shared<SimpleStatsEvolutions>(table_schema, pool);
 }
 
 }  // namespace paimon

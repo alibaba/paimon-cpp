@@ -118,6 +118,7 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
+    common/utils/arrow/arrow_utils.cpp
     common/utils/arrow/mem_utils.cpp
     common/utils/binary_row_partition_computer.cpp
     common/utils/bit_set.cpp
