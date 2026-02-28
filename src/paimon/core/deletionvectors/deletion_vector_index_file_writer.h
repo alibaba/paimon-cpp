@@ -33,10 +33,7 @@ class DeletionVectorIndexFileWriter {
                                   const std::shared_ptr<IndexPathFactory>& path_factory,
                                   int64_t target_size_per_index_file,
                                   const std::shared_ptr<MemoryPool>& pool)
-        : index_path_factory_(path_factory),
-          fs_(fs),
-          //   target_size_in_bytes_(target_size_per_index_file),
-          pool_(pool) {}
+        : index_path_factory_(path_factory), fs_(fs), pool_(pool) {}
 
     Result<std::shared_ptr<IndexFileMeta>> WriteSingleFile(
         const std::map<std::string, std::shared_ptr<DeletionVector>>& input);
@@ -44,7 +41,6 @@ class DeletionVectorIndexFileWriter {
  private:
     std::shared_ptr<IndexPathFactory> index_path_factory_;
     std::shared_ptr<FileSystem> fs_;
-    // const int64_t target_size_in_bytes_;
     std::shared_ptr<MemoryPool> pool_;
 };
 

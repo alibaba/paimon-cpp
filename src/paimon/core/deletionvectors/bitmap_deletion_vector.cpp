@@ -28,6 +28,9 @@ Result<int32_t> BitmapDeletionVector::SerializeTo(const std::shared_ptr<MemoryPo
                                                   DataOutputStream* out) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> data, SerializeToBytes(pool));
     int64_t size = data->size();
+    if (size < 0 || size > std::numeric_limits<int32_t>::max()) {
+        return Status::Invalid("BitmapDeletionVector serialize size out of range: ", size);
+    }
     PAIMON_RETURN_NOT_OK(out->WriteValue<int32_t>(static_cast<int32_t>(size)));
     PAIMON_RETURN_NOT_OK(out->WriteBytes(data));
     uint32_t crc32 = 0;
