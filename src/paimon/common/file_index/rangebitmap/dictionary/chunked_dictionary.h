@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,17 +69,16 @@ class ChunkedDictionary final : public Dictionary {
         const std::shared_ptr<MemoryPool>& pool, FieldType field_type,
         const std::shared_ptr<InputStream>& input_stream, int64_t offset);
 
-    explicit ChunkedDictionary(const std::shared_ptr<MemoryPool>& pool,
-                               const std::shared_ptr<InputStream>& input_stream,
-                               int64_t start_of_dictionary, FieldType field_type,
-                               const std::shared_ptr<KeyFactory>& factory, int32_t size,
-                               int32_t offsets_length, int32_t chunks_length, int64_t body_offset);
+    ChunkedDictionary(const std::shared_ptr<MemoryPool>& pool,
+                      const std::shared_ptr<InputStream>& input_stream,
+                      const std::shared_ptr<KeyFactory>& factory, int32_t size,
+                      int32_t offsets_length, int32_t chunks_length, int64_t body_offset);
+
+ private:
     std::shared_ptr<MemoryPool> pool_;
-    FieldType field_type_;
     std::shared_ptr<KeyFactory> factory_;
 
     std::shared_ptr<InputStream> input_stream_;
-    int64_t start_of_dictionary_;
     int32_t size_;            // number of chunks
     int32_t offsets_length_;  // bytes length of offsets
     int32_t chunks_length_;   // bytes length of chunks

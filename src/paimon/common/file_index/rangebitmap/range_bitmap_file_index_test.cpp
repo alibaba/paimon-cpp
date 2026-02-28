@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,8 +71,7 @@ template <typename ArrowBuilder, typename ValueType>
 Result<std::shared_ptr<RangeBitmapFileIndexReader>> CreateReaderForTest(
     RangeBitmapFileIndexTest* test, const std::shared_ptr<arrow::DataType>& arrow_type,
     const std::vector<ValueType>& test_data, PAIMON_UNIQUE_PTR<Bytes>* serialized_bytes_out) {
-    static const std::map<std::string, std::string> kEmptyOptions;
-    return CreateReaderForTest<ArrowBuilder, ValueType>(test, arrow_type, test_data, kEmptyOptions,
+    return CreateReaderForTest<ArrowBuilder, ValueType>(test, arrow_type, test_data, {},
                                                         serialized_bytes_out);
 }
 
@@ -86,34 +85,35 @@ Result<std::shared_ptr<RangeBitmapFileIndexReader>> CreateReaderForTest(
     auto builder = std::make_shared<ArrowBuilder>();
     auto status = builder->AppendValues(test_data);
     if (!status.ok()) {
-        return Status::Invalid("Failed to append values: " + status.ToString());
+        return Status::Invalid(fmt::format("Failed to append values: {}", status.ToString()));
     }
     std::shared_ptr<arrow::Array> arrow_array;
     status = builder->Finish(&arrow_array);
     if (!status.ok()) {
-        return Status::Invalid("Failed to finish builder: " + status.ToString());
+        return Status::Invalid(fmt::format("Failed to finish builder: {}", status.ToString()));
     }
-    const auto c_array = std::make_unique<::ArrowArray>();
+    auto c_array = std::make_unique<::ArrowArray>();
     status = arrow::ExportArray(*arrow_array, c_array.get());
     if (!status.ok()) {
-        return Status::Invalid("Failed to export array: " + status.ToString());
+        return Status::Invalid(fmt::format("Failed to export array: {}", status.ToString()));
     }
     // Create schema for the field
     const auto schema = arrow::schema({arrow::field("test_field", arrow_type)});
     // Create writer
-    PAIMON_ASSIGN_OR_RAISE(const auto writer, RangeBitmapFileIndexWriter::Create(
-                                                  schema, "test_field", options, test->pool_));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<RangeBitmapFileIndexWriter> writer,
+        RangeBitmapFileIndexWriter::Create(schema, "test_field", options, test->pool_));
     // Add the batch
     PAIMON_RETURN_NOT_OK(writer->AddBatch(c_array.get()));
     // Get serialized payload
-    PAIMON_ASSIGN_OR_RAISE(auto serialized_bytes, writer->SerializedBytes());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> serialized_bytes, writer->SerializedBytes());
     if (!serialized_bytes || serialized_bytes->size() == 0) {
         return Status::Invalid("Serialized bytes is empty");
     }
     *serialized_bytes_out = std::move(serialized_bytes);
     const auto input_stream = std::make_shared<ByteArrayInputStream>(
         (*serialized_bytes_out)->data(), (*serialized_bytes_out)->size());
-    PAIMON_ASSIGN_OR_RAISE(auto reader,
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RangeBitmapFileIndexReader> reader,
                            RangeBitmapFileIndexReader::Create(
                                arrow_type, 0, static_cast<int32_t>((*serialized_bytes_out)->size()),
                                input_stream, test->pool_));
@@ -132,8 +132,8 @@ TEST_F(RangeBitmapFileIndexTest, TestWriteAndReadRangeBitmapIndexMultiChunk) {
     const auto& arrow_type = arrow::int32();
     std::map<std::string, std::string> options;
     // Configure a very small chunk size in bytes so that the dictionary must
-    // spill into multiple chunks.
-    options[RangeBitmapFileIndex::CHUNK_SIZE] = "99b";
+    // be split into multiple chunks.
+    options[RangeBitmapFileIndex::CHUNK_SIZE] = "86b";
 
     PAIMON_UNIQUE_PTR<Bytes> serialized_bytes;
     ASSERT_OK_AND_ASSIGN(auto reader,

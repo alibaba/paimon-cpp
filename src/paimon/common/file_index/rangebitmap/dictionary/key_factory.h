@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,13 @@
 
 #pragma once
 
-#include <functional>
 #include <memory>
 
 #include "paimon/common/file_index/rangebitmap/dictionary/chunk.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/defs.h"
-#include "paimon/io/data_input_stream.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
-#include "paimon/status.h"
 
 namespace paimon {
 
@@ -38,11 +35,6 @@ class KeyFactory : public std::enable_shared_from_this<KeyFactory> {
 
     virtual FieldType GetFieldType() const = 0;
 
-    using KeySerializer =
-        std::function<Status(const std::shared_ptr<MemorySegmentOutputStream>&, const Literal&)>;
-    using KeyDeserializer =
-        std::function<Result<Literal>(const std::shared_ptr<DataInputStream>&, MemoryPool*)>;
-
     /// For writing new chunk
     virtual Result<std::unique_ptr<Chunk>> CreateChunk(const std::shared_ptr<MemoryPool>& pool,
                                                        const Literal& key, int32_t code,
@@ -53,13 +45,7 @@ class KeyFactory : public std::enable_shared_from_this<KeyFactory> {
         const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input_stream,
         int32_t chunk_offest, int32_t keys_base_offset) = 0;
 
-    virtual Result<KeySerializer> CreateSerializer() = 0;
-
-    virtual Result<KeyDeserializer> CreateDeserializer() = 0;
-
-    static Result<std::unique_ptr<KeyFactory>> Create(FieldType field_type);
-
-    static const std::string& GetDefaultChunkSize();
+    static Result<std::shared_ptr<KeyFactory>> Create(FieldType field_type);
 };
 
 class FixedLengthKeyFactory : public KeyFactory {
@@ -71,8 +57,6 @@ class FixedLengthKeyFactory : public KeyFactory {
                                              const std::shared_ptr<InputStream>& input_stream,
                                              int32_t chunk_offest,
                                              int32_t keys_base_offset) override;
-    Result<KeySerializer> CreateSerializer() override;
-    Result<KeyDeserializer> CreateDeserializer() override;
     virtual size_t GetFieldSize() const = 0;
 };
 
@@ -85,8 +69,6 @@ class VariableLengthKeyFactory : public KeyFactory {
                                              const std::shared_ptr<InputStream>& input_stream,
                                              int32_t chunk_offest,
                                              int32_t keys_base_offset) override;
-    Result<KeySerializer> CreateSerializer() override;
-    Result<KeyDeserializer> CreateDeserializer() override;
 };
 
 class DateKeyFactory final : public FixedLengthKeyFactory {

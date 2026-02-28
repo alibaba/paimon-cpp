@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@
 
 #include "paimon/common/file_index/rangebitmap/dictionary/chunk.h"
 #include "paimon/common/file_index/rangebitmap/dictionary/key_factory.h"
+#include "paimon/common/file_index/rangebitmap/utils/literal_serialization_utils.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
 namespace paimon {
-
+class DataInputStream;
 class InputStream;
 class MemoryPool;
 
@@ -67,24 +68,25 @@ class FixedLengthChunk final : public Chunk {
                      int32_t keys_length_limit, const std::shared_ptr<KeyFactory>& factory,
                      int32_t fixed_length);
 
+ private:
     std::shared_ptr<MemoryPool> pool_;
-    Literal key_;                          // representative key for binary search
-    int32_t code_;                         // first code in this chunk
-    int32_t offset_;                       // offset of this chunk
-    int32_t size_;                         // number of keys in this chunk
-    std::shared_ptr<KeyFactory> factory_;  // factory for serialization/deserialization
+    Literal key_;     // representative key for binary search
+    int32_t code_;    // first code in this chunk
+    int32_t offset_;  // offset of this chunk
+    int32_t size_;    // number of keys in this chunk
+    std::shared_ptr<KeyFactory> factory_;
 
     // For read path lazy keys loading
     std::shared_ptr<InputStream> input_stream_;
     int32_t keys_base_offset_;
     int32_t keys_length_;
     int32_t fixed_length_;
-    std::optional<KeyFactory::KeyDeserializer> deserializer_;
+    LiteralSerDeUtils::Deserializer deserializer_;
     std::shared_ptr<DataInputStream> keys_stream_in_;
     PAIMON_UNIQUE_PTR<Bytes> keys_;
 
     // For write path
-    std::optional<KeyFactory::KeySerializer> serializer_;
+    LiteralSerDeUtils::Serializer serializer_;
     std::shared_ptr<MemorySegmentOutputStream> keys_stream_out_;
     int64_t remaining_keys_size_;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 #include "paimon/common/file_index/rangebitmap/range_bitmap_file_index.h"
 
-#include <arrow/array.h>
 #include <arrow/c/bridge.h>
 #include <arrow/type.h>
 
@@ -38,10 +37,10 @@ RangeBitmapFileIndex::RangeBitmapFileIndex(const std::map<std::string, std::stri
     : options_(options) {}
 
 Result<std::shared_ptr<FileIndexReader>> RangeBitmapFileIndex::CreateReader(
-    ArrowSchema* const arrow_schema, const int32_t start, const int32_t length,
+    ::ArrowSchema* const arrow_schema, const int32_t start, const int32_t length,
     const std::shared_ptr<InputStream>& input_stream,
     const std::shared_ptr<MemoryPool>& pool) const {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(const auto arrow_schema_ptr,
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema_ptr,
                                       arrow::ImportSchema(arrow_schema));
     if (arrow_schema_ptr->num_fields() != 1) {
         return Status::Invalid(
@@ -52,8 +51,8 @@ Result<std::shared_ptr<FileIndexReader>> RangeBitmapFileIndex::CreateReader(
 }
 
 Result<std::shared_ptr<FileIndexWriter>> RangeBitmapFileIndex::CreateWriter(
-    ArrowSchema* arrow_schema, const std::shared_ptr<MemoryPool>& pool) const {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(const auto arrow_schema_ptr,
+    ::ArrowSchema* arrow_schema, const std::shared_ptr<MemoryPool>& pool) const {
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema_ptr,
                                       arrow::ImportSchema(arrow_schema));
     if (arrow_schema_ptr->num_fields() != 1) {
         return Status::Invalid(
@@ -69,14 +68,14 @@ Result<std::shared_ptr<RangeBitmapFileIndexWriter>> RangeBitmapFileIndexWriter::
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool) {
     const auto field = arrow_schema->GetFieldByName(field_name);
     if (!field) {
-        return Status::Invalid("Field not found in schema: " + field_name);
+        return Status::Invalid(fmt::format("Field not found in schema: {}", field_name));
     }
-    PAIMON_ASSIGN_OR_RAISE(auto field_type,
+    PAIMON_ASSIGN_OR_RAISE(FieldType field_type,
                            FieldTypeUtils::ConvertToFieldType(field->type()->id()));
-    PAIMON_ASSIGN_OR_RAISE(auto key_factory, KeyFactory::Create(field_type));
-    const auto shared_key_factory = std::shared_ptr{std::move(key_factory)};
-    const auto& chunk_size = KeyFactory::GetDefaultChunkSize();
-    PAIMON_ASSIGN_OR_RAISE(auto parsed_chunk_size, MemorySize::ParseBytes(chunk_size));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<KeyFactory> shared_key_factory,
+                           KeyFactory::Create(field_type));
+    PAIMON_ASSIGN_OR_RAISE(int64_t parsed_chunk_size,
+                           MemorySize::ParseBytes(RangeBitmapFileIndexWriter::DEFAULT_CHUNK_SIZE));
     if (const auto chunk_size_it = options.find(RangeBitmapFileIndex::CHUNK_SIZE);
         chunk_size_it != options.end()) {
         PAIMON_ASSIGN_OR_RAISE(parsed_chunk_size, MemorySize::ParseBytes(chunk_size_it->second));
@@ -86,14 +85,14 @@ Result<std::shared_ptr<RangeBitmapFileIndexWriter>> RangeBitmapFileIndexWriter::
     }
     auto appender_ptr =
         std::make_unique<RangeBitmap::Appender>(pool, shared_key_factory, parsed_chunk_size);
-    return std::make_shared<RangeBitmapFileIndexWriter>(field->type(), field_type, options, pool,
-                                                        parsed_chunk_size, shared_key_factory,
-                                                        std::move(appender_ptr));
+    return std::make_shared<RangeBitmapFileIndexWriter>(
+        field->type(), options, pool, shared_key_factory, std::move(appender_ptr));
 }
 
 Status RangeBitmapFileIndexWriter::AddBatch(::ArrowArray* batch) {
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(const auto array, arrow::ImportArray(batch, arrow_type_));
-    PAIMON_ASSIGN_OR_RAISE(const auto array_values,
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
+                                      arrow::ImportArray(batch, arrow_type_));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<Literal> array_values,
                            LiteralConverter::ConvertLiteralsFromArray(*array, true));
     for (const auto& literal : array_values) {
         appender_->Append(literal);
@@ -106,16 +105,13 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmapFileIndexWriter::SerializedBytes() c
 }
 
 RangeBitmapFileIndexWriter::RangeBitmapFileIndexWriter(
-    const std::shared_ptr<arrow::DataType>& arrow_type, const FieldType field_type,
+    const std::shared_ptr<arrow::DataType>& arrow_type,
     const std::map<std::string, std::string>& options, const std::shared_ptr<MemoryPool>& pool,
-    const int64_t chunk_size, const std::shared_ptr<KeyFactory>& key_factory,
-    std::unique_ptr<RangeBitmap::Appender> appender)
+    const std::shared_ptr<KeyFactory>& key_factory, std::unique_ptr<RangeBitmap::Appender> appender)
     : arrow_type_(arrow_type),
-      field_type_(field_type),
       options_(options),
       pool_(pool),
       key_factory_(key_factory),
-      chunk_size_(chunk_size),
       appender_(std::move(appender)) {}
 
 Result<std::shared_ptr<RangeBitmapFileIndexReader>> RangeBitmapFileIndexReader::Create(
@@ -124,9 +120,9 @@ Result<std::shared_ptr<RangeBitmapFileIndexReader>> RangeBitmapFileIndexReader::
     if (!arrow_type || !input_stream || !pool) {
         return Status::Invalid("RangeBitmapFileIndexReader::Create: null argument");
     }
-    PAIMON_ASSIGN_OR_RAISE(const FieldType field_type,
+    PAIMON_ASSIGN_OR_RAISE(FieldType field_type,
                            FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
-    PAIMON_ASSIGN_OR_RAISE(auto range_bitmap,
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RangeBitmap> range_bitmap,
                            RangeBitmap::Create(input_stream, start, field_type, pool));
     return std::shared_ptr<RangeBitmapFileIndexReader>(
         new RangeBitmapFileIndexReader(std::move(range_bitmap)));

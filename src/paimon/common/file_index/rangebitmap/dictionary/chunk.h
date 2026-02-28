@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ class Chunk {
     virtual Result<bool> TryAdd(const Literal& key) = 0;
 
     virtual Result<int32_t> Find(const Literal& key) {
-        PAIMON_ASSIGN_OR_RAISE(const auto cmp_with_key, Key().CompareTo(key));
+        PAIMON_ASSIGN_OR_RAISE(int32_t cmp_with_key, Key().CompareTo(key));
         if (cmp_with_key == 0) {
             return Code();
         }
@@ -42,8 +42,8 @@ class Chunk {
         const int32_t base = Code() + 1;
         while (low <= high) {
             const int32_t mid = low + (high - low) / 2;
-            PAIMON_ASSIGN_OR_RAISE(auto key_at_mid, GetKey(mid));
-            PAIMON_ASSIGN_OR_RAISE(const auto cmp, key_at_mid.CompareTo(key));
+            PAIMON_ASSIGN_OR_RAISE(Literal key_at_mid, GetKey(mid));
+            PAIMON_ASSIGN_OR_RAISE(int32_t cmp, key_at_mid.CompareTo(key));
             if (cmp < 0) {
                 low = mid + 1;
             } else if (cmp > 0) {

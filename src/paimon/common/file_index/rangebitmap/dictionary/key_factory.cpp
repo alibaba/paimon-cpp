@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,34 +24,29 @@
 
 namespace paimon {
 
-Result<std::unique_ptr<KeyFactory>> KeyFactory::Create(const FieldType field_type) {
+Result<std::shared_ptr<KeyFactory>> KeyFactory::Create(const FieldType field_type) {
     // todo: support timestamp
     switch (field_type) {
         case FieldType::BOOLEAN:
-            return std::make_unique<BooleanKeyFactory>();
+            return std::make_shared<BooleanKeyFactory>();
         case FieldType::TINYINT:
-            return std::make_unique<TinyIntKeyFactory>();
+            return std::make_shared<TinyIntKeyFactory>();
         case FieldType::SMALLINT:
-            return std::make_unique<SmallIntKeyFactory>();
+            return std::make_shared<SmallIntKeyFactory>();
         case FieldType::DATE:
-            return std::make_unique<DateKeyFactory>();
+            return std::make_shared<DateKeyFactory>();
         case FieldType::INT:
-            return std::make_unique<IntKeyFactory>();
+            return std::make_shared<IntKeyFactory>();
         case FieldType::BIGINT:
-            return std::make_unique<BigIntKeyFactory>();
+            return std::make_shared<BigIntKeyFactory>();
         case FieldType::FLOAT:
-            return std::make_unique<FloatKeyFactory>();
+            return std::make_shared<FloatKeyFactory>();
         case FieldType::DOUBLE:
-            return std::make_unique<DoubleKeyFactory>();
+            return std::make_shared<DoubleKeyFactory>();
         default:
             return Status::Invalid(fmt::format("Unsupported field type for KeyFactory: {}",
                                                FieldTypeUtils::FieldTypeToString(field_type)));
     }
-}
-
-const std::string& KeyFactory::GetDefaultChunkSize() {
-    static const std::string kDefaultChunkSize = "16kb";
-    return kDefaultChunkSize;
 }
 
 Result<std::unique_ptr<Chunk>> FixedLengthKeyFactory::CreateChunk(
@@ -65,39 +60,22 @@ Result<std::unique_ptr<Chunk>> FixedLengthKeyFactory::MmapChunk(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input_stream,
     const int32_t chunk_offest, const int32_t keys_base_offset) {
     PAIMON_RETURN_NOT_OK(input_stream->Seek(chunk_offest, FS_SEEK_SET));
-    PAIMON_ASSIGN_OR_RAISE(const auto deserializer, this->CreateDeserializer());
+    PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Deserializer deserializer,
+                           LiteralSerDeUtils::CreateValueReader(GetFieldType()));
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
-    PAIMON_ASSIGN_OR_RAISE(const auto version, data_in->ReadValue<int8_t>());
+    PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
     if (version != ChunkedDictionary::CURRENT_VERSION) {
         return Status::Invalid(fmt::format("Unsupported version for KeyFactory: {}", version));
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto key_literal, deserializer(data_in, pool.get()));
-    PAIMON_ASSIGN_OR_RAISE(const auto code, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto offset, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto size, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto keys_length, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto fixed_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(Literal key_literal, deserializer(data_in, pool.get()));
+    PAIMON_ASSIGN_OR_RAISE(int32_t code, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t offset, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t size, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t keys_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t fixed_length, data_in->ReadValue<int32_t>());
     return std::make_unique<FixedLengthChunk>(pool, key_literal, code, offset, size,
                                               this->shared_from_this(), input_stream,
                                               keys_base_offset, keys_length, fixed_length);
-}
-
-Result<KeyFactory::KeySerializer> FixedLengthKeyFactory::CreateSerializer() {
-    return KeySerializer([this](const std::shared_ptr<MemorySegmentOutputStream>& out,
-                                const Literal& literal) -> Status {
-        PAIMON_ASSIGN_OR_RAISE(const auto writer,
-                               LiteralSerializationUtils::CreateValueWriter(GetFieldType(), out));
-        return writer(literal);
-    });
-}
-
-Result<KeyFactory::KeyDeserializer> FixedLengthKeyFactory::CreateDeserializer() {
-    return KeyDeserializer([this](const std::shared_ptr<DataInputStream>& in,
-                                  MemoryPool* pool) -> Result<Literal> {
-        PAIMON_ASSIGN_OR_RAISE(
-            auto reader, LiteralSerializationUtils::CreateValueReader(GetFieldType(), in, pool));
-        return reader();
-    });
 }
 
 Result<std::unique_ptr<Chunk>> VariableLengthKeyFactory::CreateChunk(
@@ -109,14 +87,6 @@ Result<std::unique_ptr<Chunk>> VariableLengthKeyFactory::MmapChunk(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input_stream,
     int32_t chunk_offest, int32_t keys_base_offset) {
     return Status::NotImplemented("VariableLengthKeyFactory::MmapChunk not implemented");
-}
-
-Result<KeyFactory::KeySerializer> VariableLengthKeyFactory::CreateSerializer() {
-    return Status::NotImplemented("VariableLengthKeyFactory::CreateSerializer not implemented");
-}
-
-Result<KeyFactory::KeyDeserializer> VariableLengthKeyFactory::CreateDeserializer() {
-    return Status::NotImplemented("VariableLengthKeyFactory::CreateDeserializer not implemented");
 }
 
 }  // namespace paimon

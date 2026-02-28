@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,18 +33,18 @@ namespace paimon {
 Result<std::unique_ptr<BitSliceIndexBitmap>> BitSliceIndexBitmap::Create(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input_stream,
     const int32_t offset) {
-    const auto data_in = std::make_unique<DataInputStream>(input_stream);
+    auto data_in = std::make_unique<DataInputStream>(input_stream);
     PAIMON_RETURN_NOT_OK(data_in->Seek(offset));
-    PAIMON_ASSIGN_OR_RAISE(const auto header_length, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto version, data_in->ReadValue<int8_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
     if (version != CURRENT_VERSION) {
         return Status::Invalid("Unknown BitSliceBitmap Version");
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto slices_size, data_in->ReadValue<int8_t>());
+    PAIMON_ASSIGN_OR_RAISE(int8_t slices_size, data_in->ReadValue<int8_t>());
     auto slices = std::vector<std::unique_ptr<RoaringBitmap32>>();
     slices.resize(slices_size);
-    PAIMON_ASSIGN_OR_RAISE(const auto ebm_size, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto indexes_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t ebm_size, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t indexes_length, data_in->ReadValue<int32_t>());
     auto indexes = Bytes::AllocateBytes(indexes_length, pool.get());
     PAIMON_RETURN_NOT_OK(data_in->Read(indexes->data(), indexes_length));
     auto body_offset = offset + sizeof(int32_t) + header_length;
@@ -74,8 +74,8 @@ BitSliceIndexBitmap::BitSliceIndexBitmap(const std::shared_ptr<MemoryPool>& pool
                                          const int32_t body_offset)
     : pool_(pool),
       initialized_(false),
-      bit_slices_(std::vector<std::optional<RoaringBitmap32>>(slices_size, {std::nullopt})),
-      ebm({std::nullopt}),
+      bit_slices_(std::vector<std::optional<RoaringBitmap32>>(slices_size, std::nullopt)),
+      ebm(std::nullopt),
       input_stream_(input_stream),
       body_offset_(body_offset),
       indexes_(std::move(indexes)),
@@ -96,12 +96,12 @@ Result<const RoaringBitmap32*> BitSliceIndexBitmap::GetEmptyBitmap() {
 
 Result<const RoaringBitmap32*> BitSliceIndexBitmap::GetSliceBitmap(const int32_t idx) {
     if (!bit_slices_[idx].has_value()) {
-        const auto data_in = std::make_unique<DataInputStream>(
+        auto data_in = std::make_unique<DataInputStream>(
             std::make_shared<ByteArrayInputStream>(indexes_->data(), indexes_length_));
         const int position = static_cast<int32_t>(2 * sizeof(int32_t) * idx);
         PAIMON_RETURN_NOT_OK(data_in->Seek(position));
-        PAIMON_ASSIGN_OR_RAISE(const auto offset, data_in->ReadValue<int32_t>());
-        PAIMON_ASSIGN_OR_RAISE(const auto length, data_in->ReadValue<int32_t>());
+        PAIMON_ASSIGN_OR_RAISE(int32_t offset, data_in->ReadValue<int32_t>());
+        PAIMON_ASSIGN_OR_RAISE(int32_t length, data_in->ReadValue<int32_t>());
         PAIMON_RETURN_NOT_OK(input_stream_->Seek(body_offset_ + ebm_length_ + offset, FS_SEEK_SET));
         RoaringBitmap32 bitmap;
         const auto bytes = Bytes::AllocateBytes(length, pool_.get());
@@ -118,17 +118,17 @@ Status BitSliceIndexBitmap::LoadSlices(const int32_t start, const int32_t end) {
         return Status::OK();
     }
     auto indexes_stream = std::make_shared<ByteArrayInputStream>(indexes_->data(), indexes_length_);
-    const auto data_in = std::make_unique<DataInputStream>(indexes_stream);
+    auto data_in = std::make_unique<DataInputStream>(indexes_stream);
     const auto position = static_cast<int32_t>(2 * sizeof(int32_t) * start);
     PAIMON_RETURN_NOT_OK(data_in->Seek(position));
-    PAIMON_ASSIGN_OR_RAISE(const auto offset, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(auto length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t offset, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t length, data_in->ReadValue<int32_t>());
     std::vector<int32_t> lengths(end);
     lengths[start] = length;
 
     for (int32_t i = start + 1; i < end; ++i) {
         PAIMON_RETURN_NOT_OK(data_in->ReadValue<int32_t>());
-        PAIMON_ASSIGN_OR_RAISE(const auto slice_length, data_in->ReadValue<int32_t>());
+        PAIMON_ASSIGN_OR_RAISE(int32_t slice_length, data_in->ReadValue<int32_t>());
         lengths[i] = slice_length;
         length += slice_length;
     }
@@ -148,24 +148,28 @@ Status BitSliceIndexBitmap::LoadSlices(const int32_t start, const int32_t end) {
 }
 
 Result<RoaringBitmap32> BitSliceIndexBitmap::Eq(const int32_t code) {
-    PAIMON_ASSIGN_OR_RAISE(const auto empty_bitmap, GetEmptyBitmap());
-    auto equal = RoaringBitmap32(*empty_bitmap);
-    for (int32_t i = static_cast<int32_t>(bit_slices_.size()) - 1; i >= 0; --i) {
-        PAIMON_ASSIGN_OR_RAISE(const auto slice_bitmap, GetSliceBitmap(i));
+    PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* empty_bitmap, GetEmptyBitmap());
+    auto state = RoaringBitmap32(*empty_bitmap);
+    if (state.IsEmpty()) {
+        return RoaringBitmap32();
+    }
+    PAIMON_RETURN_NOT_OK(LoadSlices(0, static_cast<int32_t>(bit_slices_.size())));
+    for (int32_t i = 0; i < static_cast<int32_t>(bit_slices_.size()); i++) {
+        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* slice_bitmap, GetSliceBitmap(i));
         if ((code >> i & 1) == 1) {
-            equal &= *slice_bitmap;
+            state &= *slice_bitmap;
         } else {
-            equal -= *slice_bitmap;
+            state -= *slice_bitmap;
         }
     }
-    return equal;
+    return state;
 }
 
 Result<RoaringBitmap32> BitSliceIndexBitmap::Gt(const int32_t code) {
     if (code < 0) {
         return IsNotNull({});
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto found_set, IsNotNull({}));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 found_set, IsNotNull({}));
     if (found_set.IsEmpty()) {
         return RoaringBitmap32();
     }
@@ -175,13 +179,13 @@ Result<RoaringBitmap32> BitSliceIndexBitmap::Gt(const int32_t code) {
     PAIMON_RETURN_NOT_OK(LoadSlices(start, static_cast<int32_t>(bit_slices_.size())));
     for (int i = start; i < static_cast<int32_t>(bit_slices_.size()); ++i) {
         if (!state_inited) {
-            PAIMON_ASSIGN_OR_RAISE(const auto slice_ptr, GetSliceBitmap(i));
+            PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* slice_ptr, GetSliceBitmap(i));
             state = *slice_ptr;
             state_inited = true;
             continue;
         }
         const auto bit = code >> i & 1;
-        PAIMON_ASSIGN_OR_RAISE(const auto slice_ptr, GetSliceBitmap(i));
+        PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* slice_ptr, GetSliceBitmap(i));
         if (bit == 1) {
             state &= *slice_ptr;
         } else {
@@ -207,7 +211,7 @@ Result<RoaringBitmap32> BitSliceIndexBitmap::IsNotNull(const RoaringBitmap32& fo
         PAIMON_RETURN_NOT_OK(bitmap.Deserialize(bytes->data(), ebm_length_));
         ebm = bitmap;
     }
-    return found_set.IsEmpty() ? ebm.value() : RoaringBitmap32::And(ebm.value(), found_set);
+    return found_set.IsEmpty() ? *ebm : *ebm &= found_set;
 }
 
 BitSliceIndexBitmap::Appender::Appender(const std::shared_ptr<MemoryPool>& pool, const int32_t min,
@@ -245,7 +249,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> BitSliceIndexBitmap::Appender::Serialize() cons
     header_size += sizeof(int32_t);  // indexes length
     header_size += indexes_length;
     int32_t offset = 0;
-    const auto data_output_stream = std::make_unique<MemorySegmentOutputStream>(
+    auto data_output_stream = std::make_unique<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     auto slices_bytes_vector = std::vector<PAIMON_UNIQUE_PTR<Bytes>>{};
     auto indexes_vector = std::vector<std::pair<int32_t, int32_t>>{};

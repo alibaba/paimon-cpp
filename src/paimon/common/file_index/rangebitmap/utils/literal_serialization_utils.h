@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,18 +27,20 @@
 
 namespace paimon {
 
-class LiteralSerializationUtils {
+class LiteralSerDeUtils {
  public:
-    LiteralSerializationUtils() = delete;
+    LiteralSerDeUtils() = delete;
 
-    ~LiteralSerializationUtils() = delete;
+    ~LiteralSerDeUtils() = delete;
 
-    static Result<std::function<Result<Literal>()>> CreateValueReader(
-        FieldType field_type, const std::shared_ptr<DataInputStream>& input_stream,
-        MemoryPool* pool = nullptr);
+    using Serializer =
+        std::function<Status(const std::shared_ptr<MemorySegmentOutputStream>&, const Literal&)>;
+    using Deserializer = std::function<Result<Literal>(
+        const std::shared_ptr<DataInputStream>& input_stream, MemoryPool* pool)>;
 
-    static Result<std::function<Status(const Literal&)>> CreateValueWriter(
-        FieldType field_type, const std::shared_ptr<MemorySegmentOutputStream>& output_stream);
+    static Result<Deserializer> CreateValueReader(FieldType field_type);
+
+    static Result<Serializer> CreateValueWriter(FieldType field_type);
 
     static Result<int32_t> GetFixedFieldSize(const FieldType& field_type);
 

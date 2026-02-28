@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ Result<int32_t> ChunkedDictionary::Find(const Literal& key) {
     int32_t high = size_ - 1;
     while (low <= high) {
         const int32_t mid = low + (high - low) / 2;
-        PAIMON_ASSIGN_OR_RAISE(const auto chunk, GetChunk(mid));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Chunk> chunk, GetChunk(mid));
         PAIMON_ASSIGN_OR_RAISE(const int32_t result, chunk->Key().CompareTo(key));
         if (result > 0) {
             high = mid - 1;
@@ -51,20 +51,20 @@ Result<int32_t> ChunkedDictionary::Find(const Literal& key) {
     if (low == 0) {
         return -(low + 1);
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto prev_chunk, GetChunk(low - 1));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Chunk> prev_chunk, GetChunk(low - 1));
     return prev_chunk->Find(key);
 }
 
 Result<Literal> ChunkedDictionary::Find(const int32_t code) {
     if (code < 0) {
-        return Status::Invalid("Invalid code: " + std::to_string(code));
+        return Status::Invalid(fmt::format("Invalid code: {}", code));
     }
     int32_t low = 0;
     int32_t high = size_ - 1;
 
     while (low <= high) {
         const int32_t mid = low + (high - low) / 2;
-        PAIMON_ASSIGN_OR_RAISE(const auto chunk, GetChunk(mid));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Chunk> chunk, GetChunk(mid));
 
         auto const chunk_code = chunk->Code();
         if (chunk_code > code) {
@@ -75,7 +75,7 @@ Result<Literal> ChunkedDictionary::Find(const int32_t code) {
             return {chunk->Key()};
         }
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto prev_chunk, GetChunk(low - 1));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Chunk> prev_chunk, GetChunk(low - 1));
     return prev_chunk->Find(code);
 }
 
@@ -96,12 +96,12 @@ Result<std::shared_ptr<Chunk>> ChunkedDictionary::GetChunk(int32_t index) {
     if (chunks_cache_[index]) {
         return chunks_cache_[index];
     }
-    const auto data_in = std::make_unique<DataInputStream>(
+    auto data_in = std::make_unique<DataInputStream>(
         std::make_shared<ByteArrayInputStream>(offsets_bytes_->data(), offsets_length_));
     PAIMON_RETURN_NOT_OK(data_in->Seek(sizeof(int32_t) * index));
-    PAIMON_ASSIGN_OR_RAISE(const auto chunk_offset, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t chunk_offset, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(
-        auto chunk,
+        std::unique_ptr<Chunk> chunk,
         factory_->MmapChunk(pool_, input_stream_, body_offset_ + offsets_length_ + chunk_offset,
                             body_offset_ + chunks_length_ + offsets_length_));
     chunks_cache_[index] = std::move(chunk);
@@ -131,7 +131,7 @@ Status ChunkedDictionary::Appender::AppendSorted(const Literal& key, int32_t cod
         return Status::Invalid("key should not be null");
     }
     if (last_key_.has_value()) {
-        PAIMON_ASSIGN_OR_RAISE(const auto compare_result, last_key_->CompareTo(key));
+        PAIMON_ASSIGN_OR_RAISE(int32_t compare_result, last_key_->CompareTo(key));
         if (compare_result >= 0) {
             return Status::Invalid("key must be in sorted order");
         }
@@ -145,8 +145,10 @@ Status ChunkedDictionary::Appender::AppendSorted(const Literal& key, int32_t cod
         PAIMON_ASSIGN_OR_RAISE(chunk_,
                                key_factory_->CreateChunk(pool_, key, code, chunk_size_bytes_));
     } else {
-        PAIMON_ASSIGN_OR_RAISE(const auto success, chunk_->TryAdd(key));
-        if (success) return Status::OK();
+        PAIMON_ASSIGN_OR_RAISE(bool success, chunk_->TryAdd(key));
+        if (success) {
+            return Status::OK();
+        }
         PAIMON_RETURN_NOT_OK(Flush());
         PAIMON_ASSIGN_OR_RAISE(chunk_,
                                key_factory_->CreateChunk(pool_, key, code, chunk_size_bytes_));
@@ -163,7 +165,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> ChunkedDictionary::Appender::Serialize() {
     header_size += sizeof(int32_t);  // size
     header_size += sizeof(int32_t);  // offsets length
     header_size += sizeof(int32_t);  // chunks length
-    const auto data_out = std::make_unique<MemorySegmentOutputStream>(
+    auto data_out = std::make_unique<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     data_out->WriteValue<int32_t>(header_size);
     data_out->WriteValue<int8_t>(CURRENT_VERSION);
@@ -185,8 +187,8 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> ChunkedDictionary::Appender::Serialize() {
 
 Status ChunkedDictionary::Appender::Flush() {
     chunk_->SetOffset(key_offset_);
-    PAIMON_ASSIGN_OR_RAISE(const auto chunks_bytes, chunk_->SerializeChunk());
-    PAIMON_ASSIGN_OR_RAISE(const auto keys_bytes, chunk_->SerializeKeys());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> chunks_bytes, chunk_->SerializeChunk());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> keys_bytes, chunk_->SerializeKeys());
     offsets_output_->WriteValue<int32_t>(chunks_offset_);
     chunks_offset_ += static_cast<int32_t>(chunks_bytes->size());
     key_offset_ += static_cast<int32_t>(keys_bytes->size());
@@ -200,35 +202,32 @@ Status ChunkedDictionary::Appender::Flush() {
 Result<std::unique_ptr<ChunkedDictionary>> ChunkedDictionary::Create(
     const std::shared_ptr<MemoryPool>& pool, const FieldType field_type,
     const std::shared_ptr<InputStream>& input_stream, const int64_t offset) {
-    const auto data_in = std::make_unique<DataInputStream>(input_stream);
+    auto data_in = std::make_unique<DataInputStream>(input_stream);
     PAIMON_RETURN_NOT_OK(data_in->Seek(offset));
-    PAIMON_ASSIGN_OR_RAISE(const auto header_length, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto version, data_in->ReadValue<int8_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
     if (version != CURRENT_VERSION) {
         return Status::Invalid("Unknown version of ChunkedDictionary");
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto size, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto offsets_length, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto chunks_length, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(auto factory, KeyFactory::Create(field_type));
-    const auto factory_shared = std::shared_ptr{std::move(factory)};
-    auto result = std::make_unique<ChunkedDictionary>(
-        pool, input_stream, offset, field_type, factory_shared, size, offsets_length, chunks_length,
-        offset + header_length + sizeof(int32_t));
+    PAIMON_ASSIGN_OR_RAISE(int32_t size, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t offsets_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t chunks_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<KeyFactory> factory_shared,
+                           KeyFactory::Create(field_type));
+    auto result = std::make_unique<ChunkedDictionary>(pool, input_stream, factory_shared, size,
+                                                      offsets_length, chunks_length,
+                                                      offset + header_length + sizeof(int32_t));
     return result;
 }
 
 ChunkedDictionary::ChunkedDictionary(const std::shared_ptr<MemoryPool>& pool,
                                      const std::shared_ptr<InputStream>& input_stream,
-                                     const int64_t start_of_dictionary, const FieldType field_type,
                                      const std::shared_ptr<KeyFactory>& factory, const int32_t size,
                                      const int32_t offsets_length, const int32_t chunks_length,
                                      const int64_t body_offset)
     : pool_(pool),
-      field_type_(field_type),
       factory_(factory),
       input_stream_(input_stream),
-      start_of_dictionary_(start_of_dictionary),
       size_(size),
       offsets_length_(offsets_length),
       chunks_length_(chunks_length),

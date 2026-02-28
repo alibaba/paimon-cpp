@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/file_index/rangebitmap/dictionary/key_factory.h"
+#include "paimon/common/file_index/rangebitmap/utils/literal_serialization_utils.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
@@ -35,12 +36,13 @@ Result<bool> FixedLengthChunk::TryAdd(const Literal& key) {
     if (keys_stream_out_ == nullptr) {
         keys_stream_out_ = std::make_shared<MemorySegmentOutputStream>(
             MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
-        PAIMON_ASSIGN_OR_RAISE(serializer_, factory_->CreateSerializer());
+        PAIMON_ASSIGN_OR_RAISE(serializer_,
+                               LiteralSerDeUtils::CreateValueWriter(factory_->GetFieldType()));
     }
     if (fixed_length_ > remaining_keys_size_) {
         return false;
     }
-    PAIMON_RETURN_NOT_OK((*serializer_)(keys_stream_out_, key));
+    PAIMON_RETURN_NOT_OK(serializer_(keys_stream_out_, key));
     remaining_keys_size_ -= fixed_length_;
     size_ += 1;
     return true;
@@ -54,19 +56,20 @@ Result<Literal> FixedLengthChunk::GetKey(const int32_t index) {
         PAIMON_RETURN_NOT_OK(input_stream_->Seek(keys_base_offset_ + offset_, FS_SEEK_SET));
         keys_ = Bytes::AllocateBytes(keys_length_, pool_.get());
         PAIMON_RETURN_NOT_OK(input_stream_->Read(keys_->data(), keys_length_));
-        PAIMON_ASSIGN_OR_RAISE(deserializer_, factory_->CreateDeserializer());
+        PAIMON_ASSIGN_OR_RAISE(deserializer_,
+                               LiteralSerDeUtils::CreateValueReader(factory_->GetFieldType()));
         keys_stream_in_ = std::make_shared<DataInputStream>(
             std::make_shared<ByteArrayInputStream>(keys_->data(), keys_length_));
     }
     PAIMON_RETURN_NOT_OK(keys_stream_in_->Seek(index * fixed_length_));
-    return (*deserializer_)(keys_stream_in_, pool_.get());
+    return deserializer_(keys_stream_in_, pool_.get());
 }
 
 Result<PAIMON_UNIQUE_PTR<Bytes>> FixedLengthChunk::SerializeChunk() const {
     const auto data_out = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     data_out->WriteValue<int8_t>(CURRENT_VERSION);
-    PAIMON_RETURN_NOT_OK((*serializer_)(data_out, key_));
+    PAIMON_RETURN_NOT_OK(serializer_(data_out, key_));
     data_out->WriteValue<int32_t>(code_);
     data_out->WriteValue<int32_t>(offset_);
     data_out->WriteValue<int32_t>(size_);
@@ -99,7 +102,7 @@ FixedLengthChunk::FixedLengthChunk(const std::shared_ptr<MemoryPool>& pool, Lite
       keys_base_offset_(keys_base_offset),
       keys_length_(keys_length),
       fixed_length_(fixed_length),
-      deserializer_({std::nullopt}),
+      deserializer_({}),
       keys_stream_in_(nullptr),
       keys_(nullptr),
       remaining_keys_size_(0) {}
@@ -119,7 +122,7 @@ FixedLengthChunk::FixedLengthChunk(const std::shared_ptr<MemoryPool>& pool, Lite
       keys_base_offset_(0),
       keys_length_(0),
       fixed_length_(fixed_length),
-      deserializer_({std::nullopt}),
+      deserializer_({}),
       keys_stream_in_(nullptr),
       keys_(nullptr),
       remaining_keys_size_(keys_length_limit) {}

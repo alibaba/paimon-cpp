@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,30 +36,31 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     const FieldType field_type, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_RETURN_NOT_OK(input_stream->Seek(offset, SeekOrigin::FS_SEEK_SET));
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
-    PAIMON_ASSIGN_OR_RAISE(const auto header_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
     if (version != VERSION) {
         return Status::Invalid(
             fmt::format("RangeBitmap unsupported version {} (expected {})", version, VERSION));
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto rid, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(const auto cardinality, data_in->ReadValue<int32_t>());
-    PAIMON_ASSIGN_OR_RAISE(auto key_factory, KeyFactory::Create(field_type));
-    const auto shared_key_factory = std::shared_ptr{std::move(key_factory)};
-    PAIMON_ASSIGN_OR_RAISE(const auto key_deserializer, shared_key_factory->CreateDeserializer());
-    PAIMON_ASSIGN_OR_RAISE(auto min, key_deserializer(data_in, pool.get()));
-    PAIMON_ASSIGN_OR_RAISE(auto max, key_deserializer(data_in, pool.get()));
-    PAIMON_ASSIGN_OR_RAISE(const auto dictionary_length, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t rid, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t cardinality, data_in->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<KeyFactory> shared_key_factory,
+                           KeyFactory::Create(field_type));
+    PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Deserializer key_deserializer,
+                           LiteralSerDeUtils::CreateValueReader(field_type));
+    PAIMON_ASSIGN_OR_RAISE(Literal min, key_deserializer(data_in, pool.get()));
+    PAIMON_ASSIGN_OR_RAISE(Literal max, key_deserializer(data_in, pool.get()));
+    PAIMON_ASSIGN_OR_RAISE(int32_t dictionary_length, data_in->ReadValue<int32_t>());
     const auto dictionary_offset = static_cast<int32_t>(offset + sizeof(int32_t) + header_length);
     const auto bsi_offset = dictionary_offset + dictionary_length;
     return std::unique_ptr<RangeBitmap>(new RangeBitmap(pool, rid, cardinality, dictionary_offset,
-                                                        bsi_offset, std::move(min), std::move(max),
-                                                        shared_key_factory, input_stream));
+                                                        bsi_offset, min, max, shared_key_factory,
+                                                        input_stream));
 }
 
 Result<RoaringBitmap32> RangeBitmap::Not(RoaringBitmap32& bitmap) {
     bitmap.Flip(0, rid_);
-    PAIMON_ASSIGN_OR_RAISE(const auto is_not_null, this->IsNotNull());
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 is_not_null, this->IsNotNull());
     return bitmap &= is_not_null;
 }
 
@@ -67,17 +68,17 @@ Result<RoaringBitmap32> RangeBitmap::Eq(const Literal& key) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto min_compare, key.CompareTo(min_));
-    PAIMON_ASSIGN_OR_RAISE(const auto max_compare, key.CompareTo(max_));
-    PAIMON_ASSIGN_OR_RAISE(const auto bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(int32_t min_compare, key.CompareTo(min_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_compare, key.CompareTo(max_));
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* const bit_slice_ptr, this->GetBitSliceIndex());
     if (min_compare == 0 && max_compare == 0) {
         return bit_slice_ptr->IsNotNull({});
     }
     if (min_compare < 0 || max_compare > 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto dictionary, this->GetDictionary());
-    PAIMON_ASSIGN_OR_RAISE(const auto code, dictionary->Find(key));
+    PAIMON_ASSIGN_OR_RAISE(Dictionary* const dictionary, this->GetDictionary());
+    PAIMON_ASSIGN_OR_RAISE(int32_t code, dictionary->Find(key));
     if (code < 0) {
         return RoaringBitmap32();
     }
@@ -88,7 +89,7 @@ Result<RoaringBitmap32> RangeBitmap::Neq(const Literal& key) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(auto eq_result, Eq(key));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 eq_result, Eq(key));
     return Not(eq_result);
 }
 
@@ -96,15 +97,15 @@ Result<RoaringBitmap32> RangeBitmap::Lt(const Literal& key) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto min_compare, key.CompareTo(min_));
-    PAIMON_ASSIGN_OR_RAISE(const auto max_compare, key.CompareTo(max_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t min_compare, key.CompareTo(min_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_compare, key.CompareTo(max_));
     if (max_compare > 0) {
         return IsNotNull();
     }
     if (min_compare <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(auto gte_result, Gte(key));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 gte_result, Gte(key));
     return Not(gte_result);
 }
 
@@ -112,15 +113,15 @@ Result<RoaringBitmap32> RangeBitmap::Lte(const Literal& key) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto min_compare, key.CompareTo(min_));
-    PAIMON_ASSIGN_OR_RAISE(const auto max_compare, key.CompareTo(max_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t min_compare, key.CompareTo(min_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_compare, key.CompareTo(max_));
     if (max_compare >= 0) {
         return IsNotNull();
     }
     if (min_compare < 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(auto gt_result, Gt(key));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 gt_result, Gt(key));
     return Not(gt_result);
 }
 
@@ -128,17 +129,17 @@ Result<RoaringBitmap32> RangeBitmap::Gt(const Literal& key) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto max_compare, key.CompareTo(max_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_compare, key.CompareTo(max_));
     if (max_compare >= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto min_compare, key.CompareTo(min_));
+    PAIMON_ASSIGN_OR_RAISE(int32_t min_compare, key.CompareTo(min_));
     if (min_compare < 0) {
         return IsNotNull();
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto dictionary, this->GetDictionary());
-    PAIMON_ASSIGN_OR_RAISE(const auto code, dictionary->Find(key));
-    PAIMON_ASSIGN_OR_RAISE(const auto bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(Dictionary* const dictionary, this->GetDictionary());
+    PAIMON_ASSIGN_OR_RAISE(int32_t code, dictionary->Find(key));
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* const bit_slice_ptr, this->GetBitSliceIndex());
     if (code >= 0) {
         return bit_slice_ptr->Gt(code);
     }
@@ -146,8 +147,8 @@ Result<RoaringBitmap32> RangeBitmap::Gt(const Literal& key) {
 }
 
 Result<RoaringBitmap32> RangeBitmap::Gte(const Literal& key) {
-    PAIMON_ASSIGN_OR_RAISE(auto gt_result, Gt(key));
-    PAIMON_ASSIGN_OR_RAISE(const auto eq_result, Eq(key));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 gt_result, Gt(key));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 eq_result, Eq(key));
     gt_result |= eq_result;
     return gt_result;
 }
@@ -158,7 +159,7 @@ Result<RoaringBitmap32> RangeBitmap::In(const std::vector<Literal>& keys) {
     }
     RoaringBitmap32 result{};
     for (const auto& key : keys) {
-        PAIMON_ASSIGN_OR_RAISE(const auto bitmap, Eq(key));
+        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 bitmap, Eq(key));
         result |= bitmap;
     }
     return result;
@@ -168,7 +169,7 @@ Result<RoaringBitmap32> RangeBitmap::NotIn(const std::vector<Literal>& keys) {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(auto in_result, In(keys));
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 in_result, In(keys));
     return Not(in_result);
 }
 
@@ -182,7 +183,7 @@ Result<RoaringBitmap32> RangeBitmap::IsNull() {
         return RoaringBitmap32();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(auto non_null_bitmap, IsNotNull());
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 non_null_bitmap, IsNotNull());
     non_null_bitmap.Flip(0, rid_);
     return non_null_bitmap;
 }
@@ -192,14 +193,14 @@ Result<RoaringBitmap32> RangeBitmap::IsNotNull() {
         return RoaringBitmap32();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(const auto bit_slice_ptr, this->GetBitSliceIndex());
-    PAIMON_ASSIGN_OR_RAISE(auto result, bit_slice_ptr->IsNotNull({}));
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* const bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 result, bit_slice_ptr->IsNotNull({}));
     return result;
 }
 
 RangeBitmap::RangeBitmap(const std::shared_ptr<MemoryPool>& pool, const int32_t rid,
                          const int32_t cardinality, const int32_t dictionary_offset,
-                         const int32_t bsi_offset, Literal&& min, Literal&& max,
+                         const int32_t bsi_offset, const Literal& min, const Literal& max,
                          const std::shared_ptr<KeyFactory>& key_factory,
                          const std::shared_ptr<InputStream>& input_stream)
     : pool_(pool),
@@ -207,8 +208,8 @@ RangeBitmap::RangeBitmap(const std::shared_ptr<MemoryPool>& pool, const int32_t 
       cardinality_(cardinality),
       bsi_offset_(bsi_offset),
       dictionary_offset_(dictionary_offset),
-      min_(std::move(min)),
-      max_(std::move(max)),
+      min_(min),
+      max_(max),
       key_factory_(key_factory),
       input_stream_(input_stream),
       bsi_(nullptr),
@@ -258,17 +259,16 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
         }
         code++;
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto serializer, factory_->CreateSerializer());
+    PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Serializer serializer,
+                           LiteralSerDeUtils::CreateValueWriter(factory_->GetFieldType()));
     auto min = Literal{factory_->GetFieldType()};
     auto max = Literal{factory_->GetFieldType()};
     if (!bitmaps_.empty()) {
         min = bitmaps_.begin()->first;
         max = bitmaps_.rbegin()->first;
     }
-    PAIMON_ASSIGN_OR_RAISE(const auto min_size,
-                           LiteralSerializationUtils::GetSerializedSizeInBytes(min));
-    PAIMON_ASSIGN_OR_RAISE(const auto max_size,
-                           LiteralSerializationUtils::GetSerializedSizeInBytes(max));
+    PAIMON_ASSIGN_OR_RAISE(int32_t min_size, LiteralSerDeUtils::GetSerializedSizeInBytes(min));
+    PAIMON_ASSIGN_OR_RAISE(int32_t max_size, LiteralSerDeUtils::GetSerializedSizeInBytes(max));
     int32_t header_size = 0;
     header_size += sizeof(int8_t);               // version
     header_size += sizeof(int32_t);              // rid
@@ -276,9 +276,9 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     header_size += min.IsNull() ? 0 : min_size;  // min literal size
     header_size += max.IsNull() ? 0 : max_size;  // max literal size
     header_size += sizeof(int32_t);              // dictionary length
-    PAIMON_ASSIGN_OR_RAISE(const auto dictionary_bytes, dictionary.Serialize());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> dictionary_bytes, dictionary.Serialize());
     const auto dictionary_length = static_cast<int32_t>(dictionary_bytes->size());
-    PAIMON_ASSIGN_OR_RAISE(const auto bsi_bytes, bsi.Serialize());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bsi_bytes, bsi.Serialize());
     const auto bsi_length = bsi_bytes->size();
     const auto data_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
