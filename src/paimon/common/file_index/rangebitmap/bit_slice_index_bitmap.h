@@ -30,7 +30,6 @@ namespace paimon {
 
 class BitSliceIndexBitmap {
  public:
-    static constexpr int8_t CURRENT_VERSION = 1;
     static Result<std::unique_ptr<BitSliceIndexBitmap>> Create(
         const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input_stream,
         int32_t offset);
@@ -66,6 +65,9 @@ class BitSliceIndexBitmap {
         RoaringBitmap32 ebm_;
         std::vector<RoaringBitmap32> slices_;
     };
+
+ public:
+    static constexpr int8_t CURRENT_VERSION = 1;
 
  private:
     std::shared_ptr<MemoryPool> pool_;

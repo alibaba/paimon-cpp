@@ -37,7 +37,7 @@ Result<std::unique_ptr<BitSliceIndexBitmap>> BitSliceIndexBitmap::Create(
     PAIMON_RETURN_NOT_OK(data_in->Seek(offset));
     PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
-    if (version != CURRENT_VERSION) {
+    if (version != BitSliceIndexBitmap::CURRENT_VERSION) {
         return Status::Invalid("Unknown BitSliceBitmap Version");
     }
     PAIMON_ASSIGN_OR_RAISE(int8_t slices_size, data_in->ReadValue<int8_t>());
@@ -119,7 +119,7 @@ Status BitSliceIndexBitmap::LoadSlices(const int32_t start, const int32_t end) {
     }
     auto indexes_stream = std::make_shared<ByteArrayInputStream>(indexes_->data(), indexes_length_);
     auto data_in = std::make_unique<DataInputStream>(indexes_stream);
-    const auto position = static_cast<int32_t>(2 * sizeof(int32_t) * start);
+    auto position = static_cast<int32_t>(2 * sizeof(int32_t) * start);
     PAIMON_RETURN_NOT_OK(data_in->Seek(position));
     PAIMON_ASSIGN_OR_RAISE(int32_t offset, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int32_t length, data_in->ReadValue<int32_t>());
@@ -218,7 +218,7 @@ BitSliceIndexBitmap::Appender::Appender(const std::shared_ptr<MemoryPool>& pool,
                                         const int32_t max)
     : pool_(pool), min_(min), max_(max) {
     ebm_ = RoaringBitmap32{};
-    const auto slices_size = std::max(64 - NumberOfLeadingZeros(max), 1);
+    int32_t slices_size = std::max(64 - NumberOfLeadingZeros(max), 1);
     slices_.resize(slices_size);
 }
 
@@ -239,9 +239,9 @@ Status BitSliceIndexBitmap::Appender::Append(const int32_t key, const int32_t va
 }
 
 Result<PAIMON_UNIQUE_PTR<Bytes>> BitSliceIndexBitmap::Appender::Serialize() const {
-    const auto indexes_length = static_cast<int32_t>(2 * sizeof(int32_t) * slices_.size());
-    const auto ebm_bytes = ebm_.Serialize(pool_.get());
-    const auto ebm_length = static_cast<int32_t>(ebm_bytes->size());
+    auto indexes_length = static_cast<int32_t>(2 * sizeof(int32_t) * slices_.size());
+    PAIMON_UNIQUE_PTR<Bytes> ebm_bytes = ebm_.Serialize(pool_.get());
+    auto ebm_length = static_cast<int32_t>(ebm_bytes->size());
     int32_t header_size = 0;
     header_size += sizeof(int8_t);   // version
     header_size += sizeof(int8_t);   // slices size
@@ -255,7 +255,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> BitSliceIndexBitmap::Appender::Serialize() cons
     std::vector<std::pair<int32_t, int32_t>> indexes_vector{};
     for (const auto& slice : slices_) {
         auto slice_bytes = slice.Serialize(pool_.get());
-        const auto length = static_cast<int32_t>(slice_bytes->size());
+        auto length = static_cast<int32_t>(slice_bytes->size());
         indexes_vector.emplace_back(offset, length);
         offset += length;
         slices_bytes_vector.emplace_back(std::move(slice_bytes));

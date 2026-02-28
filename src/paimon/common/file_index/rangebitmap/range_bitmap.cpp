@@ -38,9 +38,9 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
     PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
-    if (version != CURRENT_VERSION) {
+    if (version != RangeBitmap::CURRENT_VERSION) {
         return Status::Invalid(fmt::format("RangeBitmap unsupported version {} (expected {})",
-                                           version, CURRENT_VERSION));
+                                           version, RangeBitmap::CURRENT_VERSION));
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t rid, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int32_t cardinality, data_in->ReadValue<int32_t>());
@@ -51,7 +51,7 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     PAIMON_ASSIGN_OR_RAISE(Literal min, key_deserializer(data_in, pool.get()));
     PAIMON_ASSIGN_OR_RAISE(Literal max, key_deserializer(data_in, pool.get()));
     PAIMON_ASSIGN_OR_RAISE(int32_t dictionary_length, data_in->ReadValue<int32_t>());
-    int32_t dictionary_offset = static_cast<int32_t>(offset + sizeof(int32_t) + header_length);
+    auto dictionary_offset = static_cast<int32_t>(offset + sizeof(int32_t) + header_length);
     int32_t bsi_offset = dictionary_offset + dictionary_length;
     return std::unique_ptr<RangeBitmap>(new RangeBitmap(pool, rid, cardinality, dictionary_offset,
                                                         bsi_offset, min, max, shared_key_factory,
@@ -261,8 +261,8 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     }
     PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Serializer serializer,
                            LiteralSerDeUtils::CreateValueWriter(factory_->GetFieldType()));
-    auto min = Literal{factory_->GetFieldType()};
-    auto max = Literal{factory_->GetFieldType()};
+    Literal min{factory_->GetFieldType()};
+    Literal max{factory_->GetFieldType()};
     if (!bitmaps_.empty()) {
         min = bitmaps_.begin()->first;
         max = bitmaps_.rbegin()->first;
@@ -283,7 +283,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     const auto data_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     data_output_stream->WriteValue<int32_t>(header_size);
-    data_output_stream->WriteValue<int8_t>(CURRENT_VERSION);
+    data_output_stream->WriteValue<int8_t>(RangeBitmap::CURRENT_VERSION);
     data_output_stream->WriteValue<int32_t>(rid_);
     data_output_stream->WriteValue<int32_t>(static_cast<int32_t>(bitmaps_.size()));
     if (!min.IsNull()) {

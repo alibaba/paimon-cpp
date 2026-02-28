@@ -35,8 +35,6 @@ class MemoryPool;
 
 class RangeBitmap {
  public:
-    static constexpr int8_t CURRENT_VERSION = 1;
-
     static Result<std::unique_ptr<RangeBitmap>> Create(
         const std::shared_ptr<InputStream>& input_stream, int64_t offset, FieldType field_type,
         const std::shared_ptr<MemoryPool>& pool);
@@ -51,6 +49,9 @@ class RangeBitmap {
     Result<RoaringBitmap32> NotIn(const std::vector<Literal>& keys);
     Result<RoaringBitmap32> IsNull();
     Result<RoaringBitmap32> IsNotNull();
+
+ public:
+    static constexpr int8_t CURRENT_VERSION = 1;
 
  private:
     Result<RoaringBitmap32> Not(RoaringBitmap32& bitmap);
