@@ -15,12 +15,49 @@
  */
 
 #pragma once
+
+#include <map>
+#include <memory>
 #include <string>
+
+#include "paimon/core/deletionvectors/deletion_vector.h"
+#include "paimon/core/index/index_file.h"
+#include "paimon/core/index/index_file_meta.h"
+
 namespace paimon {
+
+class DeletionVectorIndexFileWriter;
+
 /// DeletionVectors index file.
-// TODO(xinyu.lxy): add IndexFile
-class DeletionVectorsIndexFile {
+class DeletionVectorsIndexFile : public IndexFile {
  public:
     static constexpr char DELETION_VECTORS_INDEX[] = "DELETION_VECTORS";
+    static constexpr int8_t VERSION_ID_V1 = 1;
+
+    DeletionVectorsIndexFile(const std::shared_ptr<FileSystem>& fs,
+                             const std::shared_ptr<IndexPathFactory>& path_factory,
+                             int64_t target_size_per_index_file, bool bitmap64,
+                             const std::shared_ptr<MemoryPool>& pool)
+        : IndexFile(fs, path_factory),
+          target_size_per_index_file_(target_size_per_index_file),
+          bitmap64_(bitmap64),
+          pool_(pool) {}
+
+    ~DeletionVectorsIndexFile() override = default;
+
+    bool Bitmap64() const {
+        return bitmap64_;
+    }
+
+    Result<std::shared_ptr<IndexFileMeta>> WriteSingleFile(
+        const std::map<std::string, std::shared_ptr<DeletionVector>>& input);
+
+ private:
+    std::shared_ptr<DeletionVectorIndexFileWriter> CreateWriter() const;
+
+    const int64_t target_size_per_index_file_;
+    const bool bitmap64_;
+    std::shared_ptr<MemoryPool> pool_;
 };
+
 }  // namespace paimon
