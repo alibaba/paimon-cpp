@@ -303,6 +303,32 @@ struct PAIMON_EXPORT Options {
     /// "compaction.force-rewrite-all-files" - Whether to force pick all files for a full
     /// compaction. Usually seen in a compaction task to external paths. Default value is "false".
     static const char COMPACTION_FORCE_REWRITE_ALL_FILES[];
+    /// "compaction.optimization-interval" - Implying how often to perform an optimization
+    /// compaction, this configuration is used to ensure the query timeliness of the read-optimized
+    /// system table. No default value.
+    static const char COMPACTION_OPTIMIZATION_INTERVAL[];
+    /// "compaction.total-size-threshold" - When total size is smaller than this threshold, force a
+    /// full compaction. No default value.
+    static const char COMPACTION_TOTAL_SIZE_THRESHOLD[];
+    /// "compaction.incremental-size-threshold" - When incremental size is bigger than this
+    /// threshold, force a full compaction. No default value.
+    static const char COMPACTION_INCREMENTAL_SIZE_THRESHOLD[];
+    /// "compaction.offpeak.start.hour" - The start of off-peak hours, expressed as an integer
+    /// between 0 and 23, inclusive. Set to -1 to disable off-peak. Default is -1.
+    static const char COMPACT_OFFPEAK_START_HOUR[];
+    /// "compaction.offpeak.end.hour" - The end of off-peak hours, expressed as an integer between 0
+    /// and 23, exclusive. Set to -1 to disable off-peak. Default is -1.
+    static const char COMPACT_OFFPEAK_END_HOUR[];
+    /// "compaction.offpeak-ratio" - Allows you to set a different (by default, more aggressive)
+    /// percentage ratio for determining whether larger sorted run's size are included in
+    /// compactions during off-peak hours. Works in the same way as compaction.size-ratio. Only
+    /// applies if offpeak.start.hour and offpeak.end.hour are also enabled.
+    /// For instance, if your cluster experiences low pressure between 2 AM  and 6 PM , you can
+    /// configure `compaction.offpeak.start.hour=2` and `compaction.offpeak.end.hour=18` to define
+    /// this period as off-peak hours.  During these hours, you can increase the off-peak compaction
+    /// ratio (e.g. `compaction.offpeak-ratio=20`) to enable more aggressive data compaction.
+    /// Default is 0.
+    static const char COMPACTION_OFFPEAK_RATIO[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

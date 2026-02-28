@@ -324,6 +324,12 @@ struct CoreOptions::Impl {
     std::optional<std::string> global_index_external_path;
 
     std::optional<std::string> scan_tag_name;
+    std::optional<int64_t> optimized_compaction_interval;
+    std::optional<int64_t> compaction_total_size_threshold;
+    std::optional<int64_t> compaction_incremental_size_threshold;
+    int32_t compact_off_peak_start_hour = -1;
+    int32_t compact_off_peak_end_hour = -1;
+    int32_t compact_off_peak_ratio = 0;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -507,6 +513,7 @@ Result<CoreOptions> CoreOptions::FromMap(
         impl->scan_tag_name = scan_tag_name;
     }
 
+    // Parse compaction options
     // Parse commit.force-compact
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::COMMIT_FORCE_COMPACT, &impl->commit_force_compact));
@@ -518,6 +525,41 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse compaction.force-rewrite-all-files
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::COMPACTION_FORCE_REWRITE_ALL_FILES,
                                             &impl->compaction_force_rewrite_all_files));
+
+    // Parse compaction.optimization-interval
+    std::string optimized_compaction_interval_str;
+    PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_OPTIMIZATION_INTERVAL,
+                                            &optimized_compaction_interval_str));
+    if (!optimized_compaction_interval_str.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(impl->optimized_compaction_interval,
+                               TimeDuration::Parse(optimized_compaction_interval_str));
+    }
+    // Parse compaction.total-size-threshold
+    std::string compaction_total_size_threshold_str;
+    PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_TOTAL_SIZE_THRESHOLD,
+                                            &compaction_total_size_threshold_str));
+    if (!compaction_total_size_threshold_str.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(impl->compaction_total_size_threshold,
+                               MemorySize::ParseBytes(compaction_total_size_threshold_str));
+    }
+    // Parse compaction.incremental-size-threshold
+    std::string compaction_incremental_size_threshold_str;
+    PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD,
+                                            &compaction_incremental_size_threshold_str));
+    if (!compaction_incremental_size_threshold_str.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(impl->compaction_incremental_size_threshold,
+                               MemorySize::ParseBytes(compaction_incremental_size_threshold_str));
+    }
+
+    // Parse compaction.offpeak.start.hour
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse(Options::COMPACT_OFFPEAK_START_HOUR, &impl->compact_off_peak_start_hour));
+    // Parse compaction.offpeak.end.hour
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse(Options::COMPACT_OFFPEAK_END_HOUR, &impl->compact_off_peak_end_hour));
+    // Parse compaction.offpeak-ratio
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse(Options::COMPACTION_OFFPEAK_RATIO, &impl->compact_off_peak_ratio));
 
     return options;
 }
@@ -845,6 +887,26 @@ Result<std::optional<std::string>> CoreOptions::CreateGlobalIndexExternalPath() 
 
 std::optional<std::string> CoreOptions::GetScanTagName() const {
     return impl_->scan_tag_name;
+}
+
+std::optional<int64_t> CoreOptions::GetOptimizedCompactionInterval() const {
+    return impl_->optimized_compaction_interval;
+}
+std::optional<int64_t> CoreOptions::GetCompactionTotalSizeThreshold() const {
+    return impl_->compaction_total_size_threshold;
+}
+std::optional<int64_t> CoreOptions::GetCompactionIncrementalSizeThreshold() const {
+    return impl_->compaction_incremental_size_threshold;
+}
+
+int32_t CoreOptions::GetCompactOffPeakStartHour() const {
+    return impl_->compact_off_peak_start_hour;
+}
+int32_t CoreOptions::GetCompactOffPeakEndHour() const {
+    return impl_->compact_off_peak_end_hour;
+}
+int32_t CoreOptions::GetCompactOffPeakRatio() const {
+    return impl_->compact_off_peak_ratio;
 }
 
 }  // namespace paimon

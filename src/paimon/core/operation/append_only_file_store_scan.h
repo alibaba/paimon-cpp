@@ -61,11 +61,6 @@ class AppendOnlyFileStoreScan : public FileStoreScan {
     Result<bool> FilterByStats(const ManifestEntry& entry) const override;
 
  private:
-    // TODO(liancheng.lsz): to be moved in class FileStoreScan
-    static Result<std::shared_ptr<Predicate>> ReconstructPredicateWithNonCastedFields(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::shared_ptr<SimpleStatsEvolution>& evolution);
-
     Result<bool> TestFileIndex(const std::shared_ptr<DataFileMeta>& meta,
                                const std::shared_ptr<SimpleStatsEvolution>& evolution,
                                const std::shared_ptr<TableSchema>& data_schema) const;

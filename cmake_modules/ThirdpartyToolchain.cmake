@@ -532,10 +532,13 @@ macro(build_boost)
                         BUILD_COMMAND ${BOOST_PREFIX}/src/boost_ep/b2
                                       --prefix=${BOOST_INSTALL}
                                       --libdir=${BOOST_LIBRARY_DIR} link=static
+                                      -sZLIB_INCLUDE=${ZLIB_INCLUDE_DIR}
+                                      -sZLIB_LIBRARY_PATH=${ZLIB_PREFIX}/lib
                                       runtime-link=shared threading=multi variant=release
                                       cxxflags=${BOOST_CXX_FLAGS} install
                         INSTALL_COMMAND bash -c
                                         "mkdir -p ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/include/boost/* ${BOOST_INSTALL}/include/boost && cp -r ${BOOST_PREFIX}/src/boost_ep/libs/*/*/include/boost/* ${BOOST_INSTALL}/include/boost"
+                        DEPENDS zlib
                         BUILD_BYPRODUCTS ${BOOST_BYPRODUCTS}
                         LOG_DOWNLOAD ON
                         LOG_CONFIGURE ON

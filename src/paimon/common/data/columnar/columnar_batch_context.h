@@ -30,18 +30,20 @@ class MemoryPool;
 
 struct ColumnarBatchContext {
     ColumnarBatchContext(const std::shared_ptr<arrow::StructArray>& struct_array_in,
-                         const arrow::ArrayVector& array_vec_holder_in,
+                         const arrow::ArrayVector& array_vec_in,
                          const std::shared_ptr<MemoryPool>& pool_in)
-        : struct_array(struct_array_in), pool(pool_in), array_vec_holder(array_vec_holder_in) {
-        array_ptrs.reserve(array_vec_holder.size());
-        for (const auto& array : array_vec_holder) {
+        : struct_array(struct_array_in), pool(pool_in) {
+        array_ptrs.reserve(array_vec_in.size());
+        for (const auto& array : array_vec_in) {
             array_ptrs.push_back(array.get());
         }
     }
 
+    /// @note `struct_array` is the data holder for columnar row, ensure that the data life
+    /// cycle is consistent with the columnar row, `array_ptrs` maybe a subset of
+    /// `struct_array`, so `struct_array` cannot be used for `GetXXX()`
     std::shared_ptr<arrow::StructArray> struct_array;
     std::shared_ptr<MemoryPool> pool;
-    arrow::ArrayVector array_vec_holder;
     std::vector<const arrow::Array*> array_ptrs;
 };
 }  // namespace paimon

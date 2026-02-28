@@ -77,12 +77,6 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     virtual void Reset();
 
  private:
-    // For struct array, arrow is unsafe for fields() and field(); for dict array, arrow is unsafe
-    // for dictionary(). Therefore, access array in advance before merge sort and projection to
-    // avoid subsequent multi-threading problems.
-    static void TraverseArray(const std::shared_ptr<arrow::Array>& array);
-
- private:
     int32_t key_arity_;
     int32_t level_;
     std::shared_ptr<MemoryPool> pool_;

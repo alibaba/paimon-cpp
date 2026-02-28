@@ -31,9 +31,9 @@
 #include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/status.h"
-
 namespace paimon {
 class MemoryPool;
 
@@ -137,7 +137,7 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     value_fields_ = value_struct_array_->fields();
     key_ctx_ = std::make_shared<ColumnarBatchContext>(nullptr, key_fields_, pool_);
     value_ctx_ = std::make_shared<ColumnarBatchContext>(value_struct_array_, value_fields_, pool_);
-    TraverseArray(value_struct_array_);
+    ArrowUtils::TraverseArray(value_struct_array_);
     return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
 }
 
@@ -151,36 +151,4 @@ void KeyValueDataFileRecordReader::Reset() {
     sequence_number_array_.reset();
     row_kind_array_.reset();
 }
-
-void KeyValueDataFileRecordReader::TraverseArray(const std::shared_ptr<arrow::Array>& array) {
-    arrow::Type::type type = array->type()->id();
-    switch (type) {
-        case arrow::Type::type::DICTIONARY: {
-            auto* dict_array = arrow::internal::checked_cast<arrow::DictionaryArray*>(array.get());
-            [[maybe_unused]] auto dict = dict_array->dictionary();
-            return;
-        }
-        case arrow::Type::type::STRUCT: {
-            auto* struct_array = arrow::internal::checked_cast<arrow::StructArray*>(array.get());
-            for (const auto& field : struct_array->fields()) {
-                TraverseArray(field);
-            }
-            return;
-        }
-        case arrow::Type::type::MAP: {
-            auto* map_array = arrow::internal::checked_cast<arrow::MapArray*>(array.get());
-            TraverseArray(map_array->keys());
-            TraverseArray(map_array->items());
-            return;
-        }
-        case arrow::Type::type::LIST: {
-            auto* list_array = arrow::internal::checked_cast<arrow::ListArray*>(array.get());
-            TraverseArray(list_array->values());
-            return;
-        }
-        default:
-            return;
-    }
-}
-
 }  // namespace paimon
