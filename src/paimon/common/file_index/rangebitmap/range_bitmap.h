@@ -35,7 +35,7 @@ class MemoryPool;
 
 class RangeBitmap {
  public:
-    static constexpr int8_t VERSION = 1;
+    static constexpr int8_t CURRENT_VERSION = 1;
 
     static Result<std::unique_ptr<RangeBitmap>> Create(
         const std::shared_ptr<InputStream>& input_stream, int64_t offset, FieldType field_type,

@@ -38,9 +38,9 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
     PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
-    if (version != VERSION) {
-        return Status::Invalid(
-            fmt::format("RangeBitmap unsupported version {} (expected {})", version, VERSION));
+    if (version != CURRENT_VERSION) {
+        return Status::Invalid(fmt::format("RangeBitmap unsupported version {} (expected {})",
+                                           version, CURRENT_VERSION));
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t rid, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int32_t cardinality, data_in->ReadValue<int32_t>());
@@ -51,8 +51,8 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     PAIMON_ASSIGN_OR_RAISE(Literal min, key_deserializer(data_in, pool.get()));
     PAIMON_ASSIGN_OR_RAISE(Literal max, key_deserializer(data_in, pool.get()));
     PAIMON_ASSIGN_OR_RAISE(int32_t dictionary_length, data_in->ReadValue<int32_t>());
-    const auto dictionary_offset = static_cast<int32_t>(offset + sizeof(int32_t) + header_length);
-    const auto bsi_offset = dictionary_offset + dictionary_length;
+    int32_t dictionary_offset = static_cast<int32_t>(offset + sizeof(int32_t) + header_length);
+    int32_t bsi_offset = dictionary_offset + dictionary_length;
     return std::unique_ptr<RangeBitmap>(new RangeBitmap(pool, rid, cardinality, dictionary_offset,
                                                         bsi_offset, min, max, shared_key_factory,
                                                         input_stream));
@@ -277,13 +277,13 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     header_size += max.IsNull() ? 0 : max_size;  // max literal size
     header_size += sizeof(int32_t);              // dictionary length
     PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> dictionary_bytes, dictionary.Serialize());
-    const auto dictionary_length = static_cast<int32_t>(dictionary_bytes->size());
+    auto dictionary_length = static_cast<int32_t>(dictionary_bytes->size());
     PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bsi_bytes, bsi.Serialize());
-    const auto bsi_length = bsi_bytes->size();
+    size_t bsi_length = bsi_bytes->size();
     const auto data_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     data_output_stream->WriteValue<int32_t>(header_size);
-    data_output_stream->WriteValue<int8_t>(VERSION);
+    data_output_stream->WriteValue<int8_t>(CURRENT_VERSION);
     data_output_stream->WriteValue<int32_t>(rid_);
     data_output_stream->WriteValue<int32_t>(static_cast<int32_t>(bitmaps_.size()));
     if (!min.IsNull()) {

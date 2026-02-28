@@ -70,6 +70,9 @@ class RangeBitmapFileIndexWriter final : public FileIndexWriter {
                                const std::shared_ptr<KeyFactory>& key_factory,
                                std::unique_ptr<RangeBitmap::Appender> appender);
 
+ public:
+    static constexpr char DEFAULT_CHUNK_SIZE[] = "16kb";
+
  private:
     std::shared_ptr<arrow::DataType> arrow_type_;
     std::map<std::string, std::string> options_;

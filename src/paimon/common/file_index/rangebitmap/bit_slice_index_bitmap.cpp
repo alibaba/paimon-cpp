@@ -251,8 +251,8 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> BitSliceIndexBitmap::Appender::Serialize() cons
     int32_t offset = 0;
     auto data_output_stream = std::make_unique<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
-    auto slices_bytes_vector = std::vector<PAIMON_UNIQUE_PTR<Bytes>>{};
-    auto indexes_vector = std::vector<std::pair<int32_t, int32_t>>{};
+    std::vector<PAIMON_UNIQUE_PTR<Bytes>> slices_bytes_vector{};
+    std::vector<std::pair<int32_t, int32_t>> indexes_vector{};
     for (const auto& slice : slices_) {
         auto slice_bytes = slice.Serialize(pool_.get());
         const auto length = static_cast<int32_t>(slice_bytes->size());

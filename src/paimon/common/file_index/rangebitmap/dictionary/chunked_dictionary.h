@@ -51,6 +51,7 @@ class ChunkedDictionary final : public Dictionary {
      private:
         Status Flush();
 
+     private:
         std::shared_ptr<MemoryPool> pool_;
         std::shared_ptr<KeyFactory> key_factory_;
         int32_t chunk_size_bytes_;
