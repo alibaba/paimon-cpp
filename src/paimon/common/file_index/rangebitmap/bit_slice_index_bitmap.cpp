@@ -37,8 +37,9 @@ Result<std::unique_ptr<BitSliceIndexBitmap>> BitSliceIndexBitmap::Create(
     PAIMON_RETURN_NOT_OK(data_in->Seek(offset));
     PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
-    if (version != BitSliceIndexBitmap::CURRENT_VERSION) {
-        return Status::Invalid("Unknown BitSliceBitmap Version");
+    if (version != CURRENT_VERSION) {
+        return Status::Invalid(fmt::format("Unknown BitSliceBitmap version: {}, Expected: {}",
+                                           version, CURRENT_VERSION));
     }
     PAIMON_ASSIGN_OR_RAISE(int8_t slices_size, data_in->ReadValue<int8_t>());
     auto slices = std::vector<std::unique_ptr<RoaringBitmap32>>();

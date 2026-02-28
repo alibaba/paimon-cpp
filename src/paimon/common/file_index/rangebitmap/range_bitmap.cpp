@@ -38,9 +38,9 @@ Result<std::unique_ptr<RangeBitmap>> RangeBitmap::Create(
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
     PAIMON_ASSIGN_OR_RAISE(int32_t header_length, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int8_t version, data_in->ReadValue<int8_t>());
-    if (version != RangeBitmap::CURRENT_VERSION) {
-        return Status::Invalid(fmt::format("RangeBitmap unsupported version {} (expected {})",
-                                           version, RangeBitmap::CURRENT_VERSION));
+    if (version != CURRENT_VERSION) {
+        return Status::Invalid(fmt::format("RangeBitmap unsupported version {} (Expected {})",
+                                           version, CURRENT_VERSION));
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t rid, data_in->ReadValue<int32_t>());
     PAIMON_ASSIGN_OR_RAISE(int32_t cardinality, data_in->ReadValue<int32_t>());
@@ -283,7 +283,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     const auto data_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
     data_output_stream->WriteValue<int32_t>(header_size);
-    data_output_stream->WriteValue<int8_t>(RangeBitmap::CURRENT_VERSION);
+    data_output_stream->WriteValue<int8_t>(CURRENT_VERSION);
     data_output_stream->WriteValue<int32_t>(rid_);
     data_output_stream->WriteValue<int32_t>(static_cast<int32_t>(bitmaps_.size()));
     if (!min.IsNull()) {
