@@ -134,6 +134,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/byte_range_combiner.cpp
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
+    common/utils/roaring_navigable_map64.cpp
     common/utils/status.cpp
     common/utils/string_utils.cpp)
 
@@ -430,6 +431,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/rapidjson_util_test.cpp
                     common/utils/roaring_bitmap32_test.cpp
                     common/utils/roaring_bitmap64_test.cpp
+                    common/utils/roaring_navigable_map64_test.cpp
                     common/utils/range_helper_test.cpp
                     common/utils/read_ahead_cache_test.cpp
                     common/utils/byte_range_combiner_test.cpp

@@ -177,8 +177,8 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     // key range [1_000_000, 2_000_000], value is equal to the key
     std::string file = GetDataDir() + "/sst/" + param.file_path;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
-    auto block_cache =
-        std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
+    auto cache_manager = std::make_shared<CacheManager>();
+    auto block_cache = std::make_shared<BlockCache>(file, in, pool_, cache_manager);
 
     // test read
     auto reader_ret = SstFileReader::Create(pool_, fs_, file, comparator_);

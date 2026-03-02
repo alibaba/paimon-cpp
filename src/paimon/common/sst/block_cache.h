@@ -31,8 +31,8 @@ class BlockCache {
  public:
     BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
                const std::shared_ptr<MemoryPool>& pool,
-               std::unique_ptr<CacheManager>&& cache_manager)
-        : file_path_(file_path), in_(in), pool_(pool), cache_manager_(std::move(cache_manager)) {}
+               const std::shared_ptr<CacheManager>& cache_manager)
+        : file_path_(file_path), in_(in), pool_(pool), cache_manager_(cache_manager) {}
 
     ~BlockCache() = default;
 
@@ -65,8 +65,7 @@ class BlockCache {
     std::string file_path_;
     std::shared_ptr<InputStream> in_;
     std::shared_ptr<MemoryPool> pool_;
-
-    std::unique_ptr<CacheManager> cache_manager_;
+    std::shared_ptr<CacheManager> cache_manager_;
     std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> blocks_;
 };
 }  // namespace paimon

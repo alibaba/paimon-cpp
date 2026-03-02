@@ -1,0 +1,61 @@
+/*
+ * Copyright 2026-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include <memory>
+#include "paimon/common/sst/bloom_filter_handle.h"
+#include "paimon/common/sst/block_handle.h"
+#include "paimon/common/memory/memory_slice_input.h"
+#include "paimon/common/memory/memory_slice_output.h"
+
+namespace paimon {
+/// The Footer for BTree file.
+class BTreeFileFooter {
+ public:
+    static Result<std::shared_ptr<BTreeFileFooter>> Read(const std::shared_ptr<MemorySliceInput>& input);
+    static std::shared_ptr<MemorySlice> Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
+    static std::shared_ptr<MemorySlice> Write(const std::shared_ptr<BTreeFileFooter>& footer, const std::shared_ptr<MemorySliceOutput>& ouput);
+
+ public:
+    BTreeFileFooter(const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle, const std::shared_ptr<BlockHandle>& index_block_handle,
+                   const std::shared_ptr<BlockHandle>& null_bitmap_handle)
+        : bloom_filter_handle_(bloom_filter_handle), index_block_handle_(index_block_handle), null_bitmap_handle_(null_bitmap_handle) {}
+
+   std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
+      return bloom_filter_handle_;
+   }
+
+   std::shared_ptr<BlockHandle> GetIndexBlockHandle() const {
+      return index_block_handle_;
+   }
+
+   std::shared_ptr<BlockHandle> GetNullBitmapHandle() const {
+      return null_bitmap_handle_;
+   }
+
+
+ public:
+    static constexpr int32_t MAGIC_NUMBER = 198732882;
+    static constexpr int32_t ENCODED_LENGTH = 48;
+
+ private:
+    std::shared_ptr<BloomFilterHandle> bloom_filter_handle_;
+    std::shared_ptr<BlockHandle> index_block_handle_;
+    std::shared_ptr<BlockHandle> null_bitmap_handle_;
+};
+
+}  // namespace paimon

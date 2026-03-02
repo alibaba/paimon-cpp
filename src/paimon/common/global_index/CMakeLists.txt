@@ -13,7 +13,11 @@
 # limitations under the License.
 
 set(PAIMON_GLOBAL_INDEX_SRC bitmap/bitmap_global_index.cpp
-                            bitmap/bitmap_global_index_factory.cpp)
+                            bitmap/bitmap_global_index_factory.cpp
+                            btree/btree_file_footer.cpp
+                            btree/btree_global_index_factory.cpp
+                            btree/btree_global_indexer.cpp
+                            btree/btree_index_meta.cpp)
 
 add_paimon_lib(paimon_global_index
                SOURCES
