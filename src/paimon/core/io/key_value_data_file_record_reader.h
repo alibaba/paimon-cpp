@@ -86,6 +86,8 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     RoaringBitmap32 selection_bitmap_;
     std::shared_ptr<arrow::NumericArray<arrow::Int64Type>> sequence_number_array_;
     std::shared_ptr<arrow::NumericArray<arrow::Int8Type>> row_kind_array_;
+
+ protected:
     std::shared_ptr<ColumnarBatchContext> key_ctx_;
     std::shared_ptr<ColumnarBatchContext> value_ctx_;
 };

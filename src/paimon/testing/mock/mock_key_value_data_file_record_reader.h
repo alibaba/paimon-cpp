@@ -32,12 +32,12 @@ class MockKeyValueDataFileRecordReader : public KeyValueDataFileRecordReader {
 
     void Reset() override {
         if (key_ctx_) {
-            for (const auto& field : key_ctx_->array_ptrs) {
+            for (const auto& field : key_ctx_->array_vec) {
                 data_holder_.push_back(field);
             }
         }
         if (value_ctx_) {
-            for (const auto& field : value_ctx_->array_ptrs) {
+            for (const auto& field : value_ctx_->array_vec) {
                 data_holder_.push_back(field);
             }
         }

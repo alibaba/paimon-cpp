@@ -31,9 +31,9 @@ class MemoryPool;
 struct ColumnarBatchContext {
     ColumnarBatchContext(const arrow::ArrayVector& array_vec_in,
                          const std::shared_ptr<MemoryPool>& pool_in)
-        : pool(pool_in), array_ptrs(array_vec_in) {}
+        : pool(pool_in), array_vec(array_vec_in) {}
 
     std::shared_ptr<MemoryPool> pool;
-    arrow::ArrayVector array_ptrs;
+    arrow::ArrayVector array_vec;
 };
 }  // namespace paimon

@@ -45,6 +45,9 @@ class CompactRewriter {
     /// @return compaction result
     virtual Result<CompactResult> Upgrade(int32_t output_level,
                                           const std::shared_ptr<DataFileMeta>& file) const = 0;
+
+    /// Close rewriter.
+    virtual Status Close() = 0;
 };
 
 }  // namespace paimon

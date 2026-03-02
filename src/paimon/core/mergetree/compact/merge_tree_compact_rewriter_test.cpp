@@ -124,11 +124,28 @@ TEST_F(MergeTreeCompactRewriterTest, TestSimple) {
     // generate sorted runs and rewrite
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
                                                        /*partition=*/{{"f1", "10"}}))
-    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->RewriteCompaction(
+    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
                                                   /*output_level=*/5, /*drop_delete=*/true, runs));
     // check compact result
     ASSERT_EQ(4, compact_result.Before().size());
     ASSERT_EQ(1, compact_result.After().size());
+    const auto& compact_file_meta = compact_result.After()[0];
+    auto expected_file_meta = std::make_shared<DataFileMeta>(
+        "file.orc", 100l, /*row_count=*/7,
+        /*min_key=*/BinaryRowGenerator::GenerateRow({"Bob", 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({"Skye2", 0}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({"Bob", 0}, {"Skye2", 0}, {0, 0}, pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({"Bob", 10, 0, 12.1}, {"Skye2", 10, 0, 31.1},
+                                          {0, 0, 0, 0}, pool_.get()),
+        /*min_sequence_number=*/0l, /*max_sequence_number=*/10l, /*schema_id=*/0, /*level=*/5,
+        std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/0,
+        nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta))
+        << expected_file_meta->ToString() << std::endl
+        << compact_file_meta->ToString();
+    // check compact file exist
     std::string compact_file_name =
         table_path + "/f1=10/bucket-1/" + compact_result.After()[0]->file_name;
     ASSERT_OK_AND_ASSIGN(bool exist, fs->Exists(compact_file_name));
@@ -172,11 +189,28 @@ TEST_F(MergeTreeCompactRewriterTest, TestNotDropDelete) {
     // generate sorted runs and rewrite
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
                                                        /*partition=*/{{"f1", "10"}}))
-    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->RewriteCompaction(
+    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
                                                   /*output_level=*/5, /*drop_delete=*/false, runs));
     // check compact result
     ASSERT_EQ(4, compact_result.Before().size());
     ASSERT_EQ(1, compact_result.After().size());
+    const auto& compact_file_meta = compact_result.After()[0];
+    auto expected_file_meta = std::make_shared<DataFileMeta>(
+        "file.orc", 100l, /*row_count=*/9,
+        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
+        /*key_stats=*/
+        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0}, {0, 0}, pool_.get()),
+        /*value_stats=*/
+        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 31.2},
+                                          {0, 0, 0, 0}, pool_.get()),
+        /*min_sequence_number=*/0l, /*max_sequence_number=*/11l, /*schema_id=*/0, /*level=*/5,
+        std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/2,
+        nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta))
+        << expected_file_meta->ToString() << std::endl
+        << compact_file_meta->ToString();
+
     std::string compact_file_name =
         table_path + "/f1=10/bucket-1/" + compact_result.After()[0]->file_name;
     ASSERT_OK_AND_ASSIGN(bool exist, fs->Exists(compact_file_name));
@@ -229,7 +263,7 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
         // rewrite may trigger I/O exception
         ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
         io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
-        auto compact_result = rewriter->RewriteCompaction(
+        auto compact_result = rewriter->Rewrite(
             /*output_level=*/5, /*drop_delete=*/true, runs);
         CHECK_HOOK_STATUS(compact_result.status(), i);
         io_hook->Clear();

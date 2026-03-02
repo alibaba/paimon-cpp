@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <numeric>
 
 #include "arrow/api.h"
 #include "arrow/array/builder_dict.h"

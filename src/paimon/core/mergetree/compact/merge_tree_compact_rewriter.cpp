@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
 #include "arrow/c/bridge.h"
@@ -67,14 +66,20 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
                            read_context_builder.Finish());
 
     PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<InternalReadContext> interal_context,
+        std::shared_ptr<InternalReadContext> internal_context,
         InternalReadContext::Create(read_context, table_schema, options.ToMap()));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
-        MergeFileSplitRead::Create(path_factory, interal_context, pool, executor));
+        MergeFileSplitRead::Create(path_factory, internal_context, pool, executor));
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
         bucket, partition, table_schema->Id(), trimmed_primary_keys, options, data_schema,
         write_schema, std::move(merge_file_split_read), pool));
+}
+
+Result<CompactResult> MergeTreeCompactRewriter::Upgrade(
+    int32_t output_level, const std::shared_ptr<DataFileMeta>& file) const {
+    PAIMON_ASSIGN_OR_RAISE(auto upgraded_file, file->Upgrade(output_level));
+    return CompactResult({file}, {upgraded_file});
 }
 
 Result<CompactResult> MergeTreeCompactRewriter::Rewrite(
@@ -82,12 +87,24 @@ Result<CompactResult> MergeTreeCompactRewriter::Rewrite(
     return RewriteCompaction(output_level, drop_delete, sections);
 }
 
+std::vector<std::shared_ptr<DataFileMeta>> MergeTreeCompactRewriter::ExtractFilesFromSections(
+    const std::vector<std::vector<SortedRun>>& sections) {
+    std::vector<std::shared_ptr<DataFileMeta>> files;
+    for (const auto& section : sections) {
+        for (const auto& sorted_run : section) {
+            auto files_in_run = sorted_run.Files();
+            files.insert(files.end(), files_in_run.begin(), files_in_run.end());
+        }
+    }
+    return files;
+}
+
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
 MergeTreeCompactRewriter::CreateRollingRowWriter(
     int32_t level, const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    auto create_file_writer = [&]()
+    auto create_file_writer = [this, level, data_file_path_factory]()
         -> Result<std::unique_ptr<SingleFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>> {
-        ::ArrowSchema arrow_schema;
+        ::ArrowSchema arrow_schema{};
         ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*write_schema_, &arrow_schema));
         auto format = options_.GetWriteFileFormat();
@@ -120,10 +137,10 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            path_factory->CreateDataFilePathFactory(partition_, bucket_));
 
-    PAIMON_ASSIGN_OR_RAISE(
-        std::vector<int32_t> target_to_src_mapping,
-        ArrowUtils::CreateProjection(
-            /*src=*/merge_file_split_read_->GetValueSchema(), /*target=*/data_schema_->fields()));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<int32_t> target_to_src_mapping,
+                           ArrowUtils::CreateProjection(
+                               /*src_schema=*/merge_file_split_read_->GetValueSchema(),
+                               /*target_fields=*/data_schema_->fields()));
     auto create_consumer = [target_schema = write_schema_, pool = pool_, target_to_src_mapping]()
         -> Result<std::unique_ptr<RowToArrowArrayConverter<KeyValue, KeyValueBatch>>> {
         return KeyValueMetaProjectionConsumer::Create(target_schema, target_to_src_mapping, pool);
@@ -168,7 +185,7 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     PAIMON_RETURN_NOT_OK(rolling_writer->Close());
     write_guard.Release();
 
-    auto before = AbstractCompactRewriter::ExtractFilesFromSections(sections);
+    auto before = ExtractFilesFromSections(sections);
     NotifyRewriteCompactBefore(before);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> after,
                            rolling_writer->GetResult());
