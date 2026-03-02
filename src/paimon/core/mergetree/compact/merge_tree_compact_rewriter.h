@@ -69,7 +69,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     using KeyValueConsumerCreator =
         AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>::ConsumerCreator;
 
-    MergeTreeCompactRewriter(int32_t bucket, const BinaryRow& partition, int64_t schema_id,
+    MergeTreeCompactRewriter(const BinaryRow& partition, int64_t schema_id,
                              const std::vector<std::string>& trimmed_primary_keys,
                              const CoreOptions& options,
                              const std::shared_ptr<arrow::Schema>& data_schema,
@@ -89,7 +89,6 @@ class MergeTreeCompactRewriter : public CompactRewriter {
 
  private:
     std::shared_ptr<MemoryPool> pool_;
-    int32_t bucket_;
     BinaryRow partition_;
     int64_t schema_id_;
     std::vector<std::string> trimmed_primary_keys_;

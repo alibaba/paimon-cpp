@@ -145,6 +145,11 @@ Status MergeTreeWriter::Flush() {
             std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
             /*projection_thread_num=*/1, pool_);
     auto rolling_writer = CreateRollingRowWriter();
+    ScopeGuard write_guard([&]() -> void {
+        (void)rolling_writer->Close();
+        rolling_writer->Abort();
+        async_key_value_producer_consumer->Close();
+    });
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
                                async_key_value_producer_consumer->NextBatch());
@@ -156,6 +161,7 @@ Status MergeTreeWriter::Flush() {
     PAIMON_RETURN_NOT_OK(rolling_writer->Close());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
                            rolling_writer->GetResult());
+    write_guard.Release();
     new_files_.insert(new_files_.end(), flushed_files.begin(), flushed_files.end());
     metrics_->Merge(rolling_writer->GetMetrics());
     return Status::OK();

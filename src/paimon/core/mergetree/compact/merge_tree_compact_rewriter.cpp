@@ -31,7 +31,7 @@
 
 namespace paimon {
 MergeTreeCompactRewriter::MergeTreeCompactRewriter(
-    int32_t bucket, const BinaryRow& partition, int64_t schema_id,
+    const BinaryRow& partition, int64_t schema_id,
     const std::vector<std::string>& trimmed_primary_keys, const CoreOptions& options,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& write_schema,
@@ -39,7 +39,6 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
-      bucket_(bucket),
       partition_(partition),
       schema_id_(schema_id),
       trimmed_primary_keys_(trimmed_primary_keys),
@@ -77,8 +76,8 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
                            path_factory->CreateDataFilePathFactory(partition, bucket));
 
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
-        bucket, partition, table_schema->Id(), trimmed_primary_keys, options, data_schema,
-        write_schema, data_file_path_factory, std::move(merge_file_split_read), pool));
+        partition, table_schema->Id(), trimmed_primary_keys, options, data_schema, write_schema,
+        data_file_path_factory, std::move(merge_file_split_read), pool));
 }
 
 Result<CompactResult> MergeTreeCompactRewriter::Upgrade(
@@ -204,12 +203,12 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     }
 
     PAIMON_RETURN_NOT_OK(rolling_writer->Close());
-    write_guard.Release();
 
     auto before = ExtractFilesFromSections(sections);
     NotifyRewriteCompactBefore(before);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> after,
                            rolling_writer->GetResult());
+    write_guard.Release();
 
     after = NotifyRewriteCompactAfter(after);
     return CompactResult(before, after);
