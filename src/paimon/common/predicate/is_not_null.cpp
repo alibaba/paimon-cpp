@@ -21,8 +21,8 @@
 namespace paimon {
 class LeafFunction;
 
-const LeafFunction& IsNotNull::Negate() const {
-    return IsNull::Instance();
+const LeafFunction* IsNotNull::Negate() const {
+    return &IsNull::Instance();
 }
 
 }  // namespace paimon

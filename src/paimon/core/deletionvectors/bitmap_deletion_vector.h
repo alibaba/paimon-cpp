@@ -18,16 +18,19 @@
 
 #include <memory>
 
-#include "paimon/common/io/memory_segment_output_stream.h"
+#include "paimon/common/io/data_output_stream.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
-#include "paimon/io/byte_array_input_stream.h"
-#include "paimon/io/data_input_stream.h"
 #include "paimon/utils/roaring_bitmap32.h"
+
 namespace paimon {
+
 /// A `DeletionVector` based on `RoaringBitmap32`, it only supports files with row count
 /// not exceeding `RoaringBitmap32::MAX_VALUE`.
 class BitmapDeletionVector : public DeletionVector {
  public:
+    static constexpr int32_t MAGIC_NUMBER = 1581511376;
+    static constexpr int32_t MAGIC_NUMBER_SIZE_BYTES = 4;
+
     explicit BitmapDeletionVector(const RoaringBitmap32& roaring_bitmap)
         : roaring_bitmap_(roaring_bitmap) {}
 
@@ -51,51 +54,27 @@ class BitmapDeletionVector : public DeletionVector {
         return roaring_bitmap_.IsEmpty();
     }
 
-    Result<PAIMON_UNIQUE_PTR<Bytes>> SerializeToBytes(
-        const std::shared_ptr<MemoryPool>& pool) override {
-        std::shared_ptr<Bytes> bitmap_bytes = roaring_bitmap_.Serialize(pool.get());
-        if (bitmap_bytes == nullptr) {
-            assert(bitmap_bytes);
-            return Status::Invalid("roaring bitmap serialize failed");
-        }
-        MemorySegmentOutputStream output(/*segment_size=*/1024, pool);
-        output.WriteValue<int32_t>(MAGIC_NUMBER);
-        output.WriteBytes(bitmap_bytes);
-        return MemorySegmentUtils::CopyToBytes(output.Segments(), /*offset=*/0,
-                                               output.CurrentSize(), pool.get());
+    int64_t GetCardinality() const override {
+        return roaring_bitmap_.Cardinality();
     }
+
+    Result<int32_t> SerializeTo(const std::shared_ptr<MemoryPool>& pool,
+                                DataOutputStream* out) override;
+
+    Result<PAIMON_UNIQUE_PTR<Bytes>> SerializeToBytes(
+        const std::shared_ptr<MemoryPool>& pool) override;
 
     const RoaringBitmap32* GetBitmap() const {
         return &roaring_bitmap_;
     }
 
     static Result<PAIMON_UNIQUE_PTR<DeletionVector>> Deserialize(const char* buffer, int32_t length,
-                                                                 MemoryPool* pool) {
-        auto in = std::make_shared<ByteArrayInputStream>(buffer, length);
-        DataInputStream input(in);
-        PAIMON_ASSIGN_OR_RAISE(int32_t magic_num, input.ReadValue<int32_t>());
-        if (magic_num != MAGIC_NUMBER) {
-            return Status::Invalid("Invalid magic number: ", std::to_string(magic_num));
-        }
-        RoaringBitmap32 roaring_bitmap;
-        PAIMON_RETURN_NOT_OK(roaring_bitmap.Deserialize(buffer + sizeof(MAGIC_NUMBER),
-                                                        length - sizeof(MAGIC_NUMBER)));
-        return pool->AllocateUnique<BitmapDeletionVector>(roaring_bitmap);
-    }
-
-    static constexpr int32_t MAGIC_NUMBER = 1581511376;
+                                                                 MemoryPool* pool);
 
  private:
-    Status CheckPosition(int64_t position) const {
-        if (position > RoaringBitmap32::MAX_VALUE) {
-            return Status::Invalid(
-                "The file has too many rows, RoaringBitmap32 only supports files with row count "
-                "not exceeding 2147483647.");
-        }
-        return Status::OK();
-    }
+    Status CheckPosition(int64_t position) const;
 
- private:
     RoaringBitmap32 roaring_bitmap_;
 };
+
 }  // namespace paimon

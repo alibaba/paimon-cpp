@@ -53,6 +53,7 @@ const char Options::SNAPSHOT_NUM_RETAINED_MAX[] = "snapshot.num-retained.max";
 const char Options::SNAPSHOT_TIME_RETAINED[] = "snapshot.time-retained";
 const char Options::SNAPSHOT_EXPIRE_LIMIT[] = "snapshot.expire.limit";
 const char Options::SNAPSHOT_CLEAN_EMPTY_DIRECTORIES[] = "snapshot.clean-empty-directories";
+const char Options::COMMIT_FORCE_COMPACT[] = "commit.force-compact";
 const char Options::COMMIT_TIMEOUT[] = "commit.timeout";
 const char Options::COMMIT_MAX_RETRIES[] = "commit.max-retries";
 const char Options::SEQUENCE_FIELD[] = "sequence.field";
@@ -82,4 +83,14 @@ const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
 const char Options::SCAN_TAG_NAME[] = "scan.tag-name";
+const char Options::WRITE_ONLY[] = "write-only";
+const char Options::COMPACTION_MIN_FILE_NUM[] = "compaction.min.file-num";
+const char Options::COMPACTION_FORCE_REWRITE_ALL_FILES[] = "compaction.force-rewrite-all-files";
+const char Options::COMPACTION_OPTIMIZATION_INTERVAL[] = "compaction.optimization-interval";
+const char Options::COMPACTION_TOTAL_SIZE_THRESHOLD[] = "compaction.total-size-threshold";
+const char Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD[] =
+    "compaction.incremental-size-threshold";
+const char Options::COMPACT_OFFPEAK_START_HOUR[] = "compaction.offpeak.start.hour";
+const char Options::COMPACT_OFFPEAK_END_HOUR[] = "compaction.offpeak.end.hour";
+const char Options::COMPACTION_OFFPEAK_RATIO[] = "compaction.offpeak-ratio";
 }  // namespace paimon

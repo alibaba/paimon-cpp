@@ -37,8 +37,12 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.GetFileSystem());
     ASSERT_EQ(-1, core_options.GetBucket());
     ASSERT_EQ(64 * 1024L, core_options.GetPageSize());
-    ASSERT_EQ(256 * 1024 * 1024L, core_options.GetTargetFileSize());
+    ASSERT_EQ(256 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
+    ASSERT_EQ(128 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
     ASSERT_EQ(256 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
+    ASSERT_EQ(187904815, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
+    ASSERT_EQ(93952404, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
+
     ASSERT_EQ("__DEFAULT_PARTITION__", core_options.GetPartitionDefaultName());
     ASSERT_EQ(std::nullopt, core_options.GetScanSnapshotId());
     ASSERT_EQ("zstd", core_options.GetFileCompression());
@@ -53,6 +57,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(1024, core_options.GetReadBatchSize());
     ASSERT_EQ(1024, core_options.GetWriteBatchSize());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_FALSE(core_options.CommitForceCompact());
     ASSERT_EQ(std::numeric_limits<int64_t>::max(), core_options.GetCommitTimeout());
     ASSERT_EQ(10, core_options.GetCommitMaxRetries());
     ExpireConfig expire_config = core_options.GetExpireConfig();
@@ -66,6 +71,9 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(MergeEngine::DEDUPLICATE, core_options.GetMergeEngine());
     ASSERT_EQ(SortEngine::LOSER_TREE, core_options.GetSortEngine());
     ASSERT_FALSE(core_options.IgnoreDelete());
+    ASSERT_FALSE(core_options.WriteOnly());
+    ASSERT_EQ(5, core_options.GetCompactionMinFileNum());
+    ASSERT_FALSE(core_options.CompactionForceRewriteAllFiles());
     ASSERT_EQ(std::nullopt, core_options.GetFieldsDefaultFunc());
     ASSERT_EQ(std::nullopt, core_options.GetFieldAggFunc("f0").value());
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
@@ -89,6 +97,12 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_TRUE(core_options.GlobalIndexEnabled());
     ASSERT_FALSE(core_options.GetGlobalIndexExternalPath());
     ASSERT_EQ(std::nullopt, core_options.GetScanTagName());
+    ASSERT_EQ(std::nullopt, core_options.GetOptimizedCompactionInterval());
+    ASSERT_EQ(std::nullopt, core_options.GetCompactionTotalSizeThreshold());
+    ASSERT_EQ(std::nullopt, core_options.GetCompactionIncrementalSizeThreshold());
+    ASSERT_EQ(-1, core_options.GetCompactOffPeakStartHour());
+    ASSERT_EQ(-1, core_options.GetCompactOffPeakEndHour());
+    ASSERT_EQ(0, core_options.GetCompactOffPeakRatio());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -109,6 +123,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::READ_BATCH_SIZE, "2048"},
         {Options::WRITE_BUFFER_SIZE, "16MB"},
         {Options::WRITE_BATCH_SIZE, "1234"},
+        {Options::COMMIT_FORCE_COMPACT, "true"},
         {Options::COMMIT_TIMEOUT, "120s"},
         {Options::COMMIT_MAX_RETRIES, "20"},
         {Options::SCAN_SNAPSHOT_ID, "5"},
@@ -148,7 +163,15 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::GLOBAL_INDEX_ENABLED, "false"},
         {Options::GLOBAL_INDEX_EXTERNAL_PATH, "FILE:///tmp/global_index/"},
         {Options::SCAN_TAG_NAME, "test-tag"},
-    };
+        {Options::WRITE_ONLY, "true"},
+        {Options::COMPACTION_MIN_FILE_NUM, "10"},
+        {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
+        {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
+        {Options::COMPACTION_TOTAL_SIZE_THRESHOLD, "5 GB"},
+        {Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD, "12 kB"},
+        {Options::COMPACT_OFFPEAK_START_HOUR, "3"},
+        {Options::COMPACT_OFFPEAK_END_HOUR, "16"},
+        {Options::COMPACTION_OFFPEAK_RATIO, "8"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -162,7 +185,8 @@ TEST(CoreOptionsTest, TestFromMap) {
 
     ASSERT_EQ(3, core_options.GetBucket());
     ASSERT_EQ(128 * 1024L, core_options.GetPageSize());
-    ASSERT_EQ(512 * 1024 * 1024L, core_options.GetTargetFileSize());
+    ASSERT_EQ(512 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/true));
+    ASSERT_EQ(512 * 1024 * 1024L, core_options.GetTargetFileSize(/*has_primary_key=*/false));
     ASSERT_EQ(1024 * 1024 * 1024L, core_options.GetBlobTargetFileSize());
     ASSERT_EQ("foo", core_options.GetPartitionDefaultName());
     ASSERT_EQ(16 * 1024 * 1024L, core_options.GetManifestTargetFileSize());
@@ -173,6 +197,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(2048, core_options.GetReadBatchSize());
     ASSERT_EQ(1234, core_options.GetWriteBatchSize());
     ASSERT_EQ(16 * 1024 * 1024, core_options.GetWriteBufferSize());
+    ASSERT_TRUE(core_options.CommitForceCompact());
     ASSERT_EQ(120 * 1000, core_options.GetCommitTimeout());
     ASSERT_EQ(20, core_options.GetCommitMaxRetries());
     ASSERT_EQ(5, core_options.GetScanSnapshotId().value_or(-1));
@@ -220,6 +245,17 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(core_options.GetGlobalIndexExternalPath().value(), "FILE:///tmp/global_index/");
     ASSERT_EQ("test-tag", core_options.GetScanTagName().value());
     ASSERT_EQ(StartupMode::FromSnapshot(), core_options.GetStartupMode());
+    ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/true));
+    ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
+    ASSERT_TRUE(core_options.WriteOnly());
+    ASSERT_EQ(10, core_options.GetCompactionMinFileNum());
+    ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());
+    ASSERT_EQ(2000, core_options.GetOptimizedCompactionInterval().value());
+    ASSERT_EQ(5l * 1024 * 1024 * 1024, core_options.GetCompactionTotalSizeThreshold().value());
+    ASSERT_EQ(12l * 1024, core_options.GetCompactionIncrementalSizeThreshold().value());
+    ASSERT_EQ(3, core_options.GetCompactOffPeakStartHour());
+    ASSERT_EQ(16, core_options.GetCompactOffPeakEndHour());
+    ASSERT_EQ(8, core_options.GetCompactOffPeakRatio());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {

@@ -105,8 +105,8 @@ struct PAIMON_EXPORT Options {
     /// Default value is local.
     static const char FILE_SYSTEM[];
 
-    /// "target-file-size" - Target size of a file. Default value is 256MB.
-    // TODO(xinyu.lxy): change the default value to 128MB for primary key table.
+    /// "target-file-size" - Target size of a file. primary key table: the default value is 128 MB.
+    /// append table: the default value is 256 MB.
     static const char TARGET_FILE_SIZE[];
 
     /// "blob.target-file-size" - Target size of a blob file. Default is TARGET_FILE_SIZE.
@@ -192,6 +192,10 @@ struct PAIMON_EXPORT Options {
     /// snapshots, if enabled, please note: hdfs: may print exceptions in NameNode. oss/s3: may
     /// cause performance issue. Default value is false.
     static const char SNAPSHOT_CLEAN_EMPTY_DIRECTORIES[];
+
+    /// "commit.force-compact" - Whether to force a compaction before commit. Default value is
+    /// "false".
+    static const char COMMIT_FORCE_COMPACT[];
 
     /// "commit.timeout" - Timeout duration of retry when commit failed. No default value.
     static const char COMMIT_TIMEOUT[];
@@ -289,6 +293,42 @@ struct PAIMON_EXPORT Options {
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
+    /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
+    /// option is used along with dedicated compact jobs. Default value is "false".
+    /// @note: This option will be ignore until compaction is supported.
+    static const char WRITE_ONLY[];
+    /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
+    /// compaction for append-only table. Default value is 5.
+    static const char COMPACTION_MIN_FILE_NUM[];
+    /// "compaction.force-rewrite-all-files" - Whether to force pick all files for a full
+    /// compaction. Usually seen in a compaction task to external paths. Default value is "false".
+    static const char COMPACTION_FORCE_REWRITE_ALL_FILES[];
+    /// "compaction.optimization-interval" - Implying how often to perform an optimization
+    /// compaction, this configuration is used to ensure the query timeliness of the read-optimized
+    /// system table. No default value.
+    static const char COMPACTION_OPTIMIZATION_INTERVAL[];
+    /// "compaction.total-size-threshold" - When total size is smaller than this threshold, force a
+    /// full compaction. No default value.
+    static const char COMPACTION_TOTAL_SIZE_THRESHOLD[];
+    /// "compaction.incremental-size-threshold" - When incremental size is bigger than this
+    /// threshold, force a full compaction. No default value.
+    static const char COMPACTION_INCREMENTAL_SIZE_THRESHOLD[];
+    /// "compaction.offpeak.start.hour" - The start of off-peak hours, expressed as an integer
+    /// between 0 and 23, inclusive. Set to -1 to disable off-peak. Default is -1.
+    static const char COMPACT_OFFPEAK_START_HOUR[];
+    /// "compaction.offpeak.end.hour" - The end of off-peak hours, expressed as an integer between 0
+    /// and 23, exclusive. Set to -1 to disable off-peak. Default is -1.
+    static const char COMPACT_OFFPEAK_END_HOUR[];
+    /// "compaction.offpeak-ratio" - Allows you to set a different (by default, more aggressive)
+    /// percentage ratio for determining whether larger sorted run's size are included in
+    /// compactions during off-peak hours. Works in the same way as compaction.size-ratio. Only
+    /// applies if offpeak.start.hour and offpeak.end.hour are also enabled.
+    /// For instance, if your cluster experiences low pressure between 2 AM  and 6 PM , you can
+    /// configure `compaction.offpeak.start.hour=2` and `compaction.offpeak.end.hour=18` to define
+    /// this period as off-peak hours.  During these hours, you can increase the off-peak compaction
+    /// ratio (e.g. `compaction.offpeak-ratio=20`) to enable more aggressive data compaction.
+    /// Default is 0.
+    static const char COMPACTION_OFFPEAK_RATIO[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

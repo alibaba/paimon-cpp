@@ -133,5 +133,37 @@ class PAIMON_EXPORT PredicateBuilder {
     ///
     /// @param predicate A shared pointer to the predicate to be negated, which must not be nullptr.
     static Result<std::shared_ptr<Predicate>> Not(const std::shared_ptr<Predicate>& predicate);
+
+    /// Create a starts-with predicate (field like 'abc%' or field like 'abc_').
+    ///
+    /// Tests whether the field value starts with the provided literal value.
+    static Result<std::shared_ptr<Predicate>> StartsWith(int32_t field_index,
+                                                         const std::string& field_name,
+                                                         const FieldType& field_type,
+                                                         const Literal& literal);
+
+    /// Create an ends-with predicate (field like '%abc' or field like '_abc').
+    ///
+    /// Tests whether the field value ends with the provided literal value.
+    static Result<std::shared_ptr<Predicate>> EndsWith(int32_t field_index,
+                                                       const std::string& field_name,
+                                                       const FieldType& field_type,
+                                                       const Literal& literal);
+
+    /// Create a contains predicate (field like '%abc%').
+    ///
+    /// Tests whether the field value contains the provided literal value.
+    static Result<std::shared_ptr<Predicate>> Contains(int32_t field_index,
+                                                       const std::string& field_name,
+                                                       const FieldType& field_type,
+                                                       const Literal& literal);
+
+    /// Create a like predicate (field like literal).
+    ///
+    /// Tests whether the field value like the provided literal value.
+    static Result<std::shared_ptr<Predicate>> Like(int32_t field_index,
+                                                   const std::string& field_name,
+                                                   const FieldType& field_type,
+                                                   const Literal& literal);
 };
 }  // namespace paimon

@@ -21,8 +21,8 @@
 namespace paimon {
 class LeafFunction;
 
-const LeafFunction& LessOrEqual::Negate() const {
-    return GreaterThan::Instance();
+const LeafFunction* LessOrEqual::Negate() const {
+    return &GreaterThan::Instance();
 }
 
 }  // namespace paimon

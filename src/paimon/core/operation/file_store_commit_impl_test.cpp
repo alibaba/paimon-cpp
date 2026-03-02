@@ -37,7 +37,6 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/factories/io_hook.h"
-#include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/catalog/commit_table_request.h"
@@ -62,7 +61,6 @@
 #include "paimon/fs/local/local_file_system_factory.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/metrics.h"
-#include "paimon/string_builder.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/testharness.h"
@@ -88,26 +86,27 @@ class GmockFileSystemFactory : public LocalFileSystemFactory {
 
     Result<std::unique_ptr<FileSystem>> Create(
         const std::string& path, const std::map<std::string, std::string>& options) const override {
-        auto fs = std::make_unique<GmockFileSystem>();
+        auto fs = std::make_unique<testing::NiceMock<GmockFileSystem>>();
+        auto fs_ptr = fs.get();
         using ::testing::A;
         using ::testing::Invoke;
 
         ON_CALL(*fs, ListDir(A<const std::string&>(),
                              A<std::vector<std::unique_ptr<BasicFileStatus>>*>()))
             .WillByDefault(
-                Invoke([&](const std::string& directory,
-                           std::vector<std::unique_ptr<BasicFileStatus>>* file_status_list) {
-                    return fs->LocalFileSystem::ListDir(directory, file_status_list);
+                Invoke([fs_ptr](const std::string& directory,
+                                std::vector<std::unique_ptr<BasicFileStatus>>* file_status_list) {
+                    return fs_ptr->LocalFileSystem::ListDir(directory, file_status_list);
                 }));
 
         ON_CALL(*fs, ReadFile(A<const std::string&>(), A<std::string*>()))
-            .WillByDefault(Invoke([&](const std::string& path, std::string* content) {
-                return fs->FileSystem::ReadFile(path, content);
+            .WillByDefault(Invoke([fs_ptr](const std::string& path, std::string* content) {
+                return fs_ptr->FileSystem::ReadFile(path, content);
             }));
 
         ON_CALL(*fs, AtomicStore(A<const std::string&>(), A<const std::string&>()))
-            .WillByDefault(Invoke([&](const std::string& path, const std::string& content) {
-                return fs->FileSystem::AtomicStore(path, content);
+            .WillByDefault(Invoke([fs_ptr](const std::string& path, const std::string& content) {
+                return fs_ptr->FileSystem::AtomicStore(path, content);
             }));
 
         return fs;
@@ -364,33 +363,31 @@ TEST_F(FileStoreCommitImplTest, TestRESTCatalogCommit) {
     ASSERT_FALSE(exist);
 }
 
-// TODO(jinli.zjw): fix disabled case
-TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryTenTimes) {
+TEST_F(FileStoreCommitImplTest, TestCommitWithConflictSnapshotAndRetryTenTimes) {
     std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
     auto dir = UniqueTestDirectory::Create();
     std::string table_path = dir->Str();
     ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, table_path));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("gmock_fs", table_path, {}));
     CommitContextBuilder context_builder(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
                              .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
                              .AddOption(Options::COMMIT_MAX_RETRIES, "10")
-                             .AddOption(Options::FILE_SYSTEM, "gmock_fs")
+                             .WithFileSystem(fs)
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
     std::string latest_hint = PathUtil::JoinPath(table_path, "snapshot/LATEST");
 
-    auto* resolving_fs =
-        dynamic_cast<ResolvingFileSystem*>(commit_impl->snapshot_manager_->fs_.get());
-    ASSERT_OK_AND_ASSIGN(auto real_fs, resolving_fs->GetRealFileSystem(table_path));
-    auto* mock_fs = dynamic_cast<GmockFileSystem*>(real_fs.get());
+    auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
     EXPECT_CALL(*mock_fs, ReadFile(testing::StrEq(latest_hint), testing::_))
         .WillRepeatedly(testing::Invoke([](const std::string& path, std::string* content) {
             *content = "-1";
             return Status::OK();
         }));
+    EXPECT_CALL(*mock_fs, ListDir(testing::_, testing::_)).Times(testing::AnyNumber());
     EXPECT_CALL(*mock_fs,
                 ListDir(testing::StrEq(PathUtil::JoinPath(table_path, "snapshot")), testing::_))
         .WillRepeatedly(
@@ -407,25 +404,23 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryT
     ASSERT_NOK(commit->Commit(msgs));
 }
 
-TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryOnce) {
+TEST_F(FileStoreCommitImplTest, TestCommitWithConflictSnapshotAndRetryOnce) {
     std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
     auto dir = UniqueTestDirectory::Create();
     std::string table_path = dir->Str();
     ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, table_path));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("gmock_fs", table_path, {}));
     CommitContextBuilder context_builder(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
                              .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "gmock_fs")
+                             .WithFileSystem(fs)
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
     std::string latest_hint = PathUtil::JoinPath(table_path, "snapshot/LATEST");
-    auto* resolving_fs =
-        dynamic_cast<ResolvingFileSystem*>(commit_impl->snapshot_manager_->fs_.get());
-    ASSERT_OK_AND_ASSIGN(auto real_fs, resolving_fs->GetRealFileSystem(table_path));
-    auto* mock_fs = dynamic_cast<GmockFileSystem*>(real_fs.get());
+    auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
     EXPECT_CALL(*mock_fs, ReadFile(testing::StrEq(latest_hint), testing::_))
         .WillRepeatedly(testing::Invoke([](const std::string& path, std::string* content) {
             *content = "-1";
@@ -439,6 +434,7 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryO
             return mock_fs->FileSystem::ReadFile(path, content);
         }));
 
+    EXPECT_CALL(*mock_fs, ListDir(testing::_, testing::_)).Times(testing::AnyNumber());
     EXPECT_CALL(*mock_fs,
                 ListDir(testing::StrEq(PathUtil::JoinPath(table_path, "snapshot")), testing::_))
         .WillOnce(
@@ -468,25 +464,23 @@ TEST_F(FileStoreCommitImplTest, DISABLED_TestCommitWithConflictSnapshotAndRetryO
     ASSERT_TRUE(exist);
 }
 
-TEST_F(FileStoreCommitImplTest,
-       DISABLED_TestCommitWithAtomicWriteSnapshotTimeoutAndActuallySucceed) {
+TEST_F(FileStoreCommitImplTest, TestCommitWithAtomicWriteSnapshotTimeoutAndActuallySucceed) {
     std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
     auto dir = UniqueTestDirectory::Create();
     std::string table_path = dir->Str();
     ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, table_path));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("gmock_fs", table_path, {}));
     CommitContextBuilder context_builder(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context,
                          context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
                              .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "gmock_fs")
+                             .WithFileSystem(fs)
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit, FileStoreCommit::Create(std::move(commit_context)));
     std::string new_snapshot_6 = PathUtil::JoinPath(table_path, "snapshot/snapshot-6");
-    auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit.get());
-    auto* resolving_fs = dynamic_cast<ResolvingFileSystem*>(commit_impl->fs_.get());
-    ASSERT_OK_AND_ASSIGN(auto real_fs, resolving_fs->GetRealFileSystem(table_path));
-    auto* mock_fs = dynamic_cast<GmockFileSystem*>(real_fs.get());
+    auto* mock_fs = dynamic_cast<GmockFileSystem*>(fs.get());
     EXPECT_CALL(*mock_fs, AtomicStore(testing::StrEq(new_snapshot_6), testing::_))
         .WillOnce(testing::Invoke([&](const std::string& path, const std::string& content) {
             // to mock atomic store timeout actually succeed
@@ -507,22 +501,18 @@ TEST_F(FileStoreCommitImplTest,
 
     CommitContextBuilder context_builder_2(table_path, "commit_user_1");
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<CommitContext> commit_context_2,
-                         context_builder.AddOption(Options::MANIFEST_FORMAT, "orc")
+                         context_builder_2.AddOption(Options::MANIFEST_FORMAT, "orc")
                              .AddOption(Options::MANIFEST_TARGET_FILE_SIZE, "8mb")
-                             .AddOption(Options::FILE_SYSTEM, "gmock_fs")
+                             .WithFileSystem(fs)
                              .Finish());
 
     ASSERT_OK_AND_ASSIGN(auto commit_2, FileStoreCommit::Create(std::move(commit_context_2)));
     ASSERT_OK_AND_ASSIGN(int32_t num_committed, commit_2->FilterAndCommit({{1, msgs}}));
     ASSERT_EQ(0, num_committed);
-    auto commit_impl_2 = dynamic_cast<FileStoreCommitImpl*>(commit_2.get());
-    auto* resolving_fs_2 = dynamic_cast<ResolvingFileSystem*>(commit_impl_2->fs_.get());
-    ASSERT_OK_AND_ASSIGN(auto real_fs_2, resolving_fs_2->GetRealFileSystem(table_path));
-    auto* mock_fs_2 = dynamic_cast<GmockFileSystem*>(real_fs_2.get());
     std::string new_snapshot_7 = PathUtil::JoinPath(table_path, "snapshot/snapshot-7");
-    EXPECT_CALL(*mock_fs_2, AtomicStore(testing::StrEq(new_snapshot_7), testing::_))
+    EXPECT_CALL(*mock_fs, AtomicStore(testing::StrEq(new_snapshot_7), testing::_))
         .WillOnce(testing::Invoke([&](const std::string& path, const std::string& content) {
-            return mock_fs_2->FileSystem::AtomicStore(path, content);
+            return mock_fs->FileSystem::AtomicStore(path, content);
         }));
     std::vector<std::shared_ptr<CommitMessage>> msgs_2 =
         GetCommitMessages(paimon::test::GetDataDir() +

@@ -21,8 +21,8 @@
 namespace paimon {
 class LeafFunction;
 
-const LeafFunction& NotIn::Negate() const {
-    return In::Instance();
+const LeafFunction* NotIn::Negate() const {
+    return &In::Instance();
 }
 
 }  // namespace paimon
