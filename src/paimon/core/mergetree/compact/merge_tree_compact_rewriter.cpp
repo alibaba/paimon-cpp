@@ -154,7 +154,8 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
     bool drop_delete, const std::vector<SortedRun>& section,
     const MergeTreeCompactRewriter::KeyValueConsumerCreator& create_consumer,
     MergeTreeCompactRewriter::KeyValueRollingFileWriter* rolling_writer,
-    std::vector<MergeTreeCompactRewriter::KeyValueMergeReader>* reader_holders_ptr) {
+    std::vector<std::unique_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>>*
+        reader_holders_ptr) {
     auto& reader_holders = *reader_holders_ptr;
     // prepare loser tree sort merge reader
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
@@ -186,7 +187,7 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     PAIMON_ASSIGN_OR_RAISE(MergeTreeCompactRewriter::KeyValueConsumerCreator create_consumer,
                            GenerateKeyValueConsumer());
 
-    std::vector<MergeTreeCompactRewriter::KeyValueMergeReader> reader_holders;
+    std::vector<std::unique_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>> reader_holders;
     auto rolling_writer = CreateRollingRowWriter(output_level);
 
     ScopeGuard write_guard([&]() -> void {
