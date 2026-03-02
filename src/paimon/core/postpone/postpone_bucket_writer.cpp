@@ -253,7 +253,7 @@ PostponeBucketWriter::CreateRollingRowWriter() const {
             return Status::OK();
         };
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, FileSource::Append(),
+            options_.GetFileCompression(), converter, schema_id_, /*level=*/0, FileSource::Append(),
             trimmed_primary_keys_, /*stats_extractor=*/nullptr, write_schema_,
             path_factory_->IsExternalPath(), pool_);
         PAIMON_RETURN_NOT_OK(

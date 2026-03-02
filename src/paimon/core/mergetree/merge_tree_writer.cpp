@@ -80,13 +80,7 @@ MergeTreeWriter::MergeTreeWriter(
       schema_id_(schema_id),
       value_type_(arrow::struct_(value_schema->fields())),
       metrics_(std::make_shared<MetricsImpl>()) {
-    arrow::FieldVector target_fields;
-    target_fields.push_back(
-        DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
-    target_fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind()));
-    target_fields.insert(target_fields.end(), value_schema->fields().begin(),
-                         value_schema->fields().end());
-    write_schema_ = arrow::schema(target_fields);
+    write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 }
 
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
@@ -196,7 +190,7 @@ MergeTreeWriter::CreateRollingRowWriter() const {
             return Status::OK();
         };
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, FileSource::Append(),
+            options_.GetFileCompression(), converter, schema_id_, /*level=*/0, FileSource::Append(),
             trimmed_primary_keys_, stats_extractor, write_schema_, path_factory_->IsExternalPath(),
             pool_);
         PAIMON_RETURN_NOT_OK(

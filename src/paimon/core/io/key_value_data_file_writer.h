@@ -47,7 +47,7 @@ class KeyValueDataFileWriter
  public:
     KeyValueDataFileWriter(const std::string& compression,
                            std::function<Status(KeyValueBatch&&, ::ArrowArray*)> converter,
-                           int64_t schema_id, FileSource file_source,
+                           int64_t schema_id, int32_t level, FileSource file_source,
                            const std::vector<std::string>& primary_keys,
                            const std::shared_ptr<FormatStatsExtractor>& stats_extractor,
                            const std::shared_ptr<arrow::Schema>& write_schema,
@@ -69,6 +69,7 @@ class KeyValueDataFileWriter
  private:
     std::shared_ptr<MemoryPool> pool_;
     int64_t schema_id_;
+    int32_t level_;
     FileSource file_source_;
     std::vector<std::string> primary_keys_;
     std::shared_ptr<FormatStatsExtractor> stats_extractor_;
