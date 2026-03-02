@@ -142,9 +142,8 @@ TEST_F(MergeTreeCompactRewriterTest, TestSimple) {
         /*min_sequence_number=*/0l, /*max_sequence_number=*/10l, /*schema_id=*/0, /*level=*/5,
         std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/0,
         nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
-    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta))
-        << expected_file_meta->ToString() << std::endl
-        << compact_file_meta->ToString();
+    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta));
+
     // check compact file exist
     std::string compact_file_name =
         table_path + "/f1=10/bucket-1/" + compact_result.After()[0]->file_name;
@@ -207,9 +206,7 @@ TEST_F(MergeTreeCompactRewriterTest, TestNotDropDelete) {
         /*min_sequence_number=*/0l, /*max_sequence_number=*/11l, /*schema_id=*/0, /*level=*/5,
         std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/2,
         nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
-    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta))
-        << expected_file_meta->ToString() << std::endl
-        << compact_file_meta->ToString();
+    ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta));
 
     std::string compact_file_name =
         table_path + "/f1=10/bucket-1/" + compact_result.After()[0]->file_name;

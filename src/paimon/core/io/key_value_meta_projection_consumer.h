@@ -59,13 +59,13 @@ class KeyValueMetaProjectionConsumer : public RowToArrowArrayConverter<KeyValue,
                                    arrow::Int8Builder* value_kind_appender)
         : RowToArrowArrayConverter(reserve_count, std::move(appenders), std::move(array_builder),
                                    std::move(arrow_pool)),
+          target_to_src_mapping_(target_to_src_mapping),
           sequence_appender_(sequence_appender),
-          value_kind_appender_(value_kind_appender),
-          target_to_src_mapping_(target_to_src_mapping) {}
+          value_kind_appender_(value_kind_appender) {}
 
  private:
+    std::vector<int32_t> target_to_src_mapping_;
     arrow::Int64Builder* sequence_appender_;
     arrow::Int8Builder* value_kind_appender_;
-    std::vector<int32_t> target_to_src_mapping_;
 };
 }  // namespace paimon

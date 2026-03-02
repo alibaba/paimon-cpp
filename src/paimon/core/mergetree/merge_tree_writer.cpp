@@ -142,8 +142,7 @@ Status MergeTreeWriter::Flush() {
     // consumer batch size is WriteBatchSize
     auto async_key_value_producer_consumer =
         std::make_unique<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>(
-            std::move(sort_merge_reader), create_consumer,
-            std::min(options_.GetWriteBatchSize(), MAX_PROJECTION_BATCH_SIZE),
+            std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
             /*projection_thread_num=*/1, pool_);
     auto rolling_writer = CreateRollingRowWriter();
     while (true) {

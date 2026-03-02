@@ -18,6 +18,7 @@
 
 #include "arrow/api.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/io/async_key_value_producer_and_consumer.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/key_value.h"
@@ -62,20 +63,31 @@ class MergeTreeCompactRewriter : public CompactRewriter {
         const std::vector<std::vector<SortedRun>>& sections);
 
  private:
+    using KeyValueRollingFileWriter =
+        RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>;
+    using KeyValueMergeReader =
+        std::unique_ptr<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>;
+    using KeyValueConsumerCreator =
+        AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>::ConsumerCreator;
+
     MergeTreeCompactRewriter(int32_t bucket, const BinaryRow& partition, int64_t schema_id,
                              const std::vector<std::string>& trimmed_primary_keys,
                              const CoreOptions& options,
                              const std::shared_ptr<arrow::Schema>& data_schema,
                              const std::shared_ptr<arrow::Schema>& write_schema,
+                             const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
                              std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                              const std::shared_ptr<MemoryPool>& pool);
 
-    std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
-    CreateRollingRowWriter(
-        int32_t level, const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+    std::unique_ptr<KeyValueRollingFileWriter> CreateRollingRowWriter(int32_t level) const;
 
-    // in case write batch size is too large and overflow arrow array
-    static constexpr int32_t MAX_PROJECTION_BATCH_SIZE = 100000;
+    Result<KeyValueConsumerCreator> GenerateKeyValueConsumer() const;
+
+    Status MergeReadAndWrite(
+        bool drop_delete, const std::vector<SortedRun>& section,
+        const KeyValueConsumerCreator& create_consumer,
+        MergeTreeCompactRewriter::KeyValueRollingFileWriter* rolling_writer,
+        std::vector<MergeTreeCompactRewriter::KeyValueMergeReader>* reader_holders_ptr);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
@@ -88,6 +100,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     std::shared_ptr<arrow::Schema> data_schema_;
     // SequenceNumber + ValueKind + data_schema_
     std::shared_ptr<arrow::Schema> write_schema_;
+    std::shared_ptr<DataFilePathFactory> data_file_path_factory_;
     std::unique_ptr<MergeFileSplitRead> merge_file_split_read_;
 };
 
