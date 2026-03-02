@@ -36,7 +36,7 @@ find_path(JINDOSDK_INCLUDE_DIR jdo_api.h
           PATH_SUFFIXES "include")
 
 find_library(JINDOSDK_LIBRARY
-             NAMES jindosdk_c
+             NAMES ${JINDOSDK_LIBRARY_NAME}
              HINTS ${_jindosdk_path}
              PATH_SUFFIXES "lib/native")
 
