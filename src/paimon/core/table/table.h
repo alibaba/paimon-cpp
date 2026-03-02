@@ -36,26 +36,26 @@ class PAIMON_EXPORT Table {
           const std::string& table_name)
         : schema_(schema), database_(database), table_name_(table_name) {}
 
-    virtual ~Table() = default;
+    ~Table() = default;
 
     /// A name to identify this table.
-    virtual std::string Name() const {
+    std::string Name() const {
         return database_ + "." + table_name_;
     }
 
     /// Full name of the table, default is database.tableName.
-    virtual std::string FullName() const {
+    std::string FullName() const {
         return Name();
     }
 
     /// UUID of the table, metastore can provide the true UUID of this table, default is the full
     /// name.
-    virtual std::string Uuid() const {
+    std::string Uuid() const {
         return FullName();
     }
 
     /// Loads the latest schema of table.
-    virtual std::shared_ptr<Schema> LatestSchema() {
+    std::shared_ptr<Schema> LatestSchema() {
         return schema_;
     }
 
