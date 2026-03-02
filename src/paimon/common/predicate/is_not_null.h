@@ -47,7 +47,7 @@ class IsNotNull : public LeafUnaryFunction {
     Type GetType() const override {
         return Type::IS_NOT_NULL;
     }
-    const LeafFunction& Negate() const override;
+    const LeafFunction* Negate() const override;
     std::string ToString() const override {
         return "IsNotNull";
     }

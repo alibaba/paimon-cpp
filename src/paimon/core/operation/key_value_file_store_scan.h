@@ -20,7 +20,6 @@
 #include <string>
 #include <vector>
 
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/table/source/scan_mode.h"
@@ -40,6 +39,7 @@ class MemoryPool;
 class PredicateFilter;
 class ScanFilter;
 class SchemaManager;
+class SimpleStatsEvolutions;
 class SnapshotManager;
 class TableSchema;
 
@@ -105,13 +105,12 @@ class KeyValueFileStoreScan : public FileStoreScan {
                           const std::shared_ptr<arrow::Schema>& schema,
                           const CoreOptions& core_options,
                           const std::shared_ptr<Executor>& executor,
-                          const std::shared_ptr<MemoryPool>& pool)
-        : FileStoreScan(snapshot_manager, schema_manager, manifest_list, manifest_file,
-                        table_schema, schema, core_options, executor, pool) {}
+                          const std::shared_ptr<MemoryPool>& pool);
 
  private:
     bool value_filter_force_enabled_ = false;
     std::shared_ptr<PredicateFilter> key_filter_;
     std::shared_ptr<PredicateFilter> value_filter_;
+    std::shared_ptr<SimpleStatsEvolutions> evolutions_;
 };
 }  // namespace paimon

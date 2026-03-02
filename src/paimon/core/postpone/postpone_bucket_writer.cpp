@@ -261,7 +261,7 @@ PostponeBucketWriter::CreateRollingRowWriter() const {
         return writer;
     };
     return std::make_unique<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(
-        options_.GetTargetFileSize(), create_file_writer);
+        options_.GetTargetFileSize(/*has_primary_key=*/true), create_file_writer);
 }
 
 Status PostponeBucketWriter::Flush() {

@@ -157,30 +157,4 @@ Result<bool> AppendOnlyFileStoreScan::TestFileIndex(
     return index_result->IsRemain();
 }
 
-Result<std::shared_ptr<Predicate>> AppendOnlyFileStoreScan::ReconstructPredicateWithNonCastedFields(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::shared_ptr<SimpleStatsEvolution>& evolution) {
-    const auto& id_to_data_fields = evolution->GetFieldIdToDataField();
-    const auto& name_to_table_fields = evolution->GetFieldNameToTableField();
-
-    std::set<std::string> field_names_in_predicate;
-    PAIMON_RETURN_NOT_OK(PredicateUtils::GetAllNames(predicate, &field_names_in_predicate));
-    std::set<std::string> excluded_field_names;
-    for (const auto& field_name : field_names_in_predicate) {
-        auto table_iter = name_to_table_fields.find(field_name);
-        if (table_iter == name_to_table_fields.end()) {
-            return Status::Invalid(
-                fmt::format("field {} in predicate is not included in table schema", field_name));
-        }
-        auto data_iter = id_to_data_fields.find(table_iter->second.Id());
-        if (data_iter != id_to_data_fields.end()) {
-            // TODO(liancheng.lsz): isnull/notnull predicates trimming might not be required
-            if (!data_iter->second.second.Type()->Equals(table_iter->second.Type())) {
-                excluded_field_names.insert(field_name);
-            }
-        }
-    }
-    return PredicateUtils::ExcludePredicateWithFields(predicate, excluded_field_names);
-}
-
 }  // namespace paimon

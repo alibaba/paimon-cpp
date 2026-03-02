@@ -16,12 +16,7 @@
 
 #include "paimon/common/io/data_output_stream.h"
 
-#include <cassert>
-#include <type_traits>
-
 #include "fmt/format.h"
-#include "paimon/common/utils/math.h"
-#include "paimon/fs/file_system.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/result.h"
 
@@ -29,20 +24,6 @@ namespace paimon {
 DataOutputStream::DataOutputStream(const std::shared_ptr<OutputStream>& output_stream)
     : output_stream_(output_stream) {
     assert(output_stream_);
-}
-template <typename T>
-Status DataOutputStream::WriteValue(const T& value) {
-    static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-    T write_value = value;
-    if (NeedSwap()) {
-        write_value = EndianSwapValue(value);
-    }
-    int32_t write_length = sizeof(T);
-    PAIMON_ASSIGN_OR_RAISE(
-        int32_t actual_write_length,
-        output_stream_->Write(reinterpret_cast<char*>(&write_value), write_length));
-    PAIMON_RETURN_NOT_OK(AssertWriteLength(write_length, actual_write_length));
-    return Status::OK();
 }
 
 Status DataOutputStream::WriteBytes(const std::shared_ptr<Bytes>& bytes) {

@@ -31,6 +31,7 @@
 
 namespace paimon {
 class FileSystem;
+class DataOutputStream;
 struct DeletionFile;
 
 /// The DeletionVector can efficiently record the positions of rows that are deleted in a file,
@@ -71,6 +72,13 @@ class DeletionVector {
     ///
     /// @return true if the deletion vector is empty, false if it contains deletions.
     virtual bool IsEmpty() const = 0;
+
+    /// @return the number of distinct integers added to the DeletionVector.
+    virtual int64_t GetCardinality() const = 0;
+
+    /// Serializes the deletion vector.
+    virtual Result<int32_t> SerializeTo(const std::shared_ptr<MemoryPool>& pool,
+                                        DataOutputStream* out) = 0;
 
     /// Serializes the deletion vector to a byte array for storage or transmission.
     ///

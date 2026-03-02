@@ -2584,7 +2584,6 @@ TEST_P(ScanAndReadInteTest, TestCastTimestampType) {
     ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
 }
 
-#ifdef PAIMON_ENABLE_AVRO
 TEST_F(ScanAndReadInteTest, TestAvroWithAppendTable) {
     auto read_data = [](int64_t snapshot_id, const std::string& result_json) {
         std::string table_path = GetDataDir() + "/avro/append_multiple.db/append_multiple";
@@ -2721,6 +2720,5 @@ TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
 [0, true, 10, 1, 1, 1000, 1.5, 2.5, "Tony", "abcdef", 100, "123.45", [[["key",123]],[1,2,3]]]
 ])");
 }
-#endif
 
 }  // namespace paimon::test
