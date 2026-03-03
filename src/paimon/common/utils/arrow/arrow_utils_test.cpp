@@ -70,17 +70,17 @@ TEST(ArrowUtilsTest, TestCreateProjection) {
         ASSERT_EQ(projection, expected_projection);
     }
     {
-        // read field not found in file schema
+        // read field not found in src schema
         arrow::FieldVector read_fields = {
             arrow::field("k1", arrow::int32()), arrow::field("p1", arrow::int32()),
             arrow::field("s1", arrow::utf8()), arrow::field("v2", arrow::float64()),
             arrow::field("v1", arrow::boolean())};
         auto read_schema = arrow::schema(read_fields);
         ASSERT_NOK_WITH_MSG(ArrowUtils::CreateProjection(file_schema, read_schema->fields()),
-                            "Field 'v2' not found or duplicate in file schema");
+                            "Field 'v2' not found or duplicate in src schema");
     }
     {
-        // duplicate field in file schema
+        // duplicate field in src schema
         arrow::FieldVector file_fields_dup = {
             arrow::field("k0", arrow::int32()),   arrow::field("k1", arrow::int32()),
             arrow::field("p1", arrow::int32()),   arrow::field("s1", arrow::utf8()),
@@ -93,7 +93,7 @@ TEST(ArrowUtilsTest, TestCreateProjection) {
             arrow::field("v1", arrow::boolean())};
         auto read_schema = arrow::schema(read_fields);
         ASSERT_NOK_WITH_MSG(ArrowUtils::CreateProjection(file_schema_dup, read_schema->fields()),
-                            "Field 'v1' not found or duplicate in file schema");
+                            "Field 'v1' not found or duplicate in src schema");
     }
     {
         arrow::FieldVector read_fields = {

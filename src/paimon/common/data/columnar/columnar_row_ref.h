@@ -51,61 +51,61 @@ class ColumnarRowRef : public InternalRow {
     }
 
     int32_t GetFieldCount() const override {
-        return static_cast<int32_t>(ctx_->array_ptrs.size());
+        return static_cast<int32_t>(ctx_->array_vec.size());
     }
 
     bool IsNullAt(int32_t pos) const override {
-        return ctx_->array_ptrs[pos]->IsNull(row_id_);
+        return ctx_->array_vec[pos]->IsNull(row_id_);
     }
 
     bool GetBoolean(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::BooleanType, bool>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::BooleanType, bool>(ctx_->array_vec[pos].get(),
                                                                         row_id_);
     }
 
     char GetByte(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int8Type, char>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::Int8Type, char>(ctx_->array_vec[pos].get(),
                                                                      row_id_);
     }
 
     int16_t GetShort(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int16Type, int16_t>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::Int16Type, int16_t>(ctx_->array_vec[pos].get(),
                                                                          row_id_);
     }
 
     int32_t GetInt(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int32Type, int32_t>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::Int32Type, int32_t>(ctx_->array_vec[pos].get(),
                                                                          row_id_);
     }
 
     int32_t GetDate(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Date32Type, int32_t>(ctx_->array_ptrs[pos],
-                                                                          row_id_);
+        return ColumnarUtils::GetGenericValue<arrow::Date32Type, int32_t>(
+            ctx_->array_vec[pos].get(), row_id_);
     }
 
     int64_t GetLong(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::Int64Type, int64_t>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::Int64Type, int64_t>(ctx_->array_vec[pos].get(),
                                                                          row_id_);
     }
 
     float GetFloat(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::FloatType, float>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::FloatType, float>(ctx_->array_vec[pos].get(),
                                                                        row_id_);
     }
 
     double GetDouble(int32_t pos) const override {
-        return ColumnarUtils::GetGenericValue<arrow::DoubleType, double>(ctx_->array_ptrs[pos],
+        return ColumnarUtils::GetGenericValue<arrow::DoubleType, double>(ctx_->array_vec[pos].get(),
                                                                          row_id_);
     }
 
     BinaryString GetString(int32_t pos) const override {
-        auto bytes = ColumnarUtils::GetBytes<arrow::StringType>(ctx_->array_ptrs[pos], row_id_,
+        auto bytes = ColumnarUtils::GetBytes<arrow::StringType>(ctx_->array_vec[pos].get(), row_id_,
                                                                 ctx_->pool.get());
         return BinaryString::FromBytes(bytes);
     }
 
     std::string_view GetStringView(int32_t pos) const override {
-        return ColumnarUtils::GetView(ctx_->array_ptrs[pos], row_id_);
+        return ColumnarUtils::GetView(ctx_->array_vec[pos].get(), row_id_);
     }
 
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override;
@@ -113,7 +113,7 @@ class ColumnarRowRef : public InternalRow {
     Timestamp GetTimestamp(int32_t pos, int32_t precision) const override;
 
     std::shared_ptr<Bytes> GetBinary(int32_t pos) const override {
-        return ColumnarUtils::GetBytes<arrow::BinaryType>(ctx_->array_ptrs[pos], row_id_,
+        return ColumnarUtils::GetBytes<arrow::BinaryType>(ctx_->array_vec[pos].get(), row_id_,
                                                           ctx_->pool.get());
     }
 

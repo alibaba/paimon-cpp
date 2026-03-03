@@ -43,11 +43,13 @@ class Metrics;
 template <typename T, typename R>
 class AsyncKeyValueProducerAndConsumer {
  public:
-    AsyncKeyValueProducerAndConsumer(
-        std::unique_ptr<SortMergeReader>&& sort_merge_reader,
-        const std::function<Result<std::unique_ptr<RowToArrowArrayConverter<T, R>>>()>&
-            create_consumer,
-        int32_t batch_size, int32_t consumer_thread_num, const std::shared_ptr<MemoryPool>& pool);
+    using ConsumerCreator =
+        std::function<Result<std::unique_ptr<RowToArrowArrayConverter<T, R>>>()>;
+
+    AsyncKeyValueProducerAndConsumer(std::unique_ptr<SortMergeReader>&& sort_merge_reader,
+                                     ConsumerCreator create_consumer, int32_t batch_size,
+                                     int32_t consumer_thread_num,
+                                     const std::shared_ptr<MemoryPool>& pool);
 
     ~AsyncKeyValueProducerAndConsumer() {
         CleanUp();
@@ -66,6 +68,10 @@ class AsyncKeyValueProducerAndConsumer {
 
  private:
     static constexpr int32_t RESULT_BATCH_COUNT = 3;
+
+    // in case write batch size is too large and overflow arrow array
+    static constexpr int32_t MAX_PROJECTION_BATCH_SIZE = 100000;
+
     void CleanUpQueue();
     Status ProduceLoop();
     void CleanUp();
@@ -77,7 +83,7 @@ class AsyncKeyValueProducerAndConsumer {
     int32_t consumer_thread_num_;
     std::shared_ptr<MemoryPool> pool_;
     std::unique_ptr<SortMergeReader> sort_merge_reader_;
-    std::function<Result<std::unique_ptr<RowToArrowArrayConverter<T, R>>>()> create_consumer_;
+    ConsumerCreator create_consumer_;
 
     // produce: merge sort KeyValue and push result KeyValue to kv_queue_, consume: project KeyValue
     // to arrow array and push result array to result_queue_

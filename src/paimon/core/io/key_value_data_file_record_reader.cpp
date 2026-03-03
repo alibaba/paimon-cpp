@@ -77,7 +77,6 @@ Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
                            RowKind::FromByteValue(reader_->row_kind_array_->Value(cursor_)));
     int64_t sequence_number = reader_->sequence_number_array_->Value(cursor_);
     cursor_++;
-    // TODO(xinyu.lxy): reuse KeyValue and ColumnarRow to avoid construct and destruction
     return KeyValue(row_kind, sequence_number, reader_->level_, std::move(key), std::move(value));
 }
 
@@ -96,7 +95,7 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     }
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
                                       arrow::ImportArray(c_array.get(), c_schema.get()));
-    auto* data_batch = arrow::internal::checked_cast<arrow::StructArray*>(arrow_array.get());
+    auto data_batch = arrow::internal::checked_pointer_cast<arrow::StructArray>(arrow_array);
     assert(data_batch);
     // do not use arrow::checked_pointer_cast as in release compile, checked_pointer_cast is
     // static_cast without check
@@ -110,34 +109,32 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     if (!row_kind_array_) {
         return Status::Invalid("cannot cast VALUE_KIND column to int8 arrow array");
     }
-
-    key_fields_.reserve(key_arity_);
+    arrow::ArrayVector key_fields;
+    key_fields.reserve(key_arity_);
     for (int32_t i = 0; i < key_arity_; i++) {
         // skip special fields
-        key_fields_.emplace_back(
+        key_fields.emplace_back(
             data_batch->field(i + SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT));
     }
     // e.g., file schema:    seq, kind, key1, key2, s1, s2, v1, v2
     // user raw read schema: key1, v1, s1
     // format reader read schema: seq, kind, key1, key2, v1, s1, s2
     // in KeyValue object: key: key1, key2 / value: key1, v1, s1, s2
-    value_fields_.reserve(value_schema_->num_fields());
+    arrow::ArrayVector value_fields;
+    value_fields.reserve(value_schema_->num_fields());
     for (const auto& value_field : value_schema_->fields()) {
         auto field_array = data_batch->GetFieldByName(value_field->name());
         if (!field_array) {
             return Status::Invalid(
                 fmt::format("cannot find field {} in data batch", value_field->name()));
         }
-        value_fields_.emplace_back(field_array);
+        value_fields.emplace_back(field_array);
     }
 
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(value_struct_array_,
-                                      arrow::StructArray::Make(value_fields_, value_names_));
     selection_bitmap_ = std::move(bitmap);
-    value_fields_ = value_struct_array_->fields();
-    key_ctx_ = std::make_shared<ColumnarBatchContext>(nullptr, key_fields_, pool_);
-    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_struct_array_, value_fields_, pool_);
-    ArrowUtils::TraverseArray(value_struct_array_);
+    key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields, pool_);
+    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields, pool_);
+    ArrowUtils::TraverseArray(data_batch);
     return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
 }
 
@@ -145,9 +142,6 @@ void KeyValueDataFileRecordReader::Reset() {
     selection_bitmap_ = RoaringBitmap32();
     key_ctx_.reset();
     value_ctx_.reset();
-    key_fields_.clear();
-    value_fields_.clear();
-    value_struct_array_.reset();
     sequence_number_array_.reset();
     row_kind_array_.reset();
 }

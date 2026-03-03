@@ -46,13 +46,15 @@ class MemoryPool;
 
 KeyValueDataFileWriter::KeyValueDataFileWriter(
     const std::string& compression, std::function<Status(KeyValueBatch&&, ::ArrowArray*)> converter,
-    int64_t schema_id, FileSource file_source, const std::vector<std::string>& primary_keys,
+    int64_t schema_id, int32_t level, FileSource file_source,
+    const std::vector<std::string>& primary_keys,
     const std::shared_ptr<FormatStatsExtractor>& stats_extractor,
     const std::shared_ptr<arrow::Schema>& write_schema, bool is_external_path,
     const std::shared_ptr<MemoryPool>& pool)
     : SingleFileWriter(compression, converter),
       pool_(pool),
       schema_id_(schema_id),
+      level_(level),
       file_source_(file_source),
       primary_keys_(primary_keys),
       stats_extractor_(stats_extractor),
@@ -102,7 +104,7 @@ Result<std::shared_ptr<DataFileMeta>> KeyValueDataFileWriter::GetResult() {
     PAIMON_ASSIGN_OR_RAISE(int64_t local_micro, DateTimeUtils::GetCurrentLocalTimeUs());
     return std::make_shared<DataFileMeta>(
         PathUtil::GetName(path_), output_bytes_, RecordCount(), min_key, max_key, key_stats,
-        value_stats, min_sequence_number_, max_sequence_number_, schema_id_, /*level=*/0,
+        value_stats, min_sequence_number_, max_sequence_number_, schema_id_, level_,
         /*extra_files=*/std::vector<std::optional<std::string>>(),
         Timestamp(/*millisecond=*/local_micro / 1000, /*nano_of_millisecond=*/0), delete_row_count_,
         /*embedded_index=*/nullptr, file_source_,

@@ -27,6 +27,9 @@
 namespace paimon {
 
 struct SpecialFields {
+    SpecialFields() = delete;
+    ~SpecialFields() = delete;
+
     static constexpr char KEY_FIELD_PREFIX[] = "_KEY_";
     static constexpr int32_t KEY_VALUE_SPECIAL_FIELD_COUNT = 2;
 
@@ -62,6 +65,15 @@ struct SpecialFields {
         return false;
     }
     // TODO(xinyu.lxy): add a func to complete row-tracking fields
+
+    static std::shared_ptr<arrow::Schema> CompleteSequenceAndValueKindField(
+        const std::shared_ptr<arrow::Schema>& schema) {
+        arrow::FieldVector target_fields;
+        target_fields.push_back(DataField::ConvertDataFieldToArrowField(SequenceNumber()));
+        target_fields.push_back(DataField::ConvertDataFieldToArrowField(ValueKind()));
+        target_fields.insert(target_fields.end(), schema->fields().begin(), schema->fields().end());
+        return arrow::schema(target_fields);
+    }
 };
 
 }  // namespace paimon

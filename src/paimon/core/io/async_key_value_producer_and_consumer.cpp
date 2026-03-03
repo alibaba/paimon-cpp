@@ -31,14 +31,13 @@ class MemoryPool;
 
 template <typename T, typename R>
 AsyncKeyValueProducerAndConsumer<T, R>::AsyncKeyValueProducerAndConsumer(
-    std::unique_ptr<SortMergeReader>&& sort_merge_reader,
-    const std::function<Result<std::unique_ptr<RowToArrowArrayConverter<T, R>>>()>& create_consumer,
+    std::unique_ptr<SortMergeReader>&& sort_merge_reader, ConsumerCreator create_consumer,
     int32_t batch_size, int32_t consumer_thread_num, const std::shared_ptr<MemoryPool>& pool)
-    : batch_size_(batch_size),
+    : batch_size_(std::min(batch_size, MAX_PROJECTION_BATCH_SIZE)),
       consumer_thread_num_(consumer_thread_num),
       pool_(pool),
       sort_merge_reader_(std::move(sort_merge_reader)),
-      create_consumer_(create_consumer) {
+      create_consumer_(std::move(create_consumer)) {
     kv_queue_.set_capacity(batch_size);
     result_queue_.set_capacity(RESULT_BATCH_COUNT);
 }
