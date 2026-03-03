@@ -52,7 +52,10 @@ Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionCo
                             SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT) !=
         target_to_src_mapping.size()) {
         return Status::Invalid(
-            "target_schema and target_to_src_mapping mismatch in KeyValueMetaProjectionConsumer");
+            fmt::format("target_schema field count without special fields {} and "
+                        "target_to_src_mapping size {} mismatch in KeyValueMetaProjectionConsumer",
+                        target_schema->num_fields() - SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT,
+                        target_to_src_mapping.size()));
     }
 
     auto arrow_pool = GetArrowPool(pool);
