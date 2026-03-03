@@ -449,7 +449,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate) {
                                                 FieldType::INT, Literal(40));
     // in can be pushed down
     auto in = PredicateBuilder::In(/*field_index=*/5, /*field_name=*/"a", FieldType::BIGINT,
-                                   {Literal(100l)});
+                                   {Literal(static_cast<int64_t>(100))});
     auto not_in =
         PredicateBuilder::In(/*field_index=*/6, /*field_name=*/"e", FieldType::INT, {Literal(50)});
 
@@ -551,7 +551,7 @@ TEST_F(FieldMappingTest, TestSchemaEvolutionWithPredicate2) {
                                                 FieldType::INT, Literal(40));
     // in will not be pushed down, as with casting, literal from BIGINT to INT is overflow
     auto in = PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"a", FieldType::BIGINT,
-                                   {Literal(9223372036854775807l)});
+                                   {Literal(static_cast<int64_t>(9223372036854775807))});
     auto not_in =
         PredicateBuilder::In(/*field_index=*/3, /*field_name=*/"e", FieldType::INT, {Literal(50)});
 
@@ -618,8 +618,9 @@ TEST_F(FieldMappingTest, TestCompoundPredicateWithoutPushDown) {
 
     auto equal = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::INT,
                                          Literal(55));
-    auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                      FieldType::BIGINT, Literal(30l));
+    auto greater_than =
+        PredicateBuilder::GreaterThan(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+                                      Literal(static_cast<int64_t>(30)));
     auto less_than = PredicateBuilder::LessThan(/*field_index=*/3, /*field_name=*/"f3",
                                                 FieldType::INT, Literal(55));
     ASSERT_OK_AND_ASSIGN(auto or_predicate, PredicateBuilder::Or({greater_than, less_than}));

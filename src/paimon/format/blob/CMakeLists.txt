@@ -33,21 +33,39 @@ add_paimon_lib(paimon_blob_file_format
                ${PAIMON_VERSION_SCRIPT_FLAGS})
 
 if(PAIMON_BUILD_TESTS)
-    add_paimon_test(blob_format_test
-                    SOURCES
-                    blob_format_writer_test.cpp
-                    blob_file_batch_reader_test.cpp
-                    blob_stats_extractor_test.cpp
-                    blob_writer_builder_test.cpp
-                    blob_file_format_factory_test.cpp
-                    EXTRA_INCLUDES
-                    ${BLOB_INCLUDE_DIR}
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    paimon_blob_file_format_static
-                    "-Wl,--no-whole-archive"
-                    ${GTEST_LINK_TOOLCHAIN})
+    set(BLOB_FORMAT_TEST
+        blob_format_writer_test.cpp
+        blob_file_batch_reader_test.cpp
+        blob_stats_extractor_test.cpp
+        blob_writer_builder_test.cpp
+        blob_file_format_factory_test.cpp)
+    if(APPLE)
+        add_paimon_test(blob_format_test
+                        SOURCES
+                        ${BLOB_FORMAT_TEST}
+                        EXTRA_INCLUDES
+                        ${BLOB_INCLUDE_DIR}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        "-Wl,-force_load"
+                        paimon_local_file_system_static
+                        paimon_blob_file_format_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    else()
+        add_paimon_test(blob_format_test
+                        SOURCES
+                        ${BLOB_FORMAT_TEST}
+                        blob_file_format_factory_test.cpp
+                        EXTRA_INCLUDES
+                        ${BLOB_INCLUDE_DIR}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        "-Wl,--whole-archive"
+                        paimon_local_file_system_static
+                        paimon_blob_file_format_static
+                        "-Wl,--no-whole-archive"
+                        ${GTEST_LINK_TOOLCHAIN})
+    endif()
 endif()

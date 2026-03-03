@@ -268,9 +268,13 @@ else()
     endif()
 endif()
 
+set(JINDOSDK_C_NAME "jindosdk_c")
+set(JINDOSDK_C_DYNAMIC_LIB_PREFIX "lib${JINDOSDK_C_NAME}")
 if(APPLE)
-    set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c.${PAIMON_JINDOSDK_C_BUILD_VERSION}")
-    set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.dylib")
+    set(JINDOSDK_C_DYNAMIC_LIB_NAME
+        "${JINDOSDK_C_NAME}.${PAIMON_JINDOSDK_C_BUILD_VERSION}")
+    set(JINDOSDK_C_DYNAMIC_LIB_FILE
+        "${JINDOSDK_C_DYNAMIC_LIB_PREFIX}.${PAIMON_JINDOSDK_C_BUILD_VERSION}.dylib")
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
         set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
             "${PAIMON_JINDOSDK_C_MACOS_X86_64_BUILD_SHA256_CHECKSUM}")
@@ -293,8 +297,8 @@ if(APPLE)
         endif()
     endif()
 else()
-    set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c")
-    set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.so")
+    set(JINDOSDK_C_DYNAMIC_LIB_NAME "${JINDOSDK_C_NAME}")
+    set(JINDOSDK_C_DYNAMIC_LIB_FILE "${JINDOSDK_C_DYNAMIC_LIB_PREFIX}.so")
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
         set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
             "${PAIMON_JINDOSDK_C_LINUX_X86_64_BUILD_SHA256_CHECKSUM}")
@@ -761,17 +765,33 @@ macro(build_jindosdk_c)
     set(JINDOSDK_C_DYNAMIC_LIB "${JINDOSDK_C_LIB_DIR}/${JINDOSDK_C_DYNAMIC_LIB_FILE}")
 
     # Extract and install jindosdk from precompiled package
-    externalproject_add(jindosdk_ep
-                        URL ${JINDOSDK_C_SOURCE_URL}
-                        URL_HASH "SHA256=${JINDOSDK_C_BUILD_SHA256_CHECKSUM}"
-                        ${THIRDPARTY_LOG_OPTIONS}
-                        CONFIGURE_COMMAND ""
-                        BUILD_COMMAND ""
-                        INSTALL_COMMAND bash -c
-                                        "cp -r <SOURCE_DIR>/include/* ${JINDOSDK_C_INCLUDE_DIR}"
-                        COMMAND bash -c
-                                "cp -r <SOURCE_DIR>/lib/native/${JINDOSDK_C_DYNAMIC_LIB_FILE}* ${JINDOSDK_C_LIB_DIR}"
-                        BUILD_BYPRODUCTS "${JINDOSDK_C_DYNAMIC_LIB}")
+    if(APPLE)
+        externalproject_add(jindosdk_ep
+                            URL ${JINDOSDK_C_SOURCE_URL}
+                            URL_HASH "SHA256=${JINDOSDK_C_BUILD_SHA256_CHECKSUM}"
+                            ${THIRDPARTY_LOG_OPTIONS}
+                            CONFIGURE_COMMAND ""
+                            BUILD_COMMAND ""
+                            INSTALL_COMMAND bash -c
+                                            "cp -r <SOURCE_DIR>/include/* ${JINDOSDK_C_INCLUDE_DIR}"
+                            COMMAND bash -c
+                                    "cp -r <SOURCE_DIR>/lib/native/${JINDOSDK_C_DYNAMIC_LIB_FILE}* ${JINDOSDK_C_LIB_DIR}"
+                            COMMAND bash -c
+                                    "install_name_tool -id '@rpath/${JINDOSDK_C_DYNAMIC_LIB_FILE}' '${JINDOSDK_C_DYNAMIC_LIB}'"
+                            BUILD_BYPRODUCTS "${JINDOSDK_C_DYNAMIC_LIB}")
+    else()
+        externalproject_add(jindosdk_ep
+                            URL ${JINDOSDK_C_SOURCE_URL}
+                            URL_HASH "SHA256=${JINDOSDK_C_BUILD_SHA256_CHECKSUM}"
+                            ${THIRDPARTY_LOG_OPTIONS}
+                            CONFIGURE_COMMAND ""
+                            BUILD_COMMAND ""
+                            INSTALL_COMMAND bash -c
+                                            "cp -r <SOURCE_DIR>/include/* ${JINDOSDK_C_INCLUDE_DIR}"
+                            COMMAND bash -c
+                                    "cp -r <SOURCE_DIR>/lib/native/${JINDOSDK_C_DYNAMIC_LIB_FILE}* ${JINDOSDK_C_LIB_DIR}"
+                            BUILD_BYPRODUCTS "${JINDOSDK_C_DYNAMIC_LIB}")
+    endif()
 
     # The include directory must exist before it is referenced by a target.
     file(MAKE_DIRECTORY "${JINDOSDK_C_INCLUDE_DIR}")
@@ -874,7 +894,7 @@ macro(build_protobuf)
         -DCMAKE_INSTALL_PREFIX=${PROTOBUF_PREFIX}
         "-DCMAKE_CXX_FLAGS=${PROTOBUF_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${PROTOBUF_C_FLAGS}"
-        "-DZLIB_ROOT=${THIRDPARTY_ZLIB_ROOT}"
+        -Dprotobuf_WITH_ZLIB=OFF
         -Dprotobuf_BUILD_TESTS=OFF
         -Dprotobuf_DEBUG_POSTFIX=)
     set(PROTOBUF_CONFIGURE SOURCE_SUBDIR "cmake" CMAKE_ARGS ${PROTOBUF_CMAKE_ARGS})
@@ -1000,25 +1020,44 @@ macro(build_orc)
     message("ORC_CMAKE_CXX_FLAGS ${ORC_CMAKE_CXX_FLAGS}")
     message("ORC_CMAKE_C_FLAGS ${ORC_CMAKE_C_FLAGS}")
 
-    set(ORC_CMAKE_ARGS
-        ${EP_COMMON_CMAKE_ARGS}
-        "-DCMAKE_INSTALL_PREFIX=${ORC_PREFIX}"
-        "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
-        "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ORC_CMAKE_CXX_FLAGS}"
-        "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
-        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
-        "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
-        "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
-        "-DLZ4_HOME=${ORC_LZ4_ROOT}"
-        "-DZSTD_HOME=${ORC_ZSTD_ROOT}"
-        "-DZLIB_HOME=${ORC_ZLIB_ROOT}"
-        "-DPROTOBUF_HOME=${ORC_PROTOBUF_ROOT}"
-        "-DProtobuf_ROOT=${ORC_PROTOBUF_ROOT}"
-        -DBUILD_JAVA=OFF
-        -DBUILD_CPP_TESTS=OFF
-        -DBUILD_TOOLS=OFF
-        -DBUILD_CPP_ENABLE_METRICS=ON)
+    if(APPLE)
+        set(ORC_CMAKE_ARGS
+            ${EP_COMMON_CMAKE_ARGS}
+            "-DCMAKE_INSTALL_PREFIX=${ORC_PREFIX}"
+            "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
+            "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
+            "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ORC_CMAKE_CXX_FLAGS}"
+            "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
+            "-DLZ4_HOME=${ORC_LZ4_ROOT}"
+            "-DZSTD_HOME=${ORC_ZSTD_ROOT}"
+            "-DZLIB_HOME=${ORC_ZLIB_ROOT}"
+            "-DPROTOBUF_HOME=${ORC_PROTOBUF_ROOT}"
+            "-DProtobuf_ROOT=${ORC_PROTOBUF_ROOT}"
+            -DBUILD_JAVA=OFF
+            -DBUILD_CPP_TESTS=OFF
+            -DBUILD_TOOLS=OFF
+            -DBUILD_CPP_ENABLE_METRICS=ON)
+    else()
+        set(ORC_CMAKE_ARGS
+            ${EP_COMMON_CMAKE_ARGS}
+            "-DCMAKE_INSTALL_PREFIX=${ORC_PREFIX}"
+            "-DCMAKE_CXX_FLAGS=${ORC_CMAKE_CXX_FLAGS}"
+            "-DCMAKE_C_FLAGS=${ORC_CMAKE_C_FLAGS}"
+            "-DCMAKE_CXX_FLAGS_${UPPERCASE_BUILD_TYPE}=${ORC_CMAKE_CXX_FLAGS}"
+            "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+            "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,-rpath=${ORC_RPATH}"
+            "-DSNAPPY_HOME=${ORC_SNAPPY_ROOT}"
+            "-DLZ4_HOME=${ORC_LZ4_ROOT}"
+            "-DZSTD_HOME=${ORC_ZSTD_ROOT}"
+            "-DZLIB_HOME=${ORC_ZLIB_ROOT}"
+            "-DPROTOBUF_HOME=${ORC_PROTOBUF_ROOT}"
+            "-DProtobuf_ROOT=${ORC_PROTOBUF_ROOT}"
+            -DBUILD_JAVA=OFF
+            -DBUILD_CPP_TESTS=OFF
+            -DBUILD_TOOLS=OFF
+            -DBUILD_CPP_ENABLE_METRICS=ON)
+    endif()
 
     set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/orc.diff")
     externalproject_add(orc_ep
@@ -1070,8 +1109,8 @@ macro(build_arrow)
     get_target_property(ARROW_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(ARROW_ZLIB_ROOT "${ARROW_ZLIB_INCLUDE_DIR}" DIRECTORY)
 
-    set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
-    set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
+    set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error -Wno-documentation")
+    set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error -Wno-documentation")
     string(REPLACE "-Werror" "" ARROW_CMAKE_CXX_FLAGS ${ARROW_CMAKE_CXX_FLAGS})
     # Fix for thrift Mutex.h missing #include <cstdint> (GCC 15 strictness)
     # Use -include to force include cstdint for all C++ files

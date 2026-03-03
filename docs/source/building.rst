@@ -29,8 +29,8 @@ and invoke ``cmake $CMAKE_ARGS ..`` from this directory.
 
 Building requires:
 
-* A C++17-enabled compiler. On Linux, gcc 9 and higher should be
-  sufficient. Windows and MacOS are not supported for now.
+* A C++17-enabled compiler. On Linux and macOS(experimental), gcc 9 and higher should be
+  sufficient. Windows is not supported for now.
 * At least 2GB of RAM for a minimal build, 8GB for a minimal
   debug build with tests and 16GB for a full build.
 
@@ -41,6 +41,12 @@ On Ubuntu/Debian you can install the requirements with:
    sudo apt-get install \
         build-essential \
         cmake
+
+On macOS you can install the requirements with:
+
+.. code-block:: shell
+
+   brew install cmake
 
 We also provide a docker template to help you get started quickly. See in
 ``.devcontainer`` folder for more details.
@@ -119,10 +125,11 @@ several optional system components which you can opt into building by passing
 boolean flags to ``cmake``.
 
 * ``-DPAIMON_ENABLE_ORC=ON``: Paimon integration with Apache ORC
-* ``-DPAIMON_ENABLE_LANCE=ON``: Paimon integration with Lance
+* ``-DPAIMON_ENABLE_LANCE=ON``: Paimon integration with Lance(only supported for Linux)
 * ``-DPAIMON_ENABLE_AVRO=ON``: Apache Avro libraries and Paimon integration
 * ``-DPAIMON_ENABLE_JINDO=ON``: Support for Alibaba Jindo filesystems
-* ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index
+* ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index(only supported for Linux)
+* ``-DPAIMON_ENABLE_LUCENE=ON``: Support for Lucene index(only supported for Linux)
 
 Optional Targets
 ~~~~~~~~~~~~~~~~

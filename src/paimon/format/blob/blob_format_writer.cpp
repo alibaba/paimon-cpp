@@ -138,7 +138,8 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
     }
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, in->Length());
     uint64_t total_read_length = 0;
-    uint32_t read_len = std::min(file_length, tmp_buffer_->size());
+    uint32_t read_len =
+        std::min(static_cast<uint32_t>(file_length), static_cast<uint32_t>(tmp_buffer_->size()));
     while (read_len > 0) {
         PAIMON_ASSIGN_OR_RAISE(int32_t actual_read_len, in->Read(tmp_buffer_->data(), read_len));
         if (static_cast<uint32_t>(actual_read_len) != read_len) {
@@ -147,7 +148,8 @@ Status BlobFormatWriter::WriteBlob(std::string_view blob_data) {
         }
         PAIMON_RETURN_NOT_OK(WriteWithCrc32(tmp_buffer_->data(), actual_read_len));
         total_read_length += actual_read_len;
-        read_len = std::min(file_length - total_read_length, tmp_buffer_->size());
+        read_len = std::min(static_cast<uint32_t>(file_length - total_read_length),
+                            static_cast<uint32_t>(tmp_buffer_->size()));
     }
 
     // write bin length

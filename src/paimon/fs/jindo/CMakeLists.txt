@@ -22,8 +22,10 @@ if(PAIMON_ENABLE_JINDO)
                    ${JINDOSDK_INCLUDE_DIR}
                    DEPENDENCIES
                    paimon_shared
+                   jindosdk::c_sdk
                    jindosdk::nextarch
                    STATIC_LINK_LIBS
+                   jindosdk::c_sdk
                    jindosdk::nextarch
                    fmt
                    SHARED_LINK_LIBS

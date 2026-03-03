@@ -611,13 +611,14 @@ TEST_P(PrefetchFileBatchReaderImplTest, TestPrefetchWithPredicatePushdownWithCom
     auto data_array = PrepareArray(90);
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/30);
     auto schema = arrow::schema(fields_);
-    ASSERT_OK_AND_ASSIGN(auto predicate,
-                         PredicateBuilder::Or({
-                             PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                        FieldType::BIGINT, Literal(20l)),
-                             PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                           FieldType::BIGINT, Literal(70l)),
-                         }));
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::Or({
+            PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(20))),
+            PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(70))),
+        }));
 
     auto reader =
         PreparePrefetchReader(file_format, schema.get(), predicate,
@@ -646,13 +647,14 @@ TEST_P(PrefetchFileBatchReaderImplTest,
     PrepareTestData(file_format, data_array, /*stripe_row_count=*/30, /*row_index_stride=*/10);
 
     auto schema = arrow::schema(fields_);
-    ASSERT_OK_AND_ASSIGN(auto predicate,
-                         PredicateBuilder::Or({
-                             PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                        FieldType::BIGINT, Literal(20l)),
-                             PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
-                                                           FieldType::BIGINT, Literal(70l)),
-                         }));
+    ASSERT_OK_AND_ASSIGN(
+        auto predicate,
+        PredicateBuilder::Or({
+            PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(20))),
+            PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(70))),
+        }));
 
     auto reader =
         PreparePrefetchReader(file_format, schema.get(), predicate,

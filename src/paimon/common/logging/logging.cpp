@@ -83,7 +83,7 @@ std::unique_ptr<Logger> Logger::GetLogger(const std::string& path) {
     }
     std::unique_lock<std::shared_mutex> ulock(getRegistryLock());
     if (!google::IsGoogleLoggingInitialized()) {
-        google::InitGoogleLogging(program_invocation_name);
+        google::InitGoogleLogging("paimon");
     }
     return std::make_unique<GlogAdaptor>();
 }

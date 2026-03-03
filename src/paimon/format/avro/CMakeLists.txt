@@ -48,26 +48,43 @@ if(PAIMON_ENABLE_AVRO)
                    ${PAIMON_VERSION_SCRIPT_FLAGS})
 
     if(PAIMON_BUILD_TESTS)
-        add_paimon_test(avro_format_test
-                        SOURCES
-                        avro_direct_encoder_decoder_test.cpp
-                        avro_file_batch_reader_test.cpp
-                        avro_file_format_test.cpp
-                        avro_format_writer_test.cpp
-                        avro_input_stream_impl_test.cpp
-                        avro_schema_converter_test.cpp
-                        avro_stats_extractor_test.cpp
-                        avro_writer_builder_test.cpp
-                        EXTRA_INCLUDES
-                        ${AVRO_INCLUDE_DIR}
-                        STATIC_LINK_LIBS
-                        paimon_shared
-                        test_utils_static
-                        "-Wl,--whole-archive"
-                        paimon_local_file_system_static
-                        paimon_avro_file_format_static
-                        "-Wl,--no-whole-archive"
-                        ${GTEST_LINK_TOOLCHAIN})
+        set(AVRO_FORMAT_TEST
+            avro_direct_encoder_decoder_test.cpp
+            avro_file_batch_reader_test.cpp
+            avro_file_format_test.cpp
+            avro_format_writer_test.cpp
+            avro_input_stream_impl_test.cpp
+            avro_schema_converter_test.cpp
+            avro_stats_extractor_test.cpp
+            avro_writer_builder_test.cpp)
+        if(APPLE)
+            add_paimon_test(avro_format_test
+                            SOURCES
+                            ${AVRO_FORMAT_TEST}
+                            EXTRA_INCLUDES
+                            ${AVRO_INCLUDE_DIR}
+                            STATIC_LINK_LIBS
+                            paimon_shared
+                            test_utils_static
+                            "-Wl,-force_load"
+                            paimon_local_file_system_static
+                            paimon_avro_file_format_static
+                            ${GTEST_LINK_TOOLCHAIN})
+        else()
+            add_paimon_test(avro_format_test
+                            SOURCES
+                            ${AVRO_FORMAT_TEST}
+                            EXTRA_INCLUDES
+                            ${AVRO_INCLUDE_DIR}
+                            STATIC_LINK_LIBS
+                            paimon_shared
+                            test_utils_static
+                            "-Wl,--whole-archive"
+                            paimon_local_file_system_static
+                            paimon_avro_file_format_static
+                            "-Wl,--no-whole-archive"
+                            ${GTEST_LINK_TOOLCHAIN})
+        endif()
 
     endif()
 

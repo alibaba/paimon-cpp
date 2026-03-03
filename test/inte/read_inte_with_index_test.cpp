@@ -1211,8 +1211,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test equal predicate for f1
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
-                                                 FieldType::BIGINT, Literal(10l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(10)));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 10, "Alice", 11.1, null],
@@ -1228,8 +1229,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test not equal predicate for f1
-        auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f1",
-                                                    FieldType::BIGINT, Literal(10l));
+        auto predicate =
+            PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(10)));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 20, "Lucy", 15.1, null],
@@ -1344,8 +1346,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test greater than predicate for f1, do not take effective in bitmap index
-        auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f1",
-                                                       FieldType::BIGINT, Literal(10l));
+        auto predicate =
+            PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(10)));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 10, "Alice", 11.1, null],
@@ -1367,9 +1370,10 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test in predicate
-        auto predicate =
-            PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
-                                 {Literal(10l), Literal(30l), Literal(50l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(10)), Literal(static_cast<int64_t>(30)),
+             Literal(static_cast<int64_t>(50))});
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 10, "Alice", 11.1, null],
@@ -1387,9 +1391,10 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test not in predicate
-        auto predicate =
-            PredicateBuilder::NotIn(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
-                                    {Literal(10l), Literal(30l), Literal(50l)});
+        auto predicate = PredicateBuilder::NotIn(
+            /*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(10)), Literal(static_cast<int64_t>(30)),
+             Literal(static_cast<int64_t>(50))});
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 20, "Lucy", 15.1, null],
@@ -1406,8 +1411,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
         auto f4_predicate =
             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f4", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
-                                                    FieldType::BIGINT, Literal(30l));
+        auto f1_predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(30)));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f4_predicate, f1_predicate}));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
@@ -1422,8 +1428,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
         auto f4_predicate =
             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f4", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
-                                                    FieldType::BIGINT, Literal(30l));
+        auto f1_predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(30)));
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f4_predicate, f1_predicate}));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
@@ -1441,8 +1448,9 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
         auto f4_predicate =
             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f4", FieldType::STRING,
                                     Literal(FieldType::STRING, "Alice", 5));
-        auto f1_predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
-                                                    FieldType::BIGINT, Literal(40l));
+        auto f1_predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(40)));
         auto f5_predicate =
             PredicateBuilder::IsNotNull(/*field_index=*/3, /*field_name=*/"f5", FieldType::INT);
         ASSERT_OK_AND_ASSIGN(auto predicate,
@@ -1451,13 +1459,15 @@ TEST_P(ReadInteWithIndexTest, TestWithAlterTable) {
     }
     {
         // test non result
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1",
-                                                 FieldType::BIGINT, Literal(40l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(40)));
         CheckResult(path, {split}, predicate, /*expected_array=*/nullptr);
     }
     {
-        auto predicate = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f1",
-                                                    FieldType::BIGINT, Literal(40l));
+        auto predicate =
+            PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f1", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(40)));
         std::shared_ptr<arrow::ChunkedArray> expected_array;
         auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
 [0, 10, "Alice", 11.1, null],

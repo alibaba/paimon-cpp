@@ -25,13 +25,31 @@ build_dir=${1}/build
 mkdir ${build_dir}
 pushd ${build_dir}
 
-CMAKE_ARGS=(
-    "-G Ninja"
-    "-DCMAKE_BUILD_TYPE=${build_type}"
-    "-DPAIMON_BUILD_TESTS=ON"
-    "-DPAIMON_ENABLE_LANCE=ON"
-    "-DPAIMON_ENABLE_JINDO=ON"
-)
+is_macos() {
+    [[ "${OSTYPE}" == "darwin"* ]]
+}
+
+if is_macos; then
+    CMAKE_ARGS=(
+        "-G Ninja"
+        "-DCMAKE_BUILD_TYPE=${build_type}"
+        "-DPAIMON_BUILD_TESTS=ON"
+        "-DPAIMON_ENABLE_MACOS=ON"
+        "-DPAIMON_ENABLE_JINDO=ON"
+    )
+    NPROCS=$(sysctl -n hw.ncpu)
+else
+    CMAKE_ARGS=(
+        "-G Ninja"
+        "-DCMAKE_BUILD_TYPE=${build_type}"
+        "-DPAIMON_BUILD_TESTS=ON"
+        "-DPAIMON_ENABLE_LANCE=ON"
+        "-DPAIMON_ENABLE_JINDO=ON"
+        "-DPAIMON_ENABLE_LUMINA=ON"
+        "-DPAIMON_ENABLE_LUCENE=ON"
+    )
+    NPROCS=$(nproc)
+fi
 
 if [[ "${enable_sanitizer}" == "true" ]]; then
     CMAKE_ARGS+=(
@@ -41,11 +59,13 @@ if [[ "${enable_sanitizer}" == "true" ]]; then
 fi
 
 cmake "${CMAKE_ARGS[@]}" ${source_dir}
-cmake --build . -- -j$(nproc)
-ctest --output-on-failure -j $(nproc)
+cmake --build . -- -j${NPROCS}
+if ! is_macos; then
+    ctest --output-on-failure -j ${NPROCS}
 
-if [[ "${check_clang_tidy}" == "true" ]]; then
-    cmake --build . --target check-clang-tidy
+    if [[ "${check_clang_tidy}" == "true" ]]; then
+        cmake --build . --target check-clang-tidy
+    fi
 fi
 
 popd

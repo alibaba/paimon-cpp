@@ -26,15 +26,28 @@ if(PAIMON_BUILD_TESTS)
                    paimon_static
                    ${GTEST_LINK_TOOLCHAIN})
 
-    add_paimon_test(test_utils_test
-                    SOURCES
-                    data_generator_test.cpp
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_shared
-                    "-Wl,--no-whole-archive"
-                    test_utils_static
-                    ${GTEST_LINK_TOOLCHAIN})
+    set(TEST_UTILS_TEST data_generator_test.cpp)
+    if(APPLE)
+        add_paimon_test(test_utils_test
+                        SOURCES
+                        ${TEST_UTILS_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        "-Wl,-force_load"
+                        paimon_local_file_system_shared
+                        test_utils_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    else()
+        add_paimon_test(test_utils_test
+                        SOURCES
+                        ${TEST_UTILS_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        "-Wl,--whole-archive"
+                        paimon_local_file_system_shared
+                        "-Wl,--no-whole-archive"
+                        test_utils_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    endif()
 
 endif()

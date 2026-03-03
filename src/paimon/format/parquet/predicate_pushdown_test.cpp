@@ -179,57 +179,65 @@ TEST_F(PredicatePushdownTest, TestIntDoubleData) {
     }
     {
         // f2 != 4, has data
-        auto predicate = PredicateBuilder::NotEqual(/*field_index=*/2, /*field_name=*/"f2",
-                                                    FieldType::BIGINT, Literal(4l));
+        auto predicate =
+            PredicateBuilder::NotEqual(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(4)));
         CheckResult(read_schema, predicate, expected_array);
     }
     {
         // f2 == 6, has data
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
-                                                 FieldType::BIGINT, Literal(6l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(6)));
         CheckResult(read_schema, predicate, expected_array);
     }
     {
         // f2 == 1, no data
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2",
-                                                 FieldType::BIGINT, Literal(1l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(1)));
         CheckResult(read_schema, predicate, /*expected_array=*/
                     nullptr);
     }
     {
         // f2 in [1,2,3], no data
-        auto predicate =
-            PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
-                                 {Literal(1l), Literal(2l), Literal(3l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(2)),
+             Literal(static_cast<int64_t>(3))});
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
     {
         // f2 in [1,2,3] but has small predicate node limit, has data
-        auto predicate =
-            PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
-                                 {Literal(1l), Literal(2l), Literal(3l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(2)),
+             Literal(static_cast<int64_t>(3))});
         CheckResult(read_schema, predicate, expected_array,
                     /*predicate_node_count_limit=*/1);
     }
     {
         // f2 not in [1,2,3], has data
-        auto predicate =
-            PredicateBuilder::NotIn(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
-                                    {Literal(1l), Literal(2l), Literal(3l)});
+        auto predicate = PredicateBuilder::NotIn(
+            /*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(2)),
+             Literal(static_cast<int64_t>(3))});
         CheckResult(read_schema, predicate, expected_array);
     }
     {
         // f2 in [2,3,4], has data
-        auto predicate =
-            PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
-                                 {Literal(2l), Literal(3l), Literal(4l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(2)), Literal(static_cast<int64_t>(3)),
+             Literal(static_cast<int64_t>(4))});
         CheckResult(read_schema, predicate, expected_array);
     }
     {
         // f2 not in [2,3,4], has data
-        auto predicate =
-            PredicateBuilder::NotIn(/*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
-                                    {Literal(2l), Literal(3l), Literal(4l)});
+        auto predicate = PredicateBuilder::NotIn(
+            /*field_index=*/2, /*field_name=*/"f2", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(2)), Literal(static_cast<int64_t>(3)),
+             Literal(static_cast<int64_t>(4))});
         CheckResult(read_schema, predicate, expected_array);
     }
 }
@@ -402,26 +410,30 @@ TEST_F(PredicatePushdownTest, TestPredicatePushdownWithAllDataNull) {
     // other predicate, always return IS_NULL (no data)
     {
         // f4 in [1,2], no data
-        auto predicate = PredicateBuilder::In(/*field_index=*/4, /*field_name=*/"f4",
-                                              FieldType::BIGINT, {Literal(1l), Literal(2l)});
+        auto predicate = PredicateBuilder::In(
+            /*field_index=*/4, /*field_name=*/"f4", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(2))});
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
     {
         // f4 not in [1,2], no data
-        auto predicate = PredicateBuilder::NotIn(/*field_index=*/4, /*field_name=*/"f4",
-                                                 FieldType::BIGINT, {Literal(1l), Literal(2l)});
+        auto predicate = PredicateBuilder::NotIn(
+            /*field_index=*/4, /*field_name=*/"f4", FieldType::BIGINT,
+            {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(2))});
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
     {
         // f4 >= 3, no data
-        auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/4, /*field_name=*/"f4",
-                                                          FieldType::BIGINT, Literal(3l));
+        auto predicate =
+            PredicateBuilder::GreaterOrEqual(/*field_index=*/4, /*field_name=*/"f4",
+                                             FieldType::BIGINT, Literal(static_cast<int64_t>(3)));
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
     {
         // f4 <= 3, no data
-        auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"f4",
-                                                       FieldType::BIGINT, Literal(3l));
+        auto predicate =
+            PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"f4", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(3)));
         CheckResult(read_schema, predicate, /*expected_array=*/nullptr);
     }
 }
@@ -436,7 +448,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::And(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0))),
                  PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
@@ -450,7 +462,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::And(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0))),
                  PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",
@@ -464,7 +476,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::And(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0))),
                  PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
@@ -478,7 +490,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::And(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0))),
                  PredicateBuilder::Equal(/*field_index=*/5, /*field_name=*/"f5", FieldType::BINARY,
@@ -492,7 +504,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::And(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(5.0))),
                  PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
@@ -506,7 +518,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::Or(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0)))}));
         ASSERT_TRUE(predicate);
@@ -518,7 +530,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::Or(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(6l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(6))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(5.0)))}));
         ASSERT_TRUE(predicate);
@@ -528,10 +540,11 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
         // f2 < 2 or f5 is null, no data
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                                             FieldType::BIGINT, Literal(2l)),
-                                  PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
-                                                           FieldType::BINARY)}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(2))),
+                 PredicateBuilder::IsNull(/*field_index=*/5, /*field_name=*/"f5",
+                                          FieldType::BINARY)}));
         ASSERT_TRUE(predicate);
         CheckResult(read_schema, predicate, nullptr);
     }
@@ -541,7 +554,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::Or(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(2l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(2))),
                  PredicateBuilder::Equal(/*field_index=*/5, /*field_name=*/"f5", FieldType::BINARY,
                                          Literal(FieldType::BINARY, "zoo", 3))}));
         ASSERT_TRUE(predicate);
@@ -553,7 +566,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::Or(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(2l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(2))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(4.0))),
                  PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BOOLEAN,
@@ -567,7 +580,7 @@ TEST_F(PredicatePushdownTest, TestCompoundPredicate) {
             auto predicate,
             PredicateBuilder::Or(
                 {PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
-                                            FieldType::BIGINT, Literal(2l)),
+                                            FieldType::BIGINT, Literal(static_cast<int64_t>(2))),
                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::FLOAT,
                                          Literal(static_cast<float>(5.0))),
                  PredicateBuilder::IsNull(/*field_index=*/3, /*field_name=*/"f3",

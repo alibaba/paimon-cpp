@@ -458,18 +458,31 @@ if(PAIMON_BUILD_TESTS)
                     test_utils_static
                     ${GTEST_LINK_TOOLCHAIN})
 
-    add_paimon_test(common_sst_file_format_test
-                    SOURCES
-                    common/compression/block_compression_factory_test.cpp
-                    common/sst/sst_file_io_test.cpp
-                    common/utils/crc32c_test.cpp
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    test_utils_static
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    "-Wl,--no-whole-archive"
-                    ${GTEST_LINK_TOOLCHAIN})
+    set(COMMON_SST_FILE_FORMAT_TEST
+        common/compression/block_compression_factory_test.cpp
+        common/sst/sst_file_io_test.cpp common/utils/crc32c_test.cpp)
+    if(APPLE)
+        add_paimon_test(common_sst_file_format_test
+                        SOURCES
+                        ${COMMON_SST_FILE_FORMAT_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        "-Wl,-force_load"
+                        paimon_local_file_system_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    else()
+        add_paimon_test(common_sst_file_format_test
+                        SOURCES
+                        ${COMMON_SST_FILE_FORMAT_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        test_utils_static
+                        "-Wl,--whole-archive"
+                        paimon_local_file_system_static
+                        "-Wl,--no-whole-archive"
+                        ${GTEST_LINK_TOOLCHAIN})
+    endif()
 
     add_paimon_test(core_test
                     SOURCES
@@ -605,20 +618,35 @@ if(PAIMON_BUILD_TESTS)
                     ${TEST_STATIC_LINK_LIBS}
                     ${GTEST_LINK_TOOLCHAIN})
 
-    add_paimon_test(fs_test
-                    SOURCES
-                    common/fs/file_system_test.cpp
-                    common/fs/resolving_file_system_test.cpp
-                    fs/local/local_file_test.cpp
-                    # fs/jindo/jindo_file_system_factory_test.cpp
-                    # fs/jindo/jindo_file_system_test.cpp
-                    STATIC_LINK_LIBS
-                    paimon_shared
-                    "-Wl,--whole-archive"
-                    paimon_local_file_system_static
-                    # paimon_jindo_file_system_static
-                    "-Wl,--no-whole-archive"
-                    test_utils_static
-                    ${GTEST_LINK_TOOLCHAIN})
+    set(FS_TEST
+        common/fs/file_system_test.cpp
+        common/fs/resolving_file_system_test.cpp
+        fs/local/local_file_test.cpp
+        # fs/jindo/jindo_file_system_factory_test.cpp
+        # fs/jindo/jindo_file_system_test.cpp
+    )
+    if(APPLE)
+        add_paimon_test(fs_test
+                        SOURCES
+                        ${FS_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        "-Wl,-force_load,$<TARGET_FILE:paimon_local_file_system_static>"
+                        # paimon_jindo_file_system_static
+                        test_utils_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    else()
+        add_paimon_test(fs_test
+                        SOURCES
+                        ${FS_TEST}
+                        STATIC_LINK_LIBS
+                        paimon_shared
+                        "-Wl,--whole-archive"
+                        paimon_local_file_system_static
+                        # paimon_jindo_file_system_static
+                        "-Wl,--no-whole-archive"
+                        test_utils_static
+                        ${GTEST_LINK_TOOLCHAIN})
+    endif()
 
 endif()

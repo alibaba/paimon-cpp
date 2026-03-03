@@ -46,8 +46,9 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
     }
     {
         // field type and literal type mismatch
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
-                                                 FieldType::DOUBLE, Literal(15l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::DOUBLE,
+                                    Literal(static_cast<int64_t>(15)));
         ReadContextBuilder context_builder(path);
         context_builder.SetPredicate(predicate);
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
@@ -57,8 +58,9 @@ TEST(TableReadTest, TestReadWithInvalidContext) {
     }
     {
         // field type in predicate mismatch schema
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3",
-                                                 FieldType::BIGINT, Literal(15l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/3, /*field_name=*/"f3", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(15)));
         ReadContextBuilder context_builder(path);
         context_builder.SetPredicate(predicate);
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());

@@ -125,8 +125,9 @@ class PredicateTest : public ::testing::Test {
 
 TEST_F(PredicateTest, TestInvalidFieldIndex) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f0",
-                                                  FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f0", FieldType::BIGINT,
+                                Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
 
@@ -150,8 +151,9 @@ TEST_F(PredicateTest, TestInvalidFieldIndex) {
 
 TEST_F(PredicateTest, TestEqual) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                  FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -167,14 +169,15 @@ TEST_F(PredicateTest, TestEqual) {
 
     ASSERT_EQ(*predicate->Negate(),
               *PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                          Literal(5l)));
+                                          Literal(static_cast<int64_t>(5))));
 
     ASSERT_FALSE(*predicate->Negate() ==
                  *PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                             FieldType::BIGINT, Literal(10l)));
-    ASSERT_FALSE(*predicate->Negate() == *PredicateBuilder::Equal(/*field_index=*/0,
-                                                                  /*field_name=*/"f0",
-                                                                  FieldType::BIGINT, Literal(10l)));
+                                             FieldType::BIGINT, Literal(static_cast<int64_t>(10))));
+    ASSERT_FALSE(*predicate->Negate() ==
+                 *PredicateBuilder::Equal(/*field_index=*/0,
+                                          /*field_name=*/"f0", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(10))));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
@@ -217,8 +220,9 @@ TEST_F(PredicateTest, TestEqualNull) {
 
 TEST_F(PredicateTest, TestNotEqual) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                     FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                   Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -234,8 +238,9 @@ TEST_F(PredicateTest, TestNotEqual) {
     ASSERT_EQ(is_valid, std::vector<char>({1, 0, 0}));
 
     auto predicate_negate = std::dynamic_pointer_cast<PredicateFilter>(predicate->Negate());
-    ASSERT_EQ(*predicate_negate, *PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                          FieldType::BIGINT, Literal(5l)));
+    ASSERT_EQ(*predicate_negate,
+              *PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                       Literal(static_cast<int64_t>(5))));
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
@@ -280,8 +285,9 @@ TEST_F(PredicateTest, TestNotEqualNull) {
 
 TEST_F(PredicateTest, TestGreater) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                        FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                      Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -299,7 +305,7 @@ TEST_F(PredicateTest, TestGreater) {
 
     ASSERT_EQ(*predicate->Negate(),
               *PredicateBuilder::LessOrEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                             FieldType::BIGINT, Literal(5l)));
+                                             FieldType::BIGINT, Literal(static_cast<int64_t>(5))));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
@@ -344,7 +350,8 @@ TEST_F(PredicateTest, TestGreaterNull) {
 TEST_F(PredicateTest, TestGreaterOrEqual) {
     auto bigint_type = arrow::int64();
     auto predicate_base = PredicateBuilder::GreaterOrEqual(
-        /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT, Literal(5l));
+        /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+        Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     ASSERT_EQ(predicate->GetFunction().ToString(), "GreaterOrEqual");
@@ -363,7 +370,7 @@ TEST_F(PredicateTest, TestGreaterOrEqual) {
 
     ASSERT_EQ(*predicate->Negate(),
               *PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                          Literal(5l)));
+                                          Literal(static_cast<int64_t>(5))));
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateBigIntRow({4})).value());
@@ -407,8 +414,9 @@ TEST_F(PredicateTest, TestGreaterOrEqualNull) {
 
 TEST_F(PredicateTest, TestLess) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                     FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                   Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -424,9 +432,9 @@ TEST_F(PredicateTest, TestLess) {
     ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
     ASSERT_EQ(is_valid, std::vector<char>({1, 0, 0, 0}));
 
-    ASSERT_EQ(*predicate->Negate(),
-              *PredicateBuilder::GreaterOrEqual(
-                  /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT, Literal(5l)));
+    ASSERT_EQ(*predicate->Negate(), *PredicateBuilder::GreaterOrEqual(
+                                        /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                        Literal(static_cast<int64_t>(5))));
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
@@ -469,8 +477,9 @@ TEST_F(PredicateTest, TestLessNull) {
 
 TEST_F(PredicateTest, TestLessOrEqual) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::LessOrEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                        FieldType::BIGINT, Literal(5l));
+    auto predicate_base =
+        PredicateBuilder::LessOrEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                      Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -488,7 +497,7 @@ TEST_F(PredicateTest, TestLessOrEqual) {
 
     ASSERT_EQ(*predicate->Negate(),
               *PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
-                                             FieldType::BIGINT, Literal(5l)));
+                                             FieldType::BIGINT, Literal(static_cast<int64_t>(5))));
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
@@ -590,8 +599,9 @@ TEST_F(PredicateTest, TestIsNotNull) {
 
 TEST_F(PredicateTest, TestIn) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0",
-                                               FieldType::BIGINT, {Literal(1l), Literal(3l)});
+    auto predicate_base =
+        PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                             {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(3))});
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -608,8 +618,9 @@ TEST_F(PredicateTest, TestIn) {
     ASSERT_EQ(is_valid, std::vector<char>({1, 0, 1, 0}));
 
     ASSERT_EQ(*predicate->Negate(),
-              *PredicateBuilder::NotIn(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                       {Literal(1l), Literal(3l)}));
+              *PredicateBuilder::NotIn(
+                  /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                  {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(3))}));
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
@@ -627,7 +638,8 @@ TEST_F(PredicateTest, TestInNull) {
     auto bigint_type = arrow::int64();
     auto predicate_base = PredicateBuilder::In(
         /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-        {Literal(1l), Literal(FieldType::BIGINT), Literal(3l)});
+        {Literal(static_cast<int64_t>(1)), Literal(FieldType::BIGINT),
+         Literal(static_cast<int64_t>(3))});
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -657,8 +669,9 @@ TEST_F(PredicateTest, TestInNull) {
 
 TEST_F(PredicateTest, TestNotIn) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::NotIn(/*field_index=*/0, /*field_name=*/"f0",
-                                                  FieldType::BIGINT, {Literal(1l), Literal(3l)});
+    auto predicate_base = PredicateBuilder::NotIn(
+        /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+        {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(3))});
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -675,8 +688,9 @@ TEST_F(PredicateTest, TestNotIn) {
     ASSERT_EQ(is_valid, std::vector<char>({0, 1, 0, 0}));
 
     ASSERT_EQ(*predicate->Negate(),
-              *PredicateBuilder::In(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                    {Literal(1l), Literal(3l)}));
+              *PredicateBuilder::In(
+                  /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                  {Literal(static_cast<int64_t>(1)), Literal(static_cast<int64_t>(3))}));
 
     // with internal row
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", bigint_type)}));
@@ -697,7 +711,8 @@ TEST_F(PredicateTest, TestNotInNull) {
     auto bigint_type = arrow::int64();
     auto predicate_base = PredicateBuilder::NotIn(
         /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-        {Literal(1l), Literal(FieldType::BIGINT), Literal(3l)});
+        {Literal(static_cast<int64_t>(1)), Literal(FieldType::BIGINT),
+         Literal(static_cast<int64_t>(3))});
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 =
@@ -732,8 +747,8 @@ TEST_F(PredicateTest, TestLargeIn) {
     auto bigint_type = arrow::int64();
     std::vector<Literal> literals;
     literals.reserve(30);
-    literals.emplace_back(1l);
-    literals.emplace_back(3l);
+    literals.emplace_back(static_cast<int64_t>(1));
+    literals.emplace_back(static_cast<int64_t>(3));
     for (int64_t i = 10; i < 30; i++) {
         literals.emplace_back(i);
     }
@@ -771,9 +786,9 @@ TEST_F(PredicateTest, TestLargeInNull) {
     auto bigint_type = arrow::int64();
     std::vector<Literal> literals;
     literals.reserve(30);
-    literals.emplace_back(1l);
+    literals.emplace_back(static_cast<int64_t>(1));
     literals.emplace_back(FieldType::BIGINT);
-    literals.emplace_back(3l);
+    literals.emplace_back(static_cast<int64_t>(3));
     for (int64_t i = 10; i < 30; i++) {
         literals.emplace_back(i);
     }
@@ -811,8 +826,8 @@ TEST_F(PredicateTest, TestLargeNotIn) {
     auto bigint_type = arrow::int64();
     std::vector<Literal> literals;
     literals.reserve(30);
-    literals.emplace_back(1l);
-    literals.emplace_back(3l);
+    literals.emplace_back(static_cast<int64_t>(1));
+    literals.emplace_back(static_cast<int64_t>(3));
     for (int64_t i = 10; i < 30; i++) {
         literals.emplace_back(i);
     }
@@ -853,9 +868,9 @@ TEST_F(PredicateTest, TestLargeNotInNull) {
     auto bigint_type = arrow::int64();
     std::vector<Literal> literals;
     literals.reserve(30);
-    literals.emplace_back(1l);
+    literals.emplace_back(static_cast<int64_t>(1));
     literals.emplace_back(FieldType::BIGINT);
-    literals.emplace_back(3l);
+    literals.emplace_back(static_cast<int64_t>(3));
     for (int64_t i = 10; i < 30; i++) {
         literals.emplace_back(i);
     }
@@ -896,10 +911,11 @@ TEST_F(PredicateTest, TestAnd) {
     auto bigint_type = arrow::int64();
     ASSERT_OK_AND_ASSIGN(
         auto predicate_base,
-        PredicateBuilder::And({PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                       FieldType::BIGINT, Literal(3l)),
-                               PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                       FieldType::BIGINT, Literal(5l))}));
+        PredicateBuilder::And(
+            {PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                     Literal(static_cast<int64_t>(3))),
+             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                     Literal(static_cast<int64_t>(5)))}));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     auto f0 =
         arrow::ipc::internal::json::ArrayFromJSON(bigint_type, R"([4, 3, 3, null])").ValueOrDie();
@@ -916,10 +932,11 @@ TEST_F(PredicateTest, TestAnd) {
 
     ASSERT_OK_AND_ASSIGN(
         auto negate_predicate,
-        PredicateBuilder::Or({PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                         FieldType::BIGINT, Literal(3l)),
-                              PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"f1",
-                                                         FieldType::BIGINT, Literal(5l))}));
+        PredicateBuilder::Or(
+            {PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                        Literal(static_cast<int64_t>(3))),
+             PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                        Literal(static_cast<int64_t>(5)))}));
     ASSERT_EQ(*predicate->Negate(), *negate_predicate);
 
     // with internal row
@@ -942,10 +959,11 @@ TEST_F(PredicateTest, TestOr) {
     auto bigint_type = arrow::int64();
     ASSERT_OK_AND_ASSIGN(
         auto predicate_base,
-        PredicateBuilder::Or({PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                      FieldType::BIGINT, Literal(3l)),
-                              PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                      FieldType::BIGINT, Literal(5l))}));
+        PredicateBuilder::Or(
+            {PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                     Literal(static_cast<int64_t>(3))),
+             PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                     Literal(static_cast<int64_t>(5)))}));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     auto f0 =
         arrow::ipc::internal::json::ArrayFromJSON(bigint_type, R"([4, 3, 3, null])").ValueOrDie();
@@ -962,10 +980,11 @@ TEST_F(PredicateTest, TestOr) {
 
     ASSERT_OK_AND_ASSIGN(
         auto negate_predicate,
-        PredicateBuilder::And({PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0",
-                                                          FieldType::BIGINT, Literal(3l)),
-                               PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::BIGINT, Literal(5l))}));
+        PredicateBuilder::And(
+            {PredicateBuilder::NotEqual(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                        Literal(static_cast<int64_t>(3))),
+             PredicateBuilder::NotEqual(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                        Literal(static_cast<int64_t>(5)))}));
     ASSERT_EQ(*predicate->Negate(), *negate_predicate);
 
     // with internal row
@@ -986,8 +1005,9 @@ TEST_F(PredicateTest, TestOr) {
 
 TEST_F(PredicateTest, TestBetween) {
     auto bigint_type = arrow::int64();
-    auto predicate_base = PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"f0",
-                                                    FieldType::BIGINT, Literal(3l), Literal(5l));
+    auto predicate_base = PredicateBuilder::Between(
+        /*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT, Literal(static_cast<int64_t>(3)),
+        Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 = arrow::ipc::internal::json::ArrayFromJSON(bigint_type, R"([3, 4, 5, 100, 1, null])")
@@ -1002,10 +1022,12 @@ TEST_F(PredicateTest, TestBetween) {
     ASSERT_OK_AND_ASSIGN(auto is_valid, predicate->Test(*struct_array));
     ASSERT_EQ(is_valid, std::vector<char>({1, 1, 1, 0, 0, 0}));
 
-    auto less_than = PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                FieldType::BIGINT, Literal(3l));
-    auto greater_than = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                      FieldType::BIGINT, Literal(5l));
+    auto less_than =
+        PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                   Literal(static_cast<int64_t>(3)));
+    auto greater_than =
+        PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                      Literal(static_cast<int64_t>(5)));
     ASSERT_OK_AND_ASSIGN(auto or_predicate, PredicateBuilder::Or({less_than, greater_than}));
 
     auto predicate_negate = std::dynamic_pointer_cast<PredicateFilter>(predicate->Negate());
@@ -1031,7 +1053,7 @@ TEST_F(PredicateTest, TestBetweenNull) {
     auto bigint_type = arrow::int64();
     auto predicate_base =
         PredicateBuilder::Between(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
-                                  Literal(FieldType::BIGINT), Literal(5l));
+                                  Literal(FieldType::BIGINT), Literal(static_cast<int64_t>(5)));
     auto predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate);
     auto f0 = arrow::ipc::internal::json::ArrayFromJSON(bigint_type, R"([4, null])").ValueOrDie();
@@ -1334,13 +1356,15 @@ TEST_F(PredicateTest, TestCompound) {
 
 TEST_F(PredicateTest, TestPredicateToString) {
     {
-        auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                 FieldType::BIGINT, Literal(5l));
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                    Literal(static_cast<int64_t>(5)));
         ASSERT_EQ(predicate->ToString(), "Equal(f0, 5)");
     }
     {
-        auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
-                                                       FieldType::BIGINT, Literal(5l));
+        auto predicate =
+            PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                          Literal(static_cast<int64_t>(5)));
         ASSERT_EQ(predicate->ToString(), "GreaterThan(f0, 5)");
     }
     {
@@ -1378,19 +1402,21 @@ TEST_F(PredicateTest, TestPredicateToString) {
     {
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::And({PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                           FieldType::BIGINT, Literal(3l)),
-                                   PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                           FieldType::BIGINT, Literal(5l))}));
+            PredicateBuilder::And(
+                {PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                         Literal(static_cast<int64_t>(3))),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                         Literal(static_cast<int64_t>(5)))}));
         ASSERT_EQ(predicate->ToString(), "And([Equal(f0, 3), Equal(f1, 5)])");
     }
     {
         ASSERT_OK_AND_ASSIGN(
             auto predicate,
-            PredicateBuilder::Or({PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
-                                                          FieldType::BIGINT, Literal(3l)),
-                                  PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1",
-                                                          FieldType::BIGINT, Literal(5l))}));
+            PredicateBuilder::Or(
+                {PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::BIGINT,
+                                         Literal(static_cast<int64_t>(3))),
+                 PredicateBuilder::Equal(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                         Literal(static_cast<int64_t>(5)))}));
         ASSERT_EQ(predicate->ToString(), "Or([Equal(f0, 3), Equal(f1, 5)])");
     }
 }

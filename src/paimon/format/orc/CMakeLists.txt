@@ -48,27 +48,44 @@ if(PAIMON_ENABLE_ORC)
                    ${PAIMON_VERSION_SCRIPT_FLAGS})
 
     if(PAIMON_BUILD_TESTS)
-        add_paimon_test(orc_format_test
-                        SOURCES
-                        complex_predicate_test.cpp
-                        predicate_converter_test.cpp
-                        predicate_pushdown_test.cpp
-                        read_range_generator_test.cpp
-                        orc_reader_wrapper_test.cpp
-                        orc_input_output_stream_test.cpp
-                        orc_adapter_test.cpp
-                        orc_stats_extractor_test.cpp
-                        orc_format_writer_test.cpp
-                        orc_file_batch_reader_test.cpp
-                        EXTRA_INCLUDES
-                        ${ORC_INCLUDE_DIR}
-                        STATIC_LINK_LIBS
-                        paimon_shared
-                        test_utils_static
-                        "-Wl,--whole-archive"
-                        paimon_local_file_system_static
-                        paimon_orc_file_format_static
-                        "-Wl,--no-whole-archive"
-                        ${GTEST_LINK_TOOLCHAIN})
+        set(ORC_FORMAT_TEST
+            complex_predicate_test.cpp
+            predicate_converter_test.cpp
+            predicate_pushdown_test.cpp
+            read_range_generator_test.cpp
+            orc_reader_wrapper_test.cpp
+            orc_input_output_stream_test.cpp
+            orc_adapter_test.cpp
+            orc_stats_extractor_test.cpp
+            orc_format_writer_test.cpp
+            orc_file_batch_reader_test.cpp)
+        if(APPLE)
+            add_paimon_test(orc_format_test
+                            SOURCES
+                            ${ORC_FORMAT_TEST}
+                            EXTRA_INCLUDES
+                            ${ORC_INCLUDE_DIR}
+                            STATIC_LINK_LIBS
+                            paimon_shared
+                            test_utils_static
+                            "-Wl,-force_load"
+                            paimon_local_file_system_static
+                            paimon_orc_file_format_static
+                            ${GTEST_LINK_TOOLCHAIN})
+        else()
+            add_paimon_test(orc_format_test
+                            SOURCES
+                            ${ORC_FORMAT_TEST}
+                            EXTRA_INCLUDES
+                            ${ORC_INCLUDE_DIR}
+                            STATIC_LINK_LIBS
+                            paimon_shared
+                            test_utils_static
+                            "-Wl,--whole-archive"
+                            paimon_local_file_system_static
+                            paimon_orc_file_format_static
+                            "-Wl,--no-whole-archive"
+                            ${GTEST_LINK_TOOLCHAIN})
+        endif()
     endif()
 endif()

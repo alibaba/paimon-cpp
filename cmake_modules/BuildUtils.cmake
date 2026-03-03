@@ -124,12 +124,16 @@ function(add_paimon_lib LIB_NAME)
         target_link_libraries(${LIB_NAME}_shared
                               PUBLIC "$<BUILD_INTERFACE:paimon_sanitizer_flags>")
 
-        target_link_options(${LIB_NAME}_shared
-                            PRIVATE
-                            -Wl,--exclude-libs,ALL
-                            -Wl,-Bsymbolic
-                            -Wl,-z,defs
-                            -Wl,--gc-sections)
+        if(APPLE)
+            target_link_options(${LIB_NAME}_shared PRIVATE -Wl,-dead_strip)
+        else()
+            target_link_options(${LIB_NAME}_shared
+                                PRIVATE
+                                -Wl,--exclude-libs,ALL
+                                -Wl,-Bsymbolic
+                                -Wl,-z,defs
+                                -Wl,--gc-sections)
+        endif()
 
         install(TARGETS ${LIB_NAME}_shared ${INSTALL_IS_OPTIONAL}
                 EXPORT ${LIB_NAME}_targets
