@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <numeric>
 
 #include "arrow/api.h"
 #include "arrow/array/builder_dict.h"
@@ -37,9 +38,26 @@
 
 namespace paimon {
 class MemoryPool;
-
 Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionConsumer::Create(
     const std::shared_ptr<arrow::Schema>& target_schema, const std::shared_ptr<MemoryPool>& pool) {
+    std::vector<int32_t> target_to_src_mapping(target_schema->num_fields() -
+                                               SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT);
+    std::iota(target_to_src_mapping.begin(), target_to_src_mapping.end(), 0);
+    return Create(target_schema, target_to_src_mapping, pool);
+}
+Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionConsumer::Create(
+    const std::shared_ptr<arrow::Schema>& target_schema,
+    const std::vector<int32_t>& target_to_src_mapping, const std::shared_ptr<MemoryPool>& pool) {
+    if (static_cast<size_t>(target_schema->num_fields() -
+                            SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT) !=
+        target_to_src_mapping.size()) {
+        return Status::Invalid(
+            fmt::format("target_schema field count without special fields {} and "
+                        "target_to_src_mapping size {} mismatch in KeyValueMetaProjectionConsumer",
+                        target_schema->num_fields() - SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT,
+                        target_to_src_mapping.size()));
+    }
+
     auto arrow_pool = GetArrowPool(pool);
     // target fields of output array: special fields + value fields
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
@@ -74,7 +92,7 @@ Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> KeyValueMetaProjectionCo
     }
     return std::unique_ptr<KeyValueMetaProjectionConsumer>(new KeyValueMetaProjectionConsumer(
         reserve_count, std::move(appenders), std::move(struct_builder), std::move(arrow_pool),
-        sequence_appender, value_kind_appender));
+        target_to_src_mapping, sequence_appender, value_kind_appender));
 }
 
 Result<KeyValueBatch> KeyValueMetaProjectionConsumer::NextBatch(
@@ -108,7 +126,7 @@ Result<KeyValueBatch> KeyValueMetaProjectionConsumer::NextBatch(
     // append value fields
     for (size_t i = 0; i < appenders_.size(); i++) {
         for (const auto& row : key_value_vec) {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(appenders_[i](*(row.value), i));
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(appenders_[i](*(row.value), target_to_src_mapping_[i]));
         }
     }
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch result_batch, FinishAndAccumulate());

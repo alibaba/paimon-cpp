@@ -84,11 +84,10 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     std::shared_ptr<arrow::Schema> value_schema_;
     std::vector<std::string> value_names_;
     RoaringBitmap32 selection_bitmap_;
-    std::shared_ptr<arrow::StructArray> value_struct_array_;
-    arrow::ArrayVector key_fields_;
-    arrow::ArrayVector value_fields_;
     std::shared_ptr<arrow::NumericArray<arrow::Int64Type>> sequence_number_array_;
     std::shared_ptr<arrow::NumericArray<arrow::Int8Type>> row_kind_array_;
+
+ protected:
     std::shared_ptr<ColumnarBatchContext> key_ctx_;
     std::shared_ptr<ColumnarBatchContext> value_ctx_;
 };

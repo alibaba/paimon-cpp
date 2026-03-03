@@ -78,6 +78,10 @@ class PostponeBucketWriter : public BatchWriter {
     Status DoClose() {
         sequence_number_array_.reset();
         row_kind_array_.reset();
+        if (writer_) {
+            writer_->Abort();
+            writer_.reset();
+        }
         return Status::OK();
     }
 

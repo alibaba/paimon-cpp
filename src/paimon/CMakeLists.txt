@@ -170,6 +170,10 @@ set(PAIMON_CORE_SRCS
     core/catalog/identifier.cpp
     core/core_options.cpp
     core/deletionvectors/deletion_vector.cpp
+    core/deletionvectors/deletion_file_writer.cpp
+    core/deletionvectors/bitmap_deletion_vector.cpp
+    core/deletionvectors/deletion_vectors_index_file.cpp
+    core/deletionvectors/deletion_vector_index_file_writer.cpp
     core/global_index/global_index_evaluator_impl.cpp
     core/global_index/global_index_scan.cpp
     core/global_index/global_index_scan_impl.cpp
@@ -217,6 +221,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
     core/mergetree/compact/loser_tree.cpp
+    core/mergetree/compact/merge_tree_compact_rewriter.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
     core/mergetree/compact/sort_merge_reader_with_min_heap.cpp
@@ -470,7 +475,6 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(core_test
                     SOURCES
                     core/append/append_only_writer_test.cpp
-                    core/append/bucketed_append_compact_manager_test.cpp
                     core/casting/cast_executor_factory_test.cpp
                     core/casting/cast_executor_test.cpp
                     core/casting/casted_row_test.cpp
@@ -482,7 +486,9 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/identifier_test.cpp
                     core/core_options_test.cpp
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
+                    core/deletionvectors/bitmap_deletion_vector_test.cpp
                     core/deletionvectors/deletion_vector_test.cpp
+                    core/deletionvectors/deletion_vectors_index_file_test.cpp
                     core/index/index_in_data_file_dir_path_factory_test.cpp
                     core/index/deletion_vector_meta_test.cpp
                     core/index/index_file_meta_serializer_test.cpp
@@ -536,6 +542,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/universal_compaction_test.cpp
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
+                    core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/sorted_run_test.cpp

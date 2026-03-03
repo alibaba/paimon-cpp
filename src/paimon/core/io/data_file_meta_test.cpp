@@ -174,4 +174,26 @@ TEST(DataFileMetaTest, TestToFileSelection) {
     }
 }
 
+TEST(DataFileMetaTest, TestUpgrade) {
+    auto file_meta = std::make_shared<DataFileMeta>(
+        "data-0.orc", /*file_size=*/645,
+        /*row_count=*/10, BinaryRow::EmptyRow(), BinaryRow::EmptyRow(), SimpleStats::EmptyStats(),
+        SimpleStats::EmptyStats(),
+        /*min_sequence_number=*/100, /*max_sequence_number=*/109, /*schema_id=*/0,
+        /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(1737111915429ll, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt,
+        /*external_path=*/std::nullopt, /*first_row_id=*/100, /*write_cols=*/std::nullopt);
+    // test normal upgrade
+    ASSERT_OK_AND_ASSIGN(auto new_file_meta, file_meta->Upgrade(10));
+    ASSERT_EQ(new_file_meta->level, 10);
+    // check other members
+    file_meta->level = 10;
+    ASSERT_EQ(*new_file_meta, *file_meta);
+
+    // test invalid upgrade
+    ASSERT_NOK_WITH_MSG(file_meta->Upgrade(1),
+                        "new level 1 should be greater than current level 10");
+}
 }  // namespace paimon::test
