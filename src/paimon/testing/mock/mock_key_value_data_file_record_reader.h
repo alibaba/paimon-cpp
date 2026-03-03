@@ -19,8 +19,8 @@
 #include <memory>
 #include <utility>
 
+#include "paimon/common/data/columnar/columnar_batch_context.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
-
 namespace paimon::test {
 // mock reader hold data array
 class MockKeyValueDataFileRecordReader : public KeyValueDataFileRecordReader {
@@ -31,11 +31,15 @@ class MockKeyValueDataFileRecordReader : public KeyValueDataFileRecordReader {
         : KeyValueDataFileRecordReader(std::move(reader), key_arity, value_schema, level, pool) {}
 
     void Reset() override {
-        for (const auto& field : key_fields_) {
-            data_holder_.push_back(field);
+        if (key_ctx_) {
+            for (const auto& field : key_ctx_->array_vec) {
+                data_holder_.push_back(field);
+            }
         }
-        for (const auto& field : value_fields_) {
-            data_holder_.push_back(field);
+        if (value_ctx_) {
+            for (const auto& field : value_ctx_->array_vec) {
+                data_holder_.push_back(field);
+            }
         }
         KeyValueDataFileRecordReader::Reset();
     }

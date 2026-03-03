@@ -268,15 +268,53 @@ else()
     endif()
 endif()
 
-if(DEFINED ENV{PAIMON_JINDOSDK_C_URL})
-    set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_URL}")
+if(APPLE)
+    set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c.${PAIMON_JINDOSDK_C_BUILD_VERSION}")
+    set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.dylib")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+        set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
+            "${PAIMON_JINDOSDK_C_MACOS_X86_64_BUILD_SHA256_CHECKSUM}")
+        if(DEFINED ENV{PAIMON_JINDOSDK_C_MACOS_X86_64_URL})
+            set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_MACOS_X86_64_URL}")
+        else()
+            set_urls(JINDOSDK_C_SOURCE_URL
+                     "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-macos-11_0-x86_64.tar.gz"
+            )
+        endif()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+        set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
+            "${PAIMON_JINDOSDK_C_MACOS_AARCH64_BUILD_SHA256_CHECKSUM}")
+        if(DEFINED ENV{PAIMON_JINDOSDK_C_MACOS_AARCH64_URL})
+            set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_MACOS_AARCH64_URL}")
+        else()
+            set_urls(JINDOSDK_C_SOURCE_URL
+                     "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-macos-11_0-aarch64.tar.gz"
+            )
+        endif()
+    endif()
 else()
-    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_JINDOSDK_C_PKG_NAME}")
-        set_urls(JINDOSDK_C_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_JINDOSDK_C_PKG_NAME}")
-    else()
-        set_urls(JINDOSDK_C_SOURCE_URL
-                 "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux.tar.gz"
-        )
+    set(JINDOSDK_C_DYNAMIC_LIB_NAME "jindosdk_c")
+    set(JINDOSDK_C_DYNAMIC_LIB_FILE "lib${JINDOSDK_C_DYNAMIC_LIB_NAME}.so")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")
+        set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
+            "${PAIMON_JINDOSDK_C_LINUX_X86_64_BUILD_SHA256_CHECKSUM}")
+        if(DEFINED ENV{PAIMON_JINDOSDK_C_LINUX_X86_64_URL})
+            set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_LINUX_X86_64_URL}")
+        else()
+            set_urls(JINDOSDK_C_SOURCE_URL
+                     "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux.tar.gz"
+            )
+        endif()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+        set(JINDOSDK_C_BUILD_SHA256_CHECKSUM
+            "${PAIMON_JINDOSDK_C_LINUX_AARCH64_BUILD_SHA256_CHECKSUM}")
+        if(DEFINED ENV{PAIMON_JINDOSDK_C_LINUX_AARCH64_URL})
+            set(JINDOSDK_C_SOURCE_URL "$ENV{PAIMON_JINDOSDK_C_LINUX_AARCH64_URL}")
+        else()
+            set_urls(JINDOSDK_C_SOURCE_URL
+                     "https://jindodata-binary.oss-cn-shanghai.aliyuncs.com/release/${PAIMON_JINDOSDK_C_BUILD_VERSION}/jindosdk-${PAIMON_JINDOSDK_C_BUILD_VERSION}-linux-el7-aarch64.tar.gz"
+            )
+        endif()
     endif()
 endif()
 
@@ -720,19 +758,19 @@ macro(build_jindosdk_c)
     set(JINDOSDK_C_HOME "${JINDOSDK_C_PREFIX}")
     set(JINDOSDK_C_INCLUDE_DIR "${JINDOSDK_C_PREFIX}/include")
     set(JINDOSDK_C_LIB_DIR "${JINDOSDK_C_PREFIX}/lib/native")
-    set(JINDOSDK_C_DYNAMIC_LIB "${JINDOSDK_C_LIB_DIR}/libjindosdk_c.so")
+    set(JINDOSDK_C_DYNAMIC_LIB "${JINDOSDK_C_LIB_DIR}/${JINDOSDK_C_DYNAMIC_LIB_FILE}")
 
     # Extract and install jindosdk from precompiled package
     externalproject_add(jindosdk_ep
                         URL ${JINDOSDK_C_SOURCE_URL}
-                        URL_HASH "SHA256=${PAIMON_JINDOSDK_C_BUILD_SHA256_CHECKSUM}"
+                        URL_HASH "SHA256=${JINDOSDK_C_BUILD_SHA256_CHECKSUM}"
                         ${THIRDPARTY_LOG_OPTIONS}
                         CONFIGURE_COMMAND ""
                         BUILD_COMMAND ""
                         INSTALL_COMMAND bash -c
                                         "cp -r <SOURCE_DIR>/include/* ${JINDOSDK_C_INCLUDE_DIR}"
                         COMMAND bash -c
-                                "cp -r <SOURCE_DIR>/lib/native/libjindosdk_c.so* ${JINDOSDK_C_LIB_DIR}"
+                                "cp -r <SOURCE_DIR>/lib/native/${JINDOSDK_C_DYNAMIC_LIB_FILE}* ${JINDOSDK_C_LIB_DIR}"
                         BUILD_BYPRODUCTS "${JINDOSDK_C_DYNAMIC_LIB}")
 
     # The include directory must exist before it is referenced by a target.
@@ -750,7 +788,7 @@ macro(build_jindosdk_c)
     install(DIRECTORY "${JINDOSDK_C_LIB_DIR}/"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}
             FILES_MATCHING
-            PATTERN "libjindosdk_c.so*")
+            PATTERN "${JINDOSDK_C_DYNAMIC_LIB_FILE}*")
 
 endmacro()
 
@@ -780,7 +818,8 @@ macro(build_jindosdk_nextarch)
         "-DCMAKE_INSTALL_PREFIX=${JINDOSDK_NEXTARCH_PREFIX}"
         "-DCMAKE_CXX_FLAGS=${JINDOSDK_NEXTARCH_CMAKE_CXX_FLAGS}"
         "-DCMAKE_C_FLAGS=${JINDOSDK_NEXTARCH_CMAKE_C_FLAGS}"
-        -DJINDOSDK_ROOT=${JINDOSDK_C_DIR_ROOT})
+        -DJINDOSDK_ROOT=${JINDOSDK_C_DIR_ROOT}
+        -DJINDOSDK_LIBRARY_NAME=${JINDOSDK_C_DYNAMIC_LIB_NAME})
 
     externalproject_add(jindosdk-nextarch_ep
                         SOURCE_DIR ${JINDOSDK_NEXTARCH_SOURCE_DIR}

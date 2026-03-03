@@ -33,7 +33,7 @@ class PAIMON_EXPORT ArrowUtils {
         const std::shared_ptr<arrow::DataType>& data_type);
 
     static Result<std::vector<int32_t>> CreateProjection(
-        const std::shared_ptr<arrow::Schema>& file_schema, const arrow::FieldVector& read_fields);
+        const std::shared_ptr<arrow::Schema>& src_schema, const arrow::FieldVector& target_fields);
 
     static Status CheckNullabilityMatch(const std::shared_ptr<arrow::Schema>& schema,
                                         const std::shared_ptr<arrow::Array>& data);

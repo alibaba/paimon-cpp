@@ -80,13 +80,7 @@ MergeTreeWriter::MergeTreeWriter(
       schema_id_(schema_id),
       value_type_(arrow::struct_(value_schema->fields())),
       metrics_(std::make_shared<MetricsImpl>()) {
-    arrow::FieldVector target_fields;
-    target_fields.push_back(
-        DataField::ConvertDataFieldToArrowField(SpecialFields::SequenceNumber()));
-    target_fields.push_back(DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind()));
-    target_fields.insert(target_fields.end(), value_schema->fields().begin(),
-                         value_schema->fields().end());
-    write_schema_ = arrow::schema(target_fields);
+    write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 }
 
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
@@ -148,10 +142,14 @@ Status MergeTreeWriter::Flush() {
     // consumer batch size is WriteBatchSize
     auto async_key_value_producer_consumer =
         std::make_unique<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>(
-            std::move(sort_merge_reader), create_consumer,
-            std::min(options_.GetWriteBatchSize(), MAX_PROJECTION_BATCH_SIZE),
+            std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
             /*projection_thread_num=*/1, pool_);
     auto rolling_writer = CreateRollingRowWriter();
+    ScopeGuard write_guard([&]() -> void {
+        (void)rolling_writer->Close();
+        rolling_writer->Abort();
+        async_key_value_producer_consumer->Close();
+    });
     while (true) {
         PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
                                async_key_value_producer_consumer->NextBatch());
@@ -163,6 +161,7 @@ Status MergeTreeWriter::Flush() {
     PAIMON_RETURN_NOT_OK(rolling_writer->Close());
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
                            rolling_writer->GetResult());
+    write_guard.Release();
     new_files_.insert(new_files_.end(), flushed_files.begin(), flushed_files.end());
     metrics_->Merge(rolling_writer->GetMetrics());
     return Status::OK();
@@ -196,7 +195,7 @@ MergeTreeWriter::CreateRollingRowWriter() const {
             return Status::OK();
         };
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, FileSource::Append(),
+            options_.GetFileCompression(), converter, schema_id_, /*level=*/0, FileSource::Append(),
             trimmed_primary_keys_, stats_extractor, write_schema_, path_factory_->IsExternalPath(),
             pool_);
         PAIMON_RETURN_NOT_OK(

@@ -138,18 +138,23 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
             CreateNoMergeReader(data_split, /*only_filter_key=*/data_split->IsStreaming(),
                                 data_file_path_factory));
     } else {
-        if (!merge_function_wrapper_) {
-            // In deletion vector mode, streaming data split or postpone bucket mode, we don't need
-            // to use merge function. Even if the merge function in CoreOptions is not supported, it
-            // should not affect data reading. So we create merge_function_wrapper_ lazily, to avoid
-            // raise errors when creating MergeFileSplitRead at the beginning.
-            PAIMON_ASSIGN_OR_RAISE(
-                merge_function_wrapper_,
-                CreateMergeFunctionWrapper(options_, context_->GetTableSchema(), value_schema_));
-        }
         PAIMON_ASSIGN_OR_RAISE(batch_reader, CreateMergeReader(data_split, data_file_path_factory));
     }
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
+}
+
+Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>>
+MergeFileSplitRead::GetMergeFunctionWrapper() {
+    if (!merge_function_wrapper_) {
+        // In deletion vector mode, streaming data split or postpone bucket mode, we don't need
+        // to use merge function. Even if the merge function in CoreOptions is not supported, it
+        // should not affect data reading. So we create merge_function_wrapper_ lazily, to avoid
+        // raise errors when creating MergeFileSplitRead at the beginning.
+        PAIMON_ASSIGN_OR_RAISE(
+            merge_function_wrapper_,
+            CreateMergeFunctionWrapper(options_, context_->GetTableSchema(), value_schema_));
+    }
+    return merge_function_wrapper_;
 }
 
 Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>>
@@ -194,7 +199,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIf
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split,
-    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) {
     auto deletion_file_map = AbstractSplitRead::CreateDeletionFileMap(*data_split);
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(data_split->DataFiles(), interval_partition_comparator_).Partition();
@@ -202,10 +207,9 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     batch_readers.reserve(sections.size());
     // no overlap through multiple sections
     for (const auto& section : sections) {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<BatchReader> projection_reader,
-            CreateReaderForSection(section, data_split->BucketPath(), data_split->Partition(),
-                                   deletion_file_map, data_file_path_factory));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> projection_reader,
+                               CreateReaderForSection(section, data_split->Partition(),
+                                                      deletion_file_map, data_file_path_factory));
         batch_readers.push_back(std::move(projection_reader));
     }
     auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
@@ -372,44 +376,57 @@ Result<std::shared_ptr<Predicate>> MergeFileSplitRead::GenerateKeyPredicates(
 }
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReaderForSection(
-    const std::vector<SortedRun>& section, const std::string& bucket_path,
-    const BinaryRow& partition,
+    const std::vector<SortedRun>& section, const BinaryRow& partition,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) {
     // with overlap in one section
-    std::vector<std::unique_ptr<KeyValueRecordReader>> record_readers;
-    record_readers.reserve(section.size());
     std::shared_ptr<Predicate> predicate;
     if (section.size() > 1) {
         predicate = predicate_for_keys_;
     } else {
         predicate = context_->GetPredicate();
     }
-    for (const auto& run : section) {
-        // no overlap in a run
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader> run_reader,
-                               CreateReaderForRun(bucket_path, partition, run, deletion_file_map,
-                                                  predicate, data_file_path_factory));
-        record_readers.emplace_back(std::move(run_reader));
-    }
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
-                           CreateSortMergeReader(std::move(record_readers)));
-
-    auto drop_delete_reader = std::make_unique<DropDeleteReader>(std::move(sort_merge_reader));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<SortMergeReader> sort_merge_reader,
+        CreateSortMergeReaderForSection(section, partition, deletion_file_map, predicate,
+                                        data_file_path_factory, /*drop_delete=*/true));
     // KeyValueProjectionReader converts KeyValue objects to arrow array according to projection
     if (!context_->EnableMultiThreadRowToBatch()) {
-        return KeyValueProjectionReader::Create(std::move(drop_delete_reader), raw_read_schema_,
+        return KeyValueProjectionReader::Create(std::move(sort_merge_reader), raw_read_schema_,
                                                 projection_, options_.GetReadBatchSize(), pool_);
     }
     int32_t thread_number = context_->GetRowToBatchThreadNumber();
     assert(thread_number > 0);
     return std::make_unique<AsyncKeyValueProjectionReader>(
-        std::move(drop_delete_reader), raw_read_schema_, projection_, options_.GetReadBatchSize(),
+        std::move(sort_merge_reader), raw_read_schema_, projection_, options_.GetReadBatchSize(),
         thread_number, pool_);
 }
 
+Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeReaderForSection(
+    const std::vector<SortedRun>& section, const BinaryRow& partition,
+    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::shared_ptr<Predicate>& predicate,
+    const std::shared_ptr<DataFilePathFactory>& data_file_path_factory, bool drop_delete) {
+    // with overlap in one section
+    std::vector<std::unique_ptr<KeyValueRecordReader>> record_readers;
+    record_readers.reserve(section.size());
+    for (const auto& run : section) {
+        // no overlap in a run
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader> run_reader,
+                               CreateReaderForRun(partition, run, deletion_file_map, predicate,
+                                                  data_file_path_factory));
+        record_readers.emplace_back(std::move(run_reader));
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
+                           CreateSortMergeReader(std::move(record_readers)));
+    if (drop_delete) {
+        sort_merge_reader = std::make_unique<DropDeleteReader>(std::move(sort_merge_reader));
+    }
+    return sort_merge_reader;
+}
+
 Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderForRun(
-    const std::string& bucket_path, const BinaryRow& partition, const SortedRun& sorted_run,
+    const BinaryRow& partition, const SortedRun& sorted_run,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
     const std::shared_ptr<Predicate>& predicate,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
@@ -433,16 +450,18 @@ Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderFo
 }
 
 Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeReader(
-    std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers) const {
+    std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers) {
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
+                           GetMergeFunctionWrapper());
     auto sort_engine = options_.GetSortEngine();
     if (sort_engine == SortEngine::MIN_HEAP) {
         return std::make_unique<SortMergeReaderWithMinHeap>(
             std::move(record_readers), key_comparator_, user_defined_seq_comparator_,
-            merge_function_wrapper_);
+            merge_function_wrapper);
     } else if (sort_engine == SortEngine::LOSER_TREE) {
         return std::make_unique<SortMergeReaderWithLoserTree>(
             std::move(record_readers), key_comparator_, user_defined_seq_comparator_,
-            merge_function_wrapper_);
+            merge_function_wrapper);
     }
     return Status::Invalid("only support loser-tree or min-heap sort engine");
 }

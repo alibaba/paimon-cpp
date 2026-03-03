@@ -93,9 +93,6 @@ class MergeTreeWriter : public BatchWriter {
     CreateRollingRowWriter() const;
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
 
-    // in case write batch size is too large and overflow arrow array
-    static constexpr int32_t MAX_PROJECTION_BATCH_SIZE = 100000;
-
  private:
     int64_t last_sequence_number_;
     int64_t current_memory_in_bytes_;

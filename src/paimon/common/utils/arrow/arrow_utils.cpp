@@ -27,14 +27,14 @@ Result<std::shared_ptr<arrow::Schema>> ArrowUtils::DataTypeToSchema(
 }
 
 Result<std::vector<int32_t>> ArrowUtils::CreateProjection(
-    const std::shared_ptr<arrow::Schema>& file_schema, const arrow::FieldVector& read_fields) {
+    const std::shared_ptr<arrow::Schema>& src_schema, const arrow::FieldVector& target_fields) {
     std::vector<int32_t> target_to_src_mapping;
-    target_to_src_mapping.reserve(read_fields.size());
-    for (const auto& field : read_fields) {
-        auto src_field_idx = file_schema->GetFieldIndex(field->name());
+    target_to_src_mapping.reserve(target_fields.size());
+    for (const auto& field : target_fields) {
+        auto src_field_idx = src_schema->GetFieldIndex(field->name());
         if (src_field_idx < 0) {
             return Status::Invalid(
-                fmt::format("Field '{}' not found or duplicate in file schema", field->name()));
+                fmt::format("Field '{}' not found or duplicate in src schema", field->name()));
         }
         target_to_src_mapping.push_back(src_field_idx);
     }

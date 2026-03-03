@@ -30,7 +30,7 @@ struct DataFileMeta;
 /// Algorithm to partition several data files into the minimum number of `SortedRun`s.
 class IntervalPartition {
  public:
-    IntervalPartition(const std::vector<std::shared_ptr<DataFileMeta>>& inputFiles,
+    IntervalPartition(const std::vector<std::shared_ptr<DataFileMeta>>& input_files,
                       const std::shared_ptr<FieldsComparator>& key_comparator);
 
     /// Returns a two-dimensional list of `SortedRun`s.
