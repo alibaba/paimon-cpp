@@ -34,7 +34,7 @@ Result<std::vector<int32_t>> ArrowUtils::CreateProjection(
         auto src_field_idx = src_schema->GetFieldIndex(field->name());
         if (src_field_idx < 0) {
             return Status::Invalid(
-                fmt::format("Field '{}' not found or duplicate in file schema", field->name()));
+                fmt::format("Field '{}' not found or duplicate in src schema", field->name()));
         }
         target_to_src_mapping.push_back(src_field_idx);
     }
