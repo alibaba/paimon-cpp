@@ -39,7 +39,7 @@ class MemoryPool;
 
 /// The writer for writing SST Files. SST Files are row-oriented and designed to serve frequent
 /// point queries and range queries by key.
-class SstFileWriter {
+class PAIMON_EXPORT SstFileWriter {
  public:
     SstFileWriter(const std::shared_ptr<OutputStream>& out, const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,

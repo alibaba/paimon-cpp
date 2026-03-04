@@ -34,6 +34,11 @@ std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_pt
     auto has_nulls = input->ReadByte() == 1;
     return std::make_shared<BTreeIndexMeta>(first_key, last_key, has_nulls);
 }
-std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) {}
+
+std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) {
+    // TODO(zhangchaoming.zcm): Implement serialization
+    // For now, return an empty Bytes object
+    return std::make_shared<Bytes>();
+}
 
 }  // namespace paimon

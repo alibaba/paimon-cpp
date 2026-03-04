@@ -27,7 +27,7 @@
 namespace paimon {
 class CacheValue;
 
-class Cache {
+class PAIMON_EXPORT Cache {
  public:
     virtual ~Cache() = default;
     virtual std::shared_ptr<CacheValue> Get(
@@ -44,7 +44,7 @@ class Cache {
     virtual std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() = 0;
 };
 
-class NoCache : public Cache {
+class PAIMON_EXPORT NoCache : public Cache {
  public:
     std::shared_ptr<CacheValue> Get(
         const std::shared_ptr<CacheKey>& key,

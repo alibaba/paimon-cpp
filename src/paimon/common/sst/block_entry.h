@@ -23,7 +23,7 @@
 
 namespace paimon {
 
-struct BlockEntry {
+struct PAIMON_EXPORT BlockEntry {
  public:
     BlockEntry(std::shared_ptr<MemorySlice>& key, std::shared_ptr<MemorySlice>& value)
         : key_(key), value_(value) {}

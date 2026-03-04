@@ -24,7 +24,7 @@
 
 namespace paimon {
 
-class CacheKey {
+class PAIMON_EXPORT CacheKey {
  public:
     static std::shared_ptr<CacheKey> ForPosition(const std::string& file_path, int64_t position,
                                                  int32_t length, bool is_index);

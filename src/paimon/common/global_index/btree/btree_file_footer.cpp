@@ -86,6 +86,8 @@ std::shared_ptr<MemorySlice> BTreeFileFooter::Write(
 
     // write magic number
     ouput->WriteValue(MAGIC_NUMBER);
+
+    return ouput->ToSlice();
 }
 
 }  // namespace paimon

@@ -29,7 +29,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     auto cache_manager = std::make_shared<CacheManager>();
-    auto block_cache = std::make_shared<BlockCache>(file_path, in, pool.get(), cache_manager);
+    auto block_cache = std::make_shared<BlockCache>(file_path, in, pool, cache_manager);
 
     // read footer
     auto segment = block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,

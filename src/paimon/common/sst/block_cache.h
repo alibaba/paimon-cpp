@@ -27,7 +27,7 @@
 
 namespace paimon {
 
-class BlockCache {
+class PAIMON_EXPORT BlockCache {
  public:
     BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
                const std::shared_ptr<MemoryPool>& pool,

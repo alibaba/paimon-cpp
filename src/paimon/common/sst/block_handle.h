@@ -25,7 +25,7 @@
 
 namespace paimon {
 
-class BlockHandle {
+class PAIMON_EXPORT BlockHandle {
  public:
     static std::shared_ptr<BlockHandle> ReadBlockHandle(std::shared_ptr<MemorySliceInput>& input);
 

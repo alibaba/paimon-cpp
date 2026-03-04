@@ -74,5 +74,41 @@ class PAIMON_EXPORT FunctionVisitor {
 
     /// Evaluates whether string values like the given string.
     virtual Result<T> VisitLike(const Literal& literal) = 0;
+
+    /// Evaluates the BETWEEN predicate with the given lower and upper bounds.
+    virtual Result<T> VisitBetween(const Literal& from, const Literal& to) {
+        // Default implementation: BETWEEN is equivalent to >= AND <=
+        auto lower_result = VisitGreaterOrEqual(from);
+        if (!lower_result.ok()) {
+            return lower_result.status();
+        }
+        auto upper_result = VisitLessOrEqual(to);
+        if (!upper_result.ok()) {
+            return upper_result.status();
+        }
+        return VisitAnd({std::move(lower_result).value(), std::move(upper_result).value()});
+    }
+
+    /// Evaluates the NOT BETWEEN predicate with the given lower and upper bounds.
+    virtual Result<T> VisitNotBetween(const Literal& from, const Literal& to) {
+        // Default implementation: NOT BETWEEN is equivalent to < OR >
+        auto lower_result = VisitLessThan(from);
+        if (!lower_result.ok()) {
+            return lower_result.status();
+        }
+        auto upper_result = VisitGreaterThan(to);
+        if (!upper_result.ok()) {
+            return upper_result.status();
+        }
+        return VisitOr({std::move(lower_result).value(), std::move(upper_result).value()});
+    }
+
+    // ----------------- Compound functions ------------------------
+
+    /// Evaluates the AND predicate across multiple child results.
+    virtual Result<T> VisitAnd(const std::vector<Result<T>>& children) = 0;
+
+    /// Evaluates the OR predicate across multiple child results.
+    virtual Result<T> VisitOr(const std::vector<Result<T>>& children) = 0;
 };
 }  // namespace paimon

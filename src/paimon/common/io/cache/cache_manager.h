@@ -26,7 +26,7 @@
 #include "paimon/result.h"
 
 namespace paimon {
-class CacheManager {
+class PAIMON_EXPORT CacheManager {
  public:
     CacheManager() {
         // todo implements cache

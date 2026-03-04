@@ -155,6 +155,10 @@ std::vector<Range> RoaringNavigableMap64::ToRangeList() const {
     return ranges;
 }
 
+const RoaringBitmap64& RoaringNavigableMap64::GetBitmap() const {
+    return impl_->bitmap;
+}
+
 RoaringNavigableMap64 RoaringNavigableMap64::BitmapOf(const std::vector<int64_t>& values) {
     RoaringNavigableMap64 result;
     for (int64_t value : values) {

@@ -31,7 +31,7 @@ namespace paimon {
 class BlockIterator;
 
 /// Reader for a block.
-class BlockReader : public std::enable_shared_from_this<BlockReader> {
+class PAIMON_EXPORT BlockReader : public std::enable_shared_from_this<BlockReader> {
  public:
     static std::shared_ptr<BlockReader> Create(
         std::shared_ptr<MemorySlice> block,

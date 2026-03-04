@@ -28,7 +28,7 @@
 namespace paimon {
 
 /// Footer of a block.
-class BlockFooter {
+class PAIMON_EXPORT BlockFooter {
  public:
     static Result<std::unique_ptr<BlockFooter>> ReadBlockFooter(
         std::shared_ptr<MemorySliceInput>& input);

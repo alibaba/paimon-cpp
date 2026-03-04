@@ -38,7 +38,7 @@ class SstFileIterator;
 /// An SST File Reader which serves point queries and range queries. Users can call
 /// CreateIterator() to create a file iterator and then use seek and read methods to do range
 /// queries. Note that this class is NOT thread-safe.
-class SstFileReader {
+class PAIMON_EXPORT SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
         const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<paimon::FileSystem>& fs,
@@ -58,32 +58,38 @@ class SstFileReader {
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
-    /**
-     * Lookup the specified key in the file.
-     *
-     * @param key serialized key
-     * @return corresponding serialized value, nullptr if not found.
-     */
+    /// Lookup the specified key in the file.
+    ///
+    /// @param key serialized key
+    /// @return corresponding serialized value, nullptr if not found.
     std::shared_ptr<Bytes> Lookup(std::shared_ptr<Bytes> key);
 
     Result<std::unique_ptr<BlockIterator>> GetNextBlock(
         std::unique_ptr<BlockIterator>& index_iterator);
 
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
+    /// @param handle The block handle.
+    /// @param index Whether read the block as an index.
+    /// @return The reader of the target block.
     Result<std::shared_ptr<BlockReader>> ReadBlock(std::shared_ptr<BlockHandle>&& handle,
                                                    bool index);
 
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
+    /// @param handle The block handle.
+    /// @param index Whether read the block as an index.
+    /// @return The reader of the target block.
     Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
                                                    bool index);
+
+    /// @return The index block reader.
+    std::shared_ptr<BlockReader> GetIndexBlockReader() const {
+        return index_block_reader_;
+    }
+
+    /// @return The comparator function.
+    const std::function<int32_t(const std::shared_ptr<MemorySlice>&,
+                                const std::shared_ptr<MemorySlice>&)>&
+    GetComparator() const {
+        return comparator_;
+    }
 
  private:
     static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
@@ -104,10 +110,8 @@ class SstFileIterator {
     SstFileIterator() = default;
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 
-    /**
-     * Seek to the position of the record whose key is exactly equal to or greater than the
-     * specified key.
-     */
+    /// Seek to the position of the record whose key is exactly equal to or greater than the
+    /// specified key.
     Status SeekTo(std::shared_ptr<Bytes>& key);
 
  private:

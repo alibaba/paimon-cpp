@@ -138,6 +138,14 @@ class PAIMON_EXPORT RoaringNavigableMap64 {
     std::vector<Range> ToRangeList() const;
 
     /**
+     * Gets the internal RoaringBitmap64 without copying.
+     * This is an optimization to avoid O(n) conversion when the navigable map
+     * is no longer needed for modifications.
+     * @return A const reference to the internal RoaringBitmap64
+     */
+    const RoaringBitmap64& GetBitmap() const;
+
+    /**
      * Creates a new bitmap from a list of values.
      * @param values The values to include in the bitmap
      * @return A new RoaringNavigableMap64 containing the specified values
