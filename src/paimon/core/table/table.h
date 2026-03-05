@@ -55,7 +55,7 @@ class PAIMON_EXPORT Table {
     }
 
     /// Loads the latest schema of table.
-    std::shared_ptr<Schema> LatestSchema() {
+    std::shared_ptr<Schema> LatestSchema() const {
         return schema_;
     }
 

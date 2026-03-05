@@ -18,6 +18,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -33,17 +34,19 @@ namespace paimon {
 /// Interface of a database in a catalog.
 class PAIMON_EXPORT Database {
  public:
-    /// ================== Table Metadata =====================
+    virtual ~Database() = default;
+
+    /// ================== Database Metadata =====================
 
     /// A name to identify this database.
     virtual std::string Name() const = 0;
 
-    /// Get the table-level options associated with this schema.
+    /// Get the database-level options associated with this database.
     /// @return Options
     virtual const std::map<std::string, std::string>& Options() const = 0;
 
-    /// Get an optional comment describing the table.
-    /// @return The table comment if set, or std::nullopt otherwise.
+    /// Get an optional comment describing the database.
+    /// @return The database comment if set, or std::nullopt otherwise.
     virtual std::optional<std::string> Comment() const = 0;
 };
 

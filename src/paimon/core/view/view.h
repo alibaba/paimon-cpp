@@ -46,10 +46,10 @@ class PAIMON_EXPORT View {
     }
 
     /// Returns the view representation.
-    virtual std::string Query() = 0;
+    virtual std::string Query() const = 0;
 
     /// Loads the schema of view.
-    virtual std::shared_ptr<Schema> GetSchema() = 0;
+    virtual std::shared_ptr<Schema> GetSchema() const = 0;
 };
 
 }  // namespace paimon
