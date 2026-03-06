@@ -26,6 +26,8 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/operation/file_store_scan.h"
+#include "paimon/core/operation/file_system_write_restore.h"
+#include "paimon/core/operation/restore_files.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/bucket_mode.h"
@@ -72,7 +74,10 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
-      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {}
+      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
+    // TODO(yonghao.fyh): support with
+    compact_executor_ = CreateDefaultExecutor(4);
+}
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     if (PAIMON_UNLIKELY(batch == nullptr)) {
@@ -118,6 +123,14 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
                            GetWriter(partition, batch->GetBucket()));
     assert(writer);
     return writer->Write(std::move(batch));
+}
+
+Status AbstractFileStoreWrite::Compact(const std::map<std::string, std::string>& partition,
+                                       int32_t bucket, bool full_compaction) {
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow part, file_store_path_factory_->ToBinaryRow(partition))
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer, GetWriter(part, bucket));
+    assert(writer);
+    return writer->Compact(full_compaction);
 }
 
 Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::PrepareCommit(
@@ -227,6 +240,7 @@ Status AbstractFileStoreWrite::Close() {
         }
     }
     writers_.clear();
+    compact_executor_->ShutdownNow();
     return Status::OK();
 }
 
@@ -238,9 +252,8 @@ int32_t AbstractFileStoreWrite::GetDefaultBucketNum() const {
     return options_.GetBucket();
 }
 
-Result<int32_t> AbstractFileStoreWrite::ScanExistingFileMetas(
-    const Snapshot& snapshot, const BinaryRow& partition, int32_t bucket,
-    std::vector<std::shared_ptr<DataFileMeta>>* restore_files) const {
+Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMetas(
+    const Snapshot& snapshot, const BinaryRow& partition, int32_t bucket) const {
     PAIMON_ASSIGN_OR_RAISE(auto part_values,
                            file_store_path_factory_->GeneratePartitionVector(partition));
     std::map<std::string, std::string> part_values_map;
@@ -256,22 +269,28 @@ Result<int32_t> AbstractFileStoreWrite::ScanExistingFileMetas(
         /*vector_search=*/nullptr);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
-                           scan->WithSnapshot(snapshot)->CreatePlan());
-    std::vector<ManifestEntry> entries = plan->Files();
+    // PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
+    //                        scan->WithSnapshot(snapshot)->CreatePlan());
+    // std::vector<ManifestEntry> entries = plan->Files();
+
+    // TODO(yonghao.fyh): create index file handler
+    FileSystemWriteRestore restore(options_, snapshot_manager_, std::move(scan));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files, restore.GetRestoreFiles());
+
+    std::optional<int32_t> restored_total_buckets = restore_files->TotalBuckets();
     int32_t total_buckets = GetDefaultBucketNum();
-    for (auto& entry : entries) {
-        if (!ignore_num_bucket_check_ && entry.TotalBuckets() != options_.GetBucket()) {
-            return Status::Invalid(fmt::format(
-                "Try to write table with a new bucket num {}, but the previous "
-                "bucket num is {}. Please switch to batch mode, and perform INSERT OVERWRITE to "
-                "rescale current data layout first.",
-                options_.GetBucket(), entry.TotalBuckets()));
-        }
-        total_buckets = entry.TotalBuckets();
-        restore_files->push_back(std::move(entry.File()));
+    if (restored_total_buckets) {
+        total_buckets = restored_total_buckets.value();
     }
-    return total_buckets;
+
+    if (!ignore_num_bucket_check_ && total_buckets != options_.GetBucket()) {
+        return Status::Invalid(fmt::format(
+            "Try to write table with a new bucket num {}, but the previous "
+            "bucket num is {}. Please switch to batch mode, and perform INSERT OVERWRITE to "
+            "rescale current data layout first.",
+            options_.GetBucket(), total_buckets));
+    }
+    return restore_files;
 }
 
 Result<std::shared_ptr<BatchWriter>> AbstractFileStoreWrite::GetWriter(const BinaryRow& partition,

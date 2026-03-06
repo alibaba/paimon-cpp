@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "paimon/common/data/blob_utils.h"
+#include "paimon/core/compact/compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/single_file_writer.h"
@@ -58,11 +59,21 @@ class AppendOnlyWriter : public BatchWriter {
                      const std::optional<std::vector<std::string>>& write_cols,
                      int64_t max_sequence_number,
                      const std::shared_ptr<DataFilePathFactory>& path_factory,
-                     const std::shared_ptr<MemoryPool>& memory_pool);
+                     const std::shared_ptr<MemoryPool>& memory_pool,
+                     const std::shared_ptr<CompactManager>& compact_manager);
+
     ~AppendOnlyWriter() override;
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
+    Status Compact(bool full_compaction) override {
+        return Flush(/*wait_for_latest_compaction=*/true, full_compaction);
+    }
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
+    Result<bool> CompactNotCompleted() override {
+        PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(/*full_compaction=*/false));
+        return compact_manager_->CompactNotCompleted();
+    }
+    Status Sync() override;
     Status Close() override;
     bool IsCompacting() const override {
         return false;
@@ -82,7 +93,7 @@ class AppendOnlyWriter : public BatchWriter {
         const BlobUtils::SeparatedSchemas& schemas) const;
 
     Result<CommitIncrement> DrainIncrement();
-    Status Flush();
+    Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
 
     SingleFileWriterCreator GetDataFileWriterCreator(
         const std::shared_ptr<arrow::Schema>& schema,
@@ -93,6 +104,9 @@ class AppendOnlyWriter : public BatchWriter {
         const std::shared_ptr<FormatStatsExtractor>& stats_extractor,
         const std::optional<std::vector<std::string>>& write_cols) const;
 
+    Status TrySyncLatestCompaction(bool blocking);
+    Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);
+
     CoreOptions options_;
     int64_t schema_id_;
     std::shared_ptr<arrow::Schema> write_schema_;
@@ -100,11 +114,15 @@ class AppendOnlyWriter : public BatchWriter {
     std::shared_ptr<LongCounter> seq_num_counter_;
     std::shared_ptr<DataFilePathFactory> path_factory_;
     std::shared_ptr<MemoryPool> memory_pool_;
+    std::shared_ptr<CompactManager> compact_manager_;
     std::shared_ptr<Metrics> metrics_;
 
     std::vector<std::shared_ptr<DataFileMeta>> new_files_;
     std::vector<std::shared_ptr<DataFileMeta>> deleted_files_;
+    std::vector<std::shared_ptr<DataFileMeta>> compact_before_;
+    std::vector<std::shared_ptr<DataFileMeta>> compact_after_;
 
+    std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
     std::unique_ptr<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>> writer_;
 };
 

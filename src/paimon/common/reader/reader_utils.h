@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "arrow/api.h"
 #include "paimon/reader/batch_reader.h"
@@ -25,6 +26,7 @@
 namespace arrow {
 class MemoryPool;
 class Array;
+class StructArray;
 }  // namespace arrow
 
 namespace paimon {
@@ -52,5 +54,8 @@ class ReaderUtils {
     /// Precondition: input bitmap is not empty
     static Result<arrow::ArrayVector> GenerateFilteredArrayVector(
         const std::shared_ptr<arrow::Array>& src_array, const RoaringBitmap32& bitmap);
+
+    static Result<std::shared_ptr<arrow::StructArray>> RemoveFieldFromStructArray(
+        const std::shared_ptr<arrow::StructArray>& struct_array, const std::string& field_name);
 };
 }  // namespace paimon

@@ -77,6 +77,10 @@ class AbstractSplitRead : public SplitRead {
     static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
         const DataSplitImpl& data_split);
 
+    static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
+        const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+        const std::vector<std::optional<DeletionFile>>& deletion_files);
+
     Result<std::unique_ptr<BatchReader>> ApplyPredicateFilterIfNeeded(
         std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const;
 

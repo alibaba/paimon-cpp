@@ -65,6 +65,18 @@ class MergeTreeWriter : public BatchWriter {
         [[maybe_unused]] auto status = DoClose();
     }
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
+    Status Compact(bool full_compaction) override {
+        return Status::NotImplemented("not implemented");
+    }
+
+    Result<bool> CompactNotCompleted() override {
+        return Status::NotImplemented("not implemented");
+    }
+
+    Status Sync() override {
+        return Status::NotImplemented("not implemented");
+    }
+
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     bool IsCompacting() const override {

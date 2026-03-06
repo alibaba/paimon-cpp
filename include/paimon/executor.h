@@ -51,6 +51,9 @@ class PAIMON_EXPORT Executor {
     /// @note This method should be thread-safe and can be called from multiple threads
     /// simultaneously.
     virtual void Add(std::function<void()> func) = 0;
+
+    /// Shutdown the executor immediately, discarding all pending tasks.
+    virtual void ShutdownNow() = 0;
 };
 
 }  // namespace paimon

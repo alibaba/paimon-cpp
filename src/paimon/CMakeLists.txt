@@ -145,6 +145,7 @@ set(PAIMON_COMMON_SRCS
 
 set(PAIMON_CORE_SRCS
     core/append/append_only_writer.cpp
+    core/append/bucketed_append_compact_manager.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -256,6 +257,7 @@ set(PAIMON_CORE_SRCS
     core/operation/read_context.cpp
     core/operation/scan_context.cpp
     core/operation/write_context.cpp
+    core/operation/write_restore.cpp
     core/postpone/postpone_bucket_writer.cpp
     core/schema/arrow_schema_validator.cpp
     core/schema/schema_manager.cpp
@@ -488,6 +490,7 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(core_test
                     SOURCES
                     core/append/append_only_writer_test.cpp
+                    core/append/bucketed_append_compact_manager_test.cpp
                     core/casting/cast_executor_factory_test.cpp
                     core/casting/cast_executor_test.cpp
                     core/casting/casted_row_test.cpp
