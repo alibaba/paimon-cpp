@@ -52,14 +52,14 @@ TEST(RowCompactedSerializerTest, TestSimple) {
                                               .ValueOrDie();
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
     ASSERT_TRUE(struct_array);
+    ASSERT_OK_AND_ASSIGN(auto serializer,
+                         RowCompactedSerializer::Create(arrow::schema(arrow_type->fields()), pool));
     {
         auto columnar_row = std::make_shared<ColumnarRow>(
             /*struct_array=*/nullptr, struct_array->fields(), pool, /*row_id=*/0);
         columnar_row->SetRowKind(RowKind::UpdateAfter());
 
         // serialize and deserialize
-        ASSERT_OK_AND_ASSIGN(auto serializer, RowCompactedSerializer::Create(
-                                                  arrow::schema(arrow_type->fields()), pool));
         ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
         ASSERT_OK_AND_ASSIGN(auto de_row, serializer->Deserialize(bytes));
 
@@ -105,8 +105,6 @@ TEST(RowCompactedSerializerTest, TestSimple) {
         columnar_row->SetRowKind(RowKind::UpdateAfter());
 
         // serialize and deserialize
-        ASSERT_OK_AND_ASSIGN(auto serializer, RowCompactedSerializer::Create(
-                                                  arrow::schema(arrow_type->fields()), pool));
         ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
         ASSERT_OK_AND_ASSIGN(auto de_row, serializer->Deserialize(bytes));
 
@@ -326,14 +324,15 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal) {
 
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
     ASSERT_TRUE(struct_array);
+    ASSERT_OK_AND_ASSIGN(auto serializer,
+                         RowCompactedSerializer::Create(arrow::schema(arrow_type->fields()), pool));
+
     {
         auto columnar_row =
             std::make_shared<ColumnarRow>(/*struct_array=*/nullptr, struct_array->fields(), pool,
                                           /*row_id=*/0);
 
         // serialize and deserialize
-        ASSERT_OK_AND_ASSIGN(auto serializer, RowCompactedSerializer::Create(
-                                                  arrow::schema(arrow_type->fields()), pool));
         ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
         ASSERT_OK_AND_ASSIGN(auto row, serializer->Deserialize(bytes));
 
@@ -366,8 +365,6 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal) {
                                           /*row_id=*/1);
 
         // serialize and deserialize
-        ASSERT_OK_AND_ASSIGN(auto serializer, RowCompactedSerializer::Create(
-                                                  arrow::schema(arrow_type->fields()), pool));
         ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
         ASSERT_OK_AND_ASSIGN(auto row, serializer->Deserialize(bytes));
 

@@ -61,7 +61,7 @@ TEST(VarLengthIntUtilsTest, TestEncodeAndDecodeLong) {
         // Encode
         auto buffer =
             std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarLongSize, GetDefaultPool().get());
-        ASSERT_OK_AND_ASSIGN(int32_t encoded_length,
+        ASSERT_OK_AND_ASSIGN([[maybe_unused]] int32_t encoded_length,
                              VarLengthIntUtils::EncodeLong(value, buffer.get()));
 
         // Decode
@@ -95,7 +95,8 @@ TEST(VarLengthIntUtilsTest, TestEncodeIntWithOffset) {
     // Encode first value at offset 0
     ASSERT_OK_AND_ASSIGN(auto length1, VarLengthIntUtils::EncodeInt(0, value1, buffer.get()));
     // Encode second value at offset length1
-    ASSERT_OK_AND_ASSIGN(auto length2, VarLengthIntUtils::EncodeInt(length1, value2, buffer.get()));
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] auto length2,
+                         VarLengthIntUtils::EncodeInt(length1, value2, buffer.get()));
 
     // Decode both values
     int32_t offset = 0;

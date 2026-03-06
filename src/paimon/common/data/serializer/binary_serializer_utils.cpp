@@ -98,6 +98,7 @@ Status BinarySerializerUtils::WriteBinaryData(const std::shared_ptr<arrow::DataT
     arrow::Type::type type_id = type->id();
     auto array_writer = dynamic_cast<BinaryArrayWriter*>(writer);
     if (getter->IsNullAt(pos)) {
+        // compatible with Java Paimon
         if (array_writer) {
             array_writer->SetNullAt(pos, type_id);
             return Status::OK();
@@ -154,6 +155,7 @@ Status BinarySerializerUtils::WriteBinaryData(const std::shared_ptr<arrow::DataT
             assert(timestamp_type);
             int32_t precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
             if (getter->IsNullAt(pos)) {
+                // compatible with Java Paimon
                 if (!Timestamp::IsCompact(precision)) {
                     writer->WriteTimestamp(pos, std::nullopt, precision);
                 } else {
@@ -170,6 +172,7 @@ Status BinarySerializerUtils::WriteBinaryData(const std::shared_ptr<arrow::DataT
             auto precision = decimal_type->precision();
             auto scale = decimal_type->scale();
             if (getter->IsNullAt(pos)) {
+                // compatible with Java Paimon
                 if (!Decimal::IsCompact(precision)) {
                     writer->WriteDecimal(pos, std::nullopt, precision);
                 } else {

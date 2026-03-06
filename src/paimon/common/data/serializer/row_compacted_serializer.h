@@ -24,6 +24,18 @@
 #include "paimon/common/utils/var_length_int_utils.h"
 namespace paimon {
 class RowCompactedSerializer {
+ public:
+    static Result<std::unique_ptr<RowCompactedSerializer>> Create(
+        const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool);
+
+    static int32_t CalculateBitSetInBytes(int32_t arity) {
+        return (arity + 7 + BinaryRow::HEADER_SIZE_IN_BITS) / 8;
+    }
+
+    Result<std::shared_ptr<Bytes>> SerializeToBytes(const InternalRow& row);
+
+    Result<std::unique_ptr<InternalRow>> Deserialize(const std::shared_ptr<Bytes>& bytes);
+
  private:
     class RowWriter {
      public:
@@ -144,17 +156,6 @@ class RowCompactedSerializer {
 
     using FieldWriter = std::function<Status(int32_t, const VariantType&, RowWriter*)>;
     using FieldReader = std::function<Result<VariantType>(int32_t, RowReader*)>;
-
-    static Result<std::unique_ptr<RowCompactedSerializer>> Create(
-        const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool);
-
-    static int32_t CalculateBitSetInBytes(int32_t arity) {
-        return (arity + 7 + BinaryRow::HEADER_SIZE_IN_BITS) / 8;
-    }
-
-    Result<std::shared_ptr<Bytes>> SerializeToBytes(const InternalRow& row);
-
-    Result<std::unique_ptr<InternalRow>> Deserialize(const std::shared_ptr<Bytes>& bytes);
 
  private:
     RowCompactedSerializer(const std::shared_ptr<arrow::Schema>& schema,

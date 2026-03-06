@@ -26,7 +26,7 @@ class BinaryMap : public BinarySection, public InternalMap {
  public:
     BinaryMap() = default;
 
-    int32_t Size() const {
+    int32_t Size() const override {
         return keys_->Size();
     }
 

@@ -30,11 +30,12 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
     std::vector<RowCompactedSerializer::FieldWriter> writers(schema->num_fields());
     std::vector<RowCompactedSerializer::FieldReader> readers(schema->num_fields());
     for (int32_t i = 0; i < schema->num_fields(); i++) {
+        auto field_type = schema->field(i)->type();
         // TODO(xinyu.lxy): check if we can enable use view
-        PAIMON_ASSIGN_OR_RAISE(getters[i], InternalRow::CreateFieldGetter(
-                                               i, schema->field(i)->type(), /*use_view=*/false));
-        PAIMON_ASSIGN_OR_RAISE(writers[i], CreateFieldWriter(schema->field(i)->type(), pool));
-        PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(schema->field(i)->type(), pool));
+        PAIMON_ASSIGN_OR_RAISE(getters[i],
+                               InternalRow::CreateFieldGetter(i, field_type, /*use_view=*/false));
+        PAIMON_ASSIGN_OR_RAISE(writers[i], CreateFieldWriter(field_type, pool));
+        PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
     }
     return std::unique_ptr<RowCompactedSerializer>(new RowCompactedSerializer(
         schema, std::move(getters), std::move(writers), std::move(readers), pool));
