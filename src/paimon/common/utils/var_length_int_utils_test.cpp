@@ -55,7 +55,7 @@ TEST(VarLengthIntUtilsTest, TestEncodeAndDecodeLong) {
                                         1234567890123456789ll,
                                         202405170000000000ll,
                                         999999999999999999ll,
-                                        std::numeric_limits<long>::max()};
+                                        std::numeric_limits<int64_t>::max()};
 
     for (int64_t value : test_values) {
         // Encode
@@ -127,15 +127,15 @@ TEST(VarLengthIntUtilsTest, TestEncodeBytesNumber) {
 
 TEST(VarLengthIntUtilsTest, TestEncodeLongBytesNumber) {
     std::vector<int64_t> values = {
-        0x7F,                             // 127 - fits in 1 byte
-        0x80,                             // 128 - needs 2 bytes
-        0x4000,                           // 16384 - needs 3 bytes
-        0x200000,                         // 2097152 - needs 4 bytes
-        2147483647,                       // 2147483647 - needs 5 bytes
-        34359738368ll,                    // 0x800000000 - needs 6 bytes
-        562949953421311ll,                // 0x1FFFFFFFFFFFFF - needs 7 bytes
-        72057594037927935ll,              // 0xFFFFFFFFFFFFFF - needs 8 bytes
-        std::numeric_limits<long>::max()  // needs 9 bytes
+        0x7F,                                // 127 - fits in 1 byte
+        0x80,                                // 128 - needs 2 bytes
+        0x4000,                              // 16384 - needs 3 bytes
+        0x200000,                            // 2097152 - needs 4 bytes
+        2147483647,                          // 2147483647 - needs 5 bytes
+        34359738368ll,                       // 0x800000000 - needs 6 bytes
+        562949953421311ll,                   // 0x1FFFFFFFFFFFFF - needs 7 bytes
+        72057594037927935ll,                 // 0xFFFFFFFFFFFFFF - needs 8 bytes
+        std::numeric_limits<int64_t>::max()  // needs 9 bytes
     };
 
     for (int32_t i = 0; i < static_cast<int32_t>(values.size()); ++i) {

@@ -52,7 +52,7 @@ class PersistValueProcessor : public PersistProcessor<KeyValue> {
     /// Factory to create `PersistProcessor`.
     class Factory : public PersistProcessor<KeyValue>::Factory {
      public:
-        Factory(const std::shared_ptr<arrow::Schema>& current_schema)
+        explicit Factory(const std::shared_ptr<arrow::Schema>& current_schema)
             : current_schema_(current_schema) {}
 
         std::string Identifier() const override {

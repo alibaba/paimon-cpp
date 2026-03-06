@@ -24,7 +24,6 @@
 #include "paimon/common/utils/var_length_int_utils.h"
 namespace paimon {
 class RowCompactedSerializer {
- public:
  private:
     class RowWriter {
      public:
@@ -83,9 +82,6 @@ class RowCompactedSerializer {
         void EnsureCapacity(int32_t size);
         void Grow(int32_t min_capacity_add);
         void SetBuffer(std::shared_ptr<Bytes> new_buffer);
-        // static Status WriteInternalBinaryData(const std::shared_ptr<arrow::DataType>& write_type,
-        //                                       const DataGetters* getter, int32_t pos,
-        //                                       BinaryWriter* writer, MemoryPool* pool);
 
      private:
         const int32_t header_size_in_bytes_;

@@ -66,7 +66,7 @@ class PersistValueAndPosProcessor : public PersistProcessor<PositionedKeyValue> 
     /// Factory to create `PersistProcessor`.
     class Factory : public PersistProcessor<PositionedKeyValue>::Factory {
      public:
-        Factory(const std::shared_ptr<arrow::Schema>& current_schema)
+        explicit Factory(const std::shared_ptr<arrow::Schema>& current_schema)
             : current_schema_(current_schema) {}
 
         std::string Identifier() const override {
