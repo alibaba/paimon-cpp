@@ -122,6 +122,9 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
         if (rewriter) {
             (void)rewriter->Close();
         }
+        if (reader) {
+            reader->Close();
+        }
     });
 
     while (true) {
@@ -145,6 +148,7 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
     }
     guard.Release();
     PAIMON_RETURN_NOT_OK(rewriter->Close());
+    reader->Close();
     return rewriter->GetResult();
 }
 
