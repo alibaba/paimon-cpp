@@ -42,7 +42,7 @@ class PersistValueProcessor : public PersistProcessor<KeyValue> {
                                   const std::shared_ptr<Bytes>& value_bytes,
                                   const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InternalRow> value, deserializer_(value_bytes));
-        int64_t sequence_number =
+        auto sequence_number =
             MemorySegment::Wrap(value_bytes).GetValue<int64_t>(value_bytes->size() - kMetaLen);
         PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                                RowKind::FromByteValue((*value_bytes)[value_bytes->size() - 1]));

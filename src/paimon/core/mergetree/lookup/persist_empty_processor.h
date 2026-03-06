@@ -50,5 +50,8 @@ class PersistEmptyProcessor : public PersistProcessor<bool> {
             return std::unique_ptr<PersistEmptyProcessor>(new PersistEmptyProcessor());
         }
     };
+
+ private:
+    PersistEmptyProcessor() = default;
 };
 }  // namespace paimon

@@ -15,7 +15,8 @@
  */
 
 #pragma once
-
+#include <cstdint>
+#include <string>
 namespace paimon {
 /// File name and row position for DeletionVector.
 struct FilePosition {

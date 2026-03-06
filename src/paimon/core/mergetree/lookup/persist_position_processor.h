@@ -24,8 +24,6 @@ namespace paimon {
 /// A `PersistProcessor` to return `FilePosition`.
 class PersistPositionProcessor : public PersistProcessor<FilePosition> {
  public:
-    explicit PersistPositionProcessor(const std::shared_ptr<MemoryPool>& pool) : pool_(pool) {}
-
     bool WithPosition() const override {
         return true;
     }
@@ -68,6 +66,9 @@ class PersistPositionProcessor : public PersistProcessor<FilePosition> {
             return std::unique_ptr<PersistPositionProcessor>(new PersistPositionProcessor(pool));
         }
     };
+
+ private:
+    explicit PersistPositionProcessor(const std::shared_ptr<MemoryPool>& pool) : pool_(pool) {}
 
  private:
     std::shared_ptr<MemoryPool> pool_;

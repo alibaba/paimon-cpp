@@ -54,7 +54,7 @@ class VarLengthIntUtils {
     static Result<int32_t> DecodeInt(const Bytes* bytes, int32_t* offset) {
         int32_t result = 0;
         for (int32_t shift = 0; shift < 32; shift += 7) {
-            uint8_t b = static_cast<uint8_t>((*bytes)[*offset]);
+            auto b = static_cast<int32_t>((*bytes)[*offset]);
             ++(*offset);
 
             result |= (b & 0x7Fu) << shift;
@@ -86,7 +86,7 @@ class VarLengthIntUtils {
     static Result<int64_t> DecodeLong(const Bytes* bytes, int32_t index) {
         int64_t result = 0;
         for (int32_t shift = 0; shift < 64; shift += 7) {
-            int64_t b = static_cast<int64_t>((*bytes)[index++]);
+            auto b = static_cast<int64_t>((*bytes)[index++]);
 
             result |= (b & 0x7FLL) << shift;
 

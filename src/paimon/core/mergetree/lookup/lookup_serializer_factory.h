@@ -18,8 +18,10 @@
 #include <functional>
 
 #include "arrow/api.h"
+#include "paimon/common/data/internal_row.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/result.h"
 namespace paimon {
 /// Factory to create serializer for lookup.
 class LookupSerializerFactory {

@@ -53,8 +53,8 @@ class PersistValueAndPosProcessor : public PersistProcessor<PositionedKeyValue> 
                                             const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InternalRow> value, deserializer_(value_bytes));
         auto memory_segment = MemorySegment::Wrap(value_bytes);
-        int64_t row_position = memory_segment.GetValue<int64_t>(value_bytes->size() - kMetaLen);
-        int64_t sequence_number =
+        auto row_position = memory_segment.GetValue<int64_t>(value_bytes->size() - kMetaLen);
+        auto sequence_number =
             memory_segment.GetValue<int64_t>(value_bytes->size() - PersistValueProcessor::kMetaLen);
         PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                                RowKind::FromByteValue((*value_bytes)[value_bytes->size() - 1]));

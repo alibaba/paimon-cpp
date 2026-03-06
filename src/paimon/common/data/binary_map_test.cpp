@@ -22,17 +22,18 @@
 namespace paimon::test {
 TEST(BinaryMapTest, TestSimple) {
     auto pool = GetDefaultPool();
-    auto key =
-        std::make_shared<paimon::BinaryArray>(BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get()));
-    auto value = std::make_shared<paimon::BinaryArray>(
-        BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get()));
+    auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
+    auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
 
-    ASSERT_OK_AND_ASSIGN(auto binary_map, BinaryMap::ValueOf(*key, *value, pool.get()));
+    ASSERT_OK_AND_ASSIGN(auto binary_map, BinaryMap::ValueOf(key, value, pool.get()));
 
     ASSERT_EQ(binary_map->Size(), 4);
     auto key_in_map = std::dynamic_pointer_cast<BinaryArray>(binary_map->KeyArray());
     auto value_in_map = std::dynamic_pointer_cast<BinaryArray>(binary_map->ValueArray());
-    ASSERT_EQ(key_in_map->HashCode(), key->HashCode());
-    ASSERT_EQ(value_in_map->HashCode(), value->HashCode());
+    ASSERT_EQ(key_in_map->HashCode(), key.HashCode());
+    ASSERT_EQ(value_in_map->HashCode(), value.HashCode());
+    ASSERT_EQ(key_in_map->ToIntArray().value(), std::vector<int32_t>({1, 2, 3, 5}));
+    ASSERT_EQ(value_in_map->ToLongArray().value(),
+              std::vector<int64_t>({100ll, 200ll, 300ll, 500ll}));
 }
 }  // namespace paimon::test
