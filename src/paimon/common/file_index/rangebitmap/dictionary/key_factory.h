@@ -48,7 +48,7 @@ class KeyFactory : public std::enable_shared_from_this<KeyFactory> {
 
     /// For reading existing chunk, lazy loading keys in the directory
     virtual Result<std::unique_ptr<Chunk>> MmapChunk(
-        const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offest,
+        const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offset,
         int32_t keys_base_offset, const std::shared_ptr<MemoryPool>& pool) = 0;
 
     static Result<std::shared_ptr<KeyFactory>> Create(FieldType field_type);
@@ -63,7 +63,7 @@ class FixedLengthKeyFactory : public KeyFactory {
                                                int32_t keys_length_limit,
                                                const std::shared_ptr<MemoryPool>& pool) override;
     Result<std::unique_ptr<Chunk>> MmapChunk(const std::shared_ptr<InputStream>& input_stream,
-                                             int32_t chunk_offest, int32_t keys_base_offset,
+                                             int32_t chunk_offset, int32_t keys_base_offset,
                                              const std::shared_ptr<MemoryPool>& pool) override;
     virtual size_t GetFieldSize() const = 0;
 };
@@ -74,7 +74,7 @@ class VariableLengthKeyFactory : public KeyFactory {
                                                int32_t keys_length_limit,
                                                const std::shared_ptr<MemoryPool>& pool) override;
     Result<std::unique_ptr<Chunk>> MmapChunk(const std::shared_ptr<InputStream>& input_stream,
-                                             int32_t chunk_offest, int32_t keys_base_offset,
+                                             int32_t chunk_offset, int32_t keys_base_offset,
                                              const std::shared_ptr<MemoryPool>& pool) override;
 };
 

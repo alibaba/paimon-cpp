@@ -25,6 +25,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "fmt/format.h"
 #include "paimon/common/file_index/rangebitmap/dictionary/key_factory.h"
 #include "paimon/common/file_index/rangebitmap/utils/literal_serialization_utils.h"
 #include "paimon/common/memory/memory_segment_utils.h"
@@ -62,12 +63,12 @@ TEST_F(ChunkedDictionaryTest, TestEmptyDictionary) {
     // Create dictionary from bytes
     auto input_stream = std::make_shared<ByteArrayInputStream>(bytes->data(), bytes->size());
     ASSERT_OK_AND_ASSIGN(auto dict,
-                         ChunkedDictionary::Create(FieldType::INT, input_stream, 0, pool_));
+                         ChunkedDictionary::Create(FieldType::FLOAT, input_stream, 0, pool_));
 
     // Test finding non-existent key
-    auto result = dict->Find(Literal(42));
-    ASSERT_TRUE(result.ok());
-    ASSERT_EQ(result.value(), -1);  // Should return -1 for not found
+    ASSERT_OK_AND_ASSIGN(auto result, dict->Find(Literal(42)));
+    ASSERT_EQ(result, -1);  // Should return -1 for not found
+    ASSERT_NOK_WITH_MSG(dict->Find(0), "Cannot find code 0 in an empty Dictionary");
 }
 
 // when chunk can't even fit in a single key, it still works
@@ -313,17 +314,25 @@ TEST_F(ChunkedDictionaryTest, TestInvalidCodes) {
                          ChunkedDictionary::Appender::Create(key_factory, 1024, pool_));
 
     // Add keys with duplicate codes - should fail
-    ASSERT_OK(appender->AppendSorted(Literal(10), 0));
-    ASSERT_OK(appender->AppendSorted(Literal(20), 1));
+    ASSERT_OK(appender->AppendSorted(Literal(10), 1));
+    ASSERT_OK(appender->AppendSorted(Literal(20), 2));
 
     // Try to add same code - should fail
-    ASSERT_NOK_WITH_MSG(appender->AppendSorted(Literal(30), 1), "code must be in sorted order");
+    ASSERT_NOK_WITH_MSG(appender->AppendSorted(Literal(30), 2), "code must be in sorted order");
 
     // Last append failed, appender is not broken, still works
-    ASSERT_OK(appender->AppendSorted(Literal(30), 2));
+    ASSERT_OK(appender->AppendSorted(Literal(30), 3));
 
     // Code is not incrementing by step one should fail
-    ASSERT_NOK_WITH_MSG(appender->AppendSorted(Literal(40), 4), "code must be in sorted order");
+    ASSERT_NOK_WITH_MSG(appender->AppendSorted(Literal(40), 5), "code must be in sorted order");
+    auto bytes = appender->Serialize();
+    ASSERT_TRUE(bytes.ok());
+
+    auto input_stream =
+        std::make_shared<ByteArrayInputStream>(bytes.value()->data(), bytes.value()->size());
+    ASSERT_OK_AND_ASSIGN(auto dict,
+                         ChunkedDictionary::Create(FieldType::INT, input_stream, 0, pool_));
+    ASSERT_NOK_WITH_MSG(dict->Find(0), "Invalid: Cannot find code 0");
 }
 
 TEST_F(ChunkedDictionaryTest, TestNullKey) {
@@ -622,7 +631,7 @@ TEST_P(ChunkedDictionaryParamTest, TestSizeLimitAndCardinalityDouble) {
 
 INSTANTIATE_TEST_SUITE_P(
     SizeLimitAndCardinality, ChunkedDictionaryParamTest,
-    ::testing::Combine(::testing::Values(1, 16, 64, 128, 1024),                // chunk size limit
-                       ::testing::Values(1, 5, 20, 100, 666, 8888, 222222)));  // cardinality
+    ::testing::Combine(::testing::Values(1, 16, 64, 128, 1024),               // chunk size limit
+                       ::testing::Values(1, 5, 20, 100, 666, 8888, 22222)));  // cardinality
 
 }  // namespace paimon::test

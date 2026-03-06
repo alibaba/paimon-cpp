@@ -54,6 +54,9 @@ Result<int32_t> ChunkedDictionary::Find(const Literal& key) {
 }
 
 Result<Literal> ChunkedDictionary::Find(int32_t code) {
+    if (size_ <= 0) {
+        return Status::Invalid(fmt::format("Cannot find code {} in an empty Dictionary", code));
+    }
     if (code < 0) {
         return Status::Invalid(fmt::format("Invalid code: {}", code));
     }
@@ -72,6 +75,9 @@ Result<Literal> ChunkedDictionary::Find(int32_t code) {
         } else {
             return {chunk->Key()};
         }
+    }
+    if (low == 0) {
+        return Status::Invalid(fmt::format("Cannot find code {}", code));
     }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Chunk> prev_chunk, GetChunk(low - 1));
     return prev_chunk->Find(code);

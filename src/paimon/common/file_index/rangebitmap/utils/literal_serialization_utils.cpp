@@ -163,6 +163,10 @@ Result<LiteralSerDeUtils::Deserializer> LiteralSerDeUtils::CreateValueReader(Fie
                 [](const std::shared_ptr<DataInputStream>& input_stream,
                    MemoryPool* pool) -> Result<Literal> {
                     PAIMON_ASSIGN_OR_RAISE(int32_t length, input_stream->ReadValue<int32_t>());
+                    if (length < 0) {
+                        return Status::Invalid(fmt::format(
+                            "Negative string length {} when deserializing literal", length));
+                    }
                     auto bytes = Bytes::AllocateBytes(length, pool);
                     PAIMON_RETURN_NOT_OK(input_stream->ReadBytes(bytes.get()));
                     return Literal(FieldType::STRING, bytes->data(), bytes->size());

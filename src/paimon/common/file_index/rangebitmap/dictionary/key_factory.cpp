@@ -90,9 +90,9 @@ Result<std::unique_ptr<Chunk>> FixedLengthKeyFactory::CreateChunk(
 }
 
 Result<std::unique_ptr<Chunk>> FixedLengthKeyFactory::MmapChunk(
-    const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offest,
+    const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offset,
     int32_t keys_base_offset, const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_RETURN_NOT_OK(input_stream->Seek(chunk_offest, FS_SEEK_SET));
+    PAIMON_RETURN_NOT_OK(input_stream->Seek(chunk_offset, FS_SEEK_SET));
     PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Deserializer deserializer,
                            LiteralSerDeUtils::CreateValueReader(GetFieldType()));
     const auto data_in = std::make_shared<DataInputStream>(input_stream);
@@ -117,7 +117,7 @@ Result<std::unique_ptr<Chunk>> VariableLengthKeyFactory::CreateChunk(
     return Status::NotImplemented("VariableLengthKeyFactory::CreateChunk not implemented");
 }
 Result<std::unique_ptr<Chunk>> VariableLengthKeyFactory::MmapChunk(
-    const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offest,
+    const std::shared_ptr<InputStream>& input_stream, int32_t chunk_offset,
     int32_t keys_base_offset, const std::shared_ptr<MemoryPool>& pool) {
     return Status::NotImplemented("VariableLengthKeyFactory::MmapChunk not implemented");
 }

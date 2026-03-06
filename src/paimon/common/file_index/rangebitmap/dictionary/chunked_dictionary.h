@@ -18,6 +18,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "paimon/common/file_index/rangebitmap/dictionary/chunk.h"
