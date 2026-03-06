@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "paimon/common/executor/future.h"
+#include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/compact/compact_future_manager.h"
 #include "paimon/core/compact/compact_task.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
