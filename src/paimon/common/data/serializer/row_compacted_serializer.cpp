@@ -361,8 +361,7 @@ RowCompactedSerializer::RowWriter::RowWriter(int32_t header_size_in_bytes,
 
 Status RowCompactedSerializer::RowWriter::WriteDecimal(const Decimal& value, int32_t precision) {
     if (Decimal::IsCompact(precision)) {
-        WriteValue<int64_t>(value.ToUnscaledLong());
-        return Status::OK();
+        return WriteValue<int64_t>(value.ToUnscaledLong());
     } else {
         auto value_bytes = value.ToUnscaledBytes();
         return WriteBinary(&value_bytes);
@@ -372,10 +371,9 @@ Status RowCompactedSerializer::RowWriter::WriteDecimal(const Decimal& value, int
 Status RowCompactedSerializer::RowWriter::WriteTimestamp(const Timestamp& value,
                                                          int32_t precision) {
     if (Timestamp::IsCompact(precision)) {
-        WriteValue<int64_t>(value.GetMillisecond());
-        return Status::OK();
+        return WriteValue<int64_t>(value.GetMillisecond());
     } else {
-        WriteValue<int64_t>(value.GetMillisecond());
+        PAIMON_RETURN_NOT_OK(WriteValue<int64_t>(value.GetMillisecond()));
         return WriteUnsignedInt(value.GetNanoOfMillisecond());
     }
 }

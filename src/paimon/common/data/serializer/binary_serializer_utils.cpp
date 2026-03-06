@@ -30,7 +30,7 @@ Result<std::shared_ptr<BinaryArray>> BinarySerializerUtils::WriteBinaryArray(
     auto list_type = std::dynamic_pointer_cast<arrow::ListType>(type);
     assert(list_type);
     auto value_type = list_type->value_type();
-    // TODO(xinyu.lxy): reuse BianryWriter
+    // TODO(xinyu.lxy): reuse BinaryWriter
     BinaryArrayWriter binary_writer(binary_array.get(), value->Size(),
                                     BinaryArrayWriter::GetElementSize(value_type->id()), pool);
     for (int32_t i = 0; i < value->Size(); i++) {

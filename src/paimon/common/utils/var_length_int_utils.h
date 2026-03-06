@@ -43,27 +43,22 @@ class VarLengthIntUtils {
 
         int32_t i = 1;
         while ((value & ~0x7F) != 0) {
-            // Write 7 bits + continuation bit (0x80)
             (*bytes)[i + offset - 1] = static_cast<char>((value & 0x7F) | 0x80);
-            value >>= 7;  // Logical right shift (safe since value >= 0)
+            value >>= 7;
             ++i;
         }
-        // Last byte: only 7 bits, no continuation bit
         (*bytes)[i + offset - 1] = static_cast<char>(value);
-        return i;  // Number of bytes used
+        return i;
     }
 
     static Result<int32_t> DecodeInt(const Bytes* bytes, int32_t* offset) {
         int32_t result = 0;
         for (int32_t shift = 0; shift < 32; shift += 7) {
-            // Read next byte
             uint8_t b = static_cast<uint8_t>((*bytes)[*offset]);
             ++(*offset);
 
-            // Extract 7 data bits and add to result at proper bit position
             result |= (b & 0x7Fu) << shift;
 
-            // If high bit is not set, this is the last byte
             if ((b & 0x80u) == 0) {
                 return result;
             }
@@ -71,6 +66,7 @@ class VarLengthIntUtils {
         return Status::Invalid("Malformed integer for VarLengthInt Decoding");
     }
 
+    /// Returns encoding bytes length.
     static Result<int32_t> EncodeLong(int64_t value, Bytes* bytes) {
         if (value < 0) {
             return Status::Invalid(
@@ -78,7 +74,7 @@ class VarLengthIntUtils {
         }
 
         int32_t i = 1;
-        while ((value & ~0x7FL) != 0) {
+        while ((value & ~0x7FLL) != 0) {
             (*bytes)[i - 1] = static_cast<char>(static_cast<int32_t>(value & 0x7F) | 0x80);
             value >>= 7;
             ++i;
@@ -92,7 +88,7 @@ class VarLengthIntUtils {
         for (int32_t shift = 0; shift < 64; shift += 7) {
             int64_t b = static_cast<int64_t>((*bytes)[index++]);
 
-            result |= (b & 0x7Fu) << shift;
+            result |= (b & 0x7FLL) << shift;
 
             if ((b & 0x80u) == 0) {
                 return result;

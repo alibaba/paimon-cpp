@@ -43,9 +43,8 @@ class BinaryMap : public BinarySection, public InternalMap {
         int32_t key_array_bytes = MemorySegmentUtils::GetValue<int32_t>(segments, offset);
         assert(key_array_bytes >= 0);
         int32_t value_array_bytes = size_in_bytes - key_array_bytes - kHeaderSize;
-        assert(key_array_bytes >= 0);
+        assert(value_array_bytes >= 0);
 
-        // see BinarySection.readObject, on this call stack, keys and values are not initialized
         assert(keys_);
         keys_->PointTo(segments, offset + kHeaderSize, key_array_bytes);
         assert(values_);
@@ -68,11 +67,11 @@ class BinaryMap : public BinarySection, public InternalMap {
         MemorySegment segment = MemorySegment::Wrap(bytes);
         segment.PutValue<int32_t>(0, key.GetSizeInBytes());
         const auto& key_segment = key.GetSegments()[0];
-        key_segment.CopyTo(key.GetOffset(), &segment, /*target_offset*/ kHeaderSize,
+        key_segment.CopyTo(key.GetOffset(), &segment, /*target_offset=*/kHeaderSize,
                            key.GetSizeInBytes());
         const auto& value_segment = value.GetSegments()[0];
         value_segment.CopyTo(value.GetOffset(), &segment,
-                             /*target_offset*/ kHeaderSize + key.GetSizeInBytes(),
+                             /*target_offset=*/kHeaderSize + key.GetSizeInBytes(),
                              value.GetSizeInBytes());
         auto binary_map = std::make_shared<BinaryMap>();
         binary_map->PointTo({segment}, /*offset=*/0, bytes->size());

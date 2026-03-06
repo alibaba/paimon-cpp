@@ -44,9 +44,9 @@ class DefaultLookupSerializerFactory : public LookupSerializerFactory {
         const std::shared_ptr<arrow::Schema>& file_schema,
         const std::shared_ptr<MemoryPool>& pool) const override {
         if (Version() != file_ser_version) {
-            return Status::Invalid(
-                fmt::format("file_ser_version {} mismatch defaultserializer_factory version {}",
-                            file_ser_version, Version()));
+            return Status::Invalid(fmt::format(
+                "file_ser_version {} mismatch DefaultLookupSerializerFactory version {}",
+                file_ser_version, Version()));
         }
         if (!file_schema->Equals(current_schema)) {
             // TODO(xinyu.lxy): support EqualsIgnoreNullable

@@ -25,7 +25,7 @@ TEST(BinaryMapTest, TestSimple) {
     auto key =
         std::make_shared<paimon::BinaryArray>(BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get()));
     auto value = std::make_shared<paimon::BinaryArray>(
-        BinaryArray::FromLongArray({100l, 200l, 300l, 500l}, pool.get()));
+        BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get()));
 
     ASSERT_OK_AND_ASSIGN(auto binary_map, BinaryMap::ValueOf(*key, *value, pool.get()));
 
