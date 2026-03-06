@@ -114,7 +114,7 @@ PAIMON_UNIQUE_PTR<Bytes> Bytes::CopyOf(const Bytes& other, size_t len, MemoryPoo
     assert(pool);
     auto bytes = Bytes::AllocateBytes(len, pool);
     size_t copy_size = std::min(len, other.size());
-    if (bytes && bytes->data_ && other.data && copy_size > 0) {
+    if (bytes && bytes->data_ && other.data_ && copy_size > 0) {
         std::memcpy(bytes->data_, other.data_, copy_size);
     }
     return bytes;
