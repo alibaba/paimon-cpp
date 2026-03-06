@@ -1,0 +1,32 @@
+/*
+ * Copyright 2026-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#pragma once
+
+#include "paimon/core/key_value.h"
+
+namespace paimon {
+/// `KeyValue` with file name and row position for DeletionVector.
+struct PositionedKeyValue {
+ public:
+    PositionedKeyValue(KeyValue&& _key_value, const std::string& _file_name, int64_t _row_position)
+        : key_value(std::move(_key_value)), file_name(_file_name), row_position(_row_position) {}
+
+    KeyValue key_value;
+    std::string file_name;
+    int64_t row_position;
+};
+}  // namespace paimon

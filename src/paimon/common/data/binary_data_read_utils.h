@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "paimon/common/data/binary_array.h"
+#include "paimon/common/data/binary_map.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/internal_map.h"
@@ -113,7 +114,11 @@ class BinaryDataReadUtils {
 
     static std::shared_ptr<InternalMap> ReadMapData(const std::vector<MemorySegment>& segments,
                                                     int32_t base_offset, int64_t offset_and_size) {
-        return nullptr;
+        auto size = static_cast<int32_t>(offset_and_size & LOW_BYTES_MASK);
+        auto offset = static_cast<int32_t>(offset_and_size >> 32);
+        auto binary_map = std::make_shared<BinaryMap>();
+        binary_map->PointTo(segments, offset + base_offset, size);
+        return binary_map;
     }
 
  private:

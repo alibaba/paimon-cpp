@@ -226,8 +226,7 @@ std::shared_ptr<InternalArray> BinaryRow::GetArray(int32_t pos) const {
 
 std::shared_ptr<InternalMap> BinaryRow::GetMap(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return nullptr;
-    // TODO(liancheng.lsz):
+    return BinaryDataReadUtils::ReadMapData(segments_, offset_, GetLong(pos));
 }
 
 std::shared_ptr<InternalRow> BinaryRow::GetRow(int32_t pos, int32_t num_fields) const {
