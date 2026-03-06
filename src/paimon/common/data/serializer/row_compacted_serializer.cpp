@@ -429,7 +429,7 @@ void RowCompactedSerializer::RowWriter::EnsureCapacity(int32_t size) {
 }
 
 void RowCompactedSerializer::RowWriter::Grow(int32_t min_capacity_add) {
-    int32_t current_len = static_cast<int32_t>(buffer_->size());
+    auto current_len = static_cast<int32_t>(buffer_->size());
     int32_t new_len = std::max(current_len * 2, current_len + min_capacity_add);
 
     auto new_buffer = std::make_shared<Bytes>(new_len, pool_.get());
@@ -487,7 +487,7 @@ Result<Timestamp> RowCompactedSerializer::RowReader::ReadTimestamp(int32_t preci
     if (Timestamp::IsCompact(precision)) {
         return Timestamp::FromEpochMillis(ReadValue<int64_t>());
     }
-    int64_t milliseconds = ReadValue<int64_t>();
+    auto milliseconds = ReadValue<int64_t>();
     PAIMON_ASSIGN_OR_RAISE(int32_t nanos_of_millisecond, ReadUnsignedInt());
     return Timestamp::FromEpochMillis(milliseconds, nanos_of_millisecond);
 }

@@ -40,7 +40,7 @@ class BinaryMap : public BinarySection, public InternalMap {
     void PointTo(const std::vector<MemorySegment>& segments, int32_t offset,
                  int32_t size_in_bytes) override {
         // Read the numBytes of key array from the first 4 bytes.
-        int32_t key_array_bytes = MemorySegmentUtils::GetValue<int32_t>(segments, offset);
+        auto key_array_bytes = MemorySegmentUtils::GetValue<int32_t>(segments, offset);
         assert(key_array_bytes >= 0);
         int32_t value_array_bytes = size_in_bytes - key_array_bytes - kHeaderSize;
         assert(value_array_bytes >= 0);
