@@ -23,7 +23,11 @@ set(PAIMON_FILE_INDEX_SRC
     bsi/bit_slice_index_roaring_bitmap.cpp
     bloomfilter/bloom_filter_file_index.cpp
     bloomfilter/bloom_filter_file_index_factory.cpp
-    bloomfilter/fast_hash.cpp)
+    bloomfilter/fast_hash.cpp
+    rangebitmap/dictionary/chunked_dictionary.cpp
+    rangebitmap/dictionary/fixed_length_chunk.cpp
+    rangebitmap/dictionary/key_factory.cpp
+    rangebitmap/utils/literal_serialization_utils.cpp)
 
 add_paimon_lib(paimon_file_index
                SOURCES
