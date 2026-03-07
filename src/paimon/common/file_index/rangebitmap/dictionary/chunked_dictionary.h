@@ -35,7 +35,7 @@ class MemoryPool;
 class ChunkedDictionary final : public Dictionary {
  public:
     static Result<std::unique_ptr<ChunkedDictionary>> Create(
-        FieldType field_type, const std::shared_ptr<InputStream>& input_stream, int64_t offset,
+        FieldType field_type, const std::shared_ptr<InputStream>& input_stream, int32_t offset,
         const std::shared_ptr<MemoryPool>& pool);
 
     Result<int32_t> Find(const Literal& key) override;
@@ -80,7 +80,7 @@ class ChunkedDictionary final : public Dictionary {
  private:
     ChunkedDictionary(const std::shared_ptr<InputStream>& input_stream,
                       const std::shared_ptr<KeyFactory>& factory, int32_t size,
-                      int32_t offsets_length, int32_t chunks_length, int64_t body_offset,
+                      int32_t offsets_length, int32_t chunks_length, int32_t body_offset,
                       const std::shared_ptr<MemoryPool>& pool);
 
     std::shared_ptr<MemoryPool> pool_;
@@ -90,7 +90,7 @@ class ChunkedDictionary final : public Dictionary {
     int32_t size_;            // number of chunks
     int32_t offsets_length_;  // bytes length of offsets
     int32_t chunks_length_;   // bytes length of chunks
-    int64_t body_offset_;     // where offsets start
+    int32_t body_offset_;     // where offsets start
 
     // for lazy loading
     PAIMON_UNIQUE_PTR<Bytes> offsets_bytes_;

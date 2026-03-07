@@ -210,7 +210,7 @@ Status ChunkedDictionary::Appender::Flush() {
 }
 
 Result<std::unique_ptr<ChunkedDictionary>> ChunkedDictionary::Create(
-    FieldType field_type, const std::shared_ptr<InputStream>& input_stream, int64_t offset,
+    FieldType field_type, const std::shared_ptr<InputStream>& input_stream, int32_t offset,
     const std::shared_ptr<MemoryPool>& pool) {
     auto data_in = std::make_unique<DataInputStream>(input_stream);
     PAIMON_RETURN_NOT_OK(data_in->Seek(offset));
@@ -233,7 +233,7 @@ Result<std::unique_ptr<ChunkedDictionary>> ChunkedDictionary::Create(
 ChunkedDictionary::ChunkedDictionary(const std::shared_ptr<InputStream>& input_stream,
                                      const std::shared_ptr<KeyFactory>& factory, int32_t size,
                                      int32_t offsets_length, int32_t chunks_length,
-                                     int64_t body_offset, const std::shared_ptr<MemoryPool>& pool)
+                                     int32_t body_offset, const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       factory_(factory),
       input_stream_(input_stream),
