@@ -190,7 +190,6 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     auto rolling_writer = CreateRollingRowWriter(output_level);
 
     ScopeGuard write_guard([&]() -> void {
-        (void)rolling_writer->Close();
         rolling_writer->Abort();
         for (const auto& reader : reader_holders) {
             reader->Close();
