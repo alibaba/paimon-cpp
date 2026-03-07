@@ -95,6 +95,7 @@ Result<std::shared_ptr<BinaryRow>> BinarySerializerUtils::WriteBinaryRow(
 Status BinarySerializerUtils::WriteBinaryData(const std::shared_ptr<arrow::DataType>& type,
                                               const DataGetters* getter, int32_t pos,
                                               BinaryWriter* writer, MemoryPool* pool) {
+    assert(getter && writer && pool);
     arrow::Type::type type_id = type->id();
     auto array_writer = dynamic_cast<BinaryArrayWriter*>(writer);
     if (getter->IsNullAt(pos)) {
