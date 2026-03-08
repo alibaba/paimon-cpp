@@ -132,18 +132,19 @@ TEST_F(MergeTreeCompactRewriterTest, TestSimple) {
     const auto& compact_file_meta = compact_result.After()[0];
     auto expected_file_meta = std::make_shared<DataFileMeta>(
         "file.orc", 100l, /*row_count=*/7,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Bob", 0}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Skye2", 0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Bob"), 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Skye2"), 0}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Bob", 0}, {"Skye2", 0}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 0}, {std::string("Skye2"), 0},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Bob", 10, 0, 12.1}, {"Skye2", 10, 0, 31.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Bob"), 10, 0, 12.1},
+                                          {std::string("Skye2"), 10, 0, 31.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/0l, /*max_sequence_number=*/10l, /*schema_id=*/0, /*level=*/5,
         std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/0,
         nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
     ASSERT_TRUE(expected_file_meta->TEST_Equal(*compact_file_meta));
-
     // check compact file exist
     std::string compact_file_name =
         table_path + "/f1=10/bucket-1/" + compact_result.After()[0]->file_name;
@@ -196,13 +197,15 @@ TEST_F(MergeTreeCompactRewriterTest, TestNotDropDelete) {
     const auto& compact_file_meta = compact_result.After()[0];
     auto expected_file_meta = std::make_shared<DataFileMeta>(
         "file.orc", 100l, /*row_count=*/9,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 31.2},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 31.2}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/0l, /*max_sequence_number=*/11l, /*schema_id=*/0, /*level=*/5,
         std::vector<std::optional<std::string>>(), Timestamp(0l, 0), /*delete_row_count=*/2,
         nullptr, FileSource::Compact(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);

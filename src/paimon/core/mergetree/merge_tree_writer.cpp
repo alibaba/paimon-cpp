@@ -146,7 +146,6 @@ Status MergeTreeWriter::Flush() {
             /*projection_thread_num=*/1, pool_);
     auto rolling_writer = CreateRollingRowWriter();
     ScopeGuard write_guard([&]() -> void {
-        (void)rolling_writer->Close();
         rolling_writer->Abort();
         async_key_value_producer_consumer->Close();
     });
