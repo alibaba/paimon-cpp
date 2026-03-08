@@ -286,6 +286,7 @@ TEST(RowCompactedSerializerTest, TestNestedTypeWithNull) {
 }
 
 TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal) {
+    // test map/list with nested child types
     auto pool = GetDefaultPool();
     // prepare data
     auto inner_child1 = arrow::field(
@@ -385,6 +386,121 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal) {
             40,  0,  0,  0,   0,  0,  0,   0,   0,  0, 0,  0, 0,  0,   0,   0,   0, 0, 0, 0,   0,
             0,   0,  0,  48,  0,  0,  0,   0,   0,  0, 0,  0, 0,  0,   0,   0,   0, 0, 0, 0,   0,
             0,   0,  0,  0,   0,  0,  0,   0,   0,  0};
+        std::vector<uint8_t> cpp_bytes(bytes->data(), bytes->data() + bytes->size());
+        ASSERT_EQ(java_bytes, cpp_bytes);
+    }
+}
+TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal2) {
+    // test struct with nested child types
+    auto pool = GetDefaultPool();
+    // prepare data
+    auto inner_child1 = arrow::field(
+        "inner1",
+        arrow::map(
+            arrow::int32(),
+            arrow::field("inner_list", arrow::list(arrow::field("f0", arrow::decimal128(5, 2))))));
+    auto inner_child2 = arrow::field(
+        "inner2",
+        arrow::map(
+            arrow::int32(),
+            arrow::field("inner_list", arrow::list(arrow::field("f1", arrow::decimal128(30, 5))))));
+    auto inner_child3 = arrow::field(
+        "inner3",
+        arrow::map(arrow::int32(),
+                   arrow::field("inner_struct",
+                                arrow::struct_({
+                                    arrow::field("f0", arrow::timestamp(arrow::TimeUnit::NANO)),
+                                    arrow::field("f1", arrow::timestamp(arrow::TimeUnit::SECOND)),
+                                    arrow::field("f2", arrow::decimal128(5, 2)),
+                                    arrow::field("f3", arrow::decimal128(30, 5)),
+                                }))));
+    auto child1 =
+        arrow::field("child1", arrow::struct_({inner_child1, inner_child2, inner_child3}));
+    auto child2 = arrow::field("child2", arrow::utf8());
+    auto arrow_type = arrow::struct_({child1, child2});
+    // each inner child per row
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(arrow_type,
+                                                                                    R"([
+[[[[100, ["5.12", "6.12"]]],
+[[200, ["-123456789987654321.45678", "23456789987654321.45678"]]],
+[[300, [1732603136054000054, 11, "7.89", "3456789987654321.45678"]]]],
+"Alice"],
+[[[[102, [null, "6.12"]]],
+[[202, ["-123456789987654321.45678", null]]],
+[[302, [null, null, null, null]]]],
+"Bob"]
+    ])")
+                                              .ValueOrDie();
+
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
+    ASSERT_TRUE(struct_array);
+    ASSERT_OK_AND_ASSIGN(auto serializer,
+                         RowCompactedSerializer::Create(arrow::schema(arrow_type->fields()), pool));
+
+    {
+        auto columnar_row =
+            std::make_shared<ColumnarRow>(/*struct_array=*/nullptr, struct_array->fields(), pool,
+                                          /*row_id=*/0);
+
+        // serialize and deserialize
+        ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
+        ASSERT_OK_AND_ASSIGN(auto row, serializer->Deserialize(bytes));
+
+        // check result
+        ASSERT_EQ(row->GetFieldCount(), 2);
+        auto inner_row = row->GetRow(0, 3);
+        ASSERT_EQ(inner_row->GetFieldCount(), 3);
+        ASSERT_EQ(row->GetString(1).ToString(), "Alice");
+
+        // test compatibility
+        std::vector<uint8_t> java_bytes = {
+            0,   0,   129, 2,   0,   0,   60,  16,  0,   0,  0,   1,   0,   0,  0,   0,   0,   0,
+            0,   100, 0,   0,   0,   0,   0,   0,   0,   1,  0,   0,   0,   0,  0,   0,   0,   24,
+            0,   0,   0,   16,  0,   0,   0,   2,   0,   0,  0,   0,   0,   0,  0,   0,   2,   0,
+            0,   0,   0,   0,   0,   100, 2,   0,   0,   0,  0,   0,   0,   92, 16,  0,   0,   0,
+            1,   0,   0,   0,   0,   0,   0,   0,   200, 0,  0,   0,   0,   0,  0,   0,   1,   0,
+            0,   0,   0,   0,   0,   0,   56,  0,   0,   0,  16,  0,   0,   0,  2,   0,   0,   0,
+            0,   0,   0,   0,   10,  0,   0,   0,   24,  0,  0,   0,   9,   0,  0,   0,   40,  0,
+            0,   0,   253, 98,  189, 73,  88,  213, 98,  56, 248, 242, 0,   0,  0,   0,   0,   0,
+            127, 40,  213, 221, 111, 235, 135, 7,   14,  0,  0,   0,   0,   0,  0,   0,   100, 16,
+            0,   0,   0,   1,   0,   0,   0,   0,   0,   0,  0,   44,  1,   0,  0,   0,   0,   0,
+            0,   1,   0,   0,   0,   0,   0,   0,   0,   64, 0,   0,   0,   16, 0,   0,   0,   0,
+            0,   0,   0,   0,   0,   0,   0,   54,  0,   0,  0,   40,  0,   0,  0,   248, 42,  0,
+            0,   0,   0,   0,   0,   21,  3,   0,   0,   0,  0,   0,   0,   9,  0,   0,   0,   48,
+            0,   0,   0,   54,  200, 49,  103, 147, 1,   0,  0,   18,  189, 66, 129, 228, 46,  71,
+            7,   14,  0,   0,   0,   0,   0,   0,   0,   5,  65,  108, 105, 99, 101};
+        std::vector<uint8_t> cpp_bytes(bytes->data(), bytes->data() + bytes->size());
+        ASSERT_EQ(java_bytes, cpp_bytes);
+    }
+    {
+        auto columnar_row =
+            std::make_shared<ColumnarRow>(/*struct_array=*/nullptr, struct_array->fields(), pool,
+                                          /*row_id=*/1);
+
+        // serialize and deserialize
+        ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
+        ASSERT_OK_AND_ASSIGN(auto row, serializer->Deserialize(bytes));
+
+        // check result
+        ASSERT_EQ(row->GetFieldCount(), 2);
+        auto inner_row = row->GetRow(0, 3);
+        ASSERT_EQ(inner_row->GetFieldCount(), 3);
+        ASSERT_EQ(row->GetString(1).ToString(), "Bob");
+
+        // test compatibility
+        std::vector<uint8_t> java_bytes = {
+            0, 0, 241, 1,  0,   0,  60, 16,  0,  0,  0,   1,   0,  0, 0,  0,  0,   0,   0,   102, 0,
+            0, 0, 0,   0,  0,   0,  1,  0,   0,  0,  0,   0,   0,  0, 24, 0,  0,   0,   16,  0,   0,
+            0, 2, 0,   0,  0,   1,  0,  0,   0,  0,  0,   0,   0,  0, 0,  0,  0,   100, 2,   0,   0,
+            0, 0, 0,   0,  76,  16, 0,  0,   0,  1,  0,   0,   0,  0, 0,  0,  0,   202, 0,   0,   0,
+            0, 0, 0,   0,  1,   0,  0,  0,   0,  0,  0,   0,   40, 0, 0,  0,  16,  0,   0,   0,   2,
+            0, 0, 0,   2,  0,   0,  0,  10,  0,  0,  0,   24,  0,  0, 0,  0,  0,   0,   0,   0,   0,
+            0, 0, 253, 98, 189, 73, 88, 213, 98, 56, 248, 242, 0,  0, 0,  0,  0,   0,   100, 16,  0,
+            0, 0, 1,   0,  0,   0,  0,  0,   0,  0,  46,  1,   0,  0, 0,  0,  0,   0,   1,   0,   0,
+            0, 0, 0,   0,  0,   64, 0,  0,   0,  16, 0,   0,   0,  0, 15, 0,  0,   0,   0,   0,   0,
+            0, 0, 0,   0,  40,  0,  0,  0,   0,  0,  0,   0,   0,  0, 0,  0,  0,   0,   0,   0,   0,
+            0, 0, 0,   0,  0,   0,  0,  48,  0,  0,  0,   0,   0,  0, 0,  0,  0,   0,   0,   0,   0,
+            0, 0, 0,   0,  0,   0,  0,  0,   0,  0,  0,   0,   0,  0, 3,  66, 111, 98};
         std::vector<uint8_t> cpp_bytes(bytes->data(), bytes->data() + bytes->size());
         ASSERT_EQ(java_bytes, cpp_bytes);
     }
