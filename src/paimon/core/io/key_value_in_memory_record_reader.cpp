@@ -103,8 +103,8 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueInMemoryRecordRe
     for (int32_t i = 0; i < value_struct_array_->num_fields(); i++) {
         value_fields_.push_back(value_struct_array_->field(i));
     }
-    key_ctx_ = std::make_shared<ColumnarBatchContext>(value_struct_array_, key_fields_, pool_);
-    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_struct_array_, value_fields_, pool_);
+    key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields_, pool_);
+    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields_, pool_);
 
     PAIMON_ASSIGN_OR_RAISE(sort_indices_, SortBatch());
     return std::make_unique<KeyValueInMemoryRecordReader::Iterator>(this);
