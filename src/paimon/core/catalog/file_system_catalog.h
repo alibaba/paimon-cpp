@@ -76,6 +76,17 @@ class FileSystemCatalog : public Catalog {
                               const std::map<std::string, std::string>& options);
     Result<bool> TableExistsInFileSystem(const std::string& table_path) const;
 
+    // Get all external paths from a list of schemas
+    Result<std::vector<std::string>> GetSchemaExternalPaths(
+        const std::vector<std::shared_ptr<TableSchema>>& schemas) const;
+
+    // Get all branch names for a table
+    Result<std::vector<std::string>> GetTableBranches(const std::string& table_path) const;
+
+    // Drop table implementation with external paths cleanup
+    Status DropTableImpl(const Identifier& identifier,
+                         const std::vector<std::string>& external_paths);
+
     std::shared_ptr<FileSystem> fs_;
     std::string warehouse_;
 

@@ -18,6 +18,7 @@
 
 #include <cstring>
 #include <optional>
+#include <set>
 #include <utility>
 
 #include "arrow/c/bridge.h"
@@ -27,6 +28,8 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/utils/branch_manager.h"
+#include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"
@@ -293,12 +296,76 @@ Status FileSystemCatalog::DropDatabase(const std::string& name, bool ignore_if_n
     return Status::OK();
 }
 
+Result<std::vector<std::string>> FileSystemCatalog::GetSchemaExternalPaths(
+    const std::vector<std::shared_ptr<TableSchema>>& schemas) const {
+    std::set<std::string> external_paths_set;
+    for (const auto& schema : schemas) {
+        const auto& options = schema->Options();
+        auto iter = options.find(Options::DATA_FILE_EXTERNAL_PATHS);
+        if (iter != options.end() && !iter->second.empty()) {
+            auto paths = StringUtils::Split(iter->second, ",", /*ignore_empty=*/true);
+            for (const auto& path : paths) {
+                std::string trimmed_path = path;
+                StringUtils::Trim(&trimmed_path);
+                if (!trimmed_path.empty()) {
+                    external_paths_set.insert(trimmed_path);
+                }
+            }
+        }
+    }
+    return std::vector<std::string>(external_paths_set.begin(), external_paths_set.end());
+}
+
+Result<std::vector<std::string>> FileSystemCatalog::GetTableBranches(
+    const std::string& table_path) const {
+    std::vector<std::string> branches;
+    std::string branch_dir = PathUtil::JoinPath(table_path, "branch");
+    PAIMON_ASSIGN_OR_RAISE(bool branch_dir_exists, fs_->Exists(branch_dir));
+    if (!branch_dir_exists) {
+        return branches;
+    }
+
+    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
+    PAIMON_RETURN_NOT_OK(fs_->ListDir(branch_dir, &file_status_list));
+
+    for (const auto& file_status : file_status_list) {
+        if (file_status->IsDir()) {
+            std::string dir_name = PathUtil::GetName(file_status->GetPath());
+            // Branch directory name format: branch-{branch_name}
+            const std::string branch_prefix = BranchManager::BRANCH_PREFIX;
+            if (StringUtils::StartsWith(dir_name, branch_prefix, /*start_pos=*/0)) {
+                std::string branch_name = dir_name.substr(branch_prefix.length());
+                branches.push_back(branch_name);
+            }
+        }
+    }
+    return branches;
+}
+
+Status FileSystemCatalog::DropTableImpl(const Identifier& identifier,
+                                        const std::vector<std::string>& external_paths) {
+    std::string table_path = GetTableLocation(identifier);
+
+    // Delete external paths first
+    for (const auto& external_path : external_paths) {
+        PAIMON_ASSIGN_OR_RAISE(bool exists, fs_->Exists(external_path));
+        if (exists) {
+            PAIMON_RETURN_NOT_OK(fs_->Delete(external_path));
+        }
+    }
+
+    // Delete the table directory
+    PAIMON_RETURN_NOT_OK(fs_->Delete(table_path));
+    return Status::OK();
+}
+
 Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if_not_exists) {
     if (IsSystemTable(identifier)) {
         return Status::Invalid(fmt::format("Cannot drop system table {}.", identifier.ToString()));
     }
 
-    PAIMON_ASSIGN_OR_RAISE(bool exist, TableExists(identifier));
+    std::string table_path = GetTableLocation(identifier);
+    PAIMON_ASSIGN_OR_RAISE(bool exist, fs_->Exists(table_path));
     if (!exist) {
         if (ignore_if_not_exists) {
             return Status::OK();
@@ -307,9 +374,48 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
         }
     }
 
-    std::string table_path = GetTableLocation(identifier);
-    PAIMON_RETURN_NOT_OK(fs_->Delete(table_path));
-    return Status::OK();
+    // Check if table has valid schema (table exists)
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                           TableSchemaExists(identifier));
+    if (!latest_schema) {
+        if (ignore_if_not_exists) {
+            return Status::OK();
+        } else {
+            return Status::NotExist(fmt::format("table {} does not exist", identifier.ToString()));
+        }
+    }
+
+    // Collect external paths from all schemas
+    std::set<std::string> external_paths_set;
+
+    // Get external paths from main branch
+    SchemaManager schema_manager(fs_, table_path);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
+    std::vector<std::shared_ptr<TableSchema>> schemas;
+    for (int64_t id : schema_ids) {
+        PAIMON_ASSIGN_OR_RAISE(auto schema, schema_manager.ReadSchema(id));
+        schemas.push_back(schema);
+    }
+    PAIMON_ASSIGN_OR_RAISE(auto main_external_paths, GetSchemaExternalPaths(schemas));
+    external_paths_set.insert(main_external_paths.begin(), main_external_paths.end());
+
+    // Get external paths from all branches
+    PAIMON_ASSIGN_OR_RAISE(auto branches, GetTableBranches(table_path));
+    for (const auto& branch : branches) {
+        SchemaManager branch_schema_manager(fs_, table_path, branch);
+        PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> branch_schema_ids,
+                               branch_schema_manager.ListAllIds());
+        std::vector<std::shared_ptr<TableSchema>> branch_schemas;
+        for (int64_t id : branch_schema_ids) {
+            PAIMON_ASSIGN_OR_RAISE(auto schema, branch_schema_manager.ReadSchema(id));
+            branch_schemas.push_back(schema);
+        }
+        PAIMON_ASSIGN_OR_RAISE(auto branch_external_paths, GetSchemaExternalPaths(branch_schemas));
+        external_paths_set.insert(branch_external_paths.begin(), branch_external_paths.end());
+    }
+
+    std::vector<std::string> external_paths(external_paths_set.begin(), external_paths_set.end());
+    return DropTableImpl(identifier, external_paths);
 }
 
 Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identifier& to_table,

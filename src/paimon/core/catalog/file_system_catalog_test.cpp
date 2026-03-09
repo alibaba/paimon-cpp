@@ -565,4 +565,118 @@ TEST(FileSystemCatalogTest, TestRenameTable) {
     ArrowSchemaRelease(&schema2);
 }
 
+TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create external path directory
+    auto external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(external_dir);
+    std::string external_path = external_dir->Str();
+
+    // Create a file in external path to simulate external data
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string external_data_file = PathUtil::JoinPath(external_path, "data-file.parquet");
+    ASSERT_OK(fs->WriteFile(external_data_file, "test data", /*overwrite=*/true));
+
+    // Verify external data file exists
+    ASSERT_OK_AND_ASSIGN(bool external_file_exists, fs->Exists(external_data_file));
+    ASSERT_TRUE(external_file_exists);
+
+    // Create table with external path
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_with_external"), &schema, {}, {},
+                                  table_options, false));
+
+    // Verify table exists
+    ASSERT_OK_AND_ASSIGN(bool table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_with_external")));
+    ASSERT_TRUE(table_exists);
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_with_external"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_with_external")));
+    ASSERT_FALSE(table_exists);
+
+    // Verify external path is also cleaned up
+    ASSERT_OK_AND_ASSIGN(external_file_exists, fs->Exists(external_path));
+    ASSERT_FALSE(external_file_exists);
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create multiple external path directories
+    auto external_dir1 = UniqueTestDirectory::Create();
+    auto external_dir2 = UniqueTestDirectory::Create();
+    ASSERT_TRUE(external_dir1);
+    ASSERT_TRUE(external_dir2);
+
+    std::string external_path1 = external_dir1->Str();
+    std::string external_path2 = external_dir2->Str();
+
+    // Create files in external paths
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string external_data_file1 = PathUtil::JoinPath(external_path1, "data-1.parquet");
+    std::string external_data_file2 = PathUtil::JoinPath(external_path2, "data-2.parquet");
+    ASSERT_OK(fs->WriteFile(external_data_file1, "test data 1", /*overwrite=*/true));
+    ASSERT_OK(fs->WriteFile(external_data_file2, "test data 2", /*overwrite=*/true));
+
+    // Create table with multiple external paths
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path1 + "," + external_path2;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_multi_external"), &schema, {}, {},
+                                  table_options, false));
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_multi_external"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify both external paths are cleaned up
+    ASSERT_OK_AND_ASSIGN(bool exists1, fs->Exists(external_path1));
+    ASSERT_OK_AND_ASSIGN(bool exists2, fs->Exists(external_path2));
+    ASSERT_FALSE(exists1);
+    ASSERT_FALSE(exists2);
+
+    ArrowSchemaRelease(&schema);
+}
+
 }  // namespace paimon::test
