@@ -34,6 +34,8 @@ set(PAIMON_COMMON_SRCS
     common/data/internal_row.cpp
     common/data/record_batch.cpp
     common/data/serializer/binary_row_serializer.cpp
+    common/data/serializer/row_compacted_serializer.cpp
+    common/data/serializer/binary_serializer_utils.cpp
     common/data/timestamp.cpp
     common/defs.cpp
     common/executor/executor.cpp
@@ -335,6 +337,7 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(common_test
                     SOURCES
                     common/data/binary_array_test.cpp
+                    common/data/binary_map_test.cpp
                     common/data/binary_row_test.cpp
                     common/data/binary_row_writer_test.cpp
                     common/data/binary_section_test.cpp
@@ -348,6 +351,8 @@ if(PAIMON_BUILD_TESTS)
                     common/data/internal_row_test.cpp
                     common/data/record_batch_test.cpp
                     common/data/serializer/binary_row_serializer_test.cpp
+                    common/data/serializer/row_compacted_serializer_test.cpp
+                    common/data/serializer/binary_serializer_utils_test.cpp
                     common/data/timestamp_test.cpp
                     common/data/blob_test.cpp
                     common/data/blob_descriptor_test.cpp
@@ -402,6 +407,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
                     common/utils/arrow/mem_utils_test.cpp
                     common/utils/arrow/status_utils_test.cpp
@@ -543,6 +549,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
                     core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
+                    core/mergetree/lookup/persist_processor_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/sorted_run_test.cpp

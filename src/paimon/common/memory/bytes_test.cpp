@@ -39,10 +39,18 @@ TEST(BytesTest, TestCopyOf) {
     // pool allocate 5 bytes + sizeof(Bytes)
     auto bytes = Bytes::AllocateBytes("abcde", pool.get());
     ASSERT_EQ("abcde", std::string(bytes->data(), bytes->size()));
+
+    // test cp_bytes 100b and src bytes 5b
+    auto cp_bytes1 = Bytes::CopyOf(*bytes, /*size=*/100, pool.get());
+    ASSERT_EQ("abcde", std::string(cp_bytes1->data(), 5));
     // pool allocate 100 bytes + sizeof(Bytes)
-    auto cp_bytes = Bytes::CopyOf(*bytes, 100, pool.get());
-    ASSERT_EQ("abcde", std::string(cp_bytes->data(), 5));
     ASSERT_EQ(5 + 100 + sizeof(Bytes) * 2, pool->CurrentUsage());
+
+    // test cp_bytes 2b and src bytes 5b
+    auto cp_bytes2 = Bytes::CopyOf(*bytes, /*size=*/2, pool.get());
+    ASSERT_EQ("ab", std::string(cp_bytes2->data(), 2));
+    // pool allocate 2 bytes + sizeof(Bytes)
+    ASSERT_EQ(5 + 100 + 2 + sizeof(Bytes) * 3, pool->CurrentUsage());
 }
 
 TEST(BytesTest, TestAllocateBytesAndMove) {

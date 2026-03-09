@@ -27,6 +27,7 @@ class Bytes;
 class BinaryString;
 class BinaryRow;
 class BinaryArray;
+class BinaryMap;
 class Timestamp;
 class Decimal;
 
@@ -72,7 +73,8 @@ class BinaryWriter {
 
     virtual void WriteRow(int32_t pos, const BinaryRow& value) = 0;
 
-    // TODO(liancheng.lsz): write complex data type
+    virtual void WriteMap(int32_t pos, const BinaryMap& input) = 0;
+
     /// Finally, complete write to set real size to binary.
     virtual void Complete() = 0;
 };

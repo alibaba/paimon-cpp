@@ -91,20 +91,22 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueInMemoryRecordRe
         return std::unique_ptr<KeyValueInMemoryRecordReader::Iterator>();
     }
     visited_ = true;
-    key_fields_.reserve(primary_keys_.size());
+    arrow::ArrayVector key_fields;
+    key_fields.reserve(primary_keys_.size());
     for (const auto& key : primary_keys_) {
         auto key_array = value_struct_array_->GetFieldByName(key);
         if (!key_array) {
             return Status::Invalid(fmt::format("cannot find field {} in data batch", key));
         }
-        key_fields_.emplace_back(key_array);
+        key_fields.emplace_back(key_array);
     }
-    value_fields_.reserve(value_struct_array_->num_fields());
+    arrow::ArrayVector value_fields;
+    value_fields.reserve(value_struct_array_->num_fields());
     for (int32_t i = 0; i < value_struct_array_->num_fields(); i++) {
-        value_fields_.push_back(value_struct_array_->field(i));
+        value_fields.push_back(value_struct_array_->field(i));
     }
-    key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields_, pool_);
-    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields_, pool_);
+    key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields, pool_);
+    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields, pool_);
 
     PAIMON_ASSIGN_OR_RAISE(sort_indices_, SortBatch());
     return std::make_unique<KeyValueInMemoryRecordReader::Iterator>(this);
@@ -113,8 +115,6 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueInMemoryRecordRe
 void KeyValueInMemoryRecordReader::Close() {
     value_struct_array_.reset();
     row_kinds_.clear();
-    key_fields_.clear();
-    value_fields_.clear();
     sort_indices_.reset();
     key_ctx_.reset();
     value_ctx_.reset();

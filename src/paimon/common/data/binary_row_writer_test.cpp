@@ -22,6 +22,8 @@
 
 #include "arrow/type_fwd.h"
 #include "gtest/gtest.h"
+#include "paimon/common/data/binary_array.h"
+#include "paimon/common/data/binary_map.h"
 #include "paimon/common/data/binary_string.h"
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/utils/date_time_utils.h"
@@ -30,8 +32,8 @@
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 TEST(BinaryRowWriterTest, TestFieldSetter) {
     int32_t arity = 24;
@@ -269,5 +271,46 @@ TEST(BinaryRowWriterTest, TestFieldSetterWithNull) {
     ASSERT_TRUE(row.IsNullAt(2));
     ASSERT_TRUE(row.IsNullAt(3));
     ASSERT_TRUE(row.IsNullAt(4));
+}
+
+TEST(BinaryRowWriterTest, TestWriteNested) {
+    auto pool = GetDefaultPool();
+    BinaryRow inner_row =
+        BinaryRowGenerator::GenerateRow({std::string("Alice"), 30, 12.1, NullType()}, pool.get());
+    BinaryArray inner_array = BinaryArray::FromIntArray({10, 20, 30}, pool.get());
+    auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
+    auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
+    ASSERT_OK_AND_ASSIGN(auto inner_map, BinaryMap::ValueOf(key, value, pool.get()));
+
+    BinaryRow row(3);
+    BinaryRowWriter writer(&row, /*initial_size=*/1024, pool.get());
+    writer.WriteRow(0, inner_row);
+    writer.WriteArray(1, inner_array);
+    writer.WriteMap(2, *inner_map);
+    writer.Complete();
+
+    ASSERT_EQ(3, row.GetFieldCount());
+    ASSERT_FALSE(row.IsNullAt(0));
+
+    auto de_row = row.GetRow(0, 4);
+    ASSERT_EQ(std::dynamic_pointer_cast<BinaryRow>(de_row)->HashCode(), inner_row.HashCode());
+    ASSERT_EQ(4, de_row->GetFieldCount());
+    ASSERT_EQ(de_row->GetString(0).ToString(), "Alice");
+    ASSERT_EQ(de_row->GetInt(1), 30);
+    ASSERT_EQ(de_row->GetDouble(2), 12.1);
+    ASSERT_TRUE(de_row->IsNullAt(3));
+
+    auto de_array = row.GetArray(1);
+    ASSERT_EQ(std::dynamic_pointer_cast<BinaryArray>(de_array)->HashCode(), inner_array.HashCode());
+    ASSERT_EQ(de_array->ToIntArray().value(), std::vector<int32_t>({10, 20, 30}));
+
+    auto de_map = row.GetMap(2);
+    ASSERT_EQ(std::dynamic_pointer_cast<BinaryArray>(de_map->KeyArray())->HashCode(),
+              key.HashCode());
+    ASSERT_EQ(std::dynamic_pointer_cast<BinaryArray>(de_map->ValueArray())->HashCode(),
+              value.HashCode());
+    ASSERT_EQ(de_map->KeyArray()->ToIntArray().value(), std::vector<int32_t>({1, 2, 3, 5}));
+    ASSERT_EQ(de_map->ValueArray()->ToLongArray().value(),
+              std::vector<int64_t>({100ll, 200ll, 300ll, 500ll}));
 }
 }  // namespace paimon::test

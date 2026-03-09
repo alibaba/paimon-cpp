@@ -22,6 +22,7 @@
 #include <optional>
 
 #include "paimon/common/data/binary_array.h"
+#include "paimon/common/data/binary_map.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_section.h"
 #include "paimon/common/data/binary_string.h"
@@ -79,6 +80,11 @@ void AbstractBinaryWriter::WriteRow(int32_t pos, const BinaryRow& input) {
 }
 
 void AbstractBinaryWriter::WriteArray(int32_t pos, const BinaryArray& input) {
+    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
+                                     input.GetSizeInBytes());
+}
+
+void AbstractBinaryWriter::WriteMap(int32_t pos, const BinaryMap& input) {
     return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
                                      input.GetSizeInBytes());
 }

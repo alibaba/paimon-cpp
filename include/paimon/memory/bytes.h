@@ -33,6 +33,7 @@ namespace paimon {
 /// with automatic memory management and supports move semantics for efficient transfers.
 class PAIMON_EXPORT Bytes {
  public:
+    static const std::shared_ptr<Bytes>& EmptyBytes();
     /// Default constructor creating an empty Bytes object.
     ///
     /// Creates a Bytes object with no allocated memory. The object will have

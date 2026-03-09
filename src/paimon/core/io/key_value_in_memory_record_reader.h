@@ -89,8 +89,6 @@ class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
 
-    arrow::ArrayVector key_fields_;
-    arrow::ArrayVector value_fields_;
     std::shared_ptr<arrow::NumericArray<arrow::UInt64Type>> sort_indices_;
     std::shared_ptr<ColumnarBatchContext> key_ctx_;
     std::shared_ptr<ColumnarBatchContext> value_ctx_;

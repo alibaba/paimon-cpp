@@ -26,10 +26,11 @@
 #include "arrow/util/checked_cast.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_array_writer.h"
+#include "paimon/common/data/binary_map.h"
 #include "paimon/common/data/columnar/columnar_array.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 
 TEST(BinaryArrayTest, TestBinaryArraySimple) {
@@ -238,6 +239,43 @@ TEST(BinaryArrayTest, TestSetAndGet) {
         writer.Complete();
         ASSERT_EQ(arr[0].ToIntArray().value(), array.GetArray(0)->ToIntArray().value());
         ASSERT_EQ(arr[1].ToIntArray().value(), array.GetArray(1)->ToIntArray().value());
+    }
+    // row
+    {
+        BinaryRow row1 = BinaryRowGenerator::GenerateRow(
+            {std::string("Alice"), 30, 12.1, NullType()}, pool.get());
+        BinaryRow row2 =
+            BinaryRowGenerator::GenerateRow({std::string("Bob"), 40, 14.1, NullType()}, pool.get());
+        BinaryArray array;
+        BinaryArrayWriter writer =
+            BinaryArrayWriter(&array, /*num_elements=*/2, /*element_size=*/8, pool.get());
+        writer.WriteRow(0, row1);
+        writer.WriteRow(1, row2);
+        writer.Complete();
+
+        ASSERT_EQ(2, array.Size());
+        auto de_row1 = array.GetRow(0, 4);
+        ASSERT_EQ(row1, *(std::dynamic_pointer_cast<BinaryRow>(de_row1)));
+        auto de_row2 = array.GetRow(1, 4);
+        ASSERT_EQ(row2, *(std::dynamic_pointer_cast<BinaryRow>(de_row2)));
+    }
+    // map
+    {
+        auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
+        auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
+        ASSERT_OK_AND_ASSIGN(auto map, BinaryMap::ValueOf(key, value, pool.get()));
+        BinaryArray array;
+        BinaryArrayWriter writer =
+            BinaryArrayWriter(&array, /*num_elements=*/1, /*element_size=*/8, pool.get());
+        writer.WriteMap(0, *map);
+        writer.Complete();
+
+        ASSERT_EQ(1, array.Size());
+        auto de_map = array.GetMap(0);
+        ASSERT_EQ(key.HashCode(),
+                  std::dynamic_pointer_cast<BinaryArray>(de_map->KeyArray())->HashCode());
+        ASSERT_EQ(value.HashCode(),
+                  std::dynamic_pointer_cast<BinaryArray>(de_map->ValueArray())->HashCode());
     }
 }
 

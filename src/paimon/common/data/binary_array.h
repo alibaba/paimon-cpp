@@ -116,9 +116,9 @@ class BinaryArray final : public BinarySection, public InternalArray {
 
  private:
     /// The number of elements in this array.
-    int32_t size_;
+    int32_t size_ = 0;
     /// The position to start storing array elements.
-    int32_t element_offset_;
+    int32_t element_offset_ = -1;
 };
 
 }  // namespace paimon
