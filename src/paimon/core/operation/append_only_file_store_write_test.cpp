@@ -169,7 +169,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
                              write->ScanExistingFileMetas(latest_snapshot.value(), partition,
                                                           /*bucket=*/1));
-        ASSERT_EQ(-1, restore_files->TotalBuckets().value());
+        ASSERT_EQ(std::nullopt, restore_files->TotalBuckets());
         ASSERT_EQ(-1, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
     }
 }

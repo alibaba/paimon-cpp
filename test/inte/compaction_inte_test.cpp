@@ -388,4 +388,89 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
     }
 }
 
+TEST_F(CompactionInteTest, TestAppendTableWriteAlterTableWithCompaction) {
+    std::string test_data_path =
+        paimon::test::GetDataDir() +
+        "/orc/append_table_with_alter_table.db/append_table_with_alter_table/";
+    auto dir = UniqueTestDirectory::Create();
+    std::string table_path = dir->Str();
+    std::cout << "[alter]" << table_path << std::endl;
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, table_path));
+    arrow::FieldVector fields = {
+        arrow::field("key0", arrow::int32()), arrow::field("key1", arrow::int32()),
+        arrow::field("k", arrow::int32()),    arrow::field("c", arrow::int32()),
+        arrow::field("d", arrow::int32()),    arrow::field("a", arrow::int32()),
+        arrow::field("e", arrow::int32()),
+    };
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "orc"},
+                                                  {Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::TARGET_FILE_SIZE, "1024"},
+                                                  {Options::FILE_SYSTEM, "local"}};
+    ASSERT_OK_AND_ASSIGN(auto helper,
+                         TestHelper::Create(table_path, options, /*is_streaming_mode=*/true));
+    // scan with empty split
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> empty_splits,
+                         helper->NewScan(StartupMode::Latest(), /*snapshot_id=*/std::nullopt));
+    ASSERT_TRUE(empty_splits.empty());
+
+    int64_t commit_identifier = 0;
+    auto data_type = arrow::struct_(fields);
+    std::string data = R"([[1, 1, 116, 113, 567, 115, 668]])";
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<RecordBatch> batch,
+        TestHelper::MakeRecordBatch(data_type, data, {{"key0", "1"}, {"key1", "1"}}, /*bucket=*/0,
+                                    /*row_kinds=*/{}));
+    // for append only unaware bucket table, previous files will be ignored
+    auto file_meta = std::make_shared<DataFileMeta>(
+        "data-xxx.xxx", /*file_size=*/543, /*row_count=*/1,
+        /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+        /*key_stats=*/SimpleStats::EmptyStats(),
+        BinaryRowGenerator::GenerateStats({1, 1, 116, 113, 567, 115, 668},
+                                          {1, 1, 116, 113, 567, 115, 668}, {0, 0, 0, 0, 0, 0, 0},
+                                          pool_.get()),
+        /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/1,
+        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+        /*creation_time=*/Timestamp(1724090888706ll, 0),
+        /*delete_row_count=*/0, /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+        /*first_row_id=*/std::nullopt,
+        /*write_cols=*/std::nullopt);
+    DataIncrement data_increment({file_meta}, {}, {});
+    std::shared_ptr<CommitMessage> expected_commit_message = std::make_shared<CommitMessageImpl>(
+        BinaryRowGenerator::GenerateRow({1, 1}, pool_.get()), /*bucket=*/0,
+        /*total_bucket=*/-1, data_increment, CompactIncrement({}, {}, {}));
+    std::vector<std::shared_ptr<CommitMessage>> expected_commit_messages = {
+        expected_commit_message};
+    ASSERT_OK(
+        helper->WriteAndCommit(std::move(batch), commit_identifier++, expected_commit_messages));
+
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{{"key0", "0"}, {"key1", "1"}}, /*bucket=*/0,
+                                      /*full_compaction=*/true));
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{{"key0", "1"}, {"key1", "1"}}, /*bucket=*/0,
+                                      /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<std::shared_ptr<CommitMessage>> commit_messages,
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier++));
+    ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
+
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());
+    ASSERT_TRUE(snapshot);
+
+    ASSERT_EQ(1, snapshot.value().SchemaId());
+    ASSERT_EQ(4, snapshot.value().Id());
+
+    // read
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits, helper->Scan());
+    ASSERT_EQ(data_splits.size(), 1);
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type_with_row_kind = arrow::struct_(fields_with_row_kind);
+    std::string expected_data = R"([[0, 1, 1, 116, 113, 567, 115, 668]])";
+    ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type_with_row_kind,
+                                                                  data_splits, expected_data));
+    ASSERT_TRUE(success);
+}
+
 }  // namespace paimon::test

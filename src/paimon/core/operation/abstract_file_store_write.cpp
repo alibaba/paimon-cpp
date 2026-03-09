@@ -269,10 +269,6 @@ Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMe
         /*vector_search=*/nullptr);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
-    // PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
-    //                        scan->WithSnapshot(snapshot)->CreatePlan());
-    // std::vector<ManifestEntry> entries = plan->Files();
-
     // TODO(yonghao.fyh): create index file handler
     FileSystemWriteRestore restore(options_, snapshot_manager_, std::move(scan));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files, restore.GetRestoreFiles());
