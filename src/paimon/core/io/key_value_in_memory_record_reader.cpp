@@ -27,7 +27,7 @@
 #include "arrow/compute/ordering.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
-#include "paimon/common/data/columnar/columnar_row.h"
+#include "paimon/common/data/columnar/columnar_row_ref.h"
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
@@ -49,10 +49,8 @@ Result<KeyValue> KeyValueInMemoryRecordReader::Iterator::Next() {
                 row_kind, RowKind::FromByteValue(static_cast<int8_t>(reader_->row_kinds_[index])));
         }
         // key must hold value_struct_array as min/max key may be used after projection
-        auto key = std::make_unique<ColumnarRow>(reader_->value_struct_array_, reader_->key_fields_,
-                                                 reader_->pool_, index);
-        auto value = std::make_unique<ColumnarRow>(reader_->value_struct_array_,
-                                                   reader_->value_fields_, reader_->pool_, index);
+        auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, index);
+        auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, index);
         KeyValue kv(row_kind, reader_->last_sequence_num_ + index,
                     /*level=*/KeyValue::UNKNOWN_LEVEL, std::move(key), std::move(value));
         if (current_key == nullptr) {
@@ -105,6 +103,8 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueInMemoryRecordRe
     for (int32_t i = 0; i < value_struct_array_->num_fields(); i++) {
         value_fields_.push_back(value_struct_array_->field(i));
     }
+    key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields_, pool_);
+    value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields_, pool_);
 
     PAIMON_ASSIGN_OR_RAISE(sort_indices_, SortBatch());
     return std::make_unique<KeyValueInMemoryRecordReader::Iterator>(this);
@@ -116,6 +116,8 @@ void KeyValueInMemoryRecordReader::Close() {
     key_fields_.clear();
     value_fields_.clear();
     sort_indices_.reset();
+    key_ctx_.reset();
+    value_ctx_.reset();
 }
 
 Result<std::shared_ptr<arrow::NumericArray<arrow::UInt64Type>>>
