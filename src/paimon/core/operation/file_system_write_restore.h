@@ -27,8 +27,7 @@ namespace paimon {
 /// `WriteRestore` to restore files directly from file system.
 class FileSystemWriteRestore : public WriteRestore {
  public:
-    FileSystemWriteRestore(const CoreOptions& options,
-                           const std::shared_ptr<SnapshotManager>& snapshot_manager,
+    FileSystemWriteRestore(const std::shared_ptr<SnapshotManager>& snapshot_manager,
                            std::unique_ptr<FileStoreScan>&& scan)
         : snapshot_manager_(snapshot_manager), scan_(std::move(scan)) {
         // TODO(yonghao.fyh): support index file handler

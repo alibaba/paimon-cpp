@@ -136,8 +136,6 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         builder.AddOption("file.format", "orc").AddOption("manifest.format", "orc").Finish());
     ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
     auto write = dynamic_cast<AppendOnlyFileStoreWrite*>(file_store_write.get());
-    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> latest_snapshot,
-                         write->snapshot_manager_->LatestSnapshot());
     auto pool = GetDefaultPool();
     {
         BinaryRow partition(2);
@@ -145,7 +143,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         writer.WriteInt(0, 20);
         writer.WriteInt(1, 1);
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
+                             write->ScanExistingFileMetas(partition,
                                                           /*bucket=*/0));
         ASSERT_EQ(-1, restore_files->TotalBuckets().value());
         ASSERT_EQ(0, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
@@ -156,7 +154,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         writer.WriteInt(0, 10);
         writer.WriteInt(1, 0);
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
+                             write->ScanExistingFileMetas(partition,
                                                           /*bucket=*/0));
         ASSERT_EQ(-1, restore_files->TotalBuckets().value());
         ASSERT_EQ(2, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
@@ -167,7 +165,7 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         writer.WriteInt(0, 10);
         writer.WriteInt(1, 0);
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
+                             write->ScanExistingFileMetas(partition,
                                                           /*bucket=*/1));
         ASSERT_EQ(std::nullopt, restore_files->TotalBuckets());
         ASSERT_EQ(-1, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));

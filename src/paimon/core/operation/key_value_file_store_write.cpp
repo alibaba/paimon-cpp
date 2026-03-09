@@ -91,13 +91,11 @@ Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> KeyValueFileStoreWrite:
     const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) {
     PAIMON_LOG_DEBUG(logger_, "Creating key value writer for partition %s, bucket %d",
                      partition.ToString().c_str(), bucket);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_snapshot,
-                           snapshot_manager_->LatestSnapshot());
     int32_t total_buckets = GetDefaultBucketNum();
     std::vector<std::shared_ptr<DataFileMeta>> restore_data_files;
-    if (!ignore_previous_files && latest_snapshot != std::nullopt) {
+    if (!ignore_previous_files) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files,
-                               ScanExistingFileMetas(latest_snapshot.value(), partition, bucket));
+                               ScanExistingFileMetas(partition, bucket));
         restore_data_files = restore_files->DataFiles();
         if (restore_files->TotalBuckets()) {
             total_buckets = restore_files->TotalBuckets().value();

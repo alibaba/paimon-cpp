@@ -253,7 +253,7 @@ int32_t AbstractFileStoreWrite::GetDefaultBucketNum() const {
 }
 
 Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMetas(
-    const Snapshot& snapshot, const BinaryRow& partition, int32_t bucket) const {
+    const BinaryRow& partition, int32_t bucket) const {
     PAIMON_ASSIGN_OR_RAISE(auto part_values,
                            file_store_path_factory_->GeneratePartitionVector(partition));
     std::map<std::string, std::string> part_values_map;
@@ -270,7 +270,7 @@ Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMe
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
     // TODO(yonghao.fyh): create index file handler
-    FileSystemWriteRestore restore(options_, snapshot_manager_, std::move(scan));
+    FileSystemWriteRestore restore(snapshot_manager_, std::move(scan));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files, restore.GetRestoreFiles());
 
     std::optional<int32_t> restored_total_buckets = restore_files->TotalBuckets();

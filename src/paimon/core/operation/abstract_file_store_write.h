@@ -108,8 +108,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     virtual Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const = 0;
 
-    Result<std::shared_ptr<RestoreFiles>> ScanExistingFileMetas(const Snapshot& snapshot,
-                                                                const BinaryRow& partition,
+    Result<std::shared_ptr<RestoreFiles>> ScanExistingFileMetas(const BinaryRow& partition,
                                                                 int32_t bucket) const;
     int32_t GetDefaultBucketNum() const;
 
