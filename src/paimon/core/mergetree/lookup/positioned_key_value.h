@@ -21,10 +21,6 @@
 namespace paimon {
 /// `KeyValue` with file name and row position for DeletionVector.
 struct PositionedKeyValue {
- public:
-    PositionedKeyValue(KeyValue&& _key_value, const std::string& _file_name, int64_t _row_position)
-        : key_value(std::move(_key_value)), file_name(_file_name), row_position(_row_position) {}
-
     KeyValue key_value;
     std::string file_name;
     int64_t row_position;

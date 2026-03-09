@@ -48,7 +48,7 @@ class PersistPositionProcessor : public PersistProcessor<FilePosition> {
                                       const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(int64_t row_position,
                                VarLengthIntUtils::DecodeLong(value_bytes.get(), /*index=*/0));
-        return FilePosition(file_name, row_position);
+        return FilePosition{file_name, row_position};
     }
 
     /// Factory to create `PersistProcessor`.

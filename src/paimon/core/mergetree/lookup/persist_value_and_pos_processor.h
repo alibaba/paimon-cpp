@@ -58,9 +58,9 @@ class PersistValueAndPosProcessor : public PersistProcessor<PositionedKeyValue> 
             memory_segment.GetValue<int64_t>(value_bytes->size() - PersistValueProcessor::kMetaLen);
         PAIMON_ASSIGN_OR_RAISE(const RowKind* row_kind,
                                RowKind::FromByteValue((*value_bytes)[value_bytes->size() - 1]));
-        return PositionedKeyValue(
+        return PositionedKeyValue{
             KeyValue(row_kind, sequence_number, level, std::move(key), std::move(value)), file_name,
-            row_position);
+            row_position};
     }
 
     /// Factory to create `PersistProcessor`.

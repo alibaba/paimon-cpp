@@ -20,10 +20,6 @@
 namespace paimon {
 /// File name and row position for DeletionVector.
 struct FilePosition {
- public:
-    FilePosition(const std::string& _file_name, int64_t _row_position)
-        : file_name(_file_name), row_position(_row_position) {}
-
     std::string file_name;
     int64_t row_position;
 };
