@@ -70,7 +70,7 @@ class BucketedAppendCompactManagerTest : public testing::Test {
         BucketedAppendCompactManager manager(
             executor_, to_compact_before_pick,
             /*dv_maintainer=*/nullptr, min_file_num, target_file_size, threshold,
-            /*force_rewrite_all_files=*/false, /*compact_rewriter=*/nullptr);
+            /*force_rewrite_all_files=*/false, /*rewriter=*/nullptr);
         auto actual = manager.PickCompactBefore();
         if (expected_present) {
             ASSERT_TRUE(actual.has_value());

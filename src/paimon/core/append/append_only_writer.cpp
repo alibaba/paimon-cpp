@@ -86,7 +86,7 @@ Status AppendOnlyWriter::Write(std::unique_ptr<RecordBatch>&& batch) {
 
 Result<CommitIncrement> AppendOnlyWriter::PrepareCommit(bool wait_compaction) {
     PAIMON_RETURN_NOT_OK(
-        Flush(/*wait_for_latest_compaction=*/false, /*force_full_compaction=*/false));
+        Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false));
     PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_compaction || options_.CommitForceCompact()));
     return DrainIncrement();
 }

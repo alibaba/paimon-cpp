@@ -30,7 +30,7 @@ namespace paimon {
 class NoopCompactManager : public CompactManager {
  public:
     NoopCompactManager() = default;
-    ~NoopCompactManager() override {}
+    ~NoopCompactManager() override = default;
 
     void AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {}
 
