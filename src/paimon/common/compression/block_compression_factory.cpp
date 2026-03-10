@@ -16,6 +16,7 @@
 
 #include "paimon/common/compression/block_compression_factory.h"
 
+#include "fmt/format.h"
 #include "paimon/common/compression/lz4/lz4_block_compression_factory.h"
 #include "paimon/common/compression/none_block_compression_factory.h"
 #include "paimon/common/compression/zstd/zstd_block_compression_factory.h"

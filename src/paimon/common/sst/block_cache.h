@@ -57,6 +57,7 @@ class BlockCache {
         for (const auto& [key, _] : blocks_) {
             cache_manager_->InvalidPage(key);
         }
+        blocks_.clear();
     }
 
  private:

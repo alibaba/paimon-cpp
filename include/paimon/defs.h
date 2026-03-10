@@ -337,6 +337,7 @@ struct PAIMON_EXPORT Options {
     static const char LOOKUP_CACHE_BLOOM_FILTER_FPP[];
     /// "lookup.cache-spill-compression" - Spill compression for lookup cache, currently zstd, none,
     /// lz4 and lzo are supported. Default value is zstd.
+    /// Noted that paimon-cpp does not support lzo for now.
     static const char LOOKUP_CACHE_SPILL_COMPRESSION[];
     /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
     /// compression rates, it can be configured to 9, but the read and write speed will
