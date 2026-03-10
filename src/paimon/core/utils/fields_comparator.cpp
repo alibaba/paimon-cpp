@@ -126,8 +126,9 @@ Result<FieldsComparator::FieldComparatorFunc> FieldsComparator::CompareField(
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::FLOAT:
-            // TODO(xinyu.lxy): currently in java KeyComparatorSupplier: -inf < -0.0 == +0.0 < +inf
-            // = nan paimon-cpp: -inf < -0.0 == +0.0 < +inf and nan cannot be compared
+            // TODO(xinyu.lxy):
+            // currently in java KeyComparatorSupplier: -inf < -0.0 == +0.0 < +inf = nan
+            // paimon-cpp: -inf < -0.0 == +0.0 < +inf and nan cannot be compared
             return FieldsComparator::FieldComparatorFunc(
                 [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
                     float lvalue = lhs.GetFloat(field_idx);
@@ -219,28 +220,28 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
     switch (type) {
         case arrow::Type::type::BOOL:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<bool>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<bool>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::INT8:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<char>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<char>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::INT16:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<int16_t>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<int16_t>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::DATE32:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<int32_t>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<int32_t>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
@@ -248,28 +249,28 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
 
         case arrow::Type::type::INT32:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<int32_t>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<int32_t>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::INT64:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<int64_t>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<int64_t>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
         case arrow::Type::type::FLOAT:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<float>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<float>(rhs);
                     return CompareFloatingPoint(lvalue, rvalue);
                 });
         case arrow::Type::type::DOUBLE:
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<double>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<double>(rhs);
                     return CompareFloatingPoint(lvalue, rvalue);
@@ -277,7 +278,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
         case arrow::Type::type::STRING: {
             if (use_view) {
                 return FieldsComparator::VariantComparatorFunc(
-                    [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                    [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                         auto lvalue = DataDefine::GetVariantValue<std::string_view>(lhs);
                         auto rvalue = DataDefine::GetVariantValue<std::string_view>(rhs);
                         int32_t cmp = lvalue.compare(rvalue);
@@ -285,7 +286,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
                     });
             } else {
                 return FieldsComparator::VariantComparatorFunc(
-                    [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                    [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                         auto lvalue = DataDefine::GetVariantValue<BinaryString>(lhs);
                         auto rvalue = DataDefine::GetVariantValue<BinaryString>(rhs);
                         int32_t cmp = lvalue.CompareTo(rvalue);
@@ -297,7 +298,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
             // TODO(xinyu.lxy): may use 64byte compare
             if (use_view) {
                 return FieldsComparator::VariantComparatorFunc(
-                    [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                    [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                         auto lvalue = DataDefine::GetVariantValue<std::string_view>(lhs);
                         auto rvalue = DataDefine::GetVariantValue<std::string_view>(rhs);
                         int32_t cmp = lvalue.compare(rvalue);
@@ -305,7 +306,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
                     });
             } else {
                 return FieldsComparator::VariantComparatorFunc(
-                    [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                    [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                         auto lvalue = DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(lhs);
                         auto rvalue = DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(rhs);
                         int32_t cmp = lvalue->compare(*rvalue);
@@ -315,7 +316,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
         }
         case arrow::Type::type::TIMESTAMP: {
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<Timestamp>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<Timestamp>(rhs);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
@@ -323,7 +324,7 @@ Result<FieldsComparator::VariantComparatorFunc> FieldsComparator::CompareVariant
         }
         case arrow::Type::type::DECIMAL: {
             return FieldsComparator::VariantComparatorFunc(
-                [field_idx](const VariantType& lhs, const VariantType& rhs) -> int32_t {
+                [](const VariantType& lhs, const VariantType& rhs) -> int32_t {
                     auto lvalue = DataDefine::GetVariantValue<Decimal>(lhs);
                     auto rvalue = DataDefine::GetVariantValue<Decimal>(rhs);
                     int32_t cmp = lvalue.CompareTo(rvalue);

@@ -43,8 +43,8 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     // read bloom filter directly now
     auto bloom_filter_handle = footer->GetBloomFilterHandle();
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
-    if (bloom_filter_handle->ExpectedEntries() || bloom_filter_handle->Size() ||
-        bloom_filter_handle->Offset()) {
+    if (bloom_filter_handle && (bloom_filter_handle->ExpectedEntries() ||
+                                bloom_filter_handle->Size() || bloom_filter_handle->Offset())) {
         bloom_filter = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
                                                      bloom_filter_handle->Size());
         PAIMON_RETURN_NOT_OK(bloom_filter->SetMemorySegment(block_cache->GetBlock(

@@ -70,8 +70,8 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::WriteIndexBlock() {
 }
 
 Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
-    if (!bloom_filter_.get()) {
-        return Status::Invalid("bloom_filter_ should be set before writing");
+    if (!bloom_filter_) {
+        return std::shared_ptr<BloomFilterHandle>();
     }
     auto data = bloom_filter_->GetBitSet()->ToSlice()->ReadStringView();
     auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos().value(), data.size(),

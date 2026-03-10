@@ -59,6 +59,7 @@ class FieldsComparator {
 
     /// Java-compatible ordering for floating-point types:
     /// -infinity < -0.0 < +0.0 < +infinity < NaN == NaN
+    /// for range index and sst key comparator
     template <typename T>
     static int32_t CompareFloatingPoint(T a, T b) {
         const bool a_nan = std::isnan(a);
