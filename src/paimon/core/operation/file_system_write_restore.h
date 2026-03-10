@@ -16,6 +16,12 @@
 
 #pragma once
 
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/restore_files.h"

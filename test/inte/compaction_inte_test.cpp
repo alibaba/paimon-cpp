@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
@@ -303,7 +305,6 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
     auto external_dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(external_dir);
     std::string external_test_dir = "FILE://" + external_dir->Str();
-    std::cout << dir->Str() << std::endl;
 
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
@@ -394,7 +395,6 @@ TEST_F(CompactionInteTest, TestAppendTableWriteAlterTableWithCompaction) {
         "/orc/append_table_with_alter_table.db/append_table_with_alter_table/";
     auto dir = UniqueTestDirectory::Create();
     std::string table_path = dir->Str();
-    std::cout << "[alter]" << table_path << std::endl;
     ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, table_path));
     arrow::FieldVector fields = {
         arrow::field("key0", arrow::int32()), arrow::field("key1", arrow::int32()),
