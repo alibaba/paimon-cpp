@@ -29,6 +29,7 @@
 #include "paimon/core/compact/compact_task.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/io/data_file_meta.h"
+#include "paimon/core/operation/metrics/compaction_metrics.h"
 #include "paimon/executor.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"
@@ -70,7 +71,8 @@ class BucketedAppendCompactManager : public CompactFutureManager {
                                  const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                                  int32_t min_file_num, int64_t target_file_size,
                                  int64_t compaction_file_size, bool force_rewrite_all_files,
-                                 CompactRewriter rewriter);
+                                 CompactRewriter rewriter,
+                                 const std::shared_ptr<CompactionMetrics::Reporter>& reporter);
     ~BucketedAppendCompactManager() override = default;
 
     Status TriggerCompaction(bool full_compaction) override;
@@ -126,11 +128,13 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     /// A `CompactTask` impl for full compaction of append-only table.
     class FullCompactTask : public CompactTask {
      public:
-        FullCompactTask(const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
+        FullCompactTask(const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
+                        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                         const std::vector<std::shared_ptr<DataFileMeta>>& inputs,
                         int64_t compaction_file_size, bool force_rewrite_all_files,
                         CompactRewriter rewriter)
-            : dv_maintainer_(dv_maintainer),
+            : CompactTask(reporter),
+              dv_maintainer_(dv_maintainer),
               to_compact_(inputs.begin(), inputs.end()),
               compaction_file_size_(compaction_file_size),
               force_rewrite_all_files_(force_rewrite_all_files),
@@ -163,10 +167,14 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     /// compaction.
     class AutoCompactTask : public CompactTask {
      public:
-        AutoCompactTask(const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
+        AutoCompactTask(const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
+                        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                         const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
                         CompactRewriter rewriter)
-            : dv_maintainer_(dv_maintainer), to_compact_(to_compact), rewriter_(rewriter) {}
+            : CompactTask(reporter),
+              dv_maintainer_(dv_maintainer),
+              to_compact_(to_compact),
+              rewriter_(rewriter) {}
 
      protected:
         Result<std::shared_ptr<CompactResult>> DoCompact() override {
@@ -194,6 +202,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     int64_t compaction_file_size_;
     bool force_rewrite_all_files_;
     CompactRewriter rewriter_;
+    std::shared_ptr<CompactionMetrics::Reporter> reporter_;
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> compacting_;
     DataFileMetaPriorityQueue to_compact_;
     std::unique_ptr<Logger> logger_;

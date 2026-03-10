@@ -27,6 +27,7 @@
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/file_system_write_restore.h"
+#include "paimon/core/operation/metrics/compaction_metrics.h"
 #include "paimon/core/operation/restore_files.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
@@ -77,6 +78,7 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
     // TODO(yonghao.fyh): support with
     compact_executor_ = CreateDefaultExecutor(4);
+    compaction_metrics_ = std::make_shared<CompactionMetrics>();
 }
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
@@ -172,7 +174,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
     }
 
     std::vector<std::shared_ptr<CommitMessage>> result;
-    auto metrics = std::make_shared<MetricsImpl>();
+    auto metrics = compaction_metrics_->GetMetrics();
     for (auto partition_iter = writers_.begin(); partition_iter != writers_.end();) {
         auto& partition = partition_iter->first;
         auto& buckets = partition_iter->second;
@@ -229,6 +231,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             ++partition_iter;
         }
     }
+
     metrics_->Overwrite(metrics);
     return result;
 }

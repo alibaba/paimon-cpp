@@ -41,6 +41,10 @@ class PAIMON_EXPORT MetricsImpl : public Metrics {
     Result<HistogramStats> GetHistogramStats(const std::string& metric_name) const override;
     std::map<std::string, HistogramStats> GetAllHistogramStats() const override;
 
+    void SetGauge(const std::string& metric_name, double metric_value) override;
+    Result<double> GetGauge(const std::string& metric_name) const override;
+    std::map<std::string, double> GetAllGauges() const override;
+
     void Merge(const std::shared_ptr<Metrics>& other) override;
     std::string ToString() const override;
     void Overwrite(const std::shared_ptr<Metrics>& metrics);
@@ -66,6 +70,9 @@ class PAIMON_EXPORT MetricsImpl : public Metrics {
 
     mutable std::mutex histogram_lock_;
     std::map<std::string, std::shared_ptr<Histogram>> histograms_;
+
+    mutable std::mutex gauge_lock_;
+    std::map<std::string, double> gauges_;
 };
 
 }  // namespace paimon

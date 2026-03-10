@@ -45,6 +45,7 @@ namespace paimon {
 
 struct DataFileMeta;
 class BatchWriter;
+class CompactionMetrics;
 class FileStoreScan;
 class FileStorePathFactory;
 class ScanFilter;
@@ -125,6 +126,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<arrow::Schema> partition_schema_;
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;
+    std::shared_ptr<CompactionMetrics> compaction_metrics_;
 
  private:
     Result<std::shared_ptr<BatchWriter>> GetWriter(const BinaryRow& partition, int32_t bucket);

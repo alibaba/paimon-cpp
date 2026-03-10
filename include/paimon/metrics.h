@@ -77,6 +77,21 @@ class PAIMON_EXPORT Metrics {
     /// Get all histogram statistics snapshots.
     virtual std::map<std::string, HistogramStats> GetAllHistogramStats() const = 0;
 
+    /// Set the value of a specific gauge metric (current state metric).
+    /// @param metric_name The name/key of the gauge metric to set.
+    /// @param metric_value The value to set for this gauge metric (double, not just integer).
+    virtual void SetGauge(const std::string& metric_name, double metric_value) = 0;
+
+    /// Get the current value of a specific gauge metric (current state metric).
+    /// @param metric_name The name/key of the gauge metric to retrieve.
+    /// @return The current value of the gauge metric, or `Status::KeyError` if the metric doesn't
+    /// exist.
+    virtual Result<double> GetGauge(const std::string& metric_name) const = 0;
+
+    /// Get all gauge metrics as a map.
+    /// @return A map containing all gauge metric names and their current values.
+    virtual std::map<std::string, double> GetAllGauges() const = 0;
+
     /// Merge metrics from another Metrics instance into this one.
     ///
     /// For metrics that exist in both instances, the values are added together.

@@ -92,6 +92,25 @@ std::map<std::string, HistogramStats> MetricsImpl::GetAllHistogramStats() const 
     return res;
 }
 
+void MetricsImpl::SetGauge(const std::string& metric_name, double value) {
+    std::lock_guard<std::mutex> lock(gauge_lock_);
+    gauges_[metric_name] = value;
+}
+
+Result<double> MetricsImpl::GetGauge(const std::string& metric_name) const {
+    std::lock_guard<std::mutex> lock(gauge_lock_);
+    auto it = gauges_.find(metric_name);
+    if (it != gauges_.end()) {
+        return it->second;
+    }
+    return Status::KeyError(fmt::format("metric '{}' not found", metric_name));
+}
+
+std::map<std::string, double> MetricsImpl::GetAllGauges() const {
+    std::lock_guard<std::mutex> lock(gauge_lock_);
+    return gauges_;
+}
+
 void MetricsImpl::Merge(const std::shared_ptr<Metrics>& other) {
     if (other && this != other.get()) {
         {
@@ -223,6 +242,13 @@ std::string MetricsImpl::ToString() const {
         stddev_val.SetDouble(s.stddev);
         doc.AddMember(rapidjson::Value(name + ".stddev", allocator), stddev_val, allocator);
     }
+
+    std::map<std::string, double> gauges = GetAllGauges();
+    for (const auto& kv : gauges) {
+        doc.AddMember(rapidjson::Value(kv.first, allocator), rapidjson::Value(kv.second),
+                      allocator);
+    }
+
     rapidjson::StringBuffer s;
     RapidWriter writer(s);
     doc.Accept(writer);

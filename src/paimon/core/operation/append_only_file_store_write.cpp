@@ -187,7 +187,8 @@ Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> AppendOnlyFileStoreWrit
             options_.GetCompactionMinFileNum(),
             options_.GetTargetFileSize(/*has_primary_key=*/false),
             options_.GetCompactionFileSize(/*has_primary_key=*/false),
-            options_.CompactionForceRewriteAllFiles(), rewriter);
+            options_.CompactionForceRewriteAllFiles(), rewriter,
+            compaction_metrics_->CreateReporter(partition, bucket));
     }
 
     auto writer = std::make_shared<AppendOnlyWriter>(
