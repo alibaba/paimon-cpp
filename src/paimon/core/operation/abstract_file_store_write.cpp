@@ -187,19 +187,25 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
                 partition, bucket, writer_container.total_buckets, increment.GetNewFilesIncrement(),
                 increment.GetCompactIncrement());
             result.push_back(committable);
-            if (committable->IsEmpty()) {
-                // Condition 1: There is no more record waiting to be committed. Note that the
-                // condition is < (instead of <=), because each commit identifier may have
-                // multiple snapshots. We must make sure all snapshots of this identifier are
-                // committed.
-                // Condition 2: No compaction is in progress. That is, no more changelog will be
-                // produced.
-                //
-                // Condition 3: The writer has no postponed compaction like gentle lookup
-                // compaction.
-                if (writer_container.last_modified_commit_identifier <
-                        latest_committed_identifier &&
-                    !writer_container.writer->IsCompacting()) {
+            if (!committable->IsEmpty()) {
+                writer_container.last_modified_commit_identifier = commit_identifier;
+                metrics->Merge(writer_container.writer->GetMetrics());
+                ++bucket_iter;
+                continue;
+            }
+            // Condition 1: There is no more record waiting to be committed. Note that the
+            // condition is < (instead of <=), because each commit identifier may have
+            // multiple snapshots. We must make sure all snapshots of this identifier are
+            // committed.
+            // Condition 2: No compaction is in progress. That is, no more changelog will be
+            // produced.
+            //
+            // Condition 3: The writer has no postponed compaction like gentle lookup
+            // compaction.
+            if (writer_container.last_modified_commit_identifier < latest_committed_identifier) {
+                PAIMON_ASSIGN_OR_RAISE(bool has_pending_compaction,
+                                       writer_container.writer->CompactNotCompleted());
+                if (!has_pending_compaction) {
                     // Clear writer if no update, and if its latest modification has committed.
                     //
                     // We need a mechanism to clear writers, otherwise there will be more and
@@ -214,15 +220,11 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
                                      latest_committed_identifier, commit_identifier);
                     PAIMON_RETURN_NOT_OK(writer_container.writer->Close());
                     bucket_iter = buckets.erase(bucket_iter);
-                } else {
-                    metrics->Merge(writer_container.writer->GetMetrics());
-                    ++bucket_iter;
+                    continue;
                 }
-            } else {
-                writer_container.last_modified_commit_identifier = commit_identifier;
-                metrics->Merge(writer_container.writer->GetMetrics());
-                ++bucket_iter;
             }
+            metrics->Merge(writer_container.writer->GetMetrics());
+            ++bucket_iter;
         }
 
         if (buckets.empty()) {

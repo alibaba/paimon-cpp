@@ -84,7 +84,6 @@ TEST_F(AppendOnlyWriterTest, TestEmptyCommits) {
     AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                             /*max_sequence_number=*/-1, path_factory, memory_pool_,
                             compact_manager_);
-    ASSERT_FALSE(writer.IsCompacting());
     for (int i = 0; i < 3; i++) {
         ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer.PrepareCommit(true));
         ASSERT_TRUE(inc.GetNewFilesIncrement().IsEmpty());
@@ -114,7 +113,6 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndPrepareCommit) {
     AppendOnlyWriter writer(options, /*schema_id=*/2, schema, /*write_cols=*/std::nullopt,
                             /*max_sequence_number=*/-1, path_factory, memory_pool_,
                             compact_manager_);
-    ASSERT_FALSE(writer.IsCompacting());
     arrow::StringBuilder builder;
     for (size_t j = 0; j < 100; j++) {
         ASSERT_TRUE(builder.Append(std::to_string(j)).ok());
@@ -157,8 +155,6 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndClose) {
     AppendOnlyWriter writer(options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
                             /*max_sequence_number=*/-1, path_factory, memory_pool_,
                             compact_manager_);
-    ASSERT_FALSE(writer.IsCompacting());
-
     auto struct_type = arrow::struct_(fields);
     arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
                                         {std::make_shared<arrow::StringBuilder>()});
@@ -203,8 +199,6 @@ TEST_F(AppendOnlyWriterTest, TestInvalidRowKind) {
     AppendOnlyWriter writer(options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
                             /*max_sequence_number=*/-1, path_factory, memory_pool_,
                             compact_manager_);
-    ASSERT_FALSE(writer.IsCompacting());
-
     auto struct_type = arrow::struct_(fields);
     arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
                                         {std::make_shared<arrow::StringBuilder>()});

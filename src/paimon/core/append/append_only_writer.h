@@ -75,9 +75,6 @@ class AppendOnlyWriter : public BatchWriter {
     }
     Status Sync() override;
     Status Close() override;
-    bool IsCompacting() const override {
-        return false;
-    }
     std::shared_ptr<Metrics> GetMetrics() const override {
         return metrics_;
     }

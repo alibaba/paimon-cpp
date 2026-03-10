@@ -48,7 +48,7 @@ Status BucketedAppendCompactManager::TriggerCompaction(bool full_compaction) {
     if (full_compaction) {
         PAIMON_RETURN_NOT_OK(TriggerFullCompaction());
     } else {
-        PAIMON_RETURN_NOT_OK(TriggerCompactionWithBestEffort());
+        TriggerCompactionWithBestEffort();
     }
     return Status::OK();
 }
@@ -81,9 +81,9 @@ Status BucketedAppendCompactManager::TriggerFullCompaction() {
     return Status::OK();
 }
 
-Status BucketedAppendCompactManager::TriggerCompactionWithBestEffort() {
+void BucketedAppendCompactManager::TriggerCompactionWithBestEffort() {
     if (task_future_.valid()) {
-        return Status::OK();
+        return;
     }
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> picked = PickCompactBefore();
     if (picked) {
@@ -95,7 +95,6 @@ Status BucketedAppendCompactManager::TriggerCompactionWithBestEffort() {
                 return compact_task->Execute();
             });
     }
-    return Status::OK();
 }
 
 std::optional<std::vector<std::shared_ptr<DataFileMeta>>>

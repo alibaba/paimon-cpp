@@ -49,8 +49,6 @@ class BatchWriter {
     /// @param wait_compaction if this method need to wait for current compaction to complete
     /// @return Incremental files in this snapshot cycle
     virtual Result<CommitIncrement> PrepareCommit(bool wait_compaction) = 0;
-    /// Check if a compaction is in progress, or if a compaction result remains to be fetched.
-    virtual bool IsCompacting() const = 0;
 
     /// Check if a compaction is in progress, or if a compaction result remains to be fetched, or if
     /// a compaction should be triggered later.

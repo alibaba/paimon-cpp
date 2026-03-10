@@ -251,7 +251,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteBestEffortCompaction) {
                                       /*full_compaction=*/false));
     ASSERT_OK_AND_ASSIGN(
         std::vector<std::shared_ptr<CommitMessage>> commit_messages,
-        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier++));
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
     ASSERT_EQ(5, snapshot5.value().Id());
@@ -341,7 +341,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
                                       /*full_compaction=*/true));
     ASSERT_OK_AND_ASSIGN(
         std::vector<std::shared_ptr<CommitMessage>> commit_messages,
-        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier++));
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
     ASSERT_EQ(5, snapshot5.value().Id());
@@ -450,7 +450,7 @@ TEST_F(CompactionInteTest, TestAppendTableWriteAlterTableWithCompaction) {
                                       /*full_compaction=*/true));
     ASSERT_OK_AND_ASSIGN(
         std::vector<std::shared_ptr<CommitMessage>> commit_messages,
-        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier++));
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
     ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
 
     ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot, helper->LatestSnapshot());

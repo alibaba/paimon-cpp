@@ -193,7 +193,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
 
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> PickCompactBefore();
     Status TriggerFullCompaction();
-    Status TriggerCompactionWithBestEffort();
+    void TriggerCompactionWithBestEffort();
 
     std::shared_ptr<Executor> executor_;
     std::shared_ptr<BucketedDvMaintainer> dv_maintainer_;

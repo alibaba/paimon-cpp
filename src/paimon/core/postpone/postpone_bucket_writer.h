@@ -65,7 +65,7 @@ class PostponeBucketWriter : public BatchWriter {
     }
 
     Result<bool> CompactNotCompleted() override {
-        return Status::NotImplemented("not implemented");
+        return false;
     }
 
     Status Sync() override {
@@ -73,10 +73,6 @@ class PostponeBucketWriter : public BatchWriter {
     }
 
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
-
-    bool IsCompacting() const override {
-        return false;
-    }
 
     Status Close() override {
         return DoClose();
