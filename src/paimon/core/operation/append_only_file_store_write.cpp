@@ -181,7 +181,6 @@ Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> AppendOnlyFileStoreWrit
             -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
             return CompactRewrite(partition, bucket, files);
         };
-        std::vector<std::shared_ptr<DataFileMeta>> restored;
         compact_manager = std::make_shared<BucketedAppendCompactManager>(
             compact_executor_, restore_data_files, /*dv_maintainer=*/nullptr,
             options_.GetCompactionMinFileNum(),

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -251,12 +252,12 @@ class CompactionMetrics {
 
     std::shared_ptr<MetricsImpl> GetMetrics() {
         auto metrics = std::make_shared<MetricsImpl>();
-        metrics->SetCounter(MAX_LEVEL0_FILE_COUNT, MaxLevel0FileCount());
-        metrics->SetCounter(AVG_LEVEL0_FILE_COUNT, AvgLevel0FileCount());
-        metrics->SetCounter(AVG_COMPACTION_TIME, AvgCompactionTime());
         metrics->SetCounter(COMPACTION_COMPLETED_COUNT, GetCompactionsCompletedCount());
         metrics->SetCounter(COMPACTION_TOTAL_COUNT, GetCompactionsTotalCount());
         metrics->SetCounter(COMPACTION_QUEUED_COUNT, GetCompactionsQueuedCount());
+        metrics->SetGauge(MAX_LEVEL0_FILE_COUNT, MaxLevel0FileCount());
+        metrics->SetGauge(AVG_LEVEL0_FILE_COUNT, AvgLevel0FileCount());
+        metrics->SetGauge(AVG_COMPACTION_TIME, AvgCompactionTime());
         metrics->SetGauge(MAX_COMPACTION_INPUT_SIZE, MaxCompactionInputSize());
         metrics->SetGauge(MAX_COMPACTION_OUTPUT_SIZE, MaxCompactionOutputSize());
         metrics->SetGauge(AVG_COMPACTION_INPUT_SIZE, AvgCompactionInputSize());
@@ -273,9 +274,9 @@ class CompactionMetrics {
     std::vector<int64_t> compaction_times_;
     std::mutex compaction_times_mutex_;
 
-    std::atomic<int64_t> compactions_completed_count_;
-    std::atomic<int64_t> compactions_total_count_;
-    std::atomic<int64_t> compactions_queued_count_;
+    std::atomic<int64_t> compactions_completed_count_ = {0};
+    std::atomic<int64_t> compactions_total_count_ = {0};
+    std::atomic<int64_t> compactions_queued_count_ = {0};
 };
 
 }  // namespace paimon
