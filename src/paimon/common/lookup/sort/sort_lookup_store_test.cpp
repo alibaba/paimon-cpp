@@ -88,7 +88,7 @@ TEST(SortLookupStoreTest, TestSimple) {
             ASSERT_OK_AND_ASSIGN(auto key_bytes, key_serializer->SerializeToBytes(*key_row));
             ASSERT_OK_AND_ASSIGN(auto value_bytes, value_serializer->SerializeToBytes(*value_row));
             key_value_bytes_vec.push_back({key_bytes, value_bytes});
-            writer->Put(std::move(key_bytes), std::move(value_bytes));
+            ASSERT_OK(writer->Put(std::move(key_bytes), std::move(value_bytes)));
         }
         ASSERT_OK(writer->Close());
 
