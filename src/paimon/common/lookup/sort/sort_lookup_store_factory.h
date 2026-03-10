@@ -74,11 +74,11 @@ class SortLookupStoreFactory : public LookupStoreFactory {
     Result<std::unique_ptr<LookupStoreWriter>> CreateWriter(
         const std::shared_ptr<paimon::FileSystem>& fs, const std::string& file_path,
         const std::shared_ptr<BloomFilter>& bloom_filter,
-        const std::shared_ptr<MemoryPool>& pool) const;
+        const std::shared_ptr<MemoryPool>& pool) const override;
 
     Result<std::unique_ptr<LookupStoreReader>> CreateReader(
         const std::shared_ptr<paimon::FileSystem>& fs, const std::string& file_path,
-        const std::shared_ptr<MemoryPool>& pool) const;
+        const std::shared_ptr<MemoryPool>& pool) const override;
 
  private:
     int32_t block_size_;

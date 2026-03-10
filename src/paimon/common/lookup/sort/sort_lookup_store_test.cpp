@@ -87,7 +87,7 @@ TEST(SortLookupStoreTest, TestSimple) {
                 /*struct_array=*/nullptr, value_struct_array->fields(), pool, /*row_id=*/i);
             ASSERT_OK_AND_ASSIGN(auto key_bytes, key_serializer->SerializeToBytes(*key_row));
             ASSERT_OK_AND_ASSIGN(auto value_bytes, value_serializer->SerializeToBytes(*value_row));
-            key_value_bytes_vec.push_back({key_bytes, value_bytes});
+            key_value_bytes_vec.emplace_back(key_bytes, value_bytes);
             ASSERT_OK(writer->Put(std::move(key_bytes), std::move(value_bytes)));
         }
         ASSERT_OK(writer->Close());

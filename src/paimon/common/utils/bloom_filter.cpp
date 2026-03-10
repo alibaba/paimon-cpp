@@ -43,7 +43,7 @@ int32_t BloomFilter::OptimalNumOfHashFunctions(int64_t expect_entries, int64_t b
 }
 
 std::shared_ptr<BloomFilter> BloomFilter::Create(int64_t expect_entries, double fpp) {
-    int32_t bytes =
+    auto bytes =
         static_cast<int32_t>(ceil(BloomFilter::OptimalNumOfBits(expect_entries, fpp) / 8.0));
     return std::make_shared<BloomFilter>(expect_entries, bytes);
 }
