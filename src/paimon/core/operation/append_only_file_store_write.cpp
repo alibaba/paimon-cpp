@@ -144,6 +144,7 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
                                                  struct_array, SpecialFields::ValueKind().Name()));
         PAIMON_RETURN_NOT_OK_FROM_ARROW(
             arrow::ExportArray(*struct_array, c_array.get(), c_schema.get()));
+        ScopeGuard guard([schema = c_schema.get()]() { ArrowSchemaRelease(schema); });
         PAIMON_RETURN_NOT_OK(rewriter->Write(c_array.get()));
     }
     guard.Release();

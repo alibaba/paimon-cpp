@@ -113,8 +113,8 @@ std::map<std::string, double> MetricsImpl::GetAllGauges() const {
 
 void MetricsImpl::Merge(const std::shared_ptr<Metrics>& other) {
     if (other && this != other.get()) {
+        std::map<std::string, uint64_t> other_counters = other->GetAllCounters();
         {
-            std::map<std::string, uint64_t> other_counters = other->GetAllCounters();
             std::lock_guard<std::mutex> guard(counter_lock_);
             for (const auto& kv : other_counters) {
                 auto iter = counters_.find(kv.first);
@@ -125,7 +125,18 @@ void MetricsImpl::Merge(const std::shared_ptr<Metrics>& other) {
                 }
             }
         }
-
+        std::map<std::string, double> other_gauges = other->GetAllGauges();
+        {
+            std::lock_guard<std::mutex> guard(gauge_lock_);
+            for (const auto& kv : other_gauges) {
+                auto iter = gauges_.find(kv.first);
+                if (iter == gauges_.end()) {
+                    gauges_[kv.first] = kv.second;
+                } else {
+                    gauges_[kv.first] += kv.second;
+                }
+            }
+        }
         auto other_impl = std::dynamic_pointer_cast<MetricsImpl>(other);
         if (other_impl) {
             std::vector<std::pair<std::string, std::shared_ptr<Histogram>>> other_histograms;
@@ -158,8 +169,15 @@ void MetricsImpl::Merge(const std::shared_ptr<Metrics>& other) {
 void MetricsImpl::Overwrite(const std::shared_ptr<Metrics>& other) {
     if (other && this != other.get()) {
         std::map<std::string, uint64_t> other_counters = other->GetAllCounters();
-        std::lock_guard<std::mutex> guard(counter_lock_);
-        counters_.swap(other_counters);
+        {
+            std::lock_guard<std::mutex> guard(counter_lock_);
+            counters_.swap(other_counters);
+        }
+        std::map<std::string, double> other_gauges = other->GetAllGauges();
+        {
+            std::lock_guard<std::mutex> guard(gauge_lock_);
+            gauges_.swap(other_gauges);
+        }
 
         auto other_impl = std::dynamic_pointer_cast<MetricsImpl>(other);
         std::map<std::string, std::shared_ptr<Histogram>> new_histograms;
