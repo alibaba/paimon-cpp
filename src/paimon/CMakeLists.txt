@@ -585,6 +585,7 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/raw_file_split_read_test.cpp
                     core/operation/read_context_test.cpp
                     core/operation/scan_context_test.cpp
+                    core/operation/write_restore_test.cpp
                     core/operation/write_context_test.cpp
                     core/partition/partition_statistics_test.cpp
                     core/postpone/postpone_bucket_writer_test.cpp

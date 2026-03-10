@@ -160,6 +160,16 @@ TEST_F(BucketedAppendCompactManagerTest, TestPickEmptyAndNotRelease) {
     InnerTest(to_compact, /*expected_present=*/false, /*expected_compact_before=*/{}, to_compact);
 }
 
+TEST_F(BucketedAppendCompactManagerTest, TestPickPresentWhenEnoughSmallFiles) {
+    // All four files are small and should be picked once min_file_num is reached.
+    std::vector<std::shared_ptr<DataFileMeta>> to_compact_before_pick = {
+        NewFile(1, 100), NewFile(101, 200), NewFile(201, 300), NewFile(301, 400)};
+    InnerTest(to_compact_before_pick,
+              /*expected_present=*/true,
+              /*expected_compact_before=*/to_compact_before_pick,
+              /*to_compact_after_pick=*/{});
+}
+
 TEST_F(BucketedAppendCompactManagerTest, TestPickEmptyAndRelease) {
     // large file, release
     InnerTest(/*to_compact_before_pick=*/{NewFile(1, 2048)}, /*expected_present=*/false,
@@ -214,6 +224,40 @@ TEST_F(BucketedAppendCompactManagerTest, TestPickEmptyAndRelease) {
         /*expected_present=*/false,
         /*expected_compact_before=*/{},
         /*to_compact_after_pick=*/{NewFile(2051, 2100), NewFile(2101, 2110)});
+}
+
+TEST_F(BucketedAppendCompactManagerTest, TestPick) {
+    // fileNum is 13 (which > 4) and totalFileSize is 130 (which < 1024)
+    InnerTest({NewFile(1, 10), NewFile(11, 20), NewFile(21, 30), NewFile(31, 40), NewFile(41, 50),
+               NewFile(51, 60), NewFile(61, 70), NewFile(71, 80), NewFile(81, 90), NewFile(91, 100),
+               NewFile(101, 110), NewFile(111, 120), NewFile(121, 130)},
+              /*expected_present=*/true, /*expected_compact_before=*/
+              {NewFile(1, 10), NewFile(11, 20), NewFile(21, 30), NewFile(31, 40)},
+              /*to_compact_after_pick=*/
+              {NewFile(41, 50), NewFile(51, 60), NewFile(61, 70), NewFile(71, 80), NewFile(81, 90),
+               NewFile(91, 100), NewFile(101, 110), NewFile(111, 120), NewFile(121, 130)});
+
+    // fileNum is 4 (which > 3) and totalFileSize is 1026 (which > 1024)
+    InnerTest({NewFile(1, 2), NewFile(3, 500), NewFile(501, 1000), NewFile(1001, 1025),
+               NewFile(1026, 1050)},
+              /*expected_present=*/true, /*expected_compact_before=*/
+              {NewFile(1, 2), NewFile(3, 500), NewFile(501, 1000), NewFile(1001, 1025)},
+              /*to_compact_after_pick=*/{NewFile(1026, 1050)});
+
+    // The window shifts right after large files are dropped, then picks contiguous files.
+    InnerTest({NewFile(1, 1022), NewFile(1023, 1024), NewFile(1025, 2050),
+               // 2051~2510, ..., 2611~2620
+               NewFile(2051, 2510), NewFile(2511, 2520), NewFile(2521, 2530), NewFile(2531, 2540),
+               NewFile(2541, 2550), NewFile(2551, 2560), NewFile(2561, 2570), NewFile(2571, 2580),
+               NewFile(2581, 2590), NewFile(2591, 2600), NewFile(2601, 2610), NewFile(2611, 2620),
+               NewFile(2621, 2630)},
+              /*expected_present=*/true,
+              /*expected_compact_before=*/
+              {NewFile(1023, 1024), NewFile(1025, 2050), NewFile(2051, 2510), NewFile(2511, 2520)},
+              /*to_compact_after_pick=*/
+              {NewFile(2521, 2530), NewFile(2531, 2540), NewFile(2541, 2550), NewFile(2551, 2560),
+               NewFile(2561, 2570), NewFile(2571, 2580), NewFile(2581, 2590), NewFile(2591, 2600),
+               NewFile(2601, 2610), NewFile(2611, 2620), NewFile(2621, 2630)});
 }
 
 }  // namespace paimon::test

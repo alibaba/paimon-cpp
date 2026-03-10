@@ -129,7 +129,7 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
 
 Status AbstractFileStoreWrite::Compact(const std::map<std::string, std::string>& partition,
                                        int32_t bucket, bool full_compaction) {
-    PAIMON_ASSIGN_OR_RAISE(BinaryRow part, file_store_path_factory_->ToBinaryRow(partition))
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow part, file_store_path_factory_->ToBinaryRow(partition));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer, GetWriter(part, bucket));
     assert(writer);
     return writer->Compact(full_compaction);

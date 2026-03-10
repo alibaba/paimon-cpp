@@ -115,7 +115,8 @@ BucketedAppendCompactManager::PickCompactBefore() {
         if (file_num >= min_file_num_) {
             return std::vector<std::shared_ptr<DataFileMeta>>(candidates.begin(), candidates.end());
         } else if (total_file_size >= target_file_size_ * 2) {
-            // let pointer shift one pos to right
+            // Shift the compaction window right and drop the oldest file so picked files stay
+            // contiguous, preserving append order during compaction.
             std::shared_ptr<DataFileMeta> removed = candidates.front();
             candidates.pop_front();
             total_file_size -= removed->file_size;

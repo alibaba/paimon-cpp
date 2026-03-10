@@ -148,8 +148,8 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
         PAIMON_RETURN_NOT_OK(rewriter->Write(c_array.get()));
     }
     guard.Release();
-    PAIMON_RETURN_NOT_OK(rewriter->Close());
     reader->Close();
+    PAIMON_RETURN_NOT_OK(rewriter->Close());
     return rewriter->GetResult();
 }
 

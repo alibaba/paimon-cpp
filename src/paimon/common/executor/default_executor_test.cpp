@@ -15,9 +15,11 @@
  */
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <future>
 #include <memory>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -78,6 +80,46 @@ TEST(DefaultExecutorTest, TestViaWithException) {
     auto executor = GetGlobalDefaultExecutor();
     auto future = Via(executor.get(), []() { throw std::runtime_error("test"); });
     ASSERT_THROW(future.get(), std::runtime_error);
+}
+
+TEST(DefaultExecutorTest, TestShutdownNowDropsPendingTasks) {
+    auto executor = CreateDefaultExecutor(/*thread_count=*/1);
+    std::atomic<bool> first_started = false;
+    std::atomic<int32_t> executed_count = 0;
+    std::promise<void> release_first_task;
+    auto release_future = release_first_task.get_future();
+    executor->Add([&]() {
+        first_started.store(true);
+        release_future.wait();
+        ++executed_count;
+    });
+
+    for (int32_t index = 0; index < 20; ++index) {
+        executor->Add([&]() { ++executed_count; });
+    }
+
+    for (int32_t retry = 0; retry < 100 && !first_started.load(); ++retry) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    ASSERT_TRUE(first_started.load());
+    std::thread shutdown_thread([&]() { executor->ShutdownNow(); });
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    release_first_task.set_value();
+    shutdown_thread.join();
+
+    // Only the running task should complete. Pending tasks should be discarded.
+    ASSERT_EQ(executed_count.load(), 1);
+}
+
+TEST(DefaultExecutorTest, TestAddTaskAfterShutdownNowIgnored) {
+    auto executor = CreateDefaultExecutor(/*thread_count=*/1);
+    std::atomic<int32_t> executed_count = 0;
+
+    executor->ShutdownNow();
+    executor->Add([&]() { ++executed_count; });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_EQ(executed_count.load(), 0);
 }
 
 }  // namespace paimon::test

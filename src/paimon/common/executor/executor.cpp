@@ -38,7 +38,7 @@ class DefaultExecutor : public Executor {
  private:
     void WorkerThread();
 
-    void ShutdownInternal(bool drain_queue);
+    void ShutdownInternal(bool wait_for_pending_tasks);
 
     uint32_t thread_count_;
     std::vector<std::thread> workers_;
@@ -55,14 +55,14 @@ DefaultExecutor::DefaultExecutor(uint32_t thread_count) : thread_count_(thread_c
     }
 }
 
-void DefaultExecutor::ShutdownInternal(bool drain_queue) {
+void DefaultExecutor::ShutdownInternal(bool wait_for_pending_tasks) {
     {
         std::unique_lock<std::mutex> lock(queue_mutex_);
         if (stop_) {
             return;
         }
         stop_ = true;
-        if (!drain_queue) {
+        if (!wait_for_pending_tasks) {
             // Discard all pending tasks immediately.
             std::queue<std::function<void()>> empty;
             tasks_.swap(empty);
@@ -78,12 +78,12 @@ void DefaultExecutor::ShutdownInternal(bool drain_queue) {
 
 DefaultExecutor::~DefaultExecutor() {
     // Graceful shutdown: wait for all pending tasks to complete.
-    ShutdownInternal(/*drain_queue=*/true);
+    ShutdownInternal(/*wait_for_pending_tasks=*/true);
 }
 
 void DefaultExecutor::ShutdownNow() {
     // Immediate shutdown: discard all pending tasks.
-    ShutdownInternal(/*drain_queue=*/false);
+    ShutdownInternal(/*wait_for_pending_tasks=*/false);
 }
 
 void DefaultExecutor::Add(std::function<void()> func) {
