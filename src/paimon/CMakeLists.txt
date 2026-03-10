@@ -68,6 +68,8 @@ set(PAIMON_COMMON_SRCS
     common/io/cache/cache_key.cpp
     common/io/cache/cache_manager.cpp
     common/logging/logging.cpp
+    common/lookup/sort/sort_lookup_store_factory.cpp
+    common/lookup/lookup_store_factory.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
     common/memory/memory_segment.cpp
@@ -385,6 +387,7 @@ if(PAIMON_BUILD_TESTS)
                     common/io/buffered_input_stream_test.cpp
                     common/io/memory_segment_output_stream_test.cpp
                     common/io/offset_input_stream_test.cpp
+                    common/lookup/sort/sort_lookup_store_test.cpp                    
                     common/logging/logging_test.cpp
                     common/metrics/metrics_impl_test.cpp
                     common/options/memory_size_test.cpp

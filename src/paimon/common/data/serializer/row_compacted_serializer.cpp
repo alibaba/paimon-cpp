@@ -23,6 +23,8 @@
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/core/utils/fields_comparator.h"
+
 namespace paimon {
 Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
     const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool) {
@@ -39,6 +41,48 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
     }
     return std::unique_ptr<RowCompactedSerializer>(new RowCompactedSerializer(
         schema, std::move(getters), std::move(writers), std::move(readers), pool));
+}
+
+Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparator(
+    const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool) {
+    int32_t bit_set_in_bytes = RowCompactedSerializer::CalculateBitSetInBytes(schema->num_fields());
+    auto row_reader1 = std::make_shared<RowReader>(bit_set_in_bytes, pool);
+    auto row_reader2 = std::make_shared<RowReader>(bit_set_in_bytes, pool);
+    std::vector<RowCompactedSerializer::FieldReader> readers(schema->num_fields());
+    std::vector<FieldsComparator::VariantComparatorFunc> comparators(schema->num_fields());
+    for (int32_t i = 0; i < schema->num_fields(); i++) {
+        auto field_type = schema->field(i)->type();
+        PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
+        PAIMON_ASSIGN_OR_RAISE(comparators[i],
+                               FieldsComparator::CompareVariant(i, field_type, /*use_view=*/false));
+    }
+    auto comparator = [row_reader1, row_reader2, readers, comparators](
+                          const std::shared_ptr<MemorySlice>& slice1,
+                          const std::shared_ptr<MemorySlice>& slice2) -> Result<int32_t> {
+        row_reader1->PointTo(*slice1->GetSegment(), slice1->Offset());
+        row_reader2->PointTo(*slice2->GetSegment(), slice2->Offset());
+        for (int32_t i = 0; i < static_cast<int32_t>(readers.size()); i++) {
+            bool is_null1 = row_reader1->IsNullAt(i);
+            bool is_null2 = row_reader2->IsNullAt(i);
+            if (!is_null1 || !is_null2) {
+                if (is_null1) {
+                    return -1;
+                } else if (is_null2) {
+                    return 1;
+                } else {
+                    PAIMON_ASSIGN_OR_RAISE(VariantType field1, readers[i](i, row_reader1.get()));
+                    PAIMON_ASSIGN_OR_RAISE(VariantType field2, readers[i](i, row_reader2.get()));
+                    int32_t comp = comparators[i](field1, field2);
+                    if (comp != 0) {
+                        return comp;
+                    }
+                }
+            }
+        }
+        return 0;
+    };
+    return std::function<Result<int32_t>(const std::shared_ptr<MemorySlice>&,
+                                         const std::shared_ptr<MemorySlice>&)>(comparator);
 }
 
 Result<std::shared_ptr<Bytes>> RowCompactedSerializer::SerializeToBytes(const InternalRow& row) {

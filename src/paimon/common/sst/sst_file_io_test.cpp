@@ -36,7 +36,6 @@
 #include "paimon/testing/mock/mock_file_batch_reader.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon {
 class Predicate;
 }  // namespace paimon
@@ -54,7 +53,7 @@ class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
         fs_ = dir_->GetFileSystem();
         pool_ = GetDefaultPool();
         comparator_ = [](const std::shared_ptr<MemorySlice>& a,
-                         const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                         const std::shared_ptr<MemorySlice>& b) -> Result<int32_t> {
             std::string_view va = a->ReadStringView();
             std::string_view vb = b->ReadStringView();
             if (va == vb) {
@@ -73,8 +72,7 @@ class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
     std::shared_ptr<paimon::FileSystem> fs_;
     std::shared_ptr<paimon::MemoryPool> pool_;
 
-    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator_;
+    MemorySlice::SliceComparator comparator_;
 };
 
 TEST_P(SstFileIOTest, TestSimple) {
@@ -117,12 +115,8 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     ASSERT_EQ(6, writer->IndexWriter()->Size());
 
-    auto bloom_filter_handle_ret = writer->WriteBloomFilter();
-    ASSERT_OK(bloom_filter_handle_ret);
-    auto index_block_handle_ret = writer->WriteIndexBlock();
-    ASSERT_OK(index_block_handle_ret);
-    auto index_block_handle = index_block_handle_ret.value();
-    auto bloom_filter_handle = bloom_filter_handle_ret.value();
+    ASSERT_OK_AND_ASSIGN(auto bloom_filter_handle, writer->WriteBloomFilter());
+    ASSERT_OK_AND_ASSIGN(auto index_block_handle, writer->WriteIndexBlock());
     ASSERT_OK(writer->WriteFooter(index_block_handle, bloom_filter_handle));
 
     ASSERT_OK(out->Flush());
@@ -145,27 +139,27 @@ TEST_P(SstFileIOTest, TestSimple) {
     }
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, fs_, index_path, comparator_);
-    ASSERT_OK(reader_ret);
-    auto reader = reader_ret.value();
+    ASSERT_OK_AND_ASSIGN(in, fs_->Open(index_path));
+    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
+
     // not exist key
     std::string k0 = "k0";
-    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
+    ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
 
     // k4
     std::string k4 = "k4";
-    auto v4 = reader->Lookup(std::make_shared<Bytes>(k4, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto v4, reader->Lookup(std::make_shared<Bytes>(k4, pool_.get())));
     ASSERT_TRUE(v4);
     std::string string4{v4->data(), v4->size()};
     ASSERT_EQ("4", string4);
 
     // not exist key
     std::string k55 = "k55";
-    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k55, pool_.get())));
+    ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k55, pool_.get())).value());
 
     // k915
     std::string k915 = "k915";
-    auto v15 = reader->Lookup(std::make_shared<Bytes>(k915, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto v15, reader->Lookup(std::make_shared<Bytes>(k915, pool_.get())));
     ASSERT_TRUE(v15);
     std::string string15{v15->data(), v15->size()};
     ASSERT_EQ("looooooooooong-值-15", string15);
@@ -181,32 +175,33 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
         std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
 
     // test read
-    auto reader_ret = SstFileReader::Create(pool_, fs_, file, comparator_);
-    ASSERT_OK(reader_ret);
-    auto reader = reader_ret.value();
+    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
     // not exist key
     std::string k0 = "10000";
-    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())));
+    ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
 
     // k1314520
     std::string k1314520 = "1314520";
-    auto v1314520 = reader->Lookup(std::make_shared<Bytes>(k1314520, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto v1314520,
+                         reader->Lookup(std::make_shared<Bytes>(k1314520, pool_.get())));
     ASSERT_TRUE(v1314520);
     std::string string1314520{v1314520->data(), v1314520->size()};
     ASSERT_EQ("1314520", string1314520);
 
     // not exist key
     std::string k13145200 = "13145200";
-    ASSERT_EQ(nullptr, reader->Lookup(std::make_shared<Bytes>(k13145200, pool_.get())));
+    ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k13145200, pool_.get())).value());
 
     std::string k1314521 = "1314521";
-    auto v1314521 = reader->Lookup(std::make_shared<Bytes>(k1314521, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto v1314521,
+                         reader->Lookup(std::make_shared<Bytes>(k1314521, pool_.get())));
     ASSERT_TRUE(v1314521);
     std::string string1314521{v1314521->data(), v1314521->size()};
     ASSERT_EQ("1314521", string1314521);
 
     std::string k1999999 = "1999999";
-    auto v1999999 = reader->Lookup(std::make_shared<Bytes>(k1999999, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto v1999999,
+                         reader->Lookup(std::make_shared<Bytes>(k1999999, pool_.get())));
     ASSERT_TRUE(v1999999);
     std::string string1999999{v1999999->data(), v1999999->size()};
     ASSERT_EQ("1999999", string1999999);

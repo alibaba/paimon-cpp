@@ -23,34 +23,9 @@
 #include "paimon/common/file_index/rangebitmap/dictionary/fixed_length_chunk.h"
 #include "paimon/common/file_index/rangebitmap/utils/literal_serialization_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/core/utils/fields_comparator.h"
 
 namespace paimon {
-
-/// Java-compatible ordering for floating-point types:
-/// -infinity < -0.0 < +0.0 < +infinity < NaN == NaN
-template <typename T>
-static int32_t CompareFloatingPoint(T a, T b) {
-    const bool a_nan = std::isnan(a);
-    const bool b_nan = std::isnan(b);
-    if (a_nan && b_nan) {
-        return 0;
-    }
-    if (a_nan) {
-        return 1;
-    }
-    if (b_nan) {
-        return -1;
-    }
-    if (a == b) {
-        const bool a_neg = std::signbit(a);
-        const bool b_neg = std::signbit(b);
-        if (a_neg == b_neg) {
-            return 0;
-        }
-        return a_neg ? -1 : 1;  // -0.0 < +0.0
-    }
-    return a < b ? -1 : 1;
-}
 
 Result<std::shared_ptr<KeyFactory>> KeyFactory::Create(FieldType field_type) {
     // todo: support timestamp
@@ -126,14 +101,14 @@ Result<std::unique_ptr<Chunk>> VariableLengthKeyFactory::MmapChunk(
 Result<int32_t> FloatKeyFactory::CompareLiteral(const Literal& lhs, const Literal& rhs) const {
     const auto a = lhs.GetValue<float>();
     const auto b = rhs.GetValue<float>();
-    return CompareFloatingPoint(a, b);
+    return FieldsComparator::CompareFloatingPoint(a, b);
 }
 
 /// Java-compatible ordering for doubles
 Result<int32_t> DoubleKeyFactory::CompareLiteral(const Literal& lhs, const Literal& rhs) const {
     const auto a = lhs.GetValue<double>();
     const auto b = rhs.GetValue<double>();
-    return CompareFloatingPoint(a, b);
+    return FieldsComparator::CompareFloatingPoint(a, b);
 }
 
 }  // namespace paimon

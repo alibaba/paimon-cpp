@@ -103,6 +103,11 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(-1, core_options.GetCompactOffPeakStartHour());
     ASSERT_EQ(-1, core_options.GetCompactOffPeakEndHour());
     ASSERT_EQ(0, core_options.GetCompactOffPeakRatio());
+    ASSERT_TRUE(core_options.LookupCacheBloomFilterEnabled());
+    ASSERT_EQ(0.05, core_options.GetLookupCacheBloomFilterFpp());
+    ASSERT_EQ("zstd", core_options.GetLookupCompressOptions().compress);
+    ASSERT_EQ(1, core_options.GetLookupCompressOptions().zstd_level);
+    ASSERT_EQ(64 * 1024, core_options.GetCachePageSize());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -171,7 +176,12 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD, "12 kB"},
         {Options::COMPACT_OFFPEAK_START_HOUR, "3"},
         {Options::COMPACT_OFFPEAK_END_HOUR, "16"},
-        {Options::COMPACTION_OFFPEAK_RATIO, "8"}};
+        {Options::COMPACTION_OFFPEAK_RATIO, "8"},
+        {Options::LOOKUP_CACHE_BLOOM_FILTER_ENABLED, "false"},
+        {Options::LOOKUP_CACHE_BLOOM_FILTER_FPP, "0.5"},
+        {Options::LOOKUP_CACHE_SPILL_COMPRESSION, "lz4"},
+        {Options::SPILL_COMPRESSION_ZSTD_LEVEL, "2"},
+        {Options::CACHE_PAGE_SIZE, "6MB"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -256,6 +266,11 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(3, core_options.GetCompactOffPeakStartHour());
     ASSERT_EQ(16, core_options.GetCompactOffPeakEndHour());
     ASSERT_EQ(8, core_options.GetCompactOffPeakRatio());
+    ASSERT_FALSE(core_options.LookupCacheBloomFilterEnabled());
+    ASSERT_EQ(0.5, core_options.GetLookupCacheBloomFilterFpp());
+    ASSERT_EQ("lz4", core_options.GetLookupCompressOptions().compress);
+    ASSERT_EQ(2, core_options.GetLookupCompressOptions().zstd_level);
+    ASSERT_EQ(6 * 1024 * 1024, core_options.GetCachePageSize());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {

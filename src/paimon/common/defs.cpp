@@ -93,4 +93,9 @@ const char Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD[] =
 const char Options::COMPACT_OFFPEAK_START_HOUR[] = "compaction.offpeak.start.hour";
 const char Options::COMPACT_OFFPEAK_END_HOUR[] = "compaction.offpeak.end.hour";
 const char Options::COMPACTION_OFFPEAK_RATIO[] = "compaction.offpeak-ratio";
+const char Options::LOOKUP_CACHE_BLOOM_FILTER_ENABLED[] = "lookup.cache.bloom.filter.enabled";
+const char Options::LOOKUP_CACHE_BLOOM_FILTER_FPP[] = "lookup.cache.bloom.filter.fpp";
+const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compression";
+const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
+const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
 }  // namespace paimon
