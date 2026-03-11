@@ -95,7 +95,10 @@ class BucketedAppendCompactManager : public CompactFutureManager {
         bool blocking) override;
 
     Status Close() override {
-        // TODO(yonghao.fyh): metrics reporter
+        if (reporter_) {
+            reporter_->Unregister();
+            reporter_.reset();
+        }
         return Status::OK();
     }
 
@@ -113,6 +116,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
         const std::vector<std::shared_ptr<DataFileMeta>>& to_compact, CompactRewriter rewriter) {
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> rewrite,
                                rewriter(to_compact));
+
         auto result = std::make_shared<CompactResult>(to_compact, rewrite);
         if (dv_maintainer != nullptr) {
             for (const auto& file : to_compact) {
