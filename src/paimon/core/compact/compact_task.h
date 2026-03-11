@@ -40,10 +40,12 @@ class CompactTask {
     Result<std::shared_ptr<CompactResult>> Execute() {
         Duration duration;
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactResult> result, DoCompact());
-        reporter_->ReportCompactionTime(static_cast<int64_t>(duration.Get()));
-        reporter_->IncreaseCompactionsCompletedCount();
-        reporter_->ReportCompactionInputSize(CollectRewriteSize(result->Before()));
-        reporter_->ReportCompactionOutputSize(CollectRewriteSize(result->After()));
+        if (reporter_) {
+            reporter_->ReportCompactionTime(static_cast<int64_t>(duration.Get()));
+            reporter_->IncreaseCompactionsCompletedCount();
+            reporter_->ReportCompactionInputSize(CollectRewriteSize(result->Before()));
+            reporter_->ReportCompactionOutputSize(CollectRewriteSize(result->After()));
+        }
         PAIMON_LOG_DEBUG(
             logger_,
             "Done compacting %zu files to %zu files in %lldms. Rewrite input file size "
