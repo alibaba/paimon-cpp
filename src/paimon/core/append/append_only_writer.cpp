@@ -55,16 +55,16 @@ AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id
                                    const std::optional<std::vector<std::string>>& write_cols,
                                    int64_t max_sequence_number,
                                    const std::shared_ptr<DataFilePathFactory>& path_factory,
-                                   const std::shared_ptr<MemoryPool>& memory_pool,
-                                   const std::shared_ptr<CompactManager>& compact_manager)
+                                   const std::shared_ptr<CompactManager>& compact_manager,
+                                   const std::shared_ptr<MemoryPool>& memory_pool)
     : options_(options),
       schema_id_(schema_id),
       write_schema_(write_schema),
       write_cols_(write_cols),
       seq_num_counter_(std::make_shared<LongCounter>(max_sequence_number + 1)),
       path_factory_(path_factory),
-      memory_pool_(memory_pool),
       compact_manager_(compact_manager),
+      memory_pool_(memory_pool),
       metrics_(std::make_shared<MetricsImpl>()) {}
 
 AppendOnlyWriter::~AppendOnlyWriter() = default;

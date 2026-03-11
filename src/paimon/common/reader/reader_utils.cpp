@@ -107,26 +107,4 @@ BatchReader::ReadBatchWithBitmap ReaderUtils::AddAllValidBitmap(BatchReader::Rea
     return std::make_pair(std::move(batch), std::move(all_valid));
 }
 
-Result<std::shared_ptr<arrow::StructArray>> ReaderUtils::RemoveFieldFromStructArray(
-    const std::shared_ptr<arrow::StructArray>& struct_array, const std::string& field_name) {
-    auto struct_type = std::static_pointer_cast<arrow::StructType>(struct_array->type());
-    int32_t field_idx = struct_type->GetFieldIndex(field_name);
-    if (field_idx == -1) {
-        return struct_array;
-    }
-    std::vector<std::shared_ptr<arrow::Array>> new_arrays;
-    std::vector<std::shared_ptr<arrow::Field>> new_fields;
-    for (int32_t i = 0; i < struct_type->num_fields(); ++i) {
-        if (i != field_idx) {
-            new_arrays.emplace_back(struct_array->field(i));
-            new_fields.emplace_back(struct_type->field(i));
-        }
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        std::shared_ptr<arrow::StructArray> array,
-        arrow::StructArray::Make(new_arrays, new_fields, struct_array->null_bitmap(),
-                                 struct_array->null_count()));
-    return array;
-}
-
 }  // namespace paimon

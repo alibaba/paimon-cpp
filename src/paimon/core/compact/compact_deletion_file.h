@@ -54,7 +54,6 @@ class GeneratedDeletionFile : public CompactDeletionFile,
                               : std::nullopt;
     }
 
-    // TODO(yonghao.fyh): check logic
     Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
         const std::shared_ptr<CompactDeletionFile>& old) override {
         auto derived = dynamic_cast<GeneratedDeletionFile*>(old.get());

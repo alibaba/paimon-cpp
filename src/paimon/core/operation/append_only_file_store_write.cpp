@@ -19,8 +19,8 @@
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
-#include "paimon/common/reader/reader_utils.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/core/append/append_only_writer.h"
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 #include "paimon/core/compact/noop_compact_manager.h"
@@ -111,19 +111,23 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
         return std::vector<std::shared_ptr<DataFileMeta>>{};
     }
 
+    // TODO(yonghao.fyh): support dv factory
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
+                           CreateFilesReader(partition, bucket, to_compact));
     auto rewriter =
         std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
             GetDataFileWriterCreator(partition, bucket, write_schema_, write_cols_, to_compact));
-    // TODO(yonghao.fyh): support dv factory
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
-                           CreateFilesReader(partition, bucket, to_compact));
-    ScopeGuard guard([&]() {
-        if (rewriter) {
-            (void)rewriter->Close();
-        }
+
+    ScopeGuard reader_guard([&]() {
         if (reader) {
             reader->Close();
+        }
+    });
+
+    ScopeGuard rewriter_guard([&]() {
+        if (rewriter) {
+            (void)rewriter->Close();
         }
     });
 
@@ -140,16 +144,17 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
             return Status::Invalid(
                 "cannot cast array to StructArray in CompleteRowKindBatchReader");
         }
-        PAIMON_ASSIGN_OR_RAISE(struct_array, ReaderUtils::RemoveFieldFromStructArray(
+        PAIMON_ASSIGN_OR_RAISE(struct_array, ArrowUtils::RemoveFieldFromStructArray(
                                                  struct_array, SpecialFields::ValueKind().Name()));
         PAIMON_RETURN_NOT_OK_FROM_ARROW(
             arrow::ExportArray(*struct_array, c_array.get(), c_schema.get()));
         ScopeGuard guard([schema = c_schema.get()]() { ArrowSchemaRelease(schema); });
         PAIMON_RETURN_NOT_OK(rewriter->Write(c_array.get()));
     }
-    guard.Release();
-    reader->Close();
+    rewriter_guard.Release();
     PAIMON_RETURN_NOT_OK(rewriter->Close());
+    reader_guard.Release();
+    reader->Close();
     return rewriter->GetResult();
 }
 
@@ -193,7 +198,7 @@ Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> AppendOnlyFileStoreWrit
 
     auto writer = std::make_shared<AppendOnlyWriter>(
         options_, table_schema_->Id(), write_schema_, write_cols_, max_sequence_number,
-        data_file_path_factory, pool_, compact_manager);
+        data_file_path_factory, compact_manager, pool_);
     return std::pair<int32_t, std::shared_ptr<BatchWriter>>(total_buckets, writer);
 }
 
@@ -221,7 +226,6 @@ AppendOnlyFileStoreWrite::GetDataFileWriterCreator(
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                 file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
-            // TODO(yonghao.fyh): check sequence number
             auto writer = std::make_unique<DataFileWriter>(
                 options_.GetFileCompression(), std::function<Status(ArrowArray*, ArrowArray*)>(),
                 table_schema_->Id(),
@@ -238,7 +242,7 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyFileStoreWrite::CreateFilesReader
     const BinaryRow& partition, int32_t bucket,
     const std::vector<std::shared_ptr<DataFileMeta>>& files) const {
     ReadContextBuilder context_builder(root_path_);
-    context_builder.EnablePrefetch(false).SetPrefetchMaxParallelNum(1);
+    context_builder.EnablePrefetch(true).SetPrefetchMaxParallelNum(1);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
     std::map<std::string, std::string> map = options_.ToMap();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_read_context,

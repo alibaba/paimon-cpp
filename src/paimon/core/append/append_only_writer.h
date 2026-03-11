@@ -59,8 +59,8 @@ class AppendOnlyWriter : public BatchWriter {
                      const std::optional<std::vector<std::string>>& write_cols,
                      int64_t max_sequence_number,
                      const std::shared_ptr<DataFilePathFactory>& path_factory,
-                     const std::shared_ptr<MemoryPool>& memory_pool,
-                     const std::shared_ptr<CompactManager>& compact_manager);
+                     const std::shared_ptr<CompactManager>& compact_manager,
+                     const std::shared_ptr<MemoryPool>& memory_pool);
 
     ~AppendOnlyWriter() override;
 
@@ -110,8 +110,8 @@ class AppendOnlyWriter : public BatchWriter {
     std::optional<std::vector<std::string>> write_cols_;
     std::shared_ptr<LongCounter> seq_num_counter_;
     std::shared_ptr<DataFilePathFactory> path_factory_;
-    std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<CompactManager> compact_manager_;
+    std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Metrics> metrics_;
 
     std::vector<std::shared_ptr<DataFileMeta>> new_files_;

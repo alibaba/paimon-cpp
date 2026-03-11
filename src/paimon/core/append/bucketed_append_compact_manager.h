@@ -113,21 +113,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
 
     static Result<std::shared_ptr<CompactResult>> Compact(
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact, CompactRewriter rewriter) {
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> rewrite,
-                               rewriter(to_compact));
-
-        auto result = std::make_shared<CompactResult>(to_compact, rewrite);
-        if (dv_maintainer != nullptr) {
-            for (const auto& file : to_compact) {
-                dv_maintainer->RemoveDeletionVectorOf(file->file_name);
-            }
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactDeletionFile> deletion_file,
-                                   CompactDeletionFile::GenerateFiles(dv_maintainer));
-            result->SetDeletionFile(deletion_file);
-        }
-        return result;
-    }
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact, CompactRewriter rewriter);
 
     /// A `CompactTask` impl for full compaction of append-only table.
     class FullCompactTask : public CompactTask {

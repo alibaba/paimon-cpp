@@ -336,4 +336,46 @@ TEST(ArrowUtilsTest, TestCheckNullableMatchComplex) {
     }
 }
 
+TEST(ArrowUtilsTest, TestRemoveFieldFromStructArrayFieldNotFound) {
+    auto struct_type =
+        arrow::struct_({arrow::field("a", arrow::int32()), arrow::field("b", arrow::utf8())});
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(
+                         struct_type, R"([{"a":1,"b":"x"},{"a":2,"b":"y"},{"a":3,"b":"z"}])")
+                         .ValueOrDie();
+    auto src_struct_array = std::static_pointer_cast<arrow::StructArray>(src_array);
+
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         ArrowUtils::RemoveFieldFromStructArray(src_struct_array, "missing"));
+
+    ASSERT_TRUE(result->Equals(src_struct_array));
+    ASSERT_EQ(result->type()->num_fields(), 2);
+}
+
+TEST(ArrowUtilsTest, TestRemoveFieldFromStructArraySuccess) {
+    auto struct_type =
+        arrow::struct_({arrow::field("a", arrow::int32()), arrow::field("b", arrow::utf8()),
+                        arrow::field("c", arrow::int64())});
+    auto src_array =
+        arrow::ipc::internal::json::ArrayFromJSON(
+            struct_type,
+            R"([{"a":1,"b":"x","c":10},{"a":2,"b":"y","c":20},{"a":3,"b":"z","c":30}])")
+            .ValueOrDie();
+    auto src_struct_array = std::static_pointer_cast<arrow::StructArray>(src_array);
+
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         ArrowUtils::RemoveFieldFromStructArray(src_struct_array, "b"));
+
+    auto expected_type =
+        arrow::struct_({arrow::field("a", arrow::int32()), arrow::field("c", arrow::int64())});
+    auto expected_array = arrow::ipc::internal::json::ArrayFromJSON(
+                              expected_type, R"([{"a":1,"c":10},{"a":2,"c":20},{"a":3,"c":30}])")
+                              .ValueOrDie();
+    auto expected_struct_array = std::static_pointer_cast<arrow::StructArray>(expected_array);
+
+    ASSERT_EQ(result->type()->num_fields(), 2);
+    ASSERT_EQ(result->type()->field(0)->name(), "a");
+    ASSERT_EQ(result->type()->field(1)->name(), "c");
+    ASSERT_TRUE(result->Equals(expected_struct_array));
+}
+
 }  // namespace paimon::test

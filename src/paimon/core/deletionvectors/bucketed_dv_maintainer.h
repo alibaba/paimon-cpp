@@ -37,7 +37,8 @@ class BucketedDvMaintainer {
           deletion_vectors_(deletion_vectors),
           bitmap64_(dv_index_file->Bitmap64()) {}
 
-    std::optional<std::shared_ptr<DeletionVector>> DeletionVectorOf(const std::string& file_name) {
+    std::optional<std::shared_ptr<DeletionVector>> DeletionVectorOf(
+        const std::string& file_name) const {
         if (auto it = deletion_vectors_.find(file_name); it != deletion_vectors_.end()) {
             return it->second;
         }
