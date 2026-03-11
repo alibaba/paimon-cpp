@@ -36,7 +36,7 @@ class CompactDeletionFile {
     virtual std::optional<std::shared_ptr<IndexFileMeta>> GetOrCompute() = 0;
 
     virtual Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
-        const std::shared_ptr<CompactDeletionFile>& old) = 0;
+        const std::shared_ptr<CompactDeletionFile>& old) const = 0;
 
     virtual void Clean() = 0;
 };
@@ -55,7 +55,7 @@ class GeneratedDeletionFile : public CompactDeletionFile,
     }
 
     Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
-        const std::shared_ptr<CompactDeletionFile>& old) override {
+        const std::shared_ptr<CompactDeletionFile>& old) const override {
         auto derived = dynamic_cast<GeneratedDeletionFile*>(old.get());
         if (derived == nullptr) {
             return Status::Invalid("old should be a GeneratedDeletionFile, but it is not");
