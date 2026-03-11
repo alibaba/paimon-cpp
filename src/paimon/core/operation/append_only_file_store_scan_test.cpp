@@ -26,6 +26,7 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/core/manifest/partition_entry.h"
+#include "paimon/core/operation/metrics/scan_metrics.h"
 #include "paimon/core/schema/schema_manager.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats_evolution.h"
@@ -34,6 +35,7 @@
 #include "paimon/defs.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/metrics.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/scan_context.h"
 #include "paimon/status.h"
@@ -127,5 +129,44 @@ TEST(AppendOnlyFileStoreScanTest, TestReadPartitionEntries) {
                      ComparePartitionEntryByPartition);
 
     ASSERT_EQ(result_partition_entries, expected_partition_entries);
+}
+
+TEST(AppendOnlyFileStoreScanTest, TestScanDurationMetric) {
+    TimezoneGuard guard("Asia/Shanghai");
+    std::string table_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09/";
+    ScanContextBuilder context_builder(table_path);
+    context_builder.AddOption(Options::FILE_FORMAT, "orc")
+        .AddOption(Options::MANIFEST_FORMAT, "orc")
+        .AddOption(Options::SCAN_SNAPSHOT_ID, "5");
+    ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
+
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+    auto typed_table_scan = dynamic_cast<AbstractTableScan*>(table_scan.get());
+    ASSERT_TRUE(typed_table_scan);
+
+    auto file_store_scan = typed_table_scan->snapshot_reader_->scan_;
+    ASSERT_TRUE(file_store_scan);
+
+    constexpr uint64_t kPlanCount = 5;
+    for (uint64_t i = 0; i < kPlanCount; ++i) {
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileStoreScan::RawPlan> raw_plan,
+                             file_store_scan->CreatePlan());
+        (void)raw_plan;
+    }
+
+    std::shared_ptr<Metrics> metrics = file_store_scan->GetScanMetrics();
+    ASSERT_TRUE(metrics);
+
+    ASSERT_OK_AND_ASSIGN(uint64_t last_scan_duration,
+                         metrics->GetCounter(ScanMetrics::LAST_SCAN_DURATION));
+    ASSERT_OK_AND_ASSIGN(HistogramStats stats,
+                         metrics->GetHistogramStats(ScanMetrics::SCAN_DURATION));
+    ASSERT_EQ(stats.count, kPlanCount);
+    ASSERT_LE(stats.min, stats.max);
+    ASSERT_LE(stats.min, static_cast<double>(last_scan_duration));
+    ASSERT_LE(static_cast<double>(last_scan_duration), stats.max);
+    ASSERT_LE(stats.min, stats.p99);
+    ASSERT_LE(stats.p50, stats.p99);
+    ASSERT_LE(stats.p99, stats.max);
 }
 }  // namespace paimon::test

@@ -25,12 +25,28 @@
 
 namespace paimon {
 
+/// Statistics snapshot for a histogram metric.
+///
+/// Note: percentile values are estimated from internal buckets.
+struct PAIMON_EXPORT HistogramStats {
+    uint64_t count = 0;
+    double sum = 0;
+    double min = 0;
+    double max = 0;
+    double average = 0;
+    double p50 = 0;
+    double p90 = 0;
+    double p95 = 0;
+    double p99 = 0;
+    double p999 = 0;
+    double stddev = 0;
+};
+
 /// Abstract interface for collecting and managing performance metrics in Paimon operations.
 ///
 /// This class provides a unified interface for tracking various performance metrics
 /// such as counters for read/write operations, I/O statistics, and other operational
 /// measurements. It serves as the base class for concrete implementations like `MetricsImpl`.
-// TODO(yonghao.fyh): add histogram in the future
 class PAIMON_EXPORT Metrics {
  public:
     virtual ~Metrics() = default;
@@ -48,6 +64,18 @@ class PAIMON_EXPORT Metrics {
     /// Get all counter metrics as a map.
     /// @return A map containing all metric names and their current values.
     virtual std::map<std::string, uint64_t> GetAllCounters() const = 0;
+
+    /// Add a sample to a histogram metric.
+    /// @param metric_name The name/key of the histogram metric.
+    /// @param value The observed value.
+    virtual void ObserveHistogram(const std::string& metric_name, double value) = 0;
+
+    /// Get histogram statistics snapshot.
+    /// @return `Status::KeyError` if the histogram doesn't exist.
+    virtual Result<HistogramStats> GetHistogramStats(const std::string& metric_name) const = 0;
+
+    /// Get all histogram statistics snapshots.
+    virtual std::map<std::string, HistogramStats> GetAllHistogramStats() const = 0;
 
     /// Merge metrics from another Metrics instance into this one.
     ///
