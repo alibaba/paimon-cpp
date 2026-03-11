@@ -18,10 +18,12 @@
 #include <memory>
 #include <string>
 
+#include "arrow/c/bridge.h"
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/roaring_navigable_map64.h"
@@ -35,6 +37,194 @@ namespace paimon {
 // Forward declarations for helper functions
 static Result<std::shared_ptr<MemorySlice>> LiteralToMemorySlice(const Literal& literal,
                                                                  MemoryPool* pool);
+
+// Create a comparator function based on field type
+static std::function<int32_t(const std::shared_ptr<MemorySlice>&,
+                             const std::shared_ptr<MemorySlice>&)>
+CreateComparator(FieldType field_type) {
+    switch (field_type) {
+        case FieldType::STRING:
+        case FieldType::BINARY:
+            // String/binary comparison: lexicographic order
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes) return 0;
+                size_t min_len = std::min(a_bytes->size(), b_bytes->size());
+                int cmp = memcmp(a_bytes->data(), b_bytes->data(), min_len);
+                if (cmp != 0) return cmp < 0 ? -1 : 1;
+                if (a_bytes->size() < b_bytes->size()) return -1;
+                if (a_bytes->size() > b_bytes->size()) return 1;
+                return 0;
+            };
+        case FieldType::BIGINT:
+            // int64_t comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 8 || b_bytes->size() < 8) return 0;
+                int64_t a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(int64_t));
+                memcpy(&b_val, b_bytes->data(), sizeof(int64_t));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::INT:
+            // int32_t comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 4 || b_bytes->size() < 4) return 0;
+                int32_t a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(int32_t));
+                memcpy(&b_val, b_bytes->data(), sizeof(int32_t));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::SMALLINT:
+            // int16_t comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 2 || b_bytes->size() < 2) return 0;
+                int16_t a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(int16_t));
+                memcpy(&b_val, b_bytes->data(), sizeof(int16_t));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::TINYINT:
+            // int8_t comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 1 || b_bytes->size() < 1) return 0;
+                int8_t a_val = a_bytes->data()[0];
+                int8_t b_val = b_bytes->data()[0];
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::BOOLEAN:
+            // bool comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 1 || b_bytes->size() < 1) return 0;
+                bool a_val = a_bytes->data()[0] != 0;
+                bool b_val = b_bytes->data()[0] != 0;
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::FLOAT:
+            // float comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 4 || b_bytes->size() < 4) return 0;
+                float a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(float));
+                memcpy(&b_val, b_bytes->data(), sizeof(float));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::DOUBLE:
+            // double comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 8 || b_bytes->size() < 8) return 0;
+                double a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(double));
+                memcpy(&b_val, b_bytes->data(), sizeof(double));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::DATE:
+            // Date comparison (stored as int32_t days since epoch)
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 4 || b_bytes->size() < 4) return 0;
+                int32_t a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(int32_t));
+                memcpy(&b_val, b_bytes->data(), sizeof(int32_t));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::TIMESTAMP:
+            // Timestamp comparison (stored as int64_t)
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes || a_bytes->size() < 8 || b_bytes->size() < 8) return 0;
+                int64_t a_val, b_val;
+                memcpy(&a_val, a_bytes->data(), sizeof(int64_t));
+                memcpy(&b_val, b_bytes->data(), sizeof(int64_t));
+                if (a_val < b_val) return -1;
+                if (a_val > b_val) return 1;
+                return 0;
+            };
+        case FieldType::DECIMAL:
+            // Decimal comparison (stored as 16 bytes for DECIMAL128)
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes) return 0;
+                // Compare bytes directly for DECIMAL128
+                size_t min_len = std::min(a_bytes->size(), b_bytes->size());
+                int cmp = memcmp(a_bytes->data(), b_bytes->data(), min_len);
+                if (cmp != 0) return cmp < 0 ? -1 : 1;
+                if (a_bytes->size() < b_bytes->size()) return -1;
+                if (a_bytes->size() > b_bytes->size()) return 1;
+                return 0;
+            };
+        default:
+            // Default: lexicographic comparison
+            return [](const std::shared_ptr<MemorySlice>& a,
+                      const std::shared_ptr<MemorySlice>& b) -> int32_t {
+                if (!a || !b) return 0;
+                auto a_bytes = a->GetHeapMemory();
+                auto b_bytes = b->GetHeapMemory();
+                if (!a_bytes || !b_bytes) return 0;
+                size_t min_len = std::min(a_bytes->size(), b_bytes->size());
+                int cmp = memcmp(a_bytes->data(), b_bytes->data(), min_len);
+                if (cmp != 0) return cmp < 0 ? -1 : 1;
+                if (a_bytes->size() < b_bytes->size()) return -1;
+                if (a_bytes->size() > b_bytes->size()) return 1;
+                return 0;
+            };
+    }
+}
 Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     ::ArrowSchema* arrow_schema, const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<MemoryPool>& pool) const {
@@ -45,6 +235,20 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     const auto& meta = files[0];
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in,
                            file_reader->GetInputStream(meta.file_path));
+
+    // Get field type from arrow schema
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
+                                      arrow::ImportSchema(arrow_schema));
+    if (schema->num_fields() != 1) {
+        return Status::Invalid(
+            "invalid schema for BTreeGlobalIndexReader, supposed to have single field.");
+    }
+    auto arrow_type = schema->field(0)->type();
+    PAIMON_ASSIGN_OR_RAISE(FieldType field_type,
+                           FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
+
+    // Create comparator based on field type
+    auto comparator = CreateComparator(field_type);
 
     // prepare file footer
     auto cache_manager = std::make_shared<CacheManager>();
@@ -58,8 +262,6 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RoaringNavigableMap64> null_bitmap,
                            ReadNullBitmap(block_cache, footer->GetNullBitmapHandle()));
     std::shared_ptr<paimon::FileSystem> fs;
-    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator;
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SstFileReader> sst_file_reader,
                            SstFileReader::Create(pool, fs, meta.file_path, comparator));
 
@@ -175,44 +377,65 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNull()
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWith(
     const Literal& prefix) {
-    // Use btree index for startsWith: find all keys >= prefix and check if they start with prefix
+    // Use btree index for startsWith: find all keys >= prefix and < prefix_upper_bound
+    // For string prefix "abc", the upper bound should be "abd" (increment last char)
+    // This ensures we only get keys that actually start with the prefix
     return std::make_shared<BitmapGlobalIndexResult>([this, &prefix]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(auto prefix_slice, LiteralToMemorySlice(prefix, pool_.get()));
 
-        // Search for keys >= prefix
-        PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 all_candidates,
-                               RangeQuery(prefix_slice, max_key_, true, true));
-
-        // If no comparator or prefix is empty, return all candidates
-        if (!comparator_ || prefix_slice->Length() == 0) {
-            return all_candidates.GetBitmap();
-        }
-
-        // Filter to only keep keys that actually start with prefix
-        RoaringNavigableMap64 result;
-
-        // We need to iterate through the keys and check if they start with prefix
-        // This is a simplified approach - in a full implementation, we'd need to properly
-        // iterate through the btree to check prefixes
-
-        // For now, return all candidates if the index type is string/binary
-        // The exact filtering would require being able to read and compare the keys
         auto prefix_type = prefix.GetType();
+
+        // For string/binary types, compute the upper bound for prefix matching
         if (prefix_type == FieldType::STRING || prefix_type == FieldType::BINARY) {
-            // In a real implementation, we would iterate through candidates and check each key
-            // For simplicity, we're using the btree range query which gives us keys >= prefix
-            // The comparator would help determine which ones actually start with prefix
-            return all_candidates.GetBitmap();
+            auto prefix_bytes = prefix_slice->GetHeapMemory();
+            if (!prefix_bytes || prefix_bytes->size() == 0) {
+                // Empty prefix matches all non-null rows
+                PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
+                return result.GetBitmap();
+            }
+
+            // Compute upper bound: increment the last byte of the prefix
+            // For example, "abc" -> "abd", "ab\xFF" -> "ac"
+            std::string upper_bound_str(prefix_bytes->data(), prefix_bytes->size());
+            bool overflow = true;
+            for (int i = static_cast<int>(upper_bound_str.size()) - 1; i >= 0 && overflow; --i) {
+                unsigned char c = static_cast<unsigned char>(upper_bound_str[i]);
+                if (c < 0xFF) {
+                    upper_bound_str[i] = c + 1;
+                    overflow = false;
+                } else {
+                    upper_bound_str[i] = 0x00;
+                    // Continue to increment previous byte
+                }
+            }
+
+            std::shared_ptr<MemorySlice> upper_bound_slice;
+            if (!overflow) {
+                auto upper_bytes = Bytes::AllocateBytes(upper_bound_str, pool_.get());
+                upper_bound_slice =
+                    MemorySlice::Wrap(std::shared_ptr<Bytes>(upper_bytes.release()));
+            }
+            // If overflow (all bytes were 0xFF), use max_key_ as upper bound
+
+            // Execute range query [prefix, upper_bound)
+            PAIMON_ASSIGN_OR_RAISE(
+                RoaringNavigableMap64 result,
+                RangeQuery(prefix_slice, upper_bound_slice ? upper_bound_slice : max_key_, true,
+                           false));  // lower_inclusive=true, upper_inclusive=false
+            return result.GetBitmap();
         }
 
-        // For non-string types, startsWith doesn't make much sense, return all non-null rows
-        PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 all_rows, AllNonNullRows());
-        return all_rows.GetBitmap();
+        // For non-string types, startsWith doesn't make semantic sense
+        // Return empty result for non-string types
+        return RoaringBitmap64();
     });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEndsWith(
     const Literal& suffix) {
+    // BTree index is not efficient for EndsWith queries as it requires checking all keys.
+    // Return all non-null rows as fallback; the upper layer will perform exact filtering.
+    // Note: This is a conservative approach that doesn't prune any rows.
     return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
         return result.GetBitmap();
@@ -221,6 +444,9 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEndsWith
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitContains(
     const Literal& literal) {
+    // BTree index is not efficient for Contains queries as it requires checking all keys.
+    // Return all non-null rows as fallback; the upper layer will perform exact filtering.
+    // Note: This is a conservative approach that doesn't prune any rows.
     return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
         return result.GetBitmap();
@@ -229,6 +455,10 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitContains
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
     const Literal& literal) {
+    // BTree index can only efficiently handle LIKE patterns of the form "prefix%".
+    // For other patterns (e.g., "%suffix", "%contains%"), return all non-null rows as fallback.
+    // Note: This is a conservative approach that doesn't prune any rows.
+    // TODO: Parse LIKE pattern and use VisitStartsWith for "prefix%" patterns.
     return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
         return result.GetBitmap();
@@ -600,6 +830,73 @@ static Result<std::shared_ptr<MemorySlice>> LiteralToMemorySlice(const Literal& 
             return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert boolean literal to MemorySlice: " +
+                                   std::string(e.what()));
+        }
+    }
+
+    // Handle float
+    if (type == FieldType::FLOAT) {
+        try {
+            float value = literal.GetValue<float>();
+            auto bytes = Bytes::AllocateBytes(sizeof(value), pool);
+            memcpy(bytes->data(), &value, sizeof(value));
+            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to convert float literal to MemorySlice: " +
+                                   std::string(e.what()));
+        }
+    }
+
+    // Handle double
+    if (type == FieldType::DOUBLE) {
+        try {
+            double value = literal.GetValue<double>();
+            auto bytes = Bytes::AllocateBytes(sizeof(value), pool);
+            memcpy(bytes->data(), &value, sizeof(value));
+            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to convert double literal to MemorySlice: " +
+                                   std::string(e.what()));
+        }
+    }
+
+    // Handle date (stored as int32_t days since epoch)
+    if (type == FieldType::DATE) {
+        try {
+            int32_t value = literal.GetValue<int32_t>();
+            auto bytes = Bytes::AllocateBytes(sizeof(value), pool);
+            memcpy(bytes->data(), &value, sizeof(value));
+            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to convert date literal to MemorySlice: " +
+                                   std::string(e.what()));
+        }
+    }
+
+    // Handle timestamp (stored as int64_t)
+    if (type == FieldType::TIMESTAMP) {
+        try {
+            // Timestamp is stored as int64_t (milliseconds or microseconds depending on precision)
+            int64_t value = literal.GetValue<int64_t>();
+            auto bytes = Bytes::AllocateBytes(sizeof(value), pool);
+            memcpy(bytes->data(), &value, sizeof(value));
+            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to convert timestamp literal to MemorySlice: " +
+                                   std::string(e.what()));
+        }
+    }
+
+    // Handle decimal (DECIMAL128 stored as 16 bytes)
+    if (type == FieldType::DECIMAL) {
+        try {
+            // Decimal values are stored as string representation for simplicity
+            // The actual storage format should match the index writer's format
+            std::string str_value = literal.ToString();
+            auto bytes = Bytes::AllocateBytes(str_value, pool);
+            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+        } catch (const std::exception& e) {
+            return Status::Invalid("Failed to convert decimal literal to MemorySlice: " +
                                    std::string(e.what()));
         }
     }
