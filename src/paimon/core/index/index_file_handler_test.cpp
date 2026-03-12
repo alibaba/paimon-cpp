@@ -75,7 +75,8 @@ class IndexFileHandlerTest : public testing::Test {
         auto path_factories = std::make_shared<IndexFilePathFactories>(path_factory);
         return std::make_unique<IndexFileHandler>(
             core_options.GetFileSystem(), std::move(index_manifest_file), path_factories,
-            core_options.DeletionVectorTargetFileSize(), core_options.DeletionVectorsBitmap64());
+            core_options.DeletionVectorTargetFileSize(), core_options.DeletionVectorsBitmap64(),
+            memory_pool_);
     }
     std::shared_ptr<MemoryPool> memory_pool_;
 };

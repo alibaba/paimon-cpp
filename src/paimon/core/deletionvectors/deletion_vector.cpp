@@ -77,7 +77,10 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::Read(DataInputStream* 
 
         return BitmapDeletionVector::Deserialize(bytes->data(), bytes->size(), pool);
     } else if (EndianSwapValue(magic_number) == Bitmap64DeletionVector::MAGIC_NUMBER) {
-        return Status::NotImplemented("bitmap64 dv is not implemented");
+        return Status::NotImplemented(
+            "bitmap64 deletion vectors are not supported in this version; "
+            "please use bitmap deletion vectors instead or upgrade to a version "
+            "that supports bitmap64.");
     }
 
     return Status::Invalid(fmt::format(

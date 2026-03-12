@@ -147,7 +147,8 @@ class TableScanImpl {
         return std::make_unique<IndexFileHandler>(
             core_options.GetFileSystem(), std::move(index_manifest_file),
             std::make_shared<IndexFilePathFactories>(path_factory),
-            core_options.DeletionVectorTargetFileSize(), core_options.DeletionVectorsBitmap64());
+            core_options.DeletionVectorTargetFileSize(), core_options.DeletionVectorsBitmap64(),
+            memory_pool);
     }
 };
 

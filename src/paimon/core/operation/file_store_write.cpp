@@ -102,9 +102,9 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
     bool ignore_previous_files = ctx->IgnorePreviousFiles();
     if (schema->PrimaryKeys().empty()) {
         // append table
-        bool need_dv_mantainer_factory = true;
+        bool need_dv_maintainer_factory = true;
         if (options.GetBucket() == -1) {
-            need_dv_mantainer_factory = false;
+            need_dv_maintainer_factory = false;
             ignore_previous_files = true;
         } else if (options.GetBucket() <= 0) {
             return Status::Invalid(
@@ -128,7 +128,7 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         }
 
         std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory;
-        if (need_dv_mantainer_factory) {
+        if (need_dv_maintainer_factory) {
             PAIMON_ASSIGN_OR_RAISE(
                 std::unique_ptr<IndexManifestFile> index_manifest_file,
                 IndexManifestFile::Create(options.GetFileSystem(), options.GetManifestFormat(),
@@ -137,7 +137,8 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             auto index_file_handler = std::make_shared<IndexFileHandler>(
                 options.GetFileSystem(), std::move(index_manifest_file),
                 std::make_shared<IndexFilePathFactories>(file_store_path_factory),
-                options.DeletionVectorTargetFileSize(), options.DeletionVectorsBitmap64());
+                options.DeletionVectorTargetFileSize(), options.DeletionVectorsBitmap64(),
+                ctx->GetMemoryPool());
             dv_maintainer_factory =
                 std::make_shared<BucketedDvMaintainer::Factory>(index_file_handler);
         }

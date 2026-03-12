@@ -121,7 +121,7 @@ Status GlobalIndexScanImpl::Scan() {
     auto index_file_handler = std::make_unique<IndexFileHandler>(
         options_.GetFileSystem(), std::move(index_manifest_file),
         std::make_shared<IndexFilePathFactories>(path_factory_),
-        options_.DeletionVectorTargetFileSize(), options_.DeletionVectorsBitmap64());
+        options_.DeletionVectorTargetFileSize(), options_.DeletionVectorsBitmap64(), pool_);
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
                            table_schema_->GetFields(table_schema_->PartitionKeys()));
