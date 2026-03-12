@@ -178,10 +178,9 @@ Result<std::unique_ptr<FileBatchReader>> DataEvolutionSplitRead::ApplyIndexAndDv
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::optional<std::vector<Range>>& row_ranges,
+    DeletionVector::Factory dv_factory, const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    if (!deletion_file_map.empty()) {
+    if (dv_factory) {
         return Status::Invalid("DataEvolutionSplitRead do not support deletion vector");
     }
     if (predicate) {

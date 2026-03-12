@@ -74,15 +74,14 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
 Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     const BinaryRow& partition, int32_t bucket,
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-    const std::vector<std::optional<DeletionFile>>& deletion_files) {
+    DeletionVector::Factory dv_factory) {
     const auto& predicate = context_->GetPredicate();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            path_factory_->CreateDataFilePathFactory(partition, bucket));
 
-    auto deletion_file_map = CreateDeletionFileMap(data_files, deletion_files);
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
-        CreateRawFileReaders(partition, data_files, raw_read_schema_, predicate, deletion_file_map,
+        CreateRawFileReaders(partition, data_files, raw_read_schema_, predicate, dv_factory,
                              /*row_ranges=*/{}, data_file_path_factory));
 
     auto raw_readers =
@@ -91,6 +90,25 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
                            ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), predicate));
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
+}
+
+Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
+    const BinaryRow& partition, int32_t bucket,
+    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+    const std::vector<std::optional<DeletionFile>>& deletion_files) {
+    auto deletion_file_map = CreateDeletionFileMap(data_files, deletion_files);
+    auto dv_factory = [this, deletion_file_map](
+                          const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+        auto iter = deletion_file_map.find(file_name);
+        if (iter != deletion_file_map.end()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<DeletionVector> dv,
+                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
+            return dv;
+        }
+        return std::shared_ptr<DeletionVector>();
+    };
+    return CreateReader(partition, bucket, data_files, dv_factory);
 }
 
 Result<bool> RawFileSplitRead::Match(const std::shared_ptr<Split>& split,
@@ -122,8 +140,7 @@ Result<std::unique_ptr<FileBatchReader>> RawFileSplitRead::ApplyIndexAndDvReader
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::optional<std::vector<Range>>& ranges,
+    DeletionVector::Factory dv_factory, const std::optional<std::vector<Range>>& ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<FileIndexResult> file_index_result;
     if (options_.FileIndexReadEnabled()) {
@@ -143,11 +160,9 @@ Result<std::unique_ptr<FileBatchReader>> RawFileSplitRead::ApplyIndexAndDvReader
     }
 
     // prepare deletion bitmap for deletion vector
-    PAIMON_UNIQUE_PTR<DeletionVector> deletion_vector;
-    auto dv_iter = deletion_file_map.find(file->file_name);
-    if (dv_iter != deletion_file_map.end()) {
-        PAIMON_ASSIGN_OR_RAISE(deletion_vector, DeletionVector::Read(options_.GetFileSystem().get(),
-                                                                     dv_iter->second, pool_.get()));
+    std::shared_ptr<DeletionVector> deletion_vector;
+    if (dv_factory) {
+        PAIMON_ASSIGN_OR_RAISE(deletion_vector, dv_factory(file->file_name));
     }
     const RoaringBitmap32* deletion = nullptr;
     if (auto* bitmap_dv = dynamic_cast<BitmapDeletionVector*>(deletion_vector.get())) {

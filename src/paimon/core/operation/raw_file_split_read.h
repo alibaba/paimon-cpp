@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "paimon/core/core_options.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/operation/abstract_split_read.h"
 #include "paimon/core/schema/schema_manager.h"
@@ -67,14 +68,18 @@ class RawFileSplitRead : public AbstractSplitRead {
         const std::vector<std::shared_ptr<DataFileMeta>>& files,
         const std::vector<std::optional<DeletionFile>>& deletion_files);
 
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& files,
+        DeletionVector::Factory dv_factory);
+
     Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
     Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 };

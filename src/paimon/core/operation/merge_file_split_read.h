@@ -88,15 +88,13 @@ class MergeFileSplitRead : public AbstractSplitRead {
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReaderForSection(
         const std::vector<SortedRun>& section, const BinaryRow& partition,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-        const std::shared_ptr<Predicate>& predicate,
+        DeletionVector::Factory dv_factory, const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory, bool drop_delete);
 
     std::shared_ptr<FileStorePathFactory> GetPathFactory() const {
@@ -118,12 +116,11 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     Result<std::unique_ptr<BatchReader>> CreateReaderForSection(
         const std::vector<SortedRun>& section, const BinaryRow& partition,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        DeletionVector::Factory dv_factory,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory);
 
     Result<std::unique_ptr<KeyValueRecordReader>> CreateReaderForRun(
-        const BinaryRow& partition, const SortedRun& sorted_run,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const BinaryRow& partition, const SortedRun& sorted_run, DeletionVector::Factory dv_factory,
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 

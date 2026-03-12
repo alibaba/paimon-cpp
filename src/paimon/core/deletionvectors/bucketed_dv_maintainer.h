@@ -23,6 +23,7 @@
 
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
+#include "paimon/core/index/index_file_handler.h"
 #include "paimon/core/index/index_file_meta.h"
 
 namespace paimon {
@@ -64,6 +65,37 @@ class BucketedDvMaintainer {
     std::shared_ptr<DeletionVectorsIndexFile> DvIndexFile() const {
         return dv_index_file_;
     }
+
+    /// Factory to restore `BucketedDvMaintainer`.
+    class Factory {
+     public:
+        explicit Factory(const std::shared_ptr<IndexFileHandler>& index_file_handler)
+            : handler_(index_file_handler) {}
+
+        std::shared_ptr<IndexFileHandler> GetIndexFileHandler() const {
+            return handler_;
+        }
+
+        Result<std::unique_ptr<BucketedDvMaintainer>> Create(
+            const BinaryRow& partition, int32_t bucket,
+            const std::vector<std::shared_ptr<IndexFileMeta>>& restored_files) {
+            std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+            PAIMON_ASSIGN_OR_RAISE(deletion_vectors, handler_->ReadAllDeletionVectors(
+                                                         partition, bucket, restored_files));
+            return Create(partition, bucket, deletion_vectors);
+        }
+
+        Result<std::unique_ptr<BucketedDvMaintainer>> Create(
+            const BinaryRow& partition, int32_t bucket,
+            const std::map<std::string, std::shared_ptr<DeletionVector>>& deletion_vectors) {
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DeletionVectorsIndexFile> dv_index_file,
+                                   handler_->DvIndex(partition, bucket));
+            return std::make_unique<BucketedDvMaintainer>(dv_index_file, deletion_vectors);
+        }
+
+     private:
+        std::shared_ptr<IndexFileHandler> handler_;
+    };
 
  private:
     std::shared_ptr<DeletionVectorsIndexFile> dv_index_file_;

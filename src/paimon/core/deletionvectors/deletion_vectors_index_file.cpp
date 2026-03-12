@@ -16,6 +16,11 @@
 
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "paimon/core/deletionvectors/deletion_vector_index_file_writer.h"
 
 namespace paimon {
@@ -28,6 +33,44 @@ Result<std::shared_ptr<IndexFileMeta>> DeletionVectorsIndexFile::WriteSingleFile
 std::shared_ptr<DeletionVectorIndexFileWriter> DeletionVectorsIndexFile::CreateWriter() const {
     return std::make_shared<DeletionVectorIndexFileWriter>(fs_, path_factory_,
                                                            target_size_per_index_file_, pool_);
+}
+
+Result<std::map<std::string, std::shared_ptr<DeletionVector>>>
+DeletionVectorsIndexFile::ReadAllDeletionVectors(
+    const std::shared_ptr<IndexFileMeta>& file_meta) const {
+    std::optional<LinkedHashMap<std::string, DeletionVectorMeta>> deletion_vector_metas =
+        file_meta->DvRanges();
+    if (deletion_vector_metas == std::nullopt) {
+        return Status::Invalid("deletion vector metas is null");
+    }
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+    std::string file_path = path_factory_->ToPath(file_meta);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream, fs_->Open(file_path));
+    auto data_input_stream = std::make_shared<DataInputStream>(input_stream);
+    for (const auto& [_, deletion_vector_meta] : deletion_vector_metas.value()) {
+        // TODO(yonghao.fyh): check deletion_vector_meta.length = -1?
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<DeletionVector> dv,
+            DeletionVector::Read(data_input_stream.get(),
+                                 static_cast<int64_t>(deletion_vector_meta.length), pool_.get()));
+        deletion_vectors[deletion_vector_meta.data_file_name] = dv;
+    }
+    return deletion_vectors;
+}
+
+Result<std::map<std::string, std::shared_ptr<DeletionVector>>>
+DeletionVectorsIndexFile::ReadAllDeletionVectors(
+    const std::vector<std::shared_ptr<IndexFileMeta>>& index_files) const {
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+    for (const auto& index_file : index_files) {
+        std::map<std::string, std::shared_ptr<DeletionVector>> partial_deletion_vectors;
+        PAIMON_ASSIGN_OR_RAISE(partial_deletion_vectors, ReadAllDeletionVectors(index_file));
+        for (const auto& kv : partial_deletion_vectors) {
+            deletion_vectors[kv.first] = kv.second;
+        }
+    }
+    return deletion_vectors;
 }
 
 }  // namespace paimon
