@@ -26,6 +26,8 @@ add_executable(clean_demo clean_demo.cpp)
 
 include_directories(${PAIMON_INCLUDE_DIRS})
 
+set(CMAKE_EXE_LINKER_FLAGS "-Wl,--no-as-needed ${CMAKE_EXE_LINKER_FLAGS}")
+
 target_link_libraries(read_write_demo
                       PRIVATE arrow_shared
                               paimon_shared
