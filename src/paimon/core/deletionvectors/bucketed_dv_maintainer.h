@@ -78,7 +78,7 @@ class BucketedDvMaintainer {
 
         Result<std::unique_ptr<BucketedDvMaintainer>> Create(
             const BinaryRow& partition, int32_t bucket,
-            const std::vector<std::shared_ptr<IndexFileMeta>>& restored_files) {
+            const std::vector<std::shared_ptr<IndexFileMeta>>& restored_files) const {
             std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
             PAIMON_ASSIGN_OR_RAISE(deletion_vectors, handler_->ReadAllDeletionVectors(
                                                          partition, bucket, restored_files));
@@ -87,7 +87,7 @@ class BucketedDvMaintainer {
 
         Result<std::unique_ptr<BucketedDvMaintainer>> Create(
             const BinaryRow& partition, int32_t bucket,
-            const std::map<std::string, std::shared_ptr<DeletionVector>>& deletion_vectors) {
+            const std::map<std::string, std::shared_ptr<DeletionVector>>& deletion_vectors) const {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DeletionVectorsIndexFile> dv_index_file,
                                    handler_->DvIndex(partition, bucket));
             return std::make_unique<BucketedDvMaintainer>(dv_index_file, deletion_vectors);

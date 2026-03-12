@@ -31,7 +31,6 @@ class DeletionVectorIndexFileWriter {
  public:
     DeletionVectorIndexFileWriter(const std::shared_ptr<FileSystem>& fs,
                                   const std::shared_ptr<IndexPathFactory>& path_factory,
-                                  int64_t target_size_per_index_file,
                                   const std::shared_ptr<MemoryPool>& pool)
         : index_path_factory_(path_factory), fs_(fs), pool_(pool) {}
 

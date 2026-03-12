@@ -59,17 +59,9 @@ class DeletionVectorsIndexFile : public IndexFile {
         const std::vector<std::shared_ptr<IndexFileMeta>>& index_files) const;
 
  private:
-    std::shared_ptr<DeletionVectorIndexFileWriter> CreateWriter() const;
+    static Status CheckVersion(const std::shared_ptr<DataInputStream>& in);
 
-    static Status CheckVersion(const std::shared_ptr<DataInputStream>& in) {
-        PAIMON_ASSIGN_OR_RAISE(int8_t version, in->ReadValue<int8_t>());
-        if (version != VERSION_ID_V1) {
-            return Status::Invalid(
-                fmt::format("Version not match, actual version: {}, expected version: {}", version,
-                            VERSION_ID_V1));
-        }
-        return Status::OK();
-    }
+    std::shared_ptr<DeletionVectorIndexFileWriter> CreateWriter() const;
 
     const int64_t target_size_per_index_file_;
     const bool bitmap64_;

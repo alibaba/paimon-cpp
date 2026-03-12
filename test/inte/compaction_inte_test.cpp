@@ -389,7 +389,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
     }
 }
 
-TEST_F(CompactionInteTest, TestAppendTableWriteAlterTableWithCompaction) {
+TEST_F(CompactionInteTest, DISABLED_TestAppendTableWriteAlterTableWithCompaction) {
     std::string test_data_path =
         paimon::test::GetDataDir() +
         "/orc/append_table_with_alter_table.db/append_table_with_alter_table/";

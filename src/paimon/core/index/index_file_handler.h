@@ -85,7 +85,7 @@ class IndexFileHandler {
 
     Result<std::map<std::string, std::shared_ptr<DeletionVector>>> ReadAllDeletionVectors(
         const BinaryRow& partition, int32_t bucket,
-        const std::vector<std::shared_ptr<IndexFileMeta>>& file_metas) {
+        const std::vector<std::shared_ptr<IndexFileMeta>>& file_metas) const {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<DeletionVectorsIndexFile> dv_index,
                                DvIndex(partition, bucket));
         return dv_index->ReadAllDeletionVectors(file_metas);
