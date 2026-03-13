@@ -25,10 +25,10 @@ namespace paimon::test {
 
 TEST(HistogramWindowingImplTest, TestAdvanceAndAggregateAcrossWindows) {
     // Use a relatively large span to avoid flakiness around boundary (aligned_now - start == span).
-    HistogramWindowingImpl h(/*num_windows=*/4, /*micros_per_window=*/5000,
+    HistogramWindowingImpl h(/*num_windows=*/4, /*micros_per_window=*/25000,
                              /*min_num_per_window=*/1);
     h.Add(1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(26));
     h.Add(2);
 
     HistogramStats s = h.GetStats();
@@ -94,7 +94,8 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     // Validate min_num_per_window behavior:
     // - window advancement is gated by sample count
     // - if the histogram doesn't advance in time, it may get reset once beyond max span
-    HistogramWindowingImpl h(/*num_windows=*/3, /*micros_per_window=*/2000,
+    // Use a larger window to reduce wall-clock sensitivity and avoid flakiness.
+    HistogramWindowingImpl h(/*num_windows=*/3, /*micros_per_window=*/50000,
                              /*min_num_per_window=*/100);
 
     // Fill current window but keep it below min_num.
@@ -103,7 +104,7 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     }
 
     // Cross at least one window.
-    std::this_thread::sleep_for(std::chrono::milliseconds(3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(75));
     h.Add(2);  // 100th sample; advancement check happens before this add.
 
     HistogramStats s1 = h.GetStats();
@@ -112,8 +113,8 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
     EXPECT_DOUBLE_EQ(s1.max, 2);
 
     // Cross enough time so that aligned_now - current_window_start >= max_span
-    // (max_span = num_windows * micros_per_window = 6ms here).
-    std::this_thread::sleep_for(std::chrono::milliseconds(7));
+    // (max_span = num_windows * micros_per_window = 150ms here).
+    std::this_thread::sleep_for(std::chrono::milliseconds(175));
     h.Add(1000);
 
     HistogramStats s2 = h.GetStats();
