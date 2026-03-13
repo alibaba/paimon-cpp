@@ -589,6 +589,7 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/append_only_file_store_scan_test.cpp
                     core/operation/key_value_file_store_scan_test.cpp
                     core/operation/file_store_scan_test.cpp
+                    core/operation/file_system_write_restore_test.cpp
                     core/operation/file_store_write_test.cpp
                     core/operation/manifest_file_merger_test.cpp
                     core/operation/merge_file_split_read_test.cpp

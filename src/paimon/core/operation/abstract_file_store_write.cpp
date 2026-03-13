@@ -74,15 +74,13 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       partition_schema_(partition_schema),
       dv_maintainer_factory_(dv_maintainer_factory),
       options_(options),
+      compact_executor_(CreateDefaultExecutor(4)),
+      compaction_metrics_(std::make_shared<CompactionMetrics>()),
       ignore_previous_files_(ignore_previous_files),
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
-      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
-    // TODO(yonghao.fyh): support with
-    compact_executor_ = CreateDefaultExecutor(4);
-    compaction_metrics_ = std::make_shared<CompactionMetrics>();
-}
+      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {}
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     if (PAIMON_UNLIKELY(batch == nullptr)) {

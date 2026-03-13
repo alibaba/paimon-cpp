@@ -158,7 +158,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
                 std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
                 CreateRawFileReaders(split_impl->Partition(), need_merge_files, raw_read_schema_,
                                      /*predicate=*/nullptr,
-                                     /*deletion_file_map=*/{}, row_ranges, data_file_path_factory));
+                                     /*dv_factory=*/nullptr, row_ranges, data_file_path_factory));
             assert(raw_file_readers.size() == 1);
             sub_readers.push_back(std::move(raw_file_readers[0]));
         } else {
