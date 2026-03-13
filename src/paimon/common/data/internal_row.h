@@ -90,7 +90,7 @@ class PAIMON_EXPORT InternalRow : public DataGetters {
 
     virtual std::string ToString() const = 0;
 
-    using FieldGetterFunc = std::function<VariantType(const InternalRow& row)>;
+    using FieldGetterFunc = std::function<VariantType(const InternalRow&)>;
 
     static Result<FieldGetterFunc> CreateFieldGetter(
         int32_t field_idx, const std::shared_ptr<arrow::DataType>& field_type, bool use_view);

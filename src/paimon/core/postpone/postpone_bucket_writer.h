@@ -60,11 +60,19 @@ class PostponeBucketWriter : public BatchWriter {
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
 
-    Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
+    Status Compact(bool full_compaction) override {
+        return Status::NotImplemented("not implemented");
+    }
 
-    bool IsCompacting() const override {
+    Result<bool> CompactNotCompleted() override {
         return false;
     }
+
+    Status Sync() override {
+        return Status::NotImplemented("not implemented");
+    }
+
+    Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     Status Close() override {
         return DoClose();
@@ -78,6 +86,10 @@ class PostponeBucketWriter : public BatchWriter {
     Status DoClose() {
         sequence_number_array_.reset();
         row_kind_array_.reset();
+        if (writer_) {
+            writer_->Abort();
+            writer_.reset();
+        }
         return Status::OK();
     }
 

@@ -22,6 +22,8 @@
 #include <vector>
 
 #include "paimon/catalog/catalog.h"
+#include "paimon/core/schema/schema_manager.h"
+#include "paimon/core/table/table.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -46,7 +48,10 @@ class FileSystemCatalog : public Catalog {
                        const std::vector<std::string>& primary_keys,
                        const std::map<std::string, std::string>& options,
                        bool ignore_if_exists) override;
-
+    Status DropDatabase(const std::string& name, bool ignore_if_not_exists, bool cascade) override;
+    Status DropTable(const Identifier& identifier, bool ignore_if_not_exists) override;
+    Status RenameTable(const Identifier& from_table, const Identifier& to_table,
+                       bool ignore_if_not_exists) override;
     Result<std::vector<std::string>> ListDatabases() const override;
     Result<std::vector<std::string>> ListTables(const std::string& db_name) const override;
     Result<bool> DatabaseExists(const std::string& db_name) const override;
@@ -56,6 +61,7 @@ class FileSystemCatalog : public Catalog {
     Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const override;
     std::string GetRootPath() const override;
     std::shared_ptr<FileSystem> GetFileSystem() const override;
+    Result<std::shared_ptr<Table>> GetTable(const Identifier& identifier) const override;
 
  private:
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);
@@ -69,6 +75,17 @@ class FileSystemCatalog : public Catalog {
     Status CreateDatabaseImpl(const std::string& db_name,
                               const std::map<std::string, std::string>& options);
     Result<bool> TableExistsInFileSystem(const std::string& table_path) const;
+
+    // Get all external paths from a list of schemas
+    Result<std::vector<std::string>> GetSchemaExternalPaths(
+        const std::vector<std::shared_ptr<TableSchema>>& schemas) const;
+
+    // Get all branch names for a table
+    Result<std::vector<std::string>> GetTableBranches(const std::string& table_path) const;
+
+    // Drop table implementation with external paths cleanup
+    Status DropTableImpl(const Identifier& identifier,
+                         const std::vector<std::string>& external_paths);
 
     std::shared_ptr<FileSystem> fs_;
     std::string warehouse_;

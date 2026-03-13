@@ -48,8 +48,12 @@ int32_t MemorySlice::Offset() const {
     return offset_;
 }
 
-std::shared_ptr<Bytes> MemorySlice::GetHeapMemory() {
+std::shared_ptr<Bytes> MemorySlice::GetHeapMemory() const {
     return segment_->GetHeapMemory();
+}
+
+std::shared_ptr<MemorySegment> MemorySlice::GetSegment() const {
+    return segment_;
 }
 
 int8_t MemorySlice::ReadByte(int32_t position) {

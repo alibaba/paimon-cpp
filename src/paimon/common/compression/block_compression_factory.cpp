@@ -16,11 +16,27 @@
 
 #include "paimon/common/compression/block_compression_factory.h"
 
+#include "fmt/format.h"
 #include "paimon/common/compression/lz4/lz4_block_compression_factory.h"
 #include "paimon/common/compression/none_block_compression_factory.h"
 #include "paimon/common/compression/zstd/zstd_block_compression_factory.h"
+#include "paimon/common/utils/string_utils.h"
 
 namespace paimon {
+
+Result<std::shared_ptr<BlockCompressionFactory>> BlockCompressionFactory::Create(
+    const CompressOptions& compression) {
+    auto compress = StringUtils::ToLowerCase(compression.compress);
+    if (compress == "none") {
+        return std::make_shared<NoneBlockCompressionFactory>();
+    } else if (compress == "zstd") {
+        return std::make_shared<ZstdBlockCompressionFactory>(compression.zstd_level);
+    } else if (compress == "lz4") {
+        return std::make_shared<Lz4BlockCompressionFactory>();
+    }
+    // TODO(liangzi): LZO support
+    return Status::Invalid(fmt::format("Unsupported compression type: {}", compress));
+}
 
 Result<std::shared_ptr<BlockCompressionFactory>> BlockCompressionFactory::Create(
     BlockCompressionType compression) {
@@ -33,9 +49,8 @@ Result<std::shared_ptr<BlockCompressionFactory>> BlockCompressionFactory::Create
             return std::make_shared<ZstdBlockCompressionFactory>(ZSTD_COMPRESSION_LEVEL);
         default:
             // TODO(liangzi): LZO support
-            return Status::Invalid("Unsupported compression type: " +
-                                   std::to_string(static_cast<int8_t>(compression)));
+            return Status::Invalid(
+                fmt::format("Unsupported compression type: {}", static_cast<int32_t>(compression)));
     }
 }
-
 }  // namespace paimon

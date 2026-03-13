@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "arrow/api.h"
 #include "paimon/reader/batch_reader.h"
@@ -25,6 +26,7 @@
 namespace arrow {
 class MemoryPool;
 class Array;
+class StructArray;
 }  // namespace arrow
 
 namespace paimon {

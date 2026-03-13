@@ -82,7 +82,7 @@ TEST(ColumnarRowRefTest, TestSimple) {
             .ValueOrDie();
     auto data = arrow::StructArray::Make({f1, f2}, target_type->fields()).ValueOrDie();
 
-    auto ctx = std::make_shared<ColumnarBatchContext>(data, data->fields(), pool);
+    auto ctx = std::make_shared<ColumnarBatchContext>(data->fields(), pool);
     ColumnarRowRef row(ctx, 1);
     ASSERT_EQ(row.GetFieldCount(), 2);
     ASSERT_EQ(row.GetInt(0), 2);

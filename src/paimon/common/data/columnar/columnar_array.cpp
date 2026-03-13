@@ -85,7 +85,7 @@ std::shared_ptr<InternalMap> ColumnarArray::GetMap(int32_t pos) const {
 std::shared_ptr<InternalRow> ColumnarArray::GetRow(int32_t pos, int32_t num_fields) const {
     auto struct_array = arrow::internal::checked_cast<const arrow::StructArray*>(array_);
     assert(struct_array);
-    auto row_ctx = std::make_shared<ColumnarBatchContext>(nullptr, struct_array->fields(), pool_);
+    auto row_ctx = std::make_shared<ColumnarBatchContext>(struct_array->fields(), pool_);
     return std::make_shared<ColumnarRowRef>(std::move(row_ctx), offset_ + pos);
 }
 

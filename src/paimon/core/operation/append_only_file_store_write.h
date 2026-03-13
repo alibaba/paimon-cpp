@@ -27,6 +27,7 @@
 #include "arrow/type.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/table/bucket_mode.h"
 #include "paimon/file_store_write.h"
@@ -43,6 +44,7 @@ class Schema;
 
 namespace paimon {
 
+struct DataFileMeta;
 class BatchWriter;
 class FileStorePathFactory;
 class FileStoreScan;
@@ -74,14 +76,30 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
     ~AppendOnlyFileStoreWrite() override;
 
  private:
+    using SingleFileWriterCreator = std::function<
+        Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
+
     Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> CreateWriter(
         const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) override;
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
- private:
+    Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact);
+
+    SingleFileWriterCreator GetDataFileWriterCreator(
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
+        const std::optional<std::vector<std::string>>& write_cols,
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) const;
+
+    Result<std::unique_ptr<BatchReader>> CreateFilesReader(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& files) const;
+
     std::optional<std::vector<std::string>> write_cols_;
+    bool with_blob_ = false;
     std::unique_ptr<Logger> logger_;
 };
 

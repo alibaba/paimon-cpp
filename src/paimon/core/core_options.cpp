@@ -330,6 +330,10 @@ struct CoreOptions::Impl {
     int32_t compact_off_peak_start_hour = -1;
     int32_t compact_off_peak_end_hour = -1;
     int32_t compact_off_peak_ratio = 0;
+    bool lookup_cache_bloom_filter = true;
+    double lookup_cache_bloom_filter_fpp = 0.05;
+    CompressOptions lookup_compress_options{"zstd", 1};
+    int64_t cache_page_size = 64 * 1024;  // 64KB
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -560,6 +564,29 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse compaction.offpeak-ratio
     PAIMON_RETURN_NOT_OK(
         parser.Parse(Options::COMPACTION_OFFPEAK_RATIO, &impl->compact_off_peak_ratio));
+
+    // Parse lookup.cache.bloom.filter.enabled
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::LOOKUP_CACHE_BLOOM_FILTER_ENABLED,
+                                            &impl->lookup_cache_bloom_filter));
+
+    // Parse lookup.cache.bloom.filter.fpp
+    PAIMON_RETURN_NOT_OK(parser.Parse<double>(Options::LOOKUP_CACHE_BLOOM_FILTER_FPP,
+                                              &impl->lookup_cache_bloom_filter_fpp));
+
+    // Parse lookup.cache-spill-compression
+    std::string lookup_compress_options_compression_str;
+    PAIMON_RETURN_NOT_OK(parser.ParseString(Options::LOOKUP_CACHE_SPILL_COMPRESSION,
+                                            &lookup_compress_options_compression_str));
+    if (!lookup_compress_options_compression_str.empty()) {
+        impl->lookup_compress_options.compress = lookup_compress_options_compression_str;
+    }
+
+    // Parse spill-compression.zstd-level
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::SPILL_COMPRESSION_ZSTD_LEVEL,
+                                               &(impl->lookup_compress_options.zstd_level)));
+
+    // Parse cache-page-size
+    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::CACHE_PAGE_SIZE, &impl->cache_page_size));
 
     return options;
 }
@@ -909,4 +936,19 @@ int32_t CoreOptions::GetCompactOffPeakRatio() const {
     return impl_->compact_off_peak_ratio;
 }
 
+bool CoreOptions::LookupCacheBloomFilterEnabled() const {
+    return impl_->lookup_cache_bloom_filter;
+}
+
+double CoreOptions::GetLookupCacheBloomFilterFpp() const {
+    return impl_->lookup_cache_bloom_filter_fpp;
+}
+
+const CompressOptions& CoreOptions::GetLookupCompressOptions() const {
+    return impl_->lookup_compress_options;
+}
+
+int32_t CoreOptions::GetCachePageSize() const {
+    return static_cast<int32_t>(impl_->cache_page_size);
+}
 }  // namespace paimon

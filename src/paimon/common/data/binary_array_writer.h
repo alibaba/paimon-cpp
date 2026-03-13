@@ -18,9 +18,9 @@
 
 #include <cstdint>
 
+#include "arrow/api.h"
 #include "paimon/common/data/abstract_binary_writer.h"
 #include "paimon/common/memory/memory_segment.h"
-
 namespace paimon {
 class BinaryArray;
 class MemoryPool;
@@ -30,6 +30,9 @@ class BinaryArrayWriter : public AbstractBinaryWriter {
  public:
     BinaryArrayWriter(BinaryArray* array, int32_t num_elements, int32_t element_size,
                       MemoryPool* pool);
+
+    static int32_t GetElementSize(const arrow::Type::type& arrow_type);
+
     /// First, call `Reset()` before set/write value.
     void Reset() override;
     void SetNullBit(int32_t ordinal) override;
@@ -40,6 +43,8 @@ class BinaryArrayWriter : public AbstractBinaryWriter {
         // put zero into the corresponding field when set null
         segment_.PutValue<T>(GetElementOffset(ordinal, sizeof(T)), static_cast<T>(0));
     }
+
+    void SetNullAt(int32_t ordinal, const arrow::Type::type& arrow_type);
 
     void WriteBoolean(int32_t pos, bool value) override {
         segment_.PutValue<bool>(GetElementOffset(pos, 1), value);

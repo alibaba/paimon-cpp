@@ -37,13 +37,27 @@ class BatchWriter {
 
     /// Add a record batch to the writer.
     virtual Status Write(std::unique_ptr<RecordBatch>&& batch) = 0;
+
+    /// Compact files related to the writer. Note that compaction process is only submitted and may
+    /// not be completed when the method returns.
+    ///
+    /// @param full_compaction whether to trigger full compaction or just normal compaction
+    virtual Status Compact(bool full_compaction) = 0;
+
     /// Prepare for a commit.
     ///
     /// @param wait_compaction if this method need to wait for current compaction to complete
     /// @return Incremental files in this snapshot cycle
     virtual Result<CommitIncrement> PrepareCommit(bool wait_compaction) = 0;
-    /// Check if a compaction is in progress, or if a compaction result remains to be fetched.
-    virtual bool IsCompacting() const = 0;
+
+    /// Check if a compaction is in progress, or if a compaction result remains to be fetched, or if
+    /// a compaction should be triggered later.
+    virtual Result<bool> CompactNotCompleted() = 0;
+
+    /// Sync the writer. The structure related to file reading and writing is thread unsafe, there
+    /// are asynchronous threads inside the writer, which should be synced before reading data.
+    virtual Status Sync() = 0;
+
     /// Close this writer, the call will delete newly generated but not committed files.
     virtual Status Close() = 0;
 

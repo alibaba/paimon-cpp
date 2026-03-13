@@ -52,6 +52,8 @@ class AbstractBinaryWriter : public BinaryWriter {
 
     void WriteRow(int32_t pos, const BinaryRow& value) override;
 
+    void WriteMap(int32_t pos, const BinaryMap& input) override;
+
     void WriteStringView(int32_t pos, const std::string_view& view) override;
 
     const MemorySegment& GetSegments() const {

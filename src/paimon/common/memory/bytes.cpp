@@ -24,6 +24,11 @@
 #include <utility>
 
 namespace paimon {
+const std::shared_ptr<Bytes>& Bytes::EmptyBytes() {
+    static const std::shared_ptr<Bytes> empty_bytes =
+        std::make_shared<Bytes>(0, GetDefaultPool().get());
+    return empty_bytes;
+}
 
 PAIMON_UNIQUE_PTR<Bytes> Bytes::AllocateBytes(int32_t length, MemoryPool* pool) {
     return pool->AllocateUnique<Bytes>(length, pool);
@@ -106,11 +111,11 @@ char& Bytes::operator[](size_t idx) const {
 }
 
 PAIMON_UNIQUE_PTR<Bytes> Bytes::CopyOf(const Bytes& other, size_t len, MemoryPool* pool) {
-    assert(len >= other.size_);
     assert(pool);
     auto bytes = Bytes::AllocateBytes(len, pool);
-    if (bytes && bytes->data_ && other.size_ > 0) {
-        std::memcpy(bytes->data_, other.data_, other.size_);
+    size_t copy_size = std::min(len, other.size());
+    if (bytes && bytes->data_ && other.data_ && copy_size > 0) {
+        std::memcpy(bytes->data_, other.data_, copy_size);
     }
     return bytes;
 }

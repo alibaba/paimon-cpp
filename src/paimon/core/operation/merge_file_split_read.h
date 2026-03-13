@@ -93,29 +93,42 @@ class MergeFileSplitRead : public AbstractSplitRead {
         const std::optional<std::vector<Range>>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 
+    Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReaderForSection(
+        const std::vector<SortedRun>& section, const BinaryRow& partition,
+        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate,
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory, bool drop_delete);
+
+    std::shared_ptr<FileStorePathFactory> GetPathFactory() const {
+        return path_factory_;
+    }
+
+    std::shared_ptr<arrow::Schema> GetValueSchema() const {
+        return value_schema_;
+    }
+
  private:
     Result<std::unique_ptr<BatchReader>> CreateMergeReader(
         const std::shared_ptr<DataSplitImpl>& data_split,
-        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory);
 
     Result<std::unique_ptr<BatchReader>> CreateNoMergeReader(
         const std::shared_ptr<DataSplitImpl>& data_split, bool only_filter_key,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     Result<std::unique_ptr<BatchReader>> CreateReaderForSection(
-        const std::vector<SortedRun>& section, const std::string& bucket_path,
-        const BinaryRow& partition,
+        const std::vector<SortedRun>& section, const BinaryRow& partition,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory);
 
     Result<std::unique_ptr<KeyValueRecordReader>> CreateReaderForRun(
-        const std::string& bucket_path, const BinaryRow& partition, const SortedRun& sorted_run,
+        const BinaryRow& partition, const SortedRun& sorted_run,
         const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReader(
-        std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers) const;
+        std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers);
 
     MergeFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                        const std::shared_ptr<InternalReadContext>& context,
@@ -131,6 +144,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
                        const std::shared_ptr<Executor>& executor);
 
  private:
+    Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> GetMergeFunctionWrapper();
+
     static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(
         const CoreOptions& core_options, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<arrow::Schema>& value_schema);
@@ -161,6 +176,7 @@ class MergeFileSplitRead : public AbstractSplitRead {
     // actual read schema, e.g., complete all key fields, user defined sequence fields
     std::shared_ptr<arrow::Schema> read_schema_;
     std::vector<int32_t> projection_;
+    // merge_function_wrapper is lazy created, use through GetMergeFunctionWrapper()
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> interval_partition_comparator_;

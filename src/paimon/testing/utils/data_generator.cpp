@@ -269,8 +269,12 @@ Result<std::vector<std::unique_ptr<RecordBatch>>> DataGenerator::SplitArrayByPar
         auto struct_builder = struct_builder_iter->second;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder->Append());
         for (size_t i = 0; i < fields.size(); i++) {
-            PAIMON_RETURN_NOT_OK(
-                AppendValue(binary_row, i, fields[i].Type(), struct_builder.get()));
+            if (binary_row.IsNullAt(i)) {
+                PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder->field_builder(i)->AppendNull());
+            } else {
+                PAIMON_RETURN_NOT_OK(
+                    AppendValue(binary_row, i, fields[i].Type(), struct_builder.get()));
+            }
         }
 
         auto row_kinds_iter = row_kinds_holder.find({partition_map, bucket_id});

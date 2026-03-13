@@ -52,10 +52,14 @@ Result<std::unique_ptr<IndexFileMeta>> DeletionFileWriter::GetResult() const {
         return Status::Invalid(
             fmt::format("Deletion file result length {} out of int32 range.", length));
     }
-    return std::make_unique<IndexFileMeta>(
-        DeletionVectorsIndexFile::DELETION_VECTORS_INDEX, PathUtil::GetName(path_), length,
-        dv_metas_.size(), dv_metas_,
-        is_external_path_ ? std::optional<std::string>(path_) : std::optional<std::string>());
+    std::optional<std::string> final_path;
+    if (is_external_path_) {
+        PAIMON_ASSIGN_OR_RAISE(Path external_path, PathUtil::ToPath(path_));
+        final_path = external_path.ToString();
+    }
+    return std::make_unique<IndexFileMeta>(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX,
+                                           PathUtil::GetName(path_), length, dv_metas_.size(),
+                                           dv_metas_, final_path);
 }
 
 }  // namespace paimon

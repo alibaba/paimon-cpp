@@ -105,17 +105,21 @@ bool AbstractSplitRead::NeedCompleteRowTrackingFields(
 
 std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
     const DataSplitImpl& data_split) {
+    return CreateDeletionFileMap(data_split.DataFiles(), data_split.DeletionFiles());
+}
+
+std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionFileMap(
+    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+    const std::vector<std::optional<DeletionFile>>& deletion_files) {
     std::unordered_map<std::string, DeletionFile> deletion_file_map;
-    auto deletion_files = data_split.DeletionFiles();
     if (deletion_files.empty()) {
         return deletion_file_map;
     }
-    auto data_file_metas = data_split.DataFiles();
-    assert(deletion_files.size() == data_file_metas.size());
+    assert(deletion_files.size() == data_files.size());
     size_t file_count = deletion_files.size();
     for (size_t i = 0; i < file_count; i++) {
         if (deletion_files[i] != std::nullopt) {
-            deletion_file_map.emplace(data_file_metas[i]->file_name, deletion_files[i].value());
+            deletion_file_map.emplace(data_files[i]->file_name, deletion_files[i].value());
         }
     }
     return deletion_file_map;

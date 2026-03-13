@@ -16,6 +16,9 @@
 
 #pragma once
 
+#include <memory>
+
+#include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_increment.h"
 
@@ -24,8 +27,11 @@ namespace paimon {
 // Changes to commit.
 class CommitIncrement {
  public:
-    CommitIncrement(const DataIncrement& data_increment, const CompactIncrement& compact_increment)
-        : data_increment_(data_increment), compact_increment_(compact_increment) {}
+    CommitIncrement(const DataIncrement& data_increment, const CompactIncrement& compact_increment,
+                    const std::shared_ptr<CompactDeletionFile>& compact_deletion_file)
+        : data_increment_(data_increment),
+          compact_increment_(compact_increment),
+          compact_deletion_file_(compact_deletion_file) {}
 
     const DataIncrement& GetNewFilesIncrement() const {
         return data_increment_;
@@ -35,9 +41,14 @@ class CommitIncrement {
         return compact_increment_;
     }
 
+    std::shared_ptr<CompactDeletionFile> GetCompactDeletionFile() const {
+        return compact_deletion_file_;
+    }
+
  private:
     DataIncrement data_increment_;
     CompactIncrement compact_increment_;
+    std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
 };
 
 }  // namespace paimon

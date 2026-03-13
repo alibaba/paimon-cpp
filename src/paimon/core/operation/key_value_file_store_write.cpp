@@ -27,6 +27,7 @@
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/key_value_file_store_scan.h"
+#include "paimon/core/operation/restore_files.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/file_store_path_factory.h"
@@ -90,16 +91,17 @@ Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> KeyValueFileStoreWrite:
     const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) {
     PAIMON_LOG_DEBUG(logger_, "Creating key value writer for partition %s, bucket %d",
                      partition.ToString().c_str(), bucket);
-    PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> latest_snapshot,
-                           snapshot_manager_->LatestSnapshot());
-    std::vector<std::shared_ptr<DataFileMeta>> restore_files;
     int32_t total_buckets = GetDefaultBucketNum();
-    if (!ignore_previous_files && latest_snapshot != std::nullopt) {
-        PAIMON_ASSIGN_OR_RAISE(
-            total_buckets,
-            ScanExistingFileMetas(latest_snapshot.value(), partition, bucket, &restore_files));
+    std::vector<std::shared_ptr<DataFileMeta>> restore_data_files;
+    if (!ignore_previous_files) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files,
+                               ScanExistingFileMetas(partition, bucket));
+        restore_data_files = restore_files->DataFiles();
+        if (restore_files->TotalBuckets()) {
+            total_buckets = restore_files->TotalBuckets().value();
+        }
     }
-    int64_t max_sequence_number = DataFileMeta::GetMaxSequenceNumber(restore_files);
+    int64_t max_sequence_number = DataFileMeta::GetMaxSequenceNumber(restore_data_files);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,

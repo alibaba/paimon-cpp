@@ -56,6 +56,36 @@ void BinaryArrayWriter::SetNullAt(int32_t ordinal) {
     SetNullValue<int64_t>(ordinal);
 }
 
+void BinaryArrayWriter::SetNullAt(int32_t ordinal, const arrow::Type::type& arrow_type) {
+    switch (arrow_type) {
+        case arrow::Type::type::BOOL:
+            SetNullValue<bool>(ordinal);
+            return;
+        case arrow::Type::type::INT8:
+            SetNullValue<int8_t>(ordinal);
+            return;
+        case arrow::Type::type::INT16:
+            SetNullValue<int16_t>(ordinal);
+            return;
+        case arrow::Type::type::DATE32:
+        case arrow::Type::type::INT32:
+            SetNullValue<int32_t>(ordinal);
+            return;
+        case arrow::Type::type::INT64:
+            SetNullValue<int64_t>(ordinal);
+            return;
+        case arrow::Type::type::FLOAT:
+            SetNullValue<float>(ordinal);
+            return;
+        case arrow::Type::type::DOUBLE:
+            SetNullValue<double>(ordinal);
+            return;
+        default:
+            SetNullAt(ordinal);
+            return;
+    }
+}
+
 int32_t BinaryArrayWriter::GetElementOffset(int32_t pos, int32_t element_size) const {
     return null_bits_size_in_bytes_ + element_size * pos;
 }
@@ -79,6 +109,28 @@ void BinaryArrayWriter::Complete() {
 
 int32_t BinaryArrayWriter::GetNumElements() const {
     return num_elements_;
+}
+
+int32_t BinaryArrayWriter::GetElementSize(const arrow::Type::type& arrow_type) {
+    switch (arrow_type) {
+        case arrow::Type::type::BOOL:
+            return sizeof(bool);
+        case arrow::Type::type::INT8:
+            return sizeof(int8_t);
+        case arrow::Type::type::INT16:
+            return sizeof(int16_t);
+        case arrow::Type::type::DATE32:
+        case arrow::Type::type::INT32:
+            return sizeof(int32_t);
+        case arrow::Type::type::INT64:
+            return sizeof(int64_t);
+        case arrow::Type::type::FLOAT:
+            return sizeof(float);
+        case arrow::Type::type::DOUBLE:
+            return sizeof(double);
+        default:
+            return 8;
+    }
 }
 
 }  // namespace paimon

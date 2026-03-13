@@ -75,6 +75,8 @@ struct DataFileMeta {
         const std::optional<std::string>& external_path, const std::optional<int64_t>& first_row_id,
         const std::optional<std::vector<std::string>>& write_cols);
 
+    Result<std::shared_ptr<DataFileMeta>> Upgrade(int32_t new_level) const;
+
     std::optional<int64_t> AddRowCount() const {
         return delete_row_count == std::nullopt ? std::optional<int64_t>()
                                                 : row_count - delete_row_count.value();

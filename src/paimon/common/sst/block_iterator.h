@@ -26,9 +26,7 @@ class BlockReader;
 
 class PAIMON_EXPORT BlockIterator {
  public:
-    explicit BlockIterator(std::shared_ptr<BlockReader>& reader);
-
-    ~BlockIterator() = default;
+    explicit BlockIterator(const std::shared_ptr<BlockReader>& reader);
 
     bool HasNext() const;
 
@@ -36,7 +34,7 @@ class PAIMON_EXPORT BlockIterator {
 
     std::unique_ptr<BlockEntry> ReadEntry();
 
-    bool SeekTo(std::shared_ptr<paimon::MemorySlice> target_key);
+    Result<bool> SeekTo(const std::shared_ptr<MemorySlice>& target_key);
 
  private:
     std::shared_ptr<MemorySliceInput> input_;

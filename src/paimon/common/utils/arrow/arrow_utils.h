@@ -33,7 +33,7 @@ class PAIMON_EXPORT ArrowUtils {
         const std::shared_ptr<arrow::DataType>& data_type);
 
     static Result<std::vector<int32_t>> CreateProjection(
-        const std::shared_ptr<arrow::Schema>& file_schema, const arrow::FieldVector& read_fields);
+        const std::shared_ptr<arrow::Schema>& src_schema, const arrow::FieldVector& target_fields);
 
     static Status CheckNullabilityMatch(const std::shared_ptr<arrow::Schema>& schema,
                                         const std::shared_ptr<arrow::Array>& data);
@@ -42,6 +42,9 @@ class PAIMON_EXPORT ArrowUtils {
     // for dictionary(). Therefore, access array in advance before merge sort and projection to
     // avoid subsequent multi-threading problems.
     static void TraverseArray(const std::shared_ptr<arrow::Array>& array);
+
+    static Result<std::shared_ptr<arrow::StructArray>> RemoveFieldFromStructArray(
+        const std::shared_ptr<arrow::StructArray>& struct_array, const std::string& field_name);
 
  private:
     static Status InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,

@@ -21,8 +21,8 @@
 #include "paimon/common/compression/block_compression_type.h"
 #include "paimon/common/compression/block_compressor.h"
 #include "paimon/common/compression/block_decompressor.h"
+#include "paimon/core/options/compress_options.h"
 #include "paimon/result.h"
-
 namespace paimon {
 
 /// Each compression codec has an implementation of {@link BlockCompressionFactory} to create
@@ -30,7 +30,10 @@ namespace paimon {
 class BlockCompressionFactory {
  public:
     static Result<std::shared_ptr<BlockCompressionFactory>> Create(
-        BlockCompressionType compression);
+        const CompressOptions& compression);
+
+    static Result<std::shared_ptr<BlockCompressionFactory>> Create(
+        BlockCompressionType compress_type);
 
     BlockCompressionFactory() = default;
     virtual ~BlockCompressionFactory() = default;

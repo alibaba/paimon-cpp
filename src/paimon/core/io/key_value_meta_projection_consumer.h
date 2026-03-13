@@ -43,20 +43,28 @@ class KeyValueMetaProjectionConsumer : public RowToArrowArrayConverter<KeyValue,
         const std::shared_ptr<arrow::Schema>& target_schema,
         const std::shared_ptr<MemoryPool>& pool);
 
+    // target_to_src_mapping is the mapping excluding special fields.
+    static Result<std::unique_ptr<KeyValueMetaProjectionConsumer>> Create(
+        const std::shared_ptr<arrow::Schema>& target_schema,
+        const std::vector<int32_t>& target_to_src_mapping, const std::shared_ptr<MemoryPool>& pool);
+
     Result<KeyValueBatch> NextBatch(const std::vector<KeyValue>& key_value_vec) override;
 
  private:
     KeyValueMetaProjectionConsumer(int32_t reserve_count, std::vector<AppendValueFunc>&& appenders,
                                    std::unique_ptr<arrow::StructBuilder>&& array_builder,
                                    std::unique_ptr<arrow::MemoryPool>&& arrow_pool,
+                                   const std::vector<int32_t>& target_to_src_mapping,
                                    arrow::Int64Builder* sequence_appender,
                                    arrow::Int8Builder* value_kind_appender)
         : RowToArrowArrayConverter(reserve_count, std::move(appenders), std::move(array_builder),
                                    std::move(arrow_pool)),
+          target_to_src_mapping_(target_to_src_mapping),
           sequence_appender_(sequence_appender),
           value_kind_appender_(value_kind_appender) {}
 
  private:
+    std::vector<int32_t> target_to_src_mapping_;
     arrow::Int64Builder* sequence_appender_;
     arrow::Int8Builder* value_kind_appender_;
 };

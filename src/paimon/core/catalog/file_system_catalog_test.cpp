@@ -190,6 +190,17 @@ TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     ASSERT_OK_AND_ASSIGN(auto arrow_schema, table_schema->GetArrowSchema());
     auto loaded_schema = arrow::ImportSchema(arrow_schema.get()).ValueOrDie();
     ASSERT_TRUE(typed_schema.Equals(loaded_schema));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Table> table, catalog.GetTable(Identifier("db1", "tbl1")));
+    ASSERT_OK_AND_ASSIGN(auto arrow_schema_from_get_table, table->LatestSchema()->GetArrowSchema());
+    auto schema_from_get_table =
+        arrow::ImportSchema(arrow_schema_from_get_table.get()).ValueOrDie();
+    ASSERT_TRUE(typed_schema.Equals(schema_from_get_table));
+    ASSERT_EQ(table->FullName(), "db1.tbl1");
+
+    ASSERT_NOK_WITH_MSG(catalog.GetTable(Identifier("db1", "table_xaxa")),
+                        "Identifier{database='db1', table='table_xaxa'} not exist");
+
     ArrowSchemaRelease(&schema);
 }
 
@@ -386,6 +397,285 @@ TEST(FileSystemCatalogTest, TestValidateTableSchema) {
 
     ASSERT_NOK_WITH_MSG(catalog.LoadTableSchema(Identifier("db1", "tbl$11")),
                         "do not support checking TableSchemaExists for system table.");
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropDatabase) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+
+    // Test 1: Drop non-existent database with ignore_if_not_exists=true
+    ASSERT_OK(catalog.DropDatabase("non_existent_db", /*ignore_if_not_exists=*/true,
+                                   /*cascade=*/false));
+
+    // Test 2: Drop non-existent database with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase("non_existent_db", /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "database non_existent_db does not exist");
+
+    // Test 3: Drop empty database
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+    ASSERT_OK(catalog.DropDatabase("test_db", /*ignore_if_not_exists=*/false,
+                                   /*cascade=*/false));
+    ASSERT_OK_AND_ASSIGN(bool exist, catalog.DatabaseExists("test_db"));
+    ASSERT_FALSE(exist);
+
+    // Test 4: Drop non-empty database without cascade
+    ASSERT_OK(catalog.CreateDatabase("test_db2", options, /*ignore_if_exists=*/false));
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db2", "tbl1"), &schema, {}, {}, options, false));
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase("test_db2", /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "Cannot drop non-empty database test_db2. Use cascade=true to force.");
+
+    // Test 5: Drop non-empty database with cascade
+    ASSERT_OK(catalog.DropDatabase("test_db2", /*ignore_if_not_exists=*/false,
+                                   /*cascade=*/true));
+    ASSERT_OK_AND_ASSIGN(exist, catalog.DatabaseExists("test_db2"));
+    ASSERT_FALSE(exist);
+    ASSERT_OK_AND_ASSIGN(std::vector<std::string> tables, catalog.ListTables("test_db2"));
+    ASSERT_TRUE(tables.empty());
+
+    // Test 6: Drop system database
+    ASSERT_NOK_WITH_MSG(catalog.DropDatabase(Catalog::SYSTEM_DATABASE_NAME,
+                                             /*ignore_if_not_exists=*/false,
+                                             /*cascade=*/false),
+                        "Cannot drop system database sys.");
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTable) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Test 1: Drop non-existent table with ignore_if_not_exists=true
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "non_existent_tbl"),
+                                /*ignore_if_not_exists=*/true));
+
+    // Test 2: Drop non-existent table with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(
+        catalog.DropTable(Identifier("test_db", "non_existent_tbl"),
+                          /*ignore_if_not_exists=*/false),
+        "table Identifier{database='test_db', table='non_existent_tbl'} does not exist");
+
+    // Test 3: Drop existing table
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl1"), &schema, {}, {}, options, false));
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl1"), /*ignore_if_not_exists=*/false));
+    ASSERT_OK_AND_ASSIGN(bool exist, catalog.TableExists(Identifier("test_db", "tbl1")));
+    ASSERT_FALSE(exist);
+
+    // Test 4: Drop system table
+    ASSERT_NOK_WITH_MSG(
+        catalog.DropTable(Identifier("test_db", "tbl$system"),
+                          /*ignore_if_not_exists=*/false),
+        "Cannot drop system table Identifier{database='test_db', table='tbl$system'}.");
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestRenameTable) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Test 1: Rename non-existent table with ignore_if_not_exists=true
+    ASSERT_OK(catalog.RenameTable(Identifier("test_db", "non_existent_tbl"),
+                                  Identifier("test_db", "new_tbl"),
+                                  /*ignore_if_not_exists=*/true));
+
+    // Test 2: Rename non-existent table with ignore_if_not_exists=false
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "non_existent_tbl"),
+                            Identifier("test_db", "new_tbl"),
+                            /*ignore_if_not_exists=*/false),
+        "source table Identifier{database='test_db', table='non_existent_tbl'} does not exist");
+
+    // Test 3: Normal rename
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema1;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema1).ok());
+    ASSERT_OK(
+        catalog.CreateTable(Identifier("test_db", "old_tbl"), &schema1, {}, {}, options, false));
+    ASSERT_OK(catalog.RenameTable(Identifier("test_db", "old_tbl"),
+                                  Identifier("test_db", "new_tbl"),
+                                  /*ignore_if_not_exists=*/false));
+    ASSERT_OK_AND_ASSIGN(bool old_exist, catalog.TableExists(Identifier("test_db", "old_tbl")));
+    ASSERT_FALSE(old_exist);
+    ASSERT_OK_AND_ASSIGN(bool new_exist, catalog.TableExists(Identifier("test_db", "new_tbl")));
+    ASSERT_TRUE(new_exist);
+
+    // Test 4: Rename to existing table
+    ::ArrowSchema schema2;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema2).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl2"), &schema2, {}, {}, options, false));
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "new_tbl"), Identifier("test_db", "tbl2"),
+                            /*ignore_if_not_exists=*/false),
+        "target table Identifier{database='test_db', table='tbl2'} already exists");
+
+    // Test 5: Cross-database rename
+    ASSERT_OK(catalog.CreateDatabase("test_db2", options, /*ignore_if_exists=*/false));
+    ASSERT_NOK_WITH_MSG(
+        catalog.RenameTable(Identifier("test_db", "new_tbl"),
+                            Identifier("test_db2", "cross_db_tbl"),
+                            /*ignore_if_not_exists=*/false),
+        "Cannot rename table across databases. Cross-database rename is not supported.");
+
+    // Test 6: Rename system table
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(Identifier("test_db", "tbl$system"),
+                                            Identifier("test_db", "new_system_tbl"),
+                                            /*ignore_if_not_exists=*/false),
+                        "Cannot rename system table");
+
+    ArrowSchemaRelease(&schema1);
+    ArrowSchemaRelease(&schema2);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithExternalPath) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create external path directory
+    auto external_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(external_dir);
+    std::string external_path = external_dir->Str();
+
+    // Create a file in external path to simulate external data
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string external_data_file = PathUtil::JoinPath(external_path, "data-file.parquet");
+    ASSERT_OK(fs->WriteFile(external_data_file, "test data", /*overwrite=*/true));
+
+    // Verify external data file exists
+    ASSERT_OK_AND_ASSIGN(bool external_file_exists, fs->Exists(external_data_file));
+    ASSERT_TRUE(external_file_exists);
+
+    // Create table with external path
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_with_external"), &schema, {}, {},
+                                  table_options, false));
+
+    // Verify table exists
+    ASSERT_OK_AND_ASSIGN(bool table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_with_external")));
+    ASSERT_TRUE(table_exists);
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_with_external"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify table is dropped
+    ASSERT_OK_AND_ASSIGN(table_exists,
+                         catalog.TableExists(Identifier("test_db", "tbl_with_external")));
+    ASSERT_FALSE(table_exists);
+
+    // Verify external path is also cleaned up
+    ASSERT_OK_AND_ASSIGN(external_file_exists, fs->Exists(external_path));
+    ASSERT_FALSE(external_file_exists);
+
+    ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("test_db", options, /*ignore_if_exists=*/false));
+
+    // Create multiple external path directories
+    auto external_dir1 = UniqueTestDirectory::Create();
+    auto external_dir2 = UniqueTestDirectory::Create();
+    ASSERT_TRUE(external_dir1);
+    ASSERT_TRUE(external_dir2);
+
+    std::string external_path1 = external_dir1->Str();
+    std::string external_path2 = external_dir2->Str();
+
+    // Create files in external paths
+    ASSERT_OK_AND_ASSIGN(auto fs, FileSystemFactory::Get("local", dir->Str(), {}));
+    std::string external_data_file1 = PathUtil::JoinPath(external_path1, "data-1.parquet");
+    std::string external_data_file2 = PathUtil::JoinPath(external_path2, "data-2.parquet");
+    ASSERT_OK(fs->WriteFile(external_data_file1, "test data 1", /*overwrite=*/true));
+    ASSERT_OK(fs->WriteFile(external_data_file2, "test data 2", /*overwrite=*/true));
+
+    // Create table with multiple external paths
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),
+        arrow::field("f1", arrow::utf8()),
+    };
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    std::map<std::string, std::string> table_options = options;
+    table_options[Options::DATA_FILE_EXTERNAL_PATHS] = external_path1 + "," + external_path2;
+
+    ASSERT_OK(catalog.CreateTable(Identifier("test_db", "tbl_multi_external"), &schema, {}, {},
+                                  table_options, false));
+
+    // Drop the table
+    ASSERT_OK(catalog.DropTable(Identifier("test_db", "tbl_multi_external"),
+                                /*ignore_if_not_exists=*/false));
+
+    // Verify both external paths are cleaned up
+    ASSERT_OK_AND_ASSIGN(bool exists1, fs->Exists(external_path1));
+    ASSERT_OK_AND_ASSIGN(bool exists2, fs->Exists(external_path2));
+    ASSERT_FALSE(exists1);
+    ASSERT_FALSE(exists2);
+
     ArrowSchemaRelease(&schema);
 }
 

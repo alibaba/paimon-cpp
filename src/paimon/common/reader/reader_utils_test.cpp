@@ -100,4 +100,5 @@ TEST(ReaderUtilsTest, TestApplyBitmapToReadBatch) {
                  "NextBatchWithBitmap should always return the result with at least one valid row "
                  "except eof");
 }
+
 }  // namespace paimon::test

@@ -51,9 +51,43 @@ class FieldsComparator {
         return sort_fields_;
     }
 
+    using VariantComparatorFunc =
+        std::function<int32_t(const VariantType& lhs, const VariantType& rhs)>;
+
+    static Result<VariantComparatorFunc> CompareVariant(
+        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view);
+
+    /// Java-compatible ordering for floating-point types:
+    /// -infinity < -0.0 < +0.0 < +infinity < NaN == NaN
+    /// for range index and sst key comparator
+    template <typename T>
+    static int32_t CompareFloatingPoint(T a, T b) {
+        const bool a_nan = std::isnan(a);
+        const bool b_nan = std::isnan(b);
+        if (a_nan && b_nan) {
+            return 0;
+        }
+        if (a_nan) {
+            return 1;
+        }
+        if (b_nan) {
+            return -1;
+        }
+        if (a == b) {
+            const bool a_neg = std::signbit(a);
+            const bool b_neg = std::signbit(b);
+            if (a_neg == b_neg) {
+                return 0;
+            }
+            return a_neg ? -1 : 1;  // -0.0 < +0.0
+        }
+        return a < b ? -1 : 1;
+    }
+
  private:
     using FieldComparatorFunc =
         std::function<int32_t(const InternalRow& lhs, const InternalRow& rhs)>;
+
     FieldsComparator(bool is_ascending_order, const std::vector<int32_t>& sort_fields,
                      std::vector<FieldComparatorFunc>&& comparators)
         : is_ascending_order_(is_ascending_order),

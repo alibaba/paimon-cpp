@@ -16,14 +16,16 @@
 
 #pragma once
 
+#include <chrono>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "paimon/catalog/identifier.h"
 #include "paimon/result.h"
-#include "paimon/schema/schema.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
@@ -31,8 +33,17 @@
 struct ArrowSchema;
 
 namespace paimon {
-class Identifier;
+// Tag name or snapshot id
+using Instant = std::variant<std::string, int64_t>;
 
+class Database;
+class Table;
+class View;
+class Schema;
+class Snapshot;
+class PartitionStatistics;
+class Tag;
+class Identifier;
 /// This interface is responsible for reading and writing metadata such as database/table from a
 /// paimon catalog.
 class PAIMON_EXPORT Catalog {
@@ -98,6 +109,38 @@ class PAIMON_EXPORT Catalog {
     /// @return A result containing a vector of table names in the specified database, or an error
     /// status.
     virtual Result<std::vector<std::string>> ListTables(const std::string& db_name) const = 0;
+
+    /// Drops a database.
+    ///
+    /// @param name Name of the database to be dropped.
+    /// @param ignore_if_not_exists If true, no action is taken if the database does not exist.
+    /// @param cascade If true, drops all tables and functions in the database before dropping the
+    /// database.
+    /// @return A status indicating success or failure.
+    virtual Status DropDatabase(const std::string& name, bool ignore_if_not_exists,
+                                bool cascade) = 0;
+
+    /// Drops a table.
+    ///
+    /// @param identifier Identifier of the table to drop.
+    /// @param ignore_if_not_exists If true, no action is taken if the table does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status DropTable(const Identifier& identifier, bool ignore_if_not_exists) = 0;
+
+    /// Renames a table.
+    ///
+    /// @param from_table Current identifier of the table.
+    /// @param to_table New identifier for the table.
+    /// @param ignore_if_not_exists If true, no action is taken if the table does not exist.
+    /// @return A status indicating success or failure.
+    virtual Status RenameTable(const Identifier& from_table, const Identifier& to_table,
+                               bool ignore_if_not_exists) = 0;
+
+    /// Gets a table.
+    ///
+    /// @param identifier Identifier of the table to get.
+    /// @return A result containing the table, or an error status.
+    virtual Result<std::shared_ptr<Table>> GetTable(const Identifier& identifier) const = 0;
 
     /// Checks whether a database with the specified name exists in the catalog.
     ///

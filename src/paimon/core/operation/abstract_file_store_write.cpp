@@ -26,6 +26,9 @@
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/core/manifest/manifest_entry.h"
 #include "paimon/core/operation/file_store_scan.h"
+#include "paimon/core/operation/file_system_write_restore.h"
+#include "paimon/core/operation/metrics/compaction_metrics.h"
+#include "paimon/core/operation/restore_files.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/table/bucket_mode.h"
@@ -72,7 +75,11 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
-      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {}
+      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
+    // TODO(yonghao.fyh): support with
+    compact_executor_ = CreateDefaultExecutor(4);
+    compaction_metrics_ = std::make_shared<CompactionMetrics>();
+}
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     if (PAIMON_UNLIKELY(batch == nullptr)) {
@@ -120,6 +127,14 @@ Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     return writer->Write(std::move(batch));
 }
 
+Status AbstractFileStoreWrite::Compact(const std::map<std::string, std::string>& partition,
+                                       int32_t bucket, bool full_compaction) {
+    PAIMON_ASSIGN_OR_RAISE(BinaryRow part, file_store_path_factory_->ToBinaryRow(partition));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BatchWriter> writer, GetWriter(part, bucket));
+    assert(writer);
+    return writer->Compact(full_compaction);
+}
+
 Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::PrepareCommit(
     bool wait_compaction, int64_t commit_identifier) {
     if (batch_committed_) {
@@ -159,7 +174,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
     }
 
     std::vector<std::shared_ptr<CommitMessage>> result;
-    auto metrics = std::make_shared<MetricsImpl>();
+    auto metrics = compaction_metrics_->GetMetrics();
     for (auto partition_iter = writers_.begin(); partition_iter != writers_.end();) {
         auto& partition = partition_iter->first;
         auto& buckets = partition_iter->second;
@@ -172,19 +187,25 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
                 partition, bucket, writer_container.total_buckets, increment.GetNewFilesIncrement(),
                 increment.GetCompactIncrement());
             result.push_back(committable);
-            if (committable->IsEmpty()) {
-                // Condition 1: There is no more record waiting to be committed. Note that the
-                // condition is < (instead of <=), because each commit identifier may have
-                // multiple snapshots. We must make sure all snapshots of this identifier are
-                // committed.
-                // Condition 2: No compaction is in progress. That is, no more changelog will be
-                // produced.
-                //
-                // Condition 3: The writer has no postponed compaction like gentle lookup
-                // compaction.
-                if (writer_container.last_modified_commit_identifier <
-                        latest_committed_identifier &&
-                    !writer_container.writer->IsCompacting()) {
+            if (!committable->IsEmpty()) {
+                writer_container.last_modified_commit_identifier = commit_identifier;
+                metrics->Merge(writer_container.writer->GetMetrics());
+                ++bucket_iter;
+                continue;
+            }
+            // Condition 1: There is no more record waiting to be committed. Note that the
+            // condition is < (instead of <=), because each commit identifier may have
+            // multiple snapshots. We must make sure all snapshots of this identifier are
+            // committed.
+            // Condition 2: No compaction is in progress. That is, no more changelog will be
+            // produced.
+            //
+            // Condition 3: The writer has no postponed compaction like gentle lookup
+            // compaction.
+            if (writer_container.last_modified_commit_identifier < latest_committed_identifier) {
+                PAIMON_ASSIGN_OR_RAISE(bool has_pending_compaction,
+                                       writer_container.writer->CompactNotCompleted());
+                if (!has_pending_compaction) {
                     // Clear writer if no update, and if its latest modification has committed.
                     //
                     // We need a mechanism to clear writers, otherwise there will be more and
@@ -199,15 +220,11 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
                                      latest_committed_identifier, commit_identifier);
                     PAIMON_RETURN_NOT_OK(writer_container.writer->Close());
                     bucket_iter = buckets.erase(bucket_iter);
-                } else {
-                    metrics->Merge(writer_container.writer->GetMetrics());
-                    ++bucket_iter;
+                    continue;
                 }
-            } else {
-                writer_container.last_modified_commit_identifier = commit_identifier;
-                metrics->Merge(writer_container.writer->GetMetrics());
-                ++bucket_iter;
             }
+            metrics->Merge(writer_container.writer->GetMetrics());
+            ++bucket_iter;
         }
 
         if (buckets.empty()) {
@@ -216,6 +233,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             ++partition_iter;
         }
     }
+
     metrics_->Overwrite(metrics);
     return result;
 }
@@ -227,6 +245,7 @@ Status AbstractFileStoreWrite::Close() {
         }
     }
     writers_.clear();
+    compact_executor_->ShutdownNow();
     return Status::OK();
 }
 
@@ -238,9 +257,8 @@ int32_t AbstractFileStoreWrite::GetDefaultBucketNum() const {
     return options_.GetBucket();
 }
 
-Result<int32_t> AbstractFileStoreWrite::ScanExistingFileMetas(
-    const Snapshot& snapshot, const BinaryRow& partition, int32_t bucket,
-    std::vector<std::shared_ptr<DataFileMeta>>* restore_files) const {
+Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMetas(
+    const BinaryRow& partition, int32_t bucket) const {
     PAIMON_ASSIGN_OR_RAISE(auto part_values,
                            file_store_path_factory_->GeneratePartitionVector(partition));
     std::map<std::string, std::string> part_values_map;
@@ -256,22 +274,24 @@ Result<int32_t> AbstractFileStoreWrite::ScanExistingFileMetas(
         /*vector_search=*/nullptr);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
-                           scan->WithSnapshot(snapshot)->CreatePlan());
-    std::vector<ManifestEntry> entries = plan->Files();
+    // TODO(yonghao.fyh): create index file handler
+    FileSystemWriteRestore restore(snapshot_manager_, std::move(scan));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files, restore.GetRestoreFiles());
+
+    std::optional<int32_t> restored_total_buckets = restore_files->TotalBuckets();
     int32_t total_buckets = GetDefaultBucketNum();
-    for (auto& entry : entries) {
-        if (!ignore_num_bucket_check_ && entry.TotalBuckets() != options_.GetBucket()) {
-            return Status::Invalid(fmt::format(
-                "Try to write table with a new bucket num {}, but the previous "
-                "bucket num is {}. Please switch to batch mode, and perform INSERT OVERWRITE to "
-                "rescale current data layout first.",
-                options_.GetBucket(), entry.TotalBuckets()));
-        }
-        total_buckets = entry.TotalBuckets();
-        restore_files->push_back(std::move(entry.File()));
+    if (restored_total_buckets) {
+        total_buckets = restored_total_buckets.value();
     }
-    return total_buckets;
+
+    if (!ignore_num_bucket_check_ && total_buckets != options_.GetBucket()) {
+        return Status::Invalid(fmt::format(
+            "Try to write table with a new bucket num {}, but the previous "
+            "bucket num is {}. Please switch to batch mode, and perform INSERT OVERWRITE to "
+            "rescale current data layout first.",
+            options_.GetBucket(), total_buckets));
+    }
+    return restore_files;
 }
 
 Result<std::shared_ptr<BatchWriter>> AbstractFileStoreWrite::GetWriter(const BinaryRow& partition,

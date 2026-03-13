@@ -65,11 +65,19 @@ class MergeTreeWriter : public BatchWriter {
         [[maybe_unused]] auto status = DoClose();
     }
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
-    Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
+    Status Compact(bool full_compaction) override {
+        return Status::NotImplemented("not implemented");
+    }
 
-    bool IsCompacting() const override {
+    Result<bool> CompactNotCompleted() override {
         return false;
     }
+
+    Status Sync() override {
+        return Status::NotImplemented("not implemented");
+    }
+
+    Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     Status Close() override {
         return DoClose();
@@ -92,9 +100,6 @@ class MergeTreeWriter : public BatchWriter {
     std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
     CreateRollingRowWriter() const;
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
-
-    // in case write batch size is too large and overflow arrow array
-    static constexpr int32_t MAX_PROJECTION_BATCH_SIZE = 100000;
 
  private:
     int64_t last_sequence_number_;

@@ -73,6 +73,18 @@ Result<std::shared_ptr<DataFileMeta>> DataFileMeta::ForAppend(
         embedded_index, file_source, value_stats_cols, external_path, first_row_id, write_cols);
 }
 
+Result<std::shared_ptr<DataFileMeta>> DataFileMeta::Upgrade(int32_t new_level) const {
+    if (new_level <= level) {
+        return Status::Invalid(
+            fmt::format("new level {} should be greater than current level {}", new_level, level));
+    }
+    return std::make_shared<DataFileMeta>(
+        file_name, file_size, row_count, min_key, max_key, key_stats, value_stats,
+        min_sequence_number, max_sequence_number, schema_id, new_level, extra_files, creation_time,
+        delete_row_count, embedded_index, file_source, value_stats_cols, external_path,
+        first_row_id, write_cols);
+}
+
 DataFileMeta::DataFileMeta(
     const std::string& _file_name, int64_t _file_size, int64_t _row_count,
     const BinaryRow& _min_key, const BinaryRow& _max_key, const SimpleStats& _key_stats,

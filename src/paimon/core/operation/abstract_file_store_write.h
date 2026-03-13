@@ -45,6 +45,7 @@ namespace paimon {
 
 struct DataFileMeta;
 class BatchWriter;
+class CompactionMetrics;
 class FileStoreScan;
 class FileStorePathFactory;
 class ScanFilter;
@@ -57,6 +58,7 @@ class BinaryRow;
 class Executor;
 class MemoryPool;
 class RecordBatch;
+class RestoreFiles;
 
 class AbstractFileStoreWrite : public FileStoreWrite {
  public:
@@ -76,6 +78,9 @@ class AbstractFileStoreWrite : public FileStoreWrite {
                            const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
+    Status Compact(const std::map<std::string, std::string>& partition, int32_t bucket,
+                   bool full_compaction) override;
+
     Result<std::vector<std::shared_ptr<CommitMessage>>> PrepareCommit(
         bool wait_compaction, int64_t commit_identifier) override;
     Status Close() override;
@@ -104,10 +109,8 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     virtual Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const = 0;
 
-    // return actual total bucket in the specific partition
-    Result<int32_t> ScanExistingFileMetas(
-        const Snapshot& snapshot, const BinaryRow& partition, int32_t bucket,
-        std::vector<std::shared_ptr<DataFileMeta>>* restore_files) const;
+    Result<std::shared_ptr<RestoreFiles>> ScanExistingFileMetas(const BinaryRow& partition,
+                                                                int32_t bucket) const;
     int32_t GetDefaultBucketNum() const;
 
     std::shared_ptr<MemoryPool> pool_;
@@ -122,6 +125,8 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> partition_schema_;
     CoreOptions options_;
+    std::shared_ptr<Executor> compact_executor_;
+    std::shared_ptr<CompactionMetrics> compaction_metrics_;
 
  private:
     Result<std::shared_ptr<BatchWriter>> GetWriter(const BinaryRow& partition, int32_t bucket);
