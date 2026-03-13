@@ -81,7 +81,7 @@ Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalR
     auto lookup_level0 =
         [this](const std::shared_ptr<InternalRow>& key,
                const std::set<std::shared_ptr<DataFileMeta>, Levels::Level0Comparator>& level0)
-        -> Result<std::optional<T>> { return this->lookupLevel0(key, level0); };
+        -> Result<std::optional<T>> { return this->LookupLevel0(key, level0); };
     return LookupUtils::Lookup(*levels_, key, start_level, std::function(lookup),
                                std::function(lookup_level0));
 }
