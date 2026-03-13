@@ -504,6 +504,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/file_system_catalog_test.cpp
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
+                    core/compact/compact_deletion_file_test.cpp
                     core/core_options_test.cpp
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
                     core/deletionvectors/bitmap_deletion_vector_test.cpp
