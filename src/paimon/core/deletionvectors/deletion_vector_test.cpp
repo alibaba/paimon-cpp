@@ -107,7 +107,7 @@ TEST(DeletionVectorTest, TestCompatibleWithJava) {
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamLengthMismatch) {
     std::vector<uint8_t> data;
-    AppendInt32BigEndian(&data, /*bitmap_length=*/8);
+    AppendInt32BigEndian(&data, /*value=*/8);
     AppendInt32BigEndian(&data, BitmapDeletionVector::MAGIC_NUMBER);
 
     auto input_stream = std::make_shared<ByteArrayInputStream>(
@@ -122,7 +122,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamLengthMismatch) {
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidBitmapLength) {
     std::vector<uint8_t> data;
-    AppendInt32BigEndian(&data, /*bitmap_length=*/3);
+    AppendInt32BigEndian(&data, /*value=*/3);
     AppendInt32BigEndian(&data, BitmapDeletionVector::MAGIC_NUMBER);
 
     auto input_stream = std::make_shared<ByteArrayInputStream>(
@@ -137,7 +137,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidBitmapLength) {
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
     std::vector<uint8_t> data;
-    AppendInt32BigEndian(&data, /*bitmap_length=*/8);
+    AppendInt32BigEndian(&data, /*value=*/8);
     // Trigger: EndianSwapValue(magic_number) == Bitmap64DeletionVector::MAGIC_NUMBER.
     AppendInt32BigEndian(&data, EndianSwapValue(Bitmap64DeletionVector::MAGIC_NUMBER));
 
@@ -153,7 +153,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
     std::vector<uint8_t> data;
-    AppendInt32BigEndian(&data, /*bitmap_length=*/8);
+    AppendInt32BigEndian(&data, /*value=*/8);
     AppendInt32BigEndian(&data, /*invalid_magic=*/123456789);
 
     auto input_stream = std::make_shared<ByteArrayInputStream>(
