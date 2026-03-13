@@ -17,6 +17,7 @@
 #pragma once
 #include <sstream>
 
+#include "fmt/format.h"
 #include "paimon/common/compression/block_compression_type.h"
 #include "paimon/common/memory/memory_slice.h"
 
@@ -25,13 +26,16 @@ namespace paimon {
 /// Utils for sst file.
 class SstFileUtils {
  public:
-    static BlockCompressionType From(int8_t v) {
-        if (v == 1) {
+    static Result<BlockCompressionType> From(int8_t v) {
+        if (v == 0) {
+            return BlockCompressionType::NONE;
+        } else if (v == 1) {
             return BlockCompressionType::ZSTD;
         } else if (v == 2) {
             return BlockCompressionType::LZ4;
         }
-        return BlockCompressionType::NONE;
+        return Status::Invalid(
+            fmt::format("not support compression type code {}", static_cast<int32_t>(v)));
     }
 
     static std::string ToHexString(int32_t crc32c) {

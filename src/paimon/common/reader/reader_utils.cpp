@@ -23,6 +23,7 @@
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
+#include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
@@ -105,4 +106,5 @@ BatchReader::ReadBatchWithBitmap ReaderUtils::AddAllValidBitmap(BatchReader::Rea
     all_valid.AddRange(0, batch.first->length);
     return std::make_pair(std::move(batch), std::move(all_valid));
 }
+
 }  // namespace paimon

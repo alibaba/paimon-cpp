@@ -55,6 +55,7 @@ class SstFileWriter {
 
     Result<std::shared_ptr<BlockHandle>> WriteIndexBlock();
 
+    // When bloom-filter is disabled, return nullptr.
     Result<std::shared_ptr<BloomFilterHandle>> WriteBloomFilter();
 
     Status WriteFooter(const std::shared_ptr<BlockHandle>& index_block_handle,

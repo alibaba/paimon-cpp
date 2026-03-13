@@ -22,6 +22,8 @@ namespace paimon {
 class ScanMetrics {
  public:
     static constexpr char LAST_SCAN_DURATION[] = "lastScanDuration";
+    // Histogram metric for scan plan duration (milliseconds).
+    static constexpr char SCAN_DURATION[] = "scanDuration";
     static constexpr char LAST_SCANNED_SNAPSHOT_ID[] = "lastScannedSnapshotId";
     static constexpr char LAST_SCANNED_MANIFESTS[] = "lastScannedManifests";
     static constexpr char LAST_SCAN_SKIPPED_TABLE_FILES[] = "lastScanSkippedTableFiles";

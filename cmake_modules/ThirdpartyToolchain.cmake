@@ -349,6 +349,10 @@ set(EP_COMMON_CMAKE_ARGS
     -DCMAKE_C_FLAGS=${EP_C_FLAGS}
     -DCMAKE_INSTALL_LIBDIR=lib)
 
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
+    list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
+endif()
+
 macro(build_lucene)
     message(STATUS "Building lucene from source")
 

@@ -66,15 +66,23 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     if (!data_split) {
         return Status::Invalid("cannot cast split to data_split in RawFileSplitRead");
     }
-    auto deletion_file_map = CreateDeletionFileMap(*data_split);
+    return CreateReader(data_split->Partition(), data_split->Bucket(), data_split->DataFiles(),
+                        data_split->DeletionFiles());
+}
+
+Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
+    const BinaryRow& partition, int32_t bucket,
+    const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+    const std::vector<std::optional<DeletionFile>>& deletion_files) {
     const auto& predicate = context_->GetPredicate();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
+                           path_factory_->CreateDataFilePathFactory(partition, bucket));
+
+    auto deletion_file_map = CreateDeletionFileMap(data_files, deletion_files);
     PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        path_factory_->CreateDataFilePathFactory(data_split->Partition(), data_split->Bucket()));
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
-                           CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(),
-                                                raw_read_schema_, predicate, deletion_file_map,
-                                                /*row_ranges=*/{}, data_file_path_factory));
+        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+        CreateRawFileReaders(partition, data_files, raw_read_schema_, predicate, deletion_file_map,
+                             /*row_ranges=*/{}, data_file_path_factory));
     auto concat_batch_reader =
         std::make_unique<ConcatBatchReader>(std::move(raw_file_readers), pool_);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,

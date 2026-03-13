@@ -281,7 +281,7 @@ Result<CommitIncrement> PostponeBucketWriter::DrainIncrement() {
     DataIncrement data_increment(std::move(new_files_), /*deleted_files=*/{}, {});
     CompactIncrement compact_increment({}, {}, {});
     new_files_.clear();
-    return CommitIncrement(data_increment, compact_increment);
+    return CommitIncrement(data_increment, compact_increment, /*compact_deletion_file=*/nullptr);
 }
 
 }  // namespace paimon

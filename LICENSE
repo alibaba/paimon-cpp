@@ -281,6 +281,8 @@ This product includes code from RocksDB.
 * endian utility in src/paimon/common/utils/math.h
 * uuid utility in src/paimon/common/utils/uuid.h
 * Assert utilities in src/paimon/testing/utils/testharness.cpp and src/paimon/testing/utils/testharness.h
+* histogram utilities in src/paimon/common/metrics/histogram.cpp and src/paimon/common/metrics/histogram.h (inspired by RocksDB)
+* histogram windowing utilities in src/paimon/common/metrics/histogram_windowing.cpp and src/paimon/common/metrics/histogram_windowing.h (inspired by RocksDB)
 
 Copyright: 2011-present, Facebook, Inc.  All rights reserved.
 Copyright: 2011 The LevelDB Authors. All rights reserved.

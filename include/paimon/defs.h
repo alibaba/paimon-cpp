@@ -329,6 +329,22 @@ struct PAIMON_EXPORT Options {
     /// ratio (e.g. `compaction.offpeak-ratio=20`) to enable more aggressive data compaction.
     /// Default is 0.
     static const char COMPACTION_OFFPEAK_RATIO[];
+    /// "lookup.cache.bloom.filter.enabled" - Whether to enable the bloom filter for lookup cache.
+    /// Default value is true.
+    static const char LOOKUP_CACHE_BLOOM_FILTER_ENABLED[];
+    /// "lookup.cache.bloom.filter.fpp" - Define the default false positive probability for lookup
+    /// cache bloom filters. Default value is 0.05.
+    static const char LOOKUP_CACHE_BLOOM_FILTER_FPP[];
+    /// "lookup.cache-spill-compression" - Spill compression for lookup cache, currently zstd, none,
+    /// lz4 are supported. Default value is zstd.
+    /// Noted that java paimon also supports lzo which paimon-cpp does not support for now.
+    static const char LOOKUP_CACHE_SPILL_COMPRESSION[];
+    /// "spill-compression.zstd-level" - Default spill compression zstd level. For higher
+    /// compression rates, it can be configured to 9, but the read and write speed will
+    /// significantly decrease. Default value is 1.
+    static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
+    /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
+    static const char CACHE_PAGE_SIZE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "paimon/core/io/data_file_meta.h"
+#include "paimon/status.h"
 
 namespace paimon {
 class CompactDeletionFile;

@@ -43,6 +43,9 @@ class PAIMON_EXPORT ArrowUtils {
     // avoid subsequent multi-threading problems.
     static void TraverseArray(const std::shared_ptr<arrow::Array>& array);
 
+    static Result<std::shared_ptr<arrow::StructArray>> RemoveFieldFromStructArray(
+        const std::shared_ptr<arrow::StructArray>& struct_array, const std::string& field_name);
+
  private:
     static Status InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
                                              const std::shared_ptr<arrow::Array>& data);

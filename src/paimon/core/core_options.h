@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "paimon/core/options/changelog_producer.h"
+#include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
@@ -132,6 +133,12 @@ class PAIMON_EXPORT CoreOptions {
     int32_t GetCompactOffPeakStartHour() const;
     int32_t GetCompactOffPeakEndHour() const;
     int32_t GetCompactOffPeakRatio() const;
+
+    bool LookupCacheBloomFilterEnabled() const;
+    double GetLookupCacheBloomFilterFpp() const;
+
+    const CompressOptions& GetLookupCompressOptions() const;
+    int32_t GetCachePageSize() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 

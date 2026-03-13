@@ -62,6 +62,10 @@ class RawFileSplitRead : public AbstractSplitRead {
                      const std::shared_ptr<Executor>& executor);
 
     Result<std::unique_ptr<BatchReader>> CreateReader(const std::shared_ptr<Split>& split) override;
+    Result<std::unique_ptr<BatchReader>> CreateReader(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& files,
+        const std::vector<std::optional<DeletionFile>>& deletion_files);
 
     Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 

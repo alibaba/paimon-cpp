@@ -21,6 +21,7 @@
 #include "paimon/common/data/binary_writer.h"
 #include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
+#include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/utils/var_length_int_utils.h"
 namespace paimon {
 class RowCompactedSerializer {
@@ -35,6 +36,9 @@ class RowCompactedSerializer {
     Result<std::shared_ptr<Bytes>> SerializeToBytes(const InternalRow& row);
 
     Result<std::unique_ptr<InternalRow>> Deserialize(const std::shared_ptr<Bytes>& bytes);
+
+    static Result<MemorySlice::SliceComparator> CreateSliceComparator(
+        const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     class RowWriter {

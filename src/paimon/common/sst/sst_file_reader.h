@@ -40,21 +40,9 @@ class SstFileIterator;
 /// queries. Note that this class is NOT thread-safe.
 class SstFileReader {
  public:
-    static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<paimon::FileSystem>& fs,
-        const std::string& file_path,
-        std::function<int32_t(const std::shared_ptr<MemorySlice>&,
-                              const std::shared_ptr<MemorySlice>&)>
-            comparator);
-
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                  const std::shared_ptr<BlockCache>& block_cache,
-                  const std::shared_ptr<BloomFilter>& bloom_filter,
-                  const std::shared_ptr<paimon::BlockReader>& index_block_reader,
-                  std::function<int32_t(const std::shared_ptr<MemorySlice>&,
-                                        const std::shared_ptr<MemorySlice>&)>
-                      comparator);
-    ~SstFileReader() = default;
+    static Result<std::shared_ptr<SstFileReader>> Create(const std::shared_ptr<MemoryPool>& pool,
+                                                         const std::shared_ptr<InputStream>& input,
+                                                         MemorySlice::SliceComparator comparator);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
@@ -64,7 +52,7 @@ class SstFileReader {
      * @param key serialized key
      * @return corresponding serialized value, nullptr if not found.
      */
-    std::shared_ptr<Bytes> Lookup(std::shared_ptr<Bytes> key);
+    Result<std::shared_ptr<Bytes>> Lookup(const std::shared_ptr<Bytes>& key);
 
     Result<std::unique_ptr<BlockIterator>> GetNextBlock(
         std::unique_ptr<BlockIterator>& index_iterator);
@@ -85,30 +73,36 @@ class SstFileReader {
     Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
                                                    bool index);
 
+    Status Close();
+
  private:
     static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
         const std::shared_ptr<paimon::MemorySegment>& compressed_data,
         const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool);
+
+    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
+                  const std::shared_ptr<BlockCache>& block_cache,
+                  const std::shared_ptr<BloomFilter>& bloom_filter,
+                  const std::shared_ptr<paimon::BlockReader>& index_block_reader,
+                  MemorySlice::SliceComparator comparator);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<BlockCache> block_cache_;
     std::shared_ptr<BloomFilter> bloom_filter_;
     std::shared_ptr<BlockReader> index_block_reader_;
-    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator_;
+    MemorySlice::SliceComparator comparator_;
 };
 
 class SstFileIterator {
  public:
-    SstFileIterator() = default;
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 
     /**
      * Seek to the position of the record whose key is exactly equal to or greater than the
      * specified key.
      */
-    Status SeekTo(std::shared_ptr<Bytes>& key);
+    Status SeekTo(const std::shared_ptr<Bytes>& key);
 
  private:
     SstFileReader* reader_;

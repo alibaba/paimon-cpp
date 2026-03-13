@@ -34,7 +34,7 @@ std::shared_ptr<MemorySegment> CacheManager::GetPage(
     return cache->Get(key, supplier)->GetSegment();
 }
 
-void CacheManager::InvalidPage(std::shared_ptr<CacheKey>& key) {
+void CacheManager::InvalidPage(const std::shared_ptr<CacheKey>& key) {
     if (key->IsIndex()) {
         index_cache_->Invalidate(key);
     } else {

@@ -53,6 +53,13 @@ class BlockCache {
         return it->second->GetSegment();
     }
 
+    void Close() {
+        for (const auto& [key, _] : blocks_) {
+            cache_manager_->InvalidPage(key);
+        }
+        blocks_.clear();
+    }
+
  private:
     Result<MemorySegment> ReadFrom(int64_t offset, int length) {
         PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));

@@ -390,6 +390,16 @@ Status FileStoreCommitImpl::Commit(const std::shared_ptr<ManifestCommittable>& c
         attempt += cnt;
         ++generated_snapshot;
     }
+
+    if (!compact_table_files.empty() || !compact_table_index_files.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(
+            int32_t cnt, TryCommit(compact_table_files, compact_table_index_files,
+                                   committable->Identifier(), committable->Watermark(),
+                                   committable->LogOffsets(), committable->Properties(),
+                                   Snapshot::CommitKind::Compact(), /*check_append_files=*/true));
+        attempt += cnt;
+        ++generated_snapshot;
+    }
     auto table_files_added = static_cast<int32_t>(append_table_files.size());
     int32_t table_files_deleted = 0;
     int64_t compaction_input_file_size = 0;

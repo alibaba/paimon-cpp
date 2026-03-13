@@ -163,7 +163,9 @@ Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() cons
         [](const int64_t sum, const ManifestFileMeta& manifest_file_meta) {
             return sum + manifest_file_meta.NumAddedFiles() - manifest_file_meta.NumDeletedFiles();
         });
-    metrics_->SetCounter(ScanMetrics::LAST_SCAN_DURATION, duration.Get());
+    const uint64_t scan_duration_ms = duration.Get();
+    metrics_->SetCounter(ScanMetrics::LAST_SCAN_DURATION, scan_duration_ms);
+    metrics_->ObserveHistogram(ScanMetrics::SCAN_DURATION, static_cast<double>(scan_duration_ms));
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_SNAPSHOT_ID,
                          snapshot.has_value() ? snapshot.value().Id() : int64_t{0});
     metrics_->SetCounter(ScanMetrics::LAST_SCANNED_MANIFESTS, filtered_manifest_file_metas.size());

@@ -171,7 +171,7 @@ Result<CommitIncrement> MergeTreeWriter::DrainIncrement() {
     CompactIncrement compact_increment({}, {}, {});
     new_files_.clear();
     deleted_files_.clear();
-    return CommitIncrement(data_increment, compact_increment);
+    return CommitIncrement(data_increment, compact_increment, /*compact_deletion_file=*/nullptr);
 }
 
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>

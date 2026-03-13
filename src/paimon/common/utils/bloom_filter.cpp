@@ -39,11 +39,12 @@ int32_t BloomFilter::OptimalNumOfHashFunctions(int64_t expect_entries, int64_t b
     }
     double ratio = static_cast<double>(bit_size) / static_cast<double>(expect_entries);
     double result = ratio * std::log(2.0);
-    return std::max(1, static_cast<int>(std::round(result)));
+    return std::max(1, static_cast<int32_t>(std::round(result)));
 }
 
 std::shared_ptr<BloomFilter> BloomFilter::Create(int64_t expect_entries, double fpp) {
-    int bytes = static_cast<int>(ceil(BloomFilter::OptimalNumOfBits(expect_entries, fpp) / 8.0));
+    auto bytes =
+        static_cast<int32_t>(ceil(BloomFilter::OptimalNumOfBits(expect_entries, fpp) / 8.0));
     return std::make_shared<BloomFilter>(expect_entries, bytes);
 }
 
@@ -55,7 +56,7 @@ BloomFilter::BloomFilter(int64_t expected_entries, int32_t byte_length)
 }
 
 Status BloomFilter::AddHash(int32_t hash1) {
-    int hash2 = hash1 >> 16;
+    int32_t hash2 = hash1 >> 16;
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
         int32_t combined_hash = hash1 + (i * hash2);
@@ -72,7 +73,7 @@ Status BloomFilter::AddHash(int32_t hash1) {
 bool BloomFilter::TestHash(int32_t hash1) const {
     int32_t hash2 = hash1 >> 16;
 
-    for (int i = 1; i <= num_hash_functions_; i++) {
+    for (int32_t i = 1; i <= num_hash_functions_; i++) {
         int32_t combined_hash = hash1 + (i * hash2);
         // hashcode should be positive, flip all the bits if it's negative
         if (combined_hash < 0) {

@@ -49,16 +49,45 @@ TEST(MetricsImplTest, TestSimple) {
                         "Key error: metric 'some_metric' not found");
 }
 
+TEST(MetricsImplTest, TestGaugeMergeAndOverwrite) {
+    auto metrics = std::make_shared<MetricsImpl>();
+    metrics->SetGauge("g1", 1.5);
+    metrics->SetGauge("g2", 2.0);
+
+    auto other = std::make_shared<MetricsImpl>();
+    other->SetGauge("g2", 3.25);
+    other->SetGauge("g3", 4.75);
+
+    metrics->Merge(other);
+
+    ASSERT_OK_AND_ASSIGN(double gauge, metrics->GetGauge("g1"));
+    EXPECT_DOUBLE_EQ(1.5, gauge);
+    ASSERT_OK_AND_ASSIGN(gauge, metrics->GetGauge("g2"));
+    EXPECT_DOUBLE_EQ(5.25, gauge);
+    ASSERT_OK_AND_ASSIGN(gauge, metrics->GetGauge("g3"));
+    EXPECT_DOUBLE_EQ(4.75, gauge);
+
+    metrics->Overwrite(other);
+
+    ASSERT_OK_AND_ASSIGN(gauge, metrics->GetGauge("g2"));
+    EXPECT_DOUBLE_EQ(3.25, gauge);
+    ASSERT_OK_AND_ASSIGN(gauge, metrics->GetGauge("g3"));
+    EXPECT_DOUBLE_EQ(4.75, gauge);
+    ASSERT_NOK_WITH_MSG(metrics->GetGauge("g1"), "Key error: metric 'g1' not found");
+}
+
 TEST(MetricsImplTest, TestToString) {
     std::shared_ptr<MetricsImpl> metrics1 = std::make_shared<MetricsImpl>();
     metrics1->SetCounter("k1", 1);
     metrics1->SetCounter("k2", 2);
+    metrics1->SetGauge("g1", 1.25);
     std::shared_ptr<MetricsImpl> metrics2 = std::make_shared<MetricsImpl>();
     metrics2->SetCounter("m1", 3);
     metrics2->SetCounter("m2", 4);
     metrics2->SetCounter("k2", 5);
+    metrics2->SetGauge("g2", 2.5);
     metrics1->Merge(metrics2);
-    EXPECT_EQ(metrics1->ToString(), "{\"k1\":1,\"k2\":7,\"m1\":3,\"m2\":4}");
+    EXPECT_EQ(metrics1->ToString(), "{\"k1\":1,\"k2\":7,\"m1\":3,\"m2\":4,\"g1\":1.25,\"g2\":2.5}");
 }
 
 }  // namespace paimon::test

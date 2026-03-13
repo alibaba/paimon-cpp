@@ -55,6 +55,7 @@ AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id
                                    const std::optional<std::vector<std::string>>& write_cols,
                                    int64_t max_sequence_number,
                                    const std::shared_ptr<DataFilePathFactory>& path_factory,
+                                   const std::shared_ptr<CompactManager>& compact_manager,
                                    const std::shared_ptr<MemoryPool>& memory_pool)
     : options_(options),
       schema_id_(schema_id),
@@ -62,6 +63,7 @@ AppendOnlyWriter::AppendOnlyWriter(const CoreOptions& options, int64_t schema_id
       write_cols_(write_cols),
       seq_num_counter_(std::make_shared<LongCounter>(max_sequence_number + 1)),
       path_factory_(path_factory),
+      compact_manager_(compact_manager),
       memory_pool_(memory_pool),
       metrics_(std::make_shared<MetricsImpl>()) {}
 
@@ -83,24 +85,67 @@ Status AppendOnlyWriter::Write(std::unique_ptr<RecordBatch>&& batch) {
 }
 
 Result<CommitIncrement> AppendOnlyWriter::PrepareCommit(bool wait_compaction) {
-    PAIMON_RETURN_NOT_OK(Flush());
+    PAIMON_RETURN_NOT_OK(
+        Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false));
+    PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_compaction || options_.CommitForceCompact()));
     return DrainIncrement();
 }
 
 Result<CommitIncrement> AppendOnlyWriter::DrainIncrement() {
     DataIncrement data_increment(std::move(new_files_), std::move(deleted_files_), {});
-    CompactIncrement compact_increment({}, {}, {});
+    CompactIncrement compact_increment(std::move(compact_before_), std::move(compact_after_), {});
+    auto drain_deletion_file = compact_deletion_file_;
+
     new_files_.clear();
     deleted_files_.clear();
-    return CommitIncrement(data_increment, compact_increment);
+    compact_before_.clear();
+    compact_after_.clear();
+    compact_deletion_file_ = nullptr;
+
+    return CommitIncrement(data_increment, compact_increment, drain_deletion_file);
 }
 
-Status AppendOnlyWriter::Flush() {
+Status AppendOnlyWriter::TrySyncLatestCompaction(bool blocking) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<CompactResult>> result,
+                           compact_manager_->GetCompactionResult(blocking));
+    if (result.has_value()) {
+        const auto& compaction_result = result.value();
+        const auto& before = compaction_result->Before();
+        compact_before_.insert(compact_before_.end(), before.begin(), before.end());
+        const auto& after = compaction_result->After();
+        compact_after_.insert(compact_after_.end(), after.begin(), after.end());
+        PAIMON_RETURN_NOT_OK(UpdateCompactDeletionFile(compaction_result->DeletionFile()));
+    }
+    return Status::OK();
+}
+
+Status AppendOnlyWriter::UpdateCompactDeletionFile(
+    const std::shared_ptr<CompactDeletionFile>& new_deletion_file) {
+    if (new_deletion_file) {
+        if (compact_deletion_file_ == nullptr) {
+            compact_deletion_file_ = new_deletion_file;
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(compact_deletion_file_,
+                                   new_deletion_file->MergeOldFile(compact_deletion_file_));
+        }
+    }
+    return Status::OK();
+}
+
+Status AppendOnlyWriter::Flush(bool wait_for_latest_compaction, bool forced_full_compaction) {
+    std::vector<std::shared_ptr<DataFileMeta>> flushed_files;
     if (writer_) {
         PAIMON_RETURN_NOT_OK(writer_->Close());
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
-                               writer_->GetResult());
-        new_files_.insert(new_files_.end(), flushed_files.begin(), flushed_files.end());
+        PAIMON_ASSIGN_OR_RAISE(flushed_files, writer_->GetResult());
+    }
+    // add new generated files
+    for (const auto& flushed_file : flushed_files) {
+        compact_manager_->AddNewFile(flushed_file);
+    }
+    PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_for_latest_compaction));
+    PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(forced_full_compaction));
+    new_files_.insert(new_files_.end(), flushed_files.begin(), flushed_files.end());
+    if (writer_) {
         metrics_->Merge(writer_->GetMetrics());
         writer_.reset();
     }
@@ -198,10 +243,30 @@ AppendOnlyWriter::RollingFileWriterResult AppendOnlyWriter::CreateRollingBlobWri
         rolling_blob_file_writer_creator, arrow::struct_(write_schema_->fields()));
 }
 
+Status AppendOnlyWriter::Sync() {
+    return TrySyncLatestCompaction(/*blocking=*/true);
+}
+
 Status AppendOnlyWriter::Close() {
+    // cancel compaction so that it does not block job cancelling
+    compact_manager_->CancelCompaction();
+    PAIMON_RETURN_NOT_OK(Sync());
+
+    PAIMON_RETURN_NOT_OK(compact_manager_->Close());
+    auto fs = options_.GetFileSystem();
+    for (const auto& file : compact_after_) {
+        // AppendOnlyCompactManager will rewrite the file and no file upgrade will occur, so we
+        // can directly delete the file in compact_after_.
+        [[maybe_unused]] auto s = fs->Delete(path_factory_->ToPath(file));
+    }
+
     if (writer_) {
         writer_->Abort();
         writer_.reset();
+    }
+
+    if (compact_deletion_file_ != nullptr) {
+        compact_deletion_file_->Clean();
     }
     return Status::OK();
 }

@@ -31,6 +31,7 @@
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/common/fs/external_path_provider.h"
+#include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/compact_increment.h"
 #include "paimon/core/io/data_file_path_factory.h"
@@ -53,10 +54,12 @@ class AppendOnlyWriterTest : public testing::Test {
  public:
     void SetUp() override {
         memory_pool_ = GetDefaultPool();
+        compact_manager_ = std::make_shared<NoopCompactManager>();
     }
 
  private:
     std::shared_ptr<MemoryPool> memory_pool_;
+    std::shared_ptr<CompactManager> compact_manager_;
 };
 
 TEST_F(AppendOnlyWriterTest, TestEmptyCommits) {
@@ -79,8 +82,8 @@ TEST_F(AppendOnlyWriterTest, TestEmptyCommits) {
     ASSERT_OK(path_factory->Init(dir->Str(), "mock_format", options.DataFilePrefix(), nullptr));
 
     AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
-                            /*max_sequence_number=*/-1, path_factory, memory_pool_);
-    ASSERT_FALSE(writer.IsCompacting());
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
     for (int i = 0; i < 3; i++) {
         ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer.PrepareCommit(true));
         ASSERT_TRUE(inc.GetNewFilesIncrement().IsEmpty());
@@ -108,8 +111,8 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndPrepareCommit) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "mock_format", options.DataFilePrefix(), nullptr));
     AppendOnlyWriter writer(options, /*schema_id=*/2, schema, /*write_cols=*/std::nullopt,
-                            /*max_sequence_number=*/-1, path_factory, memory_pool_);
-    ASSERT_FALSE(writer.IsCompacting());
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
     arrow::StringBuilder builder;
     for (size_t j = 0; j < 100; j++) {
         ASSERT_TRUE(builder.Append(std::to_string(j)).ok());
@@ -150,9 +153,8 @@ TEST_F(AppendOnlyWriterTest, TestWriteAndClose) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     AppendOnlyWriter writer(options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
-                            /*max_sequence_number=*/-1, path_factory, memory_pool_);
-    ASSERT_FALSE(writer.IsCompacting());
-
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
     auto struct_type = arrow::struct_(fields);
     arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
                                         {std::make_shared<arrow::StringBuilder>()});
@@ -195,9 +197,8 @@ TEST_F(AppendOnlyWriterTest, TestInvalidRowKind) {
     auto path_factory = std::make_shared<DataFilePathFactory>();
     ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
     AppendOnlyWriter writer(options, /*schema_id=*/1, schema, /*write_cols=*/std::nullopt,
-                            /*max_sequence_number=*/-1, path_factory, memory_pool_);
-    ASSERT_FALSE(writer.IsCompacting());
-
+                            /*max_sequence_number=*/-1, path_factory, compact_manager_,
+                            memory_pool_);
     auto struct_type = arrow::struct_(fields);
     arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
                                         {std::make_shared<arrow::StringBuilder>()});

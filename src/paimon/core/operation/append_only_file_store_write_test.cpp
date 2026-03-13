@@ -34,6 +34,7 @@
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/io/data_file_meta.h"
+#include "paimon/core/operation/restore_files.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/file_store_write.h"
@@ -135,44 +136,39 @@ TEST_F(AppendOnlyFileStoreWriteTest, TestGetMaxSequenceNumberFromMultiPartition)
         builder.AddOption("file.format", "orc").AddOption("manifest.format", "orc").Finish());
     ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
     auto write = dynamic_cast<AppendOnlyFileStoreWrite*>(file_store_write.get());
-    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> latest_snapshot,
-                         write->snapshot_manager_->LatestSnapshot());
     auto pool = GetDefaultPool();
     {
         BinaryRow partition(2);
         BinaryRowWriter writer(&partition, 20, pool.get());
         writer.WriteInt(0, 20);
         writer.WriteInt(1, 1);
-        std::vector<std::shared_ptr<DataFileMeta>> restore_files;
-        ASSERT_OK_AND_ASSIGN(int32_t total_buckets,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
-                                                          /*bucket=*/0, &restore_files));
-        ASSERT_EQ(-1, total_buckets);
-        ASSERT_EQ(0, DataFileMeta::GetMaxSequenceNumber(restore_files));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
+                             write->ScanExistingFileMetas(partition,
+                                                          /*bucket=*/0));
+        ASSERT_EQ(-1, restore_files->TotalBuckets().value());
+        ASSERT_EQ(0, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
     }
     {
         BinaryRow partition(2);
         BinaryRowWriter writer(&partition, 20, pool.get());
         writer.WriteInt(0, 10);
         writer.WriteInt(1, 0);
-        std::vector<std::shared_ptr<DataFileMeta>> restore_files;
-        ASSERT_OK_AND_ASSIGN(int32_t total_buckets,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
-                                                          /*bucket=*/0, &restore_files));
-        ASSERT_EQ(-1, total_buckets);
-        ASSERT_EQ(2, DataFileMeta::GetMaxSequenceNumber(restore_files));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
+                             write->ScanExistingFileMetas(partition,
+                                                          /*bucket=*/0));
+        ASSERT_EQ(-1, restore_files->TotalBuckets().value());
+        ASSERT_EQ(2, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
     }
     {
         BinaryRow partition(2);
         BinaryRowWriter writer(&partition, 20, pool.get());
         writer.WriteInt(0, 10);
         writer.WriteInt(1, 0);
-        std::vector<std::shared_ptr<DataFileMeta>> restore_files;
-        ASSERT_OK_AND_ASSIGN(int32_t total_buckets,
-                             write->ScanExistingFileMetas(latest_snapshot.value(), partition,
-                                                          /*bucket=*/1, &restore_files));
-        ASSERT_EQ(-1, total_buckets);
-        ASSERT_EQ(-1, DataFileMeta::GetMaxSequenceNumber(restore_files));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> restore_files,
+                             write->ScanExistingFileMetas(partition,
+                                                          /*bucket=*/1));
+        ASSERT_EQ(std::nullopt, restore_files->TotalBuckets());
+        ASSERT_EQ(-1, DataFileMeta::GetMaxSequenceNumber(restore_files->DataFiles()));
     }
 }
 

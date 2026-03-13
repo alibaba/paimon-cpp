@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -50,6 +51,17 @@ class PAIMON_EXPORT FileStoreWrite {
     /// @note If a field in table schema is marked as non-nullable (`nullable = false`),
     ///       the corresponding array in `batch` must have zero null entries.
     virtual Status Write(std::unique_ptr<RecordBatch>&& batch) = 0;
+
+    /// Compact data stored in given partition and bucket. Note that compaction process is only
+    /// submitted and may not be completed when the method returns.
+    ///
+    /// @param partition the partition to compact
+    /// @param bucket the bucket to compact
+    /// @param full_compaction whether to trigger full compaction or just normal compaction
+    ///
+    /// @return status for compacting the records
+    virtual Status Compact(const std::map<std::string, std::string>& partition, int32_t bucket,
+                           bool full_compaction) = 0;
 
     /// Generate a list of commit messages with the latest generated data file meta
     /// information of the current snapshot.

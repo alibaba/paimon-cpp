@@ -505,4 +505,282 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal2) {
         ASSERT_EQ(java_bytes, cpp_bytes);
     }
 }
+
+TEST(RowCompactedSerializerTest, TestSliceComparator) {
+    auto pool = GetDefaultPool();
+    arrow::FieldVector fields = {
+        arrow::field("f1", arrow::boolean()),
+        arrow::field("f2", arrow::int8()),
+        arrow::field("f3", arrow::int16()),
+        arrow::field("f4", arrow::int32()),
+        arrow::field("f5", arrow::int64()),
+        arrow::field("f6", arrow::float32()),
+        arrow::field("f7", arrow::float64()),
+        arrow::field("f8", arrow::utf8()),
+        arrow::field("f9", arrow::binary()),
+        arrow::field("f10", arrow::date32()),
+        arrow::field("f11", arrow::timestamp(arrow::TimeUnit::NANO)),
+        arrow::field("f12", arrow::timestamp(arrow::TimeUnit::SECOND)),
+        arrow::field("f13", arrow::decimal128(5, 2)),
+        arrow::field("f14", arrow::decimal128(30, 5)),
+    };
+    auto check_result = [&](const std::shared_ptr<arrow::DataType>& type,
+                            const std::shared_ptr<arrow::Array>& array) {
+        auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
+        ASSERT_TRUE(struct_array);
+        ASSERT_OK_AND_ASSIGN(auto serializer,
+                             RowCompactedSerializer::Create(arrow::schema(type->fields()), pool));
+        auto columnar_row1 = std::make_shared<ColumnarRow>(
+            /*struct_array=*/nullptr, struct_array->fields(), pool, /*row_id=*/0);
+        auto columnar_row2 = std::make_shared<ColumnarRow>(
+            /*struct_array=*/nullptr, struct_array->fields(), pool, /*row_id=*/1);
+
+        ASSERT_OK_AND_ASSIGN(auto bytes1, serializer->SerializeToBytes(*columnar_row1));
+        auto slice1 = MemorySlice::Wrap(bytes1);
+        ASSERT_OK_AND_ASSIGN(auto bytes2, serializer->SerializeToBytes(*columnar_row2));
+        auto slice2 = MemorySlice::Wrap(bytes2);
+
+        ASSERT_OK_AND_ASSIGN(auto comparator, RowCompactedSerializer::CreateSliceComparator(
+                                                  arrow::schema(type->fields()), pool));
+        ASSERT_EQ(-1, comparator(slice1, slice2).value());
+        ASSERT_EQ(1, comparator(slice2, slice1).value());
+        ASSERT_EQ(0, comparator(slice1, slice1).value());
+        ASSERT_EQ(0, comparator(slice2, slice2).value());
+    };
+    // test various type
+    {
+        auto type = arrow::struct_({fields[0], fields[1], fields[2], fields[3]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [false, 0, 32767, 2147483647],
+        [true, 0, 32767, 2147483647]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1], fields[2], fields[3]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [true, 0, 32767, 2147483647],
+        [true, 1, 32767, 2147483647]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1], fields[2], fields[3]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [true, 0, 32766, 2147483647],
+        [true, 0, 32767, 2147483647]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1], fields[2], fields[3]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [true, 0, 32767, 2147483646],
+        [true, 0, 32767, 2147483647]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[4], fields[5], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [4294967295, 10.1, 100.123],
+        [4294967296, 10.1, 100.123]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[4], fields[5], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [4294967295, 10.1, 100.123],
+        [4294967295, 10.11, 100.123]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[4], fields[5], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [4294967295, 10.1, 100.123],
+        [4294967295, 10.1, 100.124]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[7], fields[8], fields[9]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        ["Alice", "这是一个中文", 10],
+        ["Bob", "这是一个中文", 10]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[7], fields[8], fields[9]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        ["Alice", "这是一个中文", 10],
+        ["Alice", "这是一个中文！", 10]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[7], fields[8], fields[9]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        ["Alice", "这是一个中文", 10],
+        ["Alice", "这是一个中文", 20]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[10], fields[11], fields[12], fields[13]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [1732603136054000054, 11, "55.02", "-123456789987654321.45678"],
+        [1732603136054000055, 11, "55.02", "-123456789987654321.45678"]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[10], fields[11], fields[12], fields[13]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [1732603136054000054, 11, "55.02", "-123456789987654321.45678"],
+        [1732603136054000054, 12, "55.02", "-123456789987654321.45678"]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[10], fields[11], fields[12], fields[13]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [1732603136054000054, 11, "55.02", "-123456789987654321.45678"],
+        [1732603136054000054, 11, "55.03", "-123456789987654321.45678"]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[10], fields[11], fields[12], fields[13]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [1732603136054000054, 11, "55.02", "-123456789987654321.45678"],
+        [1732603136054000054, 11, "55.02", "-123456789987654321.45670"]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    // test null
+    {
+        auto type = arrow::struct_({fields[0], fields[1]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [false, null],
+        [false, 20]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [null, 20],
+        [null, 21]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [false, null],
+        [true, 20]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [null, 21],
+        [false, 20]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[0], fields[1]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [null, null],
+        [null, 20]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    // test float & double
+    // -infinity < -0.0 < +0.0 < +infinity < NaN == NaN
+    {
+        auto type = arrow::struct_({fields[5], fields[5], fields[5], fields[6], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [-Inf, -0.0, 0.0, Inf, NaN],
+        [-0.0, -0.0, 0.0, Inf, NaN]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[5], fields[5], fields[5], fields[6], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [-Inf, -0.0, 0.0, Inf, NaN],
+        [-Inf, 0.0, 0.0, Inf, NaN]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[5], fields[5], fields[5], fields[6], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [-Inf, -0.0, 0.0, 0.0, NaN],
+        [-Inf, -0.0, 0.0, Inf, NaN]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+    {
+        auto type = arrow::struct_({fields[5], fields[5], fields[5], fields[6], fields[6]});
+        std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(type,
+                                                                                        R"([
+        [-Inf, -0.0, 0.0, Inf, Inf],
+        [-Inf, -0.0, 0.0, Inf, NaN]
+    ])")
+                                                  .ValueOrDie();
+        check_result(type, array);
+    }
+}
+
 }  // namespace paimon::test
