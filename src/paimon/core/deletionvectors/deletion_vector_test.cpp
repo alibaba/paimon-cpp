@@ -154,7 +154,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
     std::vector<uint8_t> data;
     AppendInt32BigEndian(&data, /*value=*/8);
-    AppendInt32BigEndian(&data, /*invalid_magic=*/123456789);
+    AppendInt32BigEndian(&data, /*value=*/123456789);
 
     auto input_stream = std::make_shared<ByteArrayInputStream>(
         reinterpret_cast<const char*>(data.data()), data.size());
