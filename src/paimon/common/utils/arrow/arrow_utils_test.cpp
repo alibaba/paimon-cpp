@@ -378,4 +378,71 @@ TEST(ArrowUtilsTest, TestRemoveFieldFromStructArraySuccess) {
     ASSERT_TRUE(result->Equals(expected_struct_array));
 }
 
+TEST(ArrowUtilsTest, TestEqualsIgnoreNullable) {
+    {
+        // test simple
+        ASSERT_FALSE(ArrowUtils::EqualsIgnoreNullable(arrow::int32(), arrow::int64()));
+        ASSERT_TRUE(ArrowUtils::EqualsIgnoreNullable(arrow::int32(), arrow::int32()));
+    }
+    {
+        // test struct
+        auto child1 = arrow::field("child1", arrow::int32(), /*nullable=*/false);
+        auto child2 = arrow::field("child2", arrow::int32(), /*nullable=*/false);
+        auto child3 = arrow::field("child1", arrow::int32(), /*nullable=*/true);
+        auto struct_type1 = arrow::struct_({child1});
+        auto struct_type2 = arrow::struct_({child2});
+        auto struct_type3 = arrow::struct_({child3});
+        auto struct_type4 = arrow::struct_({child3, child1});
+        ASSERT_FALSE(ArrowUtils::EqualsIgnoreNullable(struct_type1, struct_type2));
+        ASSERT_TRUE(ArrowUtils::EqualsIgnoreNullable(struct_type1, struct_type3));
+        ASSERT_FALSE(ArrowUtils::EqualsIgnoreNullable(struct_type1, struct_type4));
+    }
+    {
+        // test complex
+        auto key_field = arrow::field("key", arrow::int32(), /*nullable=*/false);
+        auto value_field = arrow::field("value", arrow::int32(), /*nullable=*/false);
+        auto inner_child1 = arrow::field(
+            "inner1",
+            arrow::map(arrow::utf8(), arrow::field("inner_list", arrow::list(value_field),
+                                                   /*nullable=*/true)),
+            /*nullable=*/false);
+        auto inner_child2 = arrow::field(
+            "inner2",
+            arrow::map(arrow::utf8(),
+                       arrow::field("inner_map", arrow::map(arrow::utf8(), value_field),
+                                    /*nullable=*/true)),
+            /*nullable=*/false);
+        auto inner_child3 = arrow::field(
+            "inner3",
+            arrow::map(arrow::utf8(),
+                       arrow::field("inner_struct", arrow::struct_({key_field, value_field}),
+                                    /*nullable=*/true)),
+            /*nullable=*/false);
+        auto struct_type1 = arrow::struct_({inner_child1, inner_child2, inner_child3});
+
+        auto key_field_other = arrow::field("key", arrow::int32(), /*nullable=*/true);
+        auto value_field_other = arrow::field("value", arrow::int32(), /*nullable=*/true);
+        auto inner_child1_other = arrow::field(
+            "inner1",
+            arrow::map(arrow::utf8(), arrow::field("inner_list", arrow::list(value_field_other),
+                                                   /*nullable=*/false)),
+            /*nullable=*/true);
+        auto inner_child2_other = arrow::field(
+            "inner2",
+            arrow::map(arrow::utf8(),
+                       arrow::field("inner_map", arrow::map(arrow::utf8(), value_field_other),
+                                    /*nullable=*/false)),
+            /*nullable=*/true);
+        auto inner_child3_other = arrow::field(
+            "inner3",
+            arrow::map(
+                arrow::utf8(),
+                arrow::field("inner_struct", arrow::struct_({key_field_other, value_field_other}),
+                             /*nullable=*/false)),
+            /*nullable=*/true);
+        auto struct_type2 =
+            arrow::struct_({inner_child1_other, inner_child2_other, inner_child3_other});
+        ASSERT_TRUE(ArrowUtils::EqualsIgnoreNullable(struct_type1, struct_type2));
+    }
+}
 }  // namespace paimon::test

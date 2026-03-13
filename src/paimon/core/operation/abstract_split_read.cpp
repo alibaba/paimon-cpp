@@ -61,20 +61,20 @@ AbstractSplitRead::AbstractSplitRead(const std::shared_ptr<FileStorePathFactory>
       context_(context),
       schema_manager_(std::move(schema_manager)) {}
 
-Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFileReaders(
+Result<std::vector<std::unique_ptr<FileBatchReader>>> AbstractSplitRead::CreateRawFileReaders(
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
     const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (data_files.empty()) {
-        return std::vector<std::unique_ptr<BatchReader>>();
+        return std::vector<std::unique_ptr<FileBatchReader>>();
     }
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<FieldMappingBuilder> field_mapping_builder,
         FieldMappingBuilder::Create(read_schema, context_->GetPartitionKeys(), predicate));
 
-    std::vector<std::unique_ptr<BatchReader>> raw_file_readers;
+    std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers;
     raw_file_readers.reserve(data_files.size());
     for (const auto& file : data_files) {
         auto data_file_path = data_file_path_factory->ToPath(file);
@@ -82,7 +82,7 @@ Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFi
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,
                                PrepareReaderBuilder(data_file_identifier));
         PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<BatchReader> file_reader,
+            std::unique_ptr<FileBatchReader> file_reader,
             CreateFieldMappingReader(data_file_path, file, partition, reader_builder.get(),
                                      field_mapping_builder.get(), deletion_file_map, row_ranges,
                                      data_file_path_factory));
@@ -170,7 +170,7 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReade
     }
 }
 
-Result<std::unique_ptr<BatchReader>> AbstractSplitRead::CreateFieldMappingReader(
+Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingReader(
     const std::string& data_file_path, const std::shared_ptr<DataFileMeta>& file_meta,
     const BinaryRow& partition, const ReaderBuilder* reader_builder,
     const FieldMappingBuilder* field_mapping_builder,
@@ -213,13 +213,13 @@ Result<std::unique_ptr<BatchReader>> AbstractSplitRead::CreateFieldMappingReader
 
     const auto& predicate = field_mapping->non_partition_info.non_partition_filter;
     auto all_data_schema = DataField::ConvertDataFieldsToArrowSchema(data_schema->Fields());
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> final_reader,
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> final_reader,
                            ApplyIndexAndDvReaderIfNeeded(
                                std::move(file_reader), file_meta, all_data_schema, read_schema,
                                predicate, deletion_file_map, row_ranges, data_file_path_factory));
     if (!final_reader) {
         // file is skipped by index or dv
-        return std::unique_ptr<BatchReader>();
+        return std::unique_ptr<FileBatchReader>();
     }
 
     return std::make_unique<FieldMappingReader>(field_mapping_builder->GetReadFieldCount(),

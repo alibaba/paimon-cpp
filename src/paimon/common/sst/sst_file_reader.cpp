@@ -90,7 +90,7 @@ Result<std::shared_ptr<Bytes>> SstFileReader::Lookup(const std::shared_ptr<Bytes
     auto key_slice = MemorySlice::Wrap(key);
     // seek the index to the block containing the key
     auto index_block_iterator = index_block_reader_->Iterator();
-    PAIMON_ASSIGN_OR_RAISE(bool _, index_block_iterator->SeekTo(key_slice));
+    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool _, index_block_iterator->SeekTo(key_slice));
     // if indexIterator does not have a next, it means the key does not exist in this iterator
     if (index_block_iterator->HasNext()) {
         // seek the current iterator to the key

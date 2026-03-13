@@ -25,10 +25,10 @@
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/utils/object_utils.h"
 #include "paimon/common/utils/range_helper.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/global_index/indexed_split_impl.h"
-
 namespace paimon {
 Status DataEvolutionSplitRead::BlobBunch::Add(const std::shared_ptr<DataFileMeta>& file) {
     if (!BlobUtils::IsBlobFile(file->file_name)) {
@@ -155,7 +155,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
         if (need_merge_files.size() == 1) {
             // No need to merge fields, just create a single file reader
             PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+                std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
                 CreateRawFileReaders(split_impl->Partition(), need_merge_files, raw_read_schema_,
                                      /*predicate=*/nullptr,
                                      /*deletion_file_map=*/{}, row_ranges, data_file_path_factory));
@@ -174,7 +174,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
         ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), context_->GetPredicate()));
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
 }
-Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvReaderIfNeeded(
+Result<std::unique_ptr<FileBatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
@@ -196,7 +196,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::ApplyIndexAndDvRead
     PAIMON_RETURN_NOT_OK(
         file_reader->SetReadSchema(&c_read_schema, /*predicate=*/nullptr, selection_row_ids));
 
-    std::unique_ptr<BatchReader> reader;
+    std::unique_ptr<FileBatchReader> reader;
     if (!file_reader->SupportPreciseBitmapSelection() && selection_row_ids) {
         // several format(e.g. lance, blob) will return accurate batch result, where
         // ApplyBitmapIndexBatchReader is not necessary
@@ -335,16 +335,18 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
             // create new FieldMappingReader for read partial fields
             auto file_read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields_in_file);
             PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::unique_ptr<BatchReader>> file_readers,
+                std::vector<std::unique_ptr<FileBatchReader>> file_readers,
                 CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
                                      /*predicate=*/nullptr, /*deletion_file_map=*/{}, row_ranges,
                                      data_file_path_factory));
             if (file_readers.size() == 1) {
                 file_batch_readers[file_idx] = std::move(file_readers[0]);
             } else {
+                auto raw_readers =
+                    ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(file_readers));
                 // Concat multiple blob files that map to the same data file.
                 file_batch_readers[file_idx] =
-                    std::make_unique<ConcatBatchReader>(std::move(file_readers), pool_);
+                    std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
             }
         }
     }

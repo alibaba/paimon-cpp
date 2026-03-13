@@ -16,26 +16,23 @@
 
 #pragma once
 
-#include "fmt/format.h"
-#include "paimon/core/mergetree/sorted_run.h"
-#include "paimon/core/utils/fields_comparator.h"
+#include <cstdint>
+#include <memory>
+#include <string>
+
+#include "paimon/result.h"
+#include "paimon/visibility.h"
+
 namespace paimon {
-/// A `SortedRun` with level.
-struct LevelSortedRun {
-    LevelSortedRun(int32_t _level, const SortedRun& _run) : level(_level), run(_run) {}
+/// The facade for the provided disk I/O services.
+class PAIMON_EXPORT IOManager {
+ public:
+    virtual ~IOManager() = default;
+    static std::unique_ptr<IOManager> Create(const std::string& tmp_dir);
 
-    std::string ToString() const {
-        return fmt::format("LevelSortedRun{{ level={}, run={} }}", level, run.ToString());
-    }
+    /// @return Temp directory path.
+    virtual const std::string& GetTempDir() const = 0;
 
-    bool operator==(const LevelSortedRun& other) const {
-        if (this == &other) {
-            return true;
-        }
-        return level == other.level && run == other.run;
-    }
-
-    int32_t level;
-    SortedRun run;
+    virtual Result<std::string> GenerateTempFilePath(const std::string& prefix) const = 0;
 };
 }  // namespace paimon

@@ -38,7 +38,7 @@ namespace paimon {
 class MemoryPool;
 
 KeyValueDataFileRecordReader::KeyValueDataFileRecordReader(
-    std::unique_ptr<BatchReader>&& reader, int32_t key_arity,
+    std::unique_ptr<FileBatchReader>&& reader, int32_t key_arity,
     const std::shared_ptr<arrow::Schema>& value_schema, int32_t level,
     const std::shared_ptr<MemoryPool>& pool)
     : key_arity_(key_arity),
@@ -80,10 +80,17 @@ Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
     return KeyValue(row_kind, sequence_number, reader_->level_, std::move(key), std::move(value));
 }
 
+Result<std::pair<int64_t, KeyValue>> KeyValueDataFileRecordReader::Iterator::NextWithFilePos() {
+    PAIMON_ASSIGN_OR_RAISE(KeyValue kv, Next());
+    return std::make_pair(previous_batch_first_row_number_ + cursor_ - 1, std::move(kv));
+}
+
 Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordReader::NextBatch() {
     Reset();
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            reader_->NextBatchWithBitmap());
+    PAIMON_ASSIGN_OR_RAISE(int64_t previous_batch_first_row_number,
+                           reader_->GetPreviousBatchFirstRowNumber());
     if (BatchReader::IsEofBatch(batch_with_bitmap)) {
         // reader eof, just return
         return std::unique_ptr<KeyValueRecordReader::Iterator>();
@@ -135,7 +142,8 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields, pool_);
     value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields, pool_);
     ArrowUtils::TraverseArray(data_batch);
-    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
+    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(
+        this, previous_batch_first_row_number);
 }
 
 void KeyValueDataFileRecordReader::Reset() {

@@ -25,7 +25,7 @@ namespace paimon::test {
 // mock reader hold data array
 class MockKeyValueDataFileRecordReader : public KeyValueDataFileRecordReader {
  public:
-    MockKeyValueDataFileRecordReader(std::unique_ptr<BatchReader>&& reader, int32_t key_arity,
+    MockKeyValueDataFileRecordReader(std::unique_ptr<FileBatchReader>&& reader, int32_t key_arity,
                                      const std::shared_ptr<arrow::Schema>& value_schema,
                                      int32_t level, const std::shared_ptr<MemoryPool>& pool)
         : KeyValueDataFileRecordReader(std::move(reader), key_arity, value_schema, level, pool) {}

@@ -282,4 +282,45 @@ TEST(BinaryRowPartitionComputerTest, TestNullOrWhitespaceOnlyStr) {
         {"f0", "__DEFAULT_PARTITION__"}, {"f1", "__DEFAULT_PARTITION__"}, {"f2", "ab "}};
     ASSERT_EQ(partition_key_values, expected);
 }
+
+TEST(BinaryRowPartitionComputerTest, TestPartToSimpleString) {
+    auto pool = GetDefaultPool();
+    {
+        auto schema = arrow::schema({});
+        auto partition = BinaryRow::EmptyRow();
+        ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
+                                                  schema, partition, "-", 30));
+        ASSERT_EQ(ret, "");
+    }
+    {
+        auto schema = arrow::schema({
+            arrow::field("f0", arrow::utf8()),
+            arrow::field("f1", arrow::int32()),
+        });
+        auto partition = BinaryRowGenerator::GenerateRow({"20240731", 10}, pool.get());
+        ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
+                                                  schema, partition, "-", 30));
+        ASSERT_EQ(ret, "20240731-10");
+    }
+    {
+        auto schema = arrow::schema({
+            arrow::field("f0", arrow::utf8()),
+            arrow::field("f1", arrow::int32()),
+        });
+        auto partition = BinaryRowGenerator::GenerateRow({NullType(), 10}, pool.get());
+        ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
+                                                  schema, partition, "-", 30));
+        ASSERT_EQ(ret, "null-10");
+    }
+    {
+        auto schema = arrow::schema({
+            arrow::field("f0", arrow::utf8()),
+            arrow::field("f1", arrow::int32()),
+        });
+        auto partition = BinaryRowGenerator::GenerateRow({"20240731", 10}, pool.get());
+        ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
+                                                  schema, partition, "-", 5));
+        ASSERT_EQ(ret, "20240");
+    }
+}
 }  // namespace paimon::test

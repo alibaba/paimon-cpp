@@ -74,7 +74,7 @@ class AlignedBlockReader : public BlockReader {
 class UnAlignedBlockReader : public BlockReader {
  public:
     UnAlignedBlockReader(const std::shared_ptr<MemorySlice>& data,
-                         std::shared_ptr<MemorySlice>& index,
+                         const std::shared_ptr<MemorySlice>& index,
                          MemorySlice::SliceComparator comparator)
         : BlockReader(data, index->Length() / 4, std::move(comparator)), index_(index) {}
 

@@ -100,6 +100,10 @@ class PAIMON_EXPORT Timestamp {
                nano_of_millisecond_ == other.nano_of_millisecond_;
     }
 
+    bool operator!=(const Timestamp& other) const {
+        return !(*this == other);
+    }
+
     bool operator<(const Timestamp& other) const {
         if (millisecond_ == other.millisecond_) {
             return nano_of_millisecond_ < other.nano_of_millisecond_;

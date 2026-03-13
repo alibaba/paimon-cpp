@@ -41,10 +41,12 @@ class LanceFileBatchReader : public FileBatchReader {
 
     Result<ReadBatch> NextBatch() override;
 
-    uint64_t GetPreviousBatchFirstRowNumber() const override {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
         // TODO(xinyu.lxy): support function
-        assert(false);
-        return -1;
+        return Status::Invalid(
+            "Cannot call GetPreviousBatchFirstRowNumber in LanceFileBatchReader because, after "
+            "bitmap pushdown, rows in the array returned by NextBatch are no longer "
+            "contiguous.");
     }
 
     Result<uint64_t> GetNumberOfRows() const override {

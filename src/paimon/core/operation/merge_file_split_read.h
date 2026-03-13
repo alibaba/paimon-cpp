@@ -84,7 +84,7 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
-    Result<std::unique_ptr<BatchReader>> ApplyIndexAndDvReaderIfNeeded(
+    Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,

@@ -26,6 +26,7 @@
 #include "paimon/common/reader/complete_row_kind_batch_reader.h"
 #include "paimon/common/reader/concat_batch_reader.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
@@ -80,11 +81,13 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
 
     auto deletion_file_map = CreateDeletionFileMap(data_files, deletion_files);
     PAIMON_ASSIGN_OR_RAISE(
-        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+        std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(partition, data_files, raw_read_schema_, predicate, deletion_file_map,
                              /*row_ranges=*/{}, data_file_path_factory));
-    auto concat_batch_reader =
-        std::make_unique<ConcatBatchReader>(std::move(raw_file_readers), pool_);
+
+    auto raw_readers =
+        ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
+    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> batch_reader,
                            ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader), predicate));
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
@@ -115,7 +118,7 @@ Result<bool> RawFileSplitRead::Match(const std::shared_ptr<Split>& split,
     return matched;
 }
 
-Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNeeded(
+Result<std::unique_ptr<FileBatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
@@ -171,7 +174,7 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*read_schema, &c_read_schema));
     PAIMON_RETURN_NOT_OK(file_reader->SetReadSchema(&c_read_schema, predicate, actual_selection));
 
-    std::unique_ptr<BatchReader> reader;
+    std::unique_ptr<FileBatchReader> reader;
     if (!file_reader->SupportPreciseBitmapSelection() && actual_selection) {
         // several format(e.g. lance, blob) will return accurate batch result, where
         // ApplyBitmapIndexBatchReader is not necessary
@@ -182,7 +185,7 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::ApplyIndexAndDvReaderIfNe
     }
 
     if (deletion_vector && !deletion && !deletion_vector->IsEmpty()) {
-        // TODO(xinyu.lxy): if deletion vector is bitmap, use ApplyBitmapIndexBatchReader to
+        // TODO(xinyu.lxy): if deletion vector is bitmap64, use ApplyBitmapIndexBatchReader to
         // filter result
         return Status::NotImplemented("Only support BitmapDeletionVector");
     }

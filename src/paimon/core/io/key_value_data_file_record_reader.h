@@ -24,7 +24,7 @@
 #include "arrow/type_fwd.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/key_value.h"
-#include "paimon/reader/batch_reader.h"
+#include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/utils/roaring_bitmap32.h"
 
@@ -47,17 +47,20 @@ struct ColumnarBatchContext;
 // VALUE_KIND columns)
 class KeyValueDataFileRecordReader : public KeyValueRecordReader {
  public:
-    KeyValueDataFileRecordReader(std::unique_ptr<BatchReader>&& reader, int32_t key_arity,
+    KeyValueDataFileRecordReader(std::unique_ptr<FileBatchReader>&& reader, int32_t key_arity,
                                  const std::shared_ptr<arrow::Schema>& value_schema, int32_t level,
                                  const std::shared_ptr<MemoryPool>& pool);
 
     class Iterator : public KeyValueRecordReader::Iterator {
      public:
-        explicit Iterator(KeyValueDataFileRecordReader* reader) : reader_(reader) {}
+        Iterator(KeyValueDataFileRecordReader* reader, int64_t previous_batch_first_row_number)
+            : previous_batch_first_row_number_(previous_batch_first_row_number), reader_(reader) {}
         bool HasNext() const override;
         Result<KeyValue> Next() override;
+        Result<std::pair<int64_t, KeyValue>> NextWithFilePos();
 
      private:
+        int64_t previous_batch_first_row_number_;
         mutable int64_t cursor_ = 0;
         KeyValueDataFileRecordReader* reader_ = nullptr;
     };
@@ -80,7 +83,7 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     int32_t key_arity_;
     int32_t level_;
     std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<BatchReader> reader_;
+    std::unique_ptr<FileBatchReader> reader_;
     std::shared_ptr<arrow::Schema> value_schema_;
     std::vector<std::string> value_names_;
     RoaringBitmap32 selection_bitmap_;

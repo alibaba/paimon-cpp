@@ -244,6 +244,63 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmap) {
     check_result({3});
 }
 
+TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmapWithFilePos) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("k1", arrow::int32()),
+                                 arrow::field("v0", arrow::int32()),
+                                 arrow::field("v1", arrow::int32()),
+                                 arrow::field("v2", arrow::int32())};
+
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 1, 1, 10, 20, 30],
+        [1, 0, 1, 2, 11, 21, 31],
+        [2, 1, 2, 2, 12, 22, 32],
+        [3, 2, 2, 3, 13, 23, 33],
+        [5, 0, 3, 3, 14, 24, 34],
+        [8, 0, 3, 4, 15, 25, 35],
+        [4, 1, 5, 4, 16, 26, 36],
+        [6, 3, 6, 5, 17, 27, 37]
+    ])")
+            .ValueOrDie());
+
+    RoaringBitmap32 selected_bitmap = RoaringBitmap32::From({1, 2, 4, 6});
+    auto file_batch_reader = std::make_unique<MockFileBatchReader>(
+        src_array, src_type, /*bitmap=*/selected_bitmap, /*batch_size=*/4);
+    file_batch_reader->EnableRandomizeBatchSize(false);
+    auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+        std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+
+    auto check_result = [](const std::vector<int64_t>& expected_pos_vector,
+                           KeyValueRecordReader::Iterator* iter) {
+        auto typed_iter = dynamic_cast<KeyValueDataFileRecordReader::Iterator*>(iter);
+        ASSERT_TRUE(typed_iter);
+        size_t pos_iter = 0;
+        while (iter->HasNext()) {
+            ASSERT_OK_AND_ASSIGN(auto kv_and_pos, typed_iter->NextWithFilePos());
+            const auto& [pos, kv] = kv_and_pos;
+            ASSERT_EQ(pos, expected_pos_vector[pos_iter++]);
+        }
+        ASSERT_EQ(pos_iter, expected_pos_vector.size());
+    };
+
+    // first read row 1, 2
+    ASSERT_OK_AND_ASSIGN(auto iter, record_reader->NextBatch());
+    check_result({1, 2}, iter.get());
+
+    // second read row 4, 6
+    ASSERT_OK_AND_ASSIGN(iter, record_reader->NextBatch());
+    check_result({4, 6}, iter.get());
+
+    // eof
+    ASSERT_OK_AND_ASSIGN(iter, record_reader->NextBatch());
+    ASSERT_FALSE(iter);
+}
 TEST_F(KeyValueDataFileRecordReaderTest, TestEmptyReader) {
     arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
                                  arrow::field("_VALUE_KIND", arrow::int8()),

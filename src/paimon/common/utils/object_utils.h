@@ -132,5 +132,18 @@ class ObjectUtils {
         }
         return index_map;
     }
+
+    /// Precondition: U can be moved to T.
+    template <typename T, typename U>
+    static std::vector<T> MoveVector(std::vector<U>&& input) {
+        static_assert(std::is_constructible_v<T, U&&>, "U cannot be moved to T");
+        std::vector<T> result;
+        result.reserve(input.size());
+        for (auto& item : input) {
+            result.push_back(std::move(item));
+        }
+        input.clear();
+        return result;
+    }
 };
 }  // namespace paimon

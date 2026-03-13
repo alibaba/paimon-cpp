@@ -60,7 +60,7 @@ class CompleteRowTrackingFieldsBatchReader : public FileBatchReader {
         reader_->Close();
     }
 
-    uint64_t GetPreviousBatchFirstRowNumber() const override {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
         return reader_->GetPreviousBatchFirstRowNumber();
     }
 

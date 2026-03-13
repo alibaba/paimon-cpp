@@ -182,6 +182,10 @@ bool DataFileMeta::operator==(const DataFileMeta& other) const {
            write_cols == other.write_cols;
 }
 
+bool DataFileMeta::operator!=(const DataFileMeta& other) const {
+    return !(*this == other);
+}
+
 bool DataFileMeta::TEST_Equal(const DataFileMeta& other) const {
     if (this == &other) {
         return true;

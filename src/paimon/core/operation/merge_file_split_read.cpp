@@ -34,8 +34,10 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/apply_deletion_vector_batch_reader.h"
+#include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/async_key_value_projection_reader.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
@@ -171,7 +173,7 @@ MergeFileSplitRead::CreateMergeFunctionWrapper(const CoreOptions& core_options,
     return std::make_shared<ReducerMergeFunctionWrapper>(std::move(merge_function));
 }
 
-Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIfNeeded(
+Result<std::unique_ptr<FileBatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIfNeeded(
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
@@ -185,14 +187,32 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIf
         PAIMON_ASSIGN_OR_RAISE(deletion_vector, DeletionVector::Read(options_.GetFileSystem().get(),
                                                                      dv_iter->second, pool_.get()));
     }
+
+    const RoaringBitmap32* deletion = nullptr;
+    if (auto* bitmap_dv = dynamic_cast<BitmapDeletionVector*>(deletion_vector.get())) {
+        deletion = bitmap_dv->GetBitmap();
+    }
+
+    std::optional<RoaringBitmap32> actual_selection;
+    if (deletion) {
+        actual_selection = *deletion;
+        PAIMON_ASSIGN_OR_RAISE(uint64_t num_rows, file_reader->GetNumberOfRows());
+        actual_selection.value().Flip(0, num_rows);
+    }
+
     ::ArrowSchema c_read_schema;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*read_schema, &c_read_schema));
-    PAIMON_RETURN_NOT_OK(
-        file_reader->SetReadSchema(&c_read_schema, predicate, /*selection_bitmap=*/std::nullopt));
-    // TODO(xinyu.lxy): may push down bitmap
-    if (deletion_vector && !deletion_vector->IsEmpty()) {
+
+    PAIMON_RETURN_NOT_OK(file_reader->SetReadSchema(&c_read_schema, predicate, actual_selection));
+
+    if (!file_reader->SupportPreciseBitmapSelection() && actual_selection) {
         return std::make_unique<ApplyDeletionVectorBatchReader>(std::move(file_reader),
                                                                 std::move(deletion_vector));
+    }
+    if (deletion_vector && !deletion && !deletion_vector->IsEmpty()) {
+        // TODO(xinyu.lxy): if deletion vector is bitmap64, use ApplyBitmapIndexBatchReader to
+        // filter result
+        return Status::NotImplemented("Only support BitmapDeletionVector");
     }
     return std::move(file_reader);
 }
@@ -227,13 +247,14 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> read_schema,
                                       raw_read_schema_->AddField(0, row_kind_field));
     PAIMON_ASSIGN_OR_RAISE(
-        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+        std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(data_split->Partition(), data_split->DataFiles(), read_schema,
                              only_filter_key ? predicate_for_keys_ : context_->GetPredicate(),
                              deletion_file_map, /*row_ranges=*/{}, data_file_path_factory));
 
-    auto concat_batch_reader =
-        std::make_unique<ConcatBatchReader>(std::move(raw_file_readers), pool_);
+    auto raw_readers =
+        ObjectUtils::MoveVector<std::unique_ptr<BatchReader>>(std::move(raw_file_readers));
+    auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(raw_readers), pool_);
     return AbstractSplitRead::ApplyPredicateFilterIfNeeded(std::move(concat_batch_reader),
                                                            context_->GetPredicate());
 }
@@ -433,7 +454,7 @@ Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderFo
     // no overlap in a run
     const auto& data_files = sorted_run.Files();
     PAIMON_ASSIGN_OR_RAISE(
-        std::vector<std::unique_ptr<BatchReader>> raw_file_readers,
+        std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
         CreateRawFileReaders(partition, data_files, read_schema_, predicate, deletion_file_map,
                              /*row_ranges=*/{}, data_file_path_factory));
 

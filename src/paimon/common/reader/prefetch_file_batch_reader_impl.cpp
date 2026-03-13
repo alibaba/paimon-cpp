@@ -409,7 +409,8 @@ Status PrefetchFileBatchReaderImpl::EnsureReaderPosition(
 Status PrefetchFileBatchReaderImpl::HandleReadResult(
     size_t reader_idx, const std::pair<uint64_t, uint64_t>& read_range,
     ReadBatchWithBitmap&& read_batch_with_bitmap) {
-    uint64_t first_row_number = readers_[reader_idx]->GetPreviousBatchFirstRowNumber();
+    PAIMON_ASSIGN_OR_RAISE(uint64_t first_row_number,
+                           readers_[reader_idx]->GetPreviousBatchFirstRowNumber());
     auto& prefetch_queue = prefetch_queues_[reader_idx];
     if (!BatchReader::IsEofBatch(read_batch_with_bitmap)) {
         auto& [read_batch, bitmap] = read_batch_with_bitmap;
@@ -570,7 +571,7 @@ Result<std::unique_ptr<::ArrowSchema>> PrefetchFileBatchReaderImpl::GetFileSchem
     return readers_[0]->GetFileSchema();
 }
 
-uint64_t PrefetchFileBatchReaderImpl::GetPreviousBatchFirstRowNumber() const {
+Result<uint64_t> PrefetchFileBatchReaderImpl::GetPreviousBatchFirstRowNumber() const {
     return previous_batch_first_row_num_;
 }
 

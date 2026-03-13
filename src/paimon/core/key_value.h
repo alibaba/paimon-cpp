@@ -35,6 +35,7 @@ namespace paimon {
 struct KeyValue {
     static constexpr int32_t UNKNOWN_LEVEL = -1;
     static constexpr int32_t UNKNOWN_SEQUENCE = -1;
+    KeyValue() = default;
 
     KeyValue(const RowKind* _value_kind, int64_t _sequence_number, int32_t _level,
              std::shared_ptr<InternalRow>&& _key, std::unique_ptr<InternalRow>&& _value)

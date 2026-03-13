@@ -18,6 +18,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "paimon/common/table/special_fields.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/key_value_data_file_writer.h"
 #include "paimon/core/io/key_value_meta_projection_consumer.h"
 #include "paimon/core/io/key_value_record_reader.h"
@@ -28,7 +29,6 @@
 #include "paimon/format/file_format.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/read_context.h"
-
 namespace paimon {
 MergeTreeCompactRewriter::MergeTreeCompactRewriter(
     const BinaryRow& partition, int64_t schema_id,
@@ -51,17 +51,15 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
 Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Create(
     int32_t bucket, const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<FileStorePathFactory>& path_factory, const CoreOptions& options,
-    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<Executor>& executor) {
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
+    // TODO(xinyu.lxy): set executor
     ReadContextBuilder read_context_builder(path_factory->RootPath());
-    read_context_builder.SetOptions(options.ToMap())
-        .EnablePrefetch(true)
-        .WithMemoryPool(pool)
-        .WithExecutor(executor);
+    read_context_builder.SetOptions(options.ToMap()).EnablePrefetch(true).WithMemoryPool(pool);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
@@ -70,7 +68,7 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
         InternalReadContext::Create(read_context, table_schema, options.ToMap()));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
-        MergeFileSplitRead::Create(path_factory, internal_context, pool, executor));
+        MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            path_factory->CreateDataFilePathFactory(partition, bucket));

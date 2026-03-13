@@ -26,7 +26,6 @@
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/reader/batch_reader.h"
 #include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -35,7 +34,7 @@
 namespace paimon {
 class Metrics;
 
-class ApplyDeletionVectorBatchReader : public BatchReader {
+class ApplyDeletionVectorBatchReader : public FileBatchReader {
  public:
     ApplyDeletionVectorBatchReader(std::unique_ptr<FileBatchReader>&& reader,
                                    PAIMON_UNIQUE_PTR<DeletionVector>&& deletion_vector)
@@ -74,9 +73,32 @@ class ApplyDeletionVectorBatchReader : public BatchReader {
         return reader_->GetReaderMetrics();
     }
 
+    Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override {
+        return reader_->GetFileSchema();
+    }
+
+    Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
+                         const std::optional<RoaringBitmap32>& selection_bitmap) override {
+        return Status::Invalid("ApplyDeletionVectorBatchReader does not support SetReadSchema");
+    }
+
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        return reader_->GetPreviousBatchFirstRowNumber();
+    }
+
+    Result<uint64_t> GetNumberOfRows() const override {
+        return reader_->GetNumberOfRows();
+    }
+
+    bool SupportPreciseBitmapSelection() const override {
+        return reader_->SupportPreciseBitmapSelection();
+    }
+
  private:
     Result<RoaringBitmap32> Filter(int32_t batch_size) const {
-        return deletion_vector_->IsValid(reader_->GetPreviousBatchFirstRowNumber(), batch_size);
+        PAIMON_ASSIGN_OR_RAISE(uint64_t previous_batch_first_row_number,
+                               reader_->GetPreviousBatchFirstRowNumber());
+        return deletion_vector_->IsValid(previous_batch_first_row_number, batch_size);
     }
 
  private:

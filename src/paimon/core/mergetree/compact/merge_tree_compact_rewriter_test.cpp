@@ -54,7 +54,7 @@ class MergeTreeCompactRewriterTest : public testing::Test {
                 global_index_external_path, options.IndexFileInDataFileDir(), pool_));
 
         return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, path_factory,
-                                                options, pool_, CreateDefaultExecutor());
+                                                options, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(

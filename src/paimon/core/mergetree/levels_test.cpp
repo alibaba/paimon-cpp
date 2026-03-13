@@ -1,0 +1,167 @@
+/*
+ * Copyright 2024-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "paimon/core/mergetree/levels.h"
+
+#include "arrow/api.h"
+#include "gtest/gtest.h"
+#include "paimon/common/utils/uuid.h"
+#include "paimon/memory/memory_pool.h"
+#include "paimon/result.h"
+#include "paimon/status.h"
+#include "paimon/testing/utils/binary_row_generator.h"
+#include "paimon/testing/utils/testharness.h"
+
+namespace paimon::test {
+
+class LevelsTest : public testing::Test {
+ public:
+    std::shared_ptr<DataFileMeta> CreateDataFileMeta(int32_t level, int64_t min_sequence_number,
+                                                     int64_t max_sequence_number,
+                                                     int64_t ts_second) const {
+        std::string uuid;
+        EXPECT_TRUE(UUID::Generate(&uuid));
+        return std::make_shared<DataFileMeta>(
+            /*file_name=*/uuid, /*file_size=*/1,
+            /*row_count=*/max_sequence_number - min_sequence_number + 1,
+            BinaryRowGenerator::GenerateRow({min_sequence_number}, pool_.get()),
+            BinaryRowGenerator::GenerateRow({max_sequence_number}, pool_.get()),
+            SimpleStats::EmptyStats(), SimpleStats::EmptyStats(), min_sequence_number,
+            max_sequence_number,
+            /*schema_id=*/0, level, std::vector<std::optional<std::string>>(),
+            Timestamp(ts_second, 0l), std::nullopt, nullptr, FileSource::Append(), std::nullopt,
+            std::nullopt, std::nullopt, std::nullopt);
+    }
+
+    std::shared_ptr<FieldsComparator> CreateComparator() const {
+        std::vector<DataField> data_fields;
+        data_fields.emplace_back(/*id=*/0, arrow::field("f0", arrow::int32()));
+        EXPECT_OK_AND_ASSIGN(auto cmp,
+                             FieldsComparator::Create(data_fields, /*is_ascending_order=*/true,
+                                                      /*use_view=*/false));
+        return cmp;
+    }
+
+ private:
+    std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
+};
+
+TEST_F(LevelsTest, TestNonEmptyHighestLevelNo) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files;
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->NonEmptyHighestLevel(), -1);
+}
+
+TEST_F(LevelsTest, TestNonEmptyHighestLevel0) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(0, 0, 1, 0),
+                                                              CreateDataFileMeta(0, 2, 3, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->NonEmptyHighestLevel(), 0);
+}
+
+TEST_F(LevelsTest, TestNonEmptyHighestLevel1) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(0, 0, 1, 0),
+                                                              CreateDataFileMeta(1, 2, 3, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->NonEmptyHighestLevel(), 1);
+    ASSERT_EQ(levels->NumberOfLevels(), 3);
+    ASSERT_EQ(levels->MaxLevel(), 2);
+}
+
+TEST_F(LevelsTest, TestNonEmptyHighestLevel2) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {
+        CreateDataFileMeta(0, 0, 100, 0), CreateDataFileMeta(0, 100, 200, 0),
+        CreateDataFileMeta(0, 0, 200, 0), CreateDataFileMeta(0, 0, 200, 10),
+        CreateDataFileMeta(1, 0, 500, 0), CreateDataFileMeta(2, 0, 1000, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->NonEmptyHighestLevel(), 2);
+    ASSERT_EQ(levels->TotalFileSize(), 6);
+
+    std::vector<LevelSortedRun> expected_sorted_run = {
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[2])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[3])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[1])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[0])),
+        LevelSortedRun(1, SortedRun::FromSingle(input_files[4])),
+        LevelSortedRun(2, SortedRun::FromSingle(input_files[5])),
+    };
+
+    ASSERT_EQ(levels->LevelSortedRuns(), expected_sorted_run);
+    ASSERT_EQ(levels->NumberOfSortedRuns(), 6);
+}
+
+TEST_F(LevelsTest, TestAddLevel0File) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {
+        CreateDataFileMeta(0, 100, 200, 0), CreateDataFileMeta(0, 0, 200, 0),
+        CreateDataFileMeta(0, 0, 200, 10), CreateDataFileMeta(1, 0, 500, 0),
+        CreateDataFileMeta(2, 0, 1000, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->TotalFileSize(), 5);
+
+    auto new_level0 = CreateDataFileMeta(0, 0, 100, 0);
+    levels->AddLevel0File(new_level0);
+    ASSERT_EQ(levels->TotalFileSize(), 6);
+    std::vector<LevelSortedRun> expected_sorted_run = {
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[1])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[2])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[0])),
+        LevelSortedRun(0, SortedRun::FromSingle(new_level0)),
+        LevelSortedRun(1, SortedRun::FromSingle(input_files[3])),
+        LevelSortedRun(2, SortedRun::FromSingle(input_files[4])),
+    };
+
+    ASSERT_EQ(levels->LevelSortedRuns(), expected_sorted_run);
+    ASSERT_EQ(levels->NumberOfSortedRuns(), 6);
+}
+
+TEST_F(LevelsTest, TestUpdate) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {
+        CreateDataFileMeta(0, 100, 200, 0), CreateDataFileMeta(0, 0, 200, 0),
+        CreateDataFileMeta(0, 0, 200, 10), CreateDataFileMeta(1, 0, 500, 0),
+        CreateDataFileMeta(1, 600, 1000, 0)};
+
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    ASSERT_EQ(levels->TotalFileSize(), 5);
+    ASSERT_EQ(levels->NumberOfSortedRuns(), 4);
+
+    std::vector<std::shared_ptr<DataFileMeta>> before = {
+        input_files[1],
+        input_files[3],
+    };
+
+    std::vector<std::shared_ptr<DataFileMeta>> after = {CreateDataFileMeta(0, 0, 100, 0),
+                                                        CreateDataFileMeta(1, 0, 550, 0)};
+
+    ASSERT_OK(levels->Update(before, after));
+
+    std::vector<LevelSortedRun> expected_sorted_run = {
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[2])),
+        LevelSortedRun(0, SortedRun::FromSingle(input_files[0])),
+        LevelSortedRun(0, SortedRun::FromSingle(after[0])),
+        LevelSortedRun(1, SortedRun::FromSorted({after[1], input_files[4]})),
+    };
+
+    ASSERT_EQ(levels->LevelSortedRuns(), expected_sorted_run);
+    ASSERT_EQ(levels->NumberOfSortedRuns(), 4);
+}
+
+}  // namespace paimon::test

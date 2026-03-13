@@ -144,6 +144,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/string_utils.cpp)
 
 set(PAIMON_CORE_SRCS
+    core/disk/io_manager.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
     core/casting/binary_to_string_cast_executor.cpp
@@ -233,6 +234,8 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
     core/mergetree/compact/sort_merge_reader_with_min_heap.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/levels.cpp
+    core/mergetree/lookup_levels.cpp
     core/migrate/file_meta_utils.cpp
     core/operation/data_evolution_file_store_scan.cpp
     core/operation/data_evolution_split_read.cpp
@@ -536,6 +539,9 @@ if(PAIMON_BUILD_TESTS)
                     core/manifest/partition_entry_test.cpp
                     core/manifest/file_entry_test.cpp
                     core/manifest/index_manifest_entry_serializer_test.cpp
+                    core/mergetree/levels_test.cpp
+                    core/mergetree/lookup_file_test.cpp
+                    core/mergetree/lookup_levels_test.cpp
                     core/mergetree/compact/aggregate/aggregate_merge_function_test.cpp
                     core/mergetree/compact/aggregate/field_aggregator_factory_test.cpp
                     core/mergetree/compact/aggregate/field_bool_agg_test.cpp

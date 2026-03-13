@@ -35,7 +35,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
         int32_t bucket, const BinaryRow& partition,
         const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<FileStorePathFactory>& path_factory, const CoreOptions& options,
-        const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor);
+        const std::shared_ptr<MemoryPool>& memory_pool);
 
     Result<CompactResult> Rewrite(int32_t output_level, bool drop_delete,
                                   const std::vector<std::vector<SortedRun>>& sections) override;
