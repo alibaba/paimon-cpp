@@ -184,9 +184,19 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             WriterContainer<BatchWriter>& writer_container = bucket_iter->second;
             PAIMON_ASSIGN_OR_RAISE(CommitIncrement increment,
                                    writer_container.writer->PrepareCommit(wait_compaction));
+            auto compact_deletion_file = increment.GetCompactDeletionFile();
+            auto& compact_increment = increment.GetCompactIncrement();
+            if (compact_deletion_file) {
+                std::optional<std::shared_ptr<IndexFileMeta>> dv_index_file_meta =
+                    compact_deletion_file->GetOrCompute();
+                if (dv_index_file_meta) {
+                    compact_increment.AddNewIndexFiles({dv_index_file_meta.value()});
+                }
+            }
+
             auto committable = std::make_shared<CommitMessageImpl>(
                 partition, bucket, writer_container.total_buckets, increment.GetNewFilesIncrement(),
-                increment.GetCompactIncrement());
+                compact_increment);
             result.push_back(committable);
             if (!committable->IsEmpty()) {
                 writer_container.last_modified_commit_identifier = commit_identifier;

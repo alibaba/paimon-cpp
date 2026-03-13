@@ -172,7 +172,8 @@ TEST_F(IndexFileHandlerTest, TestScan) {
                            /*length=*/22, /*cardinality=*/1));
     std::vector<std::shared_ptr<IndexFileMeta>> index_meta_p10_b0 = {
         std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "index-86356766-3238-46e6-990b-656cd7409eaa-0",
+            std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+            "index-86356766-3238-46e6-990b-656cd7409eaa-0",
             /*file_size=*/31, /*row_count=*/1, dv_meta_p10_b0, /*external_path=*/std::nullopt)};
 
     LinkedHashMap<std::string, DeletionVectorMeta> dv_meta_p10_b1;
@@ -182,7 +183,8 @@ TEST_F(IndexFileHandlerTest, TestScan) {
                            /*length=*/24, /*cardinality=*/2));
     std::vector<std::shared_ptr<IndexFileMeta>> index_meta_p10_b1 = {
         std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "index-86356766-3238-46e6-990b-656cd7409eaa-1",
+            std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+            "index-86356766-3238-46e6-990b-656cd7409eaa-1",
             /*file_size=*/33, /*row_count=*/1, dv_meta_p10_b1, /*external_path=*/std::nullopt)};
     ASSERT_TRUE(
         ObjectUtils::Equal(index_file_metas[std::make_pair(partition, 0)], index_meta_p10_b0));
@@ -227,7 +229,8 @@ TEST_F(IndexFileHandlerTest, Test09VersionScan) {
                            /*length=*/22, /*cardinality=*/std::nullopt));
     std::vector<std::shared_ptr<IndexFileMeta>> index_meta_p10_b0 = {
         std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "index-7badd250-6c0b-49e9-8e40-2449ae9a2539-0",
+            std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+            "index-7badd250-6c0b-49e9-8e40-2449ae9a2539-0",
             /*file_size=*/61, /*row_count=*/2, dv_meta_p10_b0, /*external_path=*/std::nullopt)};
 
     LinkedHashMap<std::string, DeletionVectorMeta> dv_meta_p10_b1;
@@ -237,7 +240,8 @@ TEST_F(IndexFileHandlerTest, Test09VersionScan) {
                            /*length=*/22, /*cardinality=*/std::nullopt));
     std::vector<std::shared_ptr<IndexFileMeta>> index_meta_p10_b1 = {
         std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "index-7badd250-6c0b-49e9-8e40-2449ae9a2539-1",
+            std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+            "index-7badd250-6c0b-49e9-8e40-2449ae9a2539-1",
             /*file_size=*/31, /*row_count=*/1, dv_meta_p10_b1, /*external_path=*/std::nullopt)};
     ASSERT_TRUE(
         ObjectUtils::Equal(index_file_metas[std::make_pair(partition, 0)], index_meta_p10_b0));

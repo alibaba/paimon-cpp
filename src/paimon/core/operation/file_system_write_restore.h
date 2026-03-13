@@ -52,7 +52,8 @@ class FileSystemWriteRestore : public WriteRestore {
     }
 
     Result<std::shared_ptr<RestoreFiles>> GetRestoreFiles(
-        const BinaryRow& partition, int32_t bucket, bool scan_delete_vectors_index) const override {
+        const BinaryRow& partition, int32_t bucket,
+        bool scan_deletion_vectors_index) const override {
         // TODO(yonghao.fyh): java paimon doesn't use snapshot_manager.LatestSnapshot() here,
         // because they don't want to flood the catalog with high concurrency
         PAIMON_ASSIGN_OR_RAISE(std::optional<Snapshot> snapshot,
@@ -61,16 +62,15 @@ class FileSystemWriteRestore : public WriteRestore {
             return RestoreFiles::Empty();
         }
 
-        // Plan scan
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStoreScan::RawPlan> plan,
                                scan_->WithSnapshot(snapshot.value())->CreatePlan());
         std::vector<ManifestEntry> entries = plan->Files();
-        std::vector<std::shared_ptr<DataFileMeta>> restore_files;
+        std::vector<std::shared_ptr<DataFileMeta>> restore_data_files;
         PAIMON_ASSIGN_OR_RAISE(std::optional<int32_t> total_buckets,
-                               WriteRestore::ExtractDataFiles(entries, &restore_files));
+                               WriteRestore::ExtractDataFiles(entries, &restore_data_files));
 
         std::vector<std::shared_ptr<IndexFileMeta>> deletion_vectors_index;
-        if (scan_delete_vectors_index) {
+        if (scan_deletion_vectors_index) {
             PAIMON_ASSIGN_OR_RAISE(
                 deletion_vectors_index,
                 index_file_handler_->Scan(
@@ -78,7 +78,7 @@ class FileSystemWriteRestore : public WriteRestore {
                     partition, bucket));
         }
 
-        return std::make_shared<RestoreFiles>(snapshot, total_buckets, restore_files,
+        return std::make_shared<RestoreFiles>(snapshot, total_buckets, restore_data_files,
                                               /*dynamic_bucket_index=*/nullptr,
                                               deletion_vectors_index);
     }

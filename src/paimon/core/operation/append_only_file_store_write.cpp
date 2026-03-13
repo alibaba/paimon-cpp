@@ -154,8 +154,6 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
     }
     rewriter_guard.Release();
     PAIMON_RETURN_NOT_OK(rewriter->Close());
-    reader_guard.Release();
-    reader->Close();
     return rewriter->GetResult();
 }
 
@@ -170,15 +168,16 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
 
     std::shared_ptr<CompactManager> compact_manager;
     auto schemas = BlobUtils::SeparateBlobSchema(write_schema_);
-    if (options_.WriteOnly() || options_.GetBucket() == -1 || with_blob_) {
-        // TODO(yonghao.fyh): check data evolution
+    if (options_.WriteOnly() || options_.DataEvolutionEnabled() || options_.GetBucket() == -1 ||
+        with_blob_) {
         compact_manager = std::make_shared<NoopCompactManager>();
     } else {
         auto dv_factory =
             [dv_maintainer](
                 const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
             if (dv_maintainer) {
-                return dv_maintainer->DeletionVectorOf(file_name).value_or(nullptr);
+                return dv_maintainer->DeletionVectorOf(file_name).value_or(
+                    std::shared_ptr<DeletionVector>());
             }
             return std::shared_ptr<DeletionVector>();
         };
