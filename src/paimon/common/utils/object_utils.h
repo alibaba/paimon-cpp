@@ -27,7 +27,6 @@
 
 #include "paimon/result.h"
 #include "paimon/traits.h"
-
 namespace paimon {
 /// Utils for objects.
 class ObjectUtils {
@@ -133,10 +132,12 @@ class ObjectUtils {
         return index_map;
     }
 
-    /// Precondition: U can be moved to T.
+    /// Precondition: U and T must be pointer and U::value can move to T::value
     template <typename T, typename U>
     static std::vector<T> MoveVector(std::vector<U>&& input) {
-        static_assert(std::is_constructible_v<T, U&&>, "U cannot be moved to T");
+        static_assert(is_pointer<U>::value && is_pointer<T>::value &&
+                          std::is_convertible_v<value_type_traits_t<U>, value_type_traits_t<T>>,
+                      "U and T must be pointer and U::value can move to T::value");
         std::vector<T> result;
         result.reserve(input.size());
         for (auto& item : input) {

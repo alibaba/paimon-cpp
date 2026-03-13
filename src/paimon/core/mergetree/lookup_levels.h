@@ -49,7 +49,7 @@ class LookupLevels {
 
     Result<std::optional<T>> Lookup(const std::shared_ptr<InternalRow>& key, int32_t start_level);
 
-    Result<std::optional<T>> lookupLevel0(
+    Result<std::optional<T>> LookupLevel0(
         const std::shared_ptr<InternalRow>& key,
         const std::set<std::shared_ptr<DataFileMeta>, Levels::Level0Comparator>& level0);
 

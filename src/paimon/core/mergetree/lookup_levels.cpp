@@ -87,7 +87,7 @@ Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalR
 }
 
 template <typename T>
-Result<std::optional<T>> LookupLevels<T>::lookupLevel0(
+Result<std::optional<T>> LookupLevels<T>::LookupLevel0(
     const std::shared_ptr<InternalRow>& key,
     const std::set<std::shared_ptr<DataFileMeta>, Levels::Level0Comparator>& level0) {
     auto lookup = [this](const std::shared_ptr<InternalRow>& key,
@@ -241,7 +241,7 @@ Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFile
             PAIMON_RETURN_NOT_OK(kv_writer->Put(std::move(key_bytes), std::move(value_bytes)));
         }
     }
-    kv_writer->Close();
+    PAIMON_RETURN_NOT_OK(kv_writer->Close());
     write_guard.Release();
     return Status::OK();
 }
