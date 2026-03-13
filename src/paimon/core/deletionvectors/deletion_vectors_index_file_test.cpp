@@ -35,8 +35,7 @@ TEST(DeletionVectorsIndexFileTest, Basic) {
                          FileSystemFactory::Get("local", dir->Str(), {}));
     auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
     auto pool = GetDefaultPool();
-    DeletionVectorsIndexFile index_file(
-        fs, path_factory, /*target_size_per_index_file=*/1024 * 1024, /*bitmap64=*/false, pool);
+    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
 
     std::map<std::string, std::shared_ptr<DeletionVector>> input;
     RoaringBitmap32 roaring_1;
@@ -66,7 +65,6 @@ TEST(DeletionVectorsIndexFileTest, ExternalPathAndIndexFileMeta) {
     path_factory->SetExternal(true);
     auto pool = GetDefaultPool();
     DeletionVectorsIndexFile index_file(fs, path_factory,
-                                        /*target_size_per_index_file=*/1024 * 1024,
                                         /*bitmap64=*/false, pool);
 
     std::map<std::string, std::shared_ptr<DeletionVector>> input;

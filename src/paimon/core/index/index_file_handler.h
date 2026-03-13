@@ -45,12 +45,10 @@ class IndexFileHandler {
     IndexFileHandler(const std::shared_ptr<FileSystem>& fs,
                      std::unique_ptr<IndexManifestFile>&& index_manifest_file,
                      const std::shared_ptr<IndexFilePathFactories>& path_factories,
-                     int64_t dv_target_file_size, bool dv_bitmap64,
-                     const std::shared_ptr<MemoryPool>& pool)
+                     bool dv_bitmap64, const std::shared_ptr<MemoryPool>& pool)
         : fs_(fs),
           index_manifest_file_(std::move(index_manifest_file)),
           path_factories_(path_factories),
-          dv_target_file_size_(dv_target_file_size),
           dv_bitmap64_(dv_bitmap64),
           pool_(pool) {}
 
@@ -79,8 +77,8 @@ class IndexFileHandler {
                                                               int32_t bucket) const {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<IndexPathFactory> index_path_factory,
                                path_factories_->Get(partition, bucket));
-        return std::make_unique<DeletionVectorsIndexFile>(
-            fs_, index_path_factory, dv_target_file_size_, dv_bitmap64_, pool_);
+        return std::make_unique<DeletionVectorsIndexFile>(fs_, index_path_factory, dv_bitmap64_,
+                                                          pool_);
     }
 
     Result<std::map<std::string, std::shared_ptr<DeletionVector>>> ReadAllDeletionVectors(
@@ -95,7 +93,6 @@ class IndexFileHandler {
     std::shared_ptr<FileSystem> fs_;
     std::unique_ptr<IndexManifestFile> index_manifest_file_;
     std::shared_ptr<IndexFilePathFactories> path_factories_;
-    int64_t dv_target_file_size_;
     bool dv_bitmap64_;
     std::shared_ptr<MemoryPool> pool_;
 };

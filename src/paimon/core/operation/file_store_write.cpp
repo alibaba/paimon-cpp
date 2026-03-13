@@ -137,8 +137,7 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             auto index_file_handler = std::make_shared<IndexFileHandler>(
                 options.GetFileSystem(), std::move(index_manifest_file),
                 std::make_shared<IndexFilePathFactories>(file_store_path_factory),
-                options.DeletionVectorTargetFileSize(), options.DeletionVectorsBitmap64(),
-                ctx->GetMemoryPool());
+                options.DeletionVectorsBitmap64(), ctx->GetMemoryPool());
             dv_maintainer_factory =
                 std::make_shared<BucketedDvMaintainer::Factory>(index_file_handler);
         }

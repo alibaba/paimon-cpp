@@ -36,7 +36,6 @@ std::shared_ptr<DeletionVectorsIndexFile> CreateDvIndexFile(const std::string& r
                          FileSystemFactory::Get("local", root_path, {}));
     auto path_factory = std::make_shared<MockIndexPathFactory>(root_path);
     return std::make_shared<DeletionVectorsIndexFile>(fs, path_factory,
-                                                      /*target_size_per_index_file=*/1024 * 1024,
                                                       /*bitmap64=*/false, memory_pool);
 }
 
