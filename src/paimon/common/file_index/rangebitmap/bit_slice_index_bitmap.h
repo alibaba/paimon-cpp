@@ -60,7 +60,7 @@ class BitSliceIndexBitmap {
     };
 
  public:
-    static constexpr int kCurrentVersion = 1;
+    static constexpr int32_t kCurrentVersion = 1;
 
  private:
     BitSliceIndexBitmap(int32_t indexes_length, PAIMON_UNIQUE_PTR<Bytes> indexes,
