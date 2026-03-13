@@ -245,4 +245,69 @@ TEST_F(IndexFileHandlerTest, Test09VersionScan) {
         ObjectUtils::Equal(index_file_metas[std::make_pair(partition, 1)], index_meta_p10_b1));
 }
 
+TEST_F(IndexFileHandlerTest, TestScanWithNoIndexManifest) {
+    std::string table_path = paimon::test::GetDataDir() + "/orc/pk_09.db/pk_09/";
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::MANIFEST_FORMAT, "orc"}}));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<IndexFileHandler> index_file_handler,
+                         CreateIndexFileHandler(table_path, core_options));
+
+    SnapshotManager snapshot_manager(core_options.GetFileSystem(), table_path);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot, snapshot_manager.LoadSnapshot(/*snapshot_id=*/6));
+
+    Snapshot no_index_manifest_snapshot(
+        std::optional<int32_t>(snapshot.Version()), snapshot.Id(), snapshot.SchemaId(),
+        snapshot.BaseManifestList(), snapshot.BaseManifestListSize(), snapshot.DeltaManifestList(),
+        snapshot.DeltaManifestListSize(), snapshot.ChangelogManifestList(),
+        snapshot.ChangelogManifestListSize(), /*index_manifest=*/std::nullopt,
+        snapshot.CommitUser(), snapshot.CommitIdentifier(), snapshot.GetCommitKind(),
+        snapshot.TimeMillis(), snapshot.LogOffsets(), snapshot.TotalRecordCount(),
+        snapshot.DeltaRecordCount(), snapshot.ChangelogRecordCount(), snapshot.Watermark(),
+        snapshot.Statistics(), snapshot.Properties(), snapshot.NextRowId());
+
+    auto partition = BinaryRowGenerator::GenerateRow({10}, memory_pool_.get());
+    std::unordered_set<BinaryRow> partitions = {partition};
+    ASSERT_OK_AND_ASSIGN(
+        auto index_file_metas,
+        index_file_handler->Scan(no_index_manifest_snapshot,
+                                 std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+                                 partitions));
+    ASSERT_TRUE(index_file_metas.empty());
+
+    ASSERT_OK_AND_ASSIGN(
+        auto index_entries,
+        index_file_handler->Scan(no_index_manifest_snapshot,
+                                 [](const IndexManifestEntry&) -> Result<bool> { return true; }));
+    ASSERT_TRUE(index_entries.empty());
+}
+
+TEST_F(IndexFileHandlerTest, TestScanByPartitionBucketAndReadAllDeletionVectors) {
+    std::string table_path = paimon::test::GetDataDir() +
+                             "/orc/pk_table_with_dv_cardinality.db/pk_table_with_dv_cardinality/";
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::MANIFEST_FORMAT, "orc"}}));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<IndexFileHandler> index_file_handler,
+                         CreateIndexFileHandler(table_path, core_options));
+
+    SnapshotManager snapshot_manager(core_options.GetFileSystem(), table_path);
+    ASSERT_OK_AND_ASSIGN(Snapshot snapshot, snapshot_manager.LoadSnapshot(/*snapshot_id=*/4));
+
+    auto partition = BinaryRowGenerator::GenerateRow({10}, memory_pool_.get());
+    ASSERT_OK_AND_ASSIGN(
+        auto index_file_metas,
+        index_file_handler->Scan(
+            snapshot, std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX), partition,
+            /*bucket=*/0));
+    ASSERT_EQ(index_file_metas.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto deletion_vectors, index_file_handler->ReadAllDeletionVectors(
+                                                    partition, /*bucket=*/0, index_file_metas));
+    ASSERT_EQ(deletion_vectors.size(), 1);
+    ASSERT_TRUE(deletion_vectors.find("data-0d0f29cc-63c6-4fab-a594-71bd7d06fcde-0.orc") !=
+                deletion_vectors.end());
+    ASSERT_EQ(deletion_vectors["data-0d0f29cc-63c6-4fab-a594-71bd7d06fcde-0.orc"]->GetCardinality(),
+              1);
+}
+
 }  // namespace paimon::test

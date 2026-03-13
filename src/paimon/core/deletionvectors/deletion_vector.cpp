@@ -44,7 +44,7 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::Read(const FileSystem*
     PAIMON_ASSIGN_OR_RAISE(int32_t actual_length, file_input_stream.ReadValue<int32_t>());
     if (actual_length != deletion_file.length) {
         return Status::Invalid(
-            fmt::format("Size not match, actual size: {}, expect size: {}, , file path: {}",
+            fmt::format("Size not match, actual size: {}, expect size: {}, file path: {}",
                         actual_length, deletion_file.length, deletion_file.path));
     }
     auto bytes = Bytes::AllocateBytes(deletion_file.length, pool);
@@ -75,10 +75,11 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::Read(DataInputStream* 
         PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] int32_t unused_crc,
                                input_stream->ReadValue<int32_t>());
 
-        return BitmapDeletionVector::Deserialize(bytes->data(), bytes->size(), pool);
+        return BitmapDeletionVector::DeserializeWithoutMagicNumber(bytes->data(), bytes->size(),
+                                                                   pool);
     } else if (EndianSwapValue(magic_number) == Bitmap64DeletionVector::MAGIC_NUMBER) {
         return Status::NotImplemented(
-            "bitmap64 deletion vectors are not supported in this version; "
+            "bitmap64 deletion vectors are not supported in this version, "
             "please use bitmap deletion vectors instead or upgrade to a version "
             "that supports bitmap64.");
     }

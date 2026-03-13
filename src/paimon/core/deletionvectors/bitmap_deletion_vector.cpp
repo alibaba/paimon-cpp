@@ -63,6 +63,13 @@ Status BitmapDeletionVector::CheckPosition(int64_t position) const {
     return Status::OK();
 }
 
+Result<PAIMON_UNIQUE_PTR<DeletionVector>> BitmapDeletionVector::DeserializeWithoutMagicNumber(
+    const char* buffer, int32_t length, MemoryPool* pool) {
+    RoaringBitmap32 roaring_bitmap;
+    PAIMON_RETURN_NOT_OK(roaring_bitmap.Deserialize(buffer, length));
+    return pool->AllocateUnique<BitmapDeletionVector>(roaring_bitmap);
+}
+
 Result<PAIMON_UNIQUE_PTR<DeletionVector>> BitmapDeletionVector::Deserialize(const char* buffer,
                                                                             int32_t length,
                                                                             MemoryPool* pool) {
@@ -73,10 +80,8 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> BitmapDeletionVector::Deserialize(cons
         return Status::Invalid(fmt::format(
             "Unable to deserialize deletion vector, invalid magic number: {}", magic_num));
     }
-    RoaringBitmap32 roaring_bitmap;
-    PAIMON_RETURN_NOT_OK(roaring_bitmap.Deserialize(buffer + MAGIC_NUMBER_SIZE_BYTES,
-                                                    length - MAGIC_NUMBER_SIZE_BYTES));
-    return pool->AllocateUnique<BitmapDeletionVector>(roaring_bitmap);
+    return DeserializeWithoutMagicNumber(buffer + MAGIC_NUMBER_SIZE_BYTES,
+                                         length - MAGIC_NUMBER_SIZE_BYTES, pool);
 }
 
 }  // namespace paimon

@@ -508,7 +508,9 @@ if(PAIMON_BUILD_TESTS)
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
                     core/deletionvectors/bitmap_deletion_vector_test.cpp
                     core/deletionvectors/bucketed_dv_maintainer_test.cpp
+                    core/deletionvectors/deletion_file_writer_test.cpp
                     core/deletionvectors/deletion_vector_test.cpp
+                    core/deletionvectors/deletion_vector_index_file_writer_test.cpp
                     core/deletionvectors/deletion_vectors_index_file_test.cpp
                     core/index/index_in_data_file_dir_path_factory_test.cpp
                     core/index/deletion_vector_meta_test.cpp
