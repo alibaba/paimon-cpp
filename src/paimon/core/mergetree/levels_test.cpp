@@ -117,7 +117,7 @@ TEST_F(LevelsTest, TestAddLevel0File) {
     ASSERT_EQ(levels->TotalFileSize(), 5);
 
     auto new_level0 = CreateDataFileMeta(0, 0, 100, 0);
-    levels->AddLevel0File(new_level0);
+    ASSERT_OK(levels->AddLevel0File(new_level0));
     ASSERT_EQ(levels->TotalFileSize(), 6);
     std::vector<LevelSortedRun> expected_sorted_run = {
         LevelSortedRun(0, SortedRun::FromSingle(input_files[1])),
