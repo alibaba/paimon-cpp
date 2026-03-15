@@ -30,6 +30,7 @@ if(CMAKE_GENERATOR_TOOLSET)
 endif()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
+string(TOLOWER ${CMAKE_BUILD_TYPE} LOWERCASE_BUILD_TYPE)
 
 set(EP_COMMON_TOOLCHAIN "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                         "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
@@ -1091,7 +1092,6 @@ macro(build_arrow)
     file(MAKE_DIRECTORY "${ARROW_INCLUDE_DIR}")
 
     set(ARROW_BUILD_DIR "${CMAKE_BINARY_DIR}/arrow")
-    string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
     set(ARROW_STATIC_LIB
         "${ARROW_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}arrow${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
@@ -1164,7 +1164,7 @@ macro(build_arrow)
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libarrow.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_dataset STATIC IMPORTED)
     set_target_properties(arrow_dataset
@@ -1172,7 +1172,7 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_dataset.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_acero STATIC IMPORTED)
     set_target_properties(arrow_acero
@@ -1180,14 +1180,14 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_acero.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(parquet STATIC IMPORTED)
     set_target_properties(parquet
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libparquet.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_bundled_dependencies STATIC IMPORTED)
     set_target_properties(arrow_bundled_dependencies
@@ -1195,7 +1195,7 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_bundled_dependencies.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_dependencies(arrow arrow_ep)
     add_dependencies(parquet arrow_ep)
@@ -1238,7 +1238,7 @@ macro(build_gtest)
     # Library and runtime same on non-Windows
     set(_GTEST_LIBRARY_DIR "${_GTEST_RUNTIME_DIR}")
 
-    if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
+    if(LOWERCASE_BUILD_TYPE STREQUAL "debug")
         set(GTEST_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtestd.a")
         set(GMOCK_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gmockd.a")
         set(GTEST_MAIN_STATIC_LIB
@@ -1301,7 +1301,7 @@ macro(build_tbb)
 
     set(TBB_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/tbb_ep-install")
 
-    if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
+    if(LOWERCASE_BUILD_TYPE STREQUAL "debug")
         set(TBB_STATIC_LIB "${TBB_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}tbb_debug.a")
     else()
         set(TBB_STATIC_LIB "${TBB_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}tbb.a")
@@ -1311,8 +1311,6 @@ macro(build_tbb)
     file(MAKE_DIRECTORY "${TBB_INCLUDE_DIR}")
 
     set(TBB_BUILD_DIR "${CMAKE_BINARY_DIR}/tbb")
-
-    string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 
     set(TBB_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
@@ -1333,7 +1331,7 @@ macro(build_tbb)
                           PROPERTIES IMPORTED_LOCATION "${TBB_STATIC_LIB}"
                                      INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${TBB_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${TBB_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
     add_dependencies(tbb tbb_ep)
 
 endmacro(build_tbb)
