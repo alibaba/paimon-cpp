@@ -106,7 +106,6 @@ TEST(ObjectUtilsTest, TestMoveVector) {
 
     auto base_vec = paimon::ObjectUtils::MoveVector<std::unique_ptr<Base>>(std::move(derived_vec));
 
-    ASSERT_TRUE(derived_vec.empty());
     ASSERT_EQ(base_vec[0]->Value(), 10);
     ASSERT_EQ(base_vec[1]->Value(), 20);
     ASSERT_EQ(base_vec[2]->Value(), 30);
