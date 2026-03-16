@@ -333,11 +333,10 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
         if (!read_fields_in_file.empty()) {
             // create new FieldMappingReader for read partial fields
             auto file_read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields_in_file);
-            PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::unique_ptr<FileBatchReader>> file_readers,
-                CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
-                                     /*predicate=*/nullptr, /*deletion_file_map=*/{}, row_ranges,
-                                     data_file_path_factory));
+            PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<FileBatchReader>> file_readers,
+                                   CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
+                                                        /*predicate=*/nullptr, /*dv_factory=*/{},
+                                                        row_ranges, data_file_path_factory));
             if (file_readers.size() == 1) {
                 file_batch_readers[file_idx] = std::move(file_readers[0]);
             } else {

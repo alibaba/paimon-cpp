@@ -62,7 +62,7 @@ TEST(FileSystemWriteRestoreTest, GetRestoreFilesReturnsEmptyWhenNoLatestSnapshot
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<RestoreFiles> files,
                          restore.GetRestoreFiles(BinaryRow::EmptyRow(), /*bucket=*/0,
-                                                 /*scan_delete_vectors_index=*/true));
+                                                 /*scan_deletion_vectors_index=*/true));
     ASSERT_FALSE(files->GetSnapshot().has_value());
     ASSERT_FALSE(files->TotalBuckets().has_value());
     ASSERT_TRUE(files->DataFiles().empty());
