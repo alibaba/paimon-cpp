@@ -15,6 +15,7 @@
  */
 
 #pragma once
+#include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/lookup/lookup_store_factory.h"
 #include "paimon/common/utils/binary_row_partition_computer.h"
@@ -35,7 +36,9 @@ class LookupFile {
           reader_(std::move(reader)) {}
 
     ~LookupFile() {
-        [[maybe_unused]] auto status = Close();
+        if (!closed_) {
+            [[maybe_unused]] auto status = Close();
+        }
     }
     const std::string& LocalFile() const {
         return local_file_;

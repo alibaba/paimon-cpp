@@ -23,6 +23,7 @@
 namespace paimon::test {
 TEST(LookupFileTest, TestSimple) {
     class FakeLookupStoreReader : public LookupStoreReader {
+     public:
         FakeLookupStoreReader(const std::map<std::string, std::string>& kvs,
                               std::shared_ptr<MemoryPool>& pool)
             : pool_(pool), kvs_(kvs) {}

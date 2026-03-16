@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 #include "paimon/core/mergetree/levels.h"
+
+#include <algorithm>
 namespace paimon {
 bool Levels::Level0Comparator::operator()(const std::shared_ptr<DataFileMeta>& a,
                                           const std::shared_ptr<DataFileMeta>& b) const {

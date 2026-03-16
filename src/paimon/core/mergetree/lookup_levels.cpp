@@ -253,8 +253,6 @@ Result<std::shared_ptr<PersistProcessor<T>>> LookupLevels<T>::GetOrCreateProcess
     if (iter != schema_id_and_ser_version_to_processors_.end()) {
         return iter->second;
     }
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> table_schema,
-                           schema_manager_->ReadSchema(schema_id));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<PersistProcessor<T>> processor,
         processor_factory_->Create(ser_version, serializer_factory_, value_schema_, pool_));
