@@ -23,6 +23,8 @@
 #include "gtest/gtest.h"
 #include "paimon/commit_context.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/factories/io_hook.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/operation/append_only_file_store_write.h"
@@ -34,6 +36,7 @@
 #include "paimon/result.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/data_generator.h"
+#include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/test_helper.h"
 #include "paimon/testing/utils/testharness.h"
 #include "paimon/write_context.h"
@@ -387,6 +390,70 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
                              helper->ReadAndCheckResult(data_type, {split}, iter->second));
         ASSERT_TRUE(success);
     }
+}
+
+TEST_F(CompactionInteTest, TestAppendTableCompactionWithIOException) {
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    auto schema = arrow::schema(fields);
+
+    std::vector<std::string> primary_keys = {};
+    std::vector<std::string> partition_keys = {"f1"};
+    // auto file_format = GetParam();
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, "orc"},
+        {Options::BUCKET, "2"},
+        {Options::BUCKET_KEY, "f2"},
+        {Options::FILE_SYSTEM, "local"},
+    };
+
+    bool compaction_run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 600; ++i) {
+        auto dir = UniqueTestDirectory::Create();
+        ASSERT_TRUE(dir);
+
+        ASSERT_OK_AND_ASSIGN(auto helper,
+                             TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys,
+                                                options, /*is_streaming_mode=*/true));
+        ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<TableSchema>> table_schema,
+                             helper->LatestSchema());
+        ASSERT_TRUE(table_schema);
+
+        auto gen = std::make_shared<DataGenerator>(table_schema.value(), pool_);
+        int64_t commit_identifier = 0;
+        PrepareSimpleAppendData(gen, helper.get(), &commit_identifier);
+
+        std::vector<BinaryRow> data;
+        data.push_back(
+            BinaryRowGenerator::GenerateRow({std::string("Lily"), 10, 0, 17.1}, pool_.get()));
+        ASSERT_OK_AND_ASSIGN(auto batches, gen->SplitArrayByPartitionAndBucket(data));
+        ASSERT_EQ(1, batches.size());
+
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+
+        CHECK_HOOK_STATUS(helper->write_->Write(std::move(batches[0])), i);
+        CHECK_HOOK_STATUS(helper->write_->Compact(/*partition=*/{{"f1", "10"}}, /*bucket=*/1,
+                                                  /*full_compaction=*/true),
+                          i);
+
+        Result<std::vector<std::shared_ptr<CommitMessage>>> commit_messages =
+            helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier);
+        CHECK_HOOK_STATUS(commit_messages.status(), i);
+        CHECK_HOOK_STATUS(helper->commit_->Commit(commit_messages.value(), commit_identifier), i);
+
+        compaction_run_complete = true;
+        io_hook->Clear();
+
+        ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> latest_snapshot, helper->LatestSnapshot());
+        ASSERT_TRUE(latest_snapshot);
+        ASSERT_EQ(Snapshot::CommitKind::Compact(), latest_snapshot->GetCommitKind());
+        break;
+    }
+
+    ASSERT_TRUE(compaction_run_complete);
 }
 
 TEST_F(CompactionInteTest, DISABLED_TestAppendTableWriteAlterTableWithCompaction) {
