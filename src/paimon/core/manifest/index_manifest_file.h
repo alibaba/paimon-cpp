@@ -47,7 +47,7 @@ class IndexManifestFile : public ObjectsFile<IndexManifestEntry> {
         const std::shared_ptr<FileSystem>& file_system,
         const std::shared_ptr<FileFormat>& file_format, const std::string& compression,
         const std::shared_ptr<FileStorePathFactory>& path_factory,
-        const std::shared_ptr<MemoryPool>& pool, const CoreOptions& options);
+        const std::shared_ptr<MemoryPool>& pool, int32_t bucket_mode, const CoreOptions& options);
 
     /// Write new index files to index manifest.
     Result<std::optional<std::string>> WriteIndexFiles(

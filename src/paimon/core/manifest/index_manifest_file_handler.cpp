@@ -17,14 +17,59 @@
 #include "paimon/core/manifest/index_manifest_file_handler.h"
 
 #include <set>
+#include <unordered_map>
 #include <utility>
 
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 namespace paimon {
+
+using BucketIdentifer = std::tuple<BinaryRow, int32_t, std::string>;
+
+std::vector<IndexManifestEntry> IndexManifestFileHandler::BucketedCombiner::Combine(
+    const std::vector<IndexManifestEntry>& prev_index_files,
+    const std::vector<IndexManifestEntry>& new_index_files) const {
+    std::unordered_map<BucketIdentifer, IndexManifestEntry> index_entries;
+    for (const auto& entry : prev_index_files) {
+        index_entries.emplace(
+            BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()), entry);
+    }
+
+    std::unordered_map<BucketIdentifer, IndexManifestEntry> removed;
+    removed.reserve(new_index_files.size());
+    std::unordered_map<BucketIdentifer, IndexManifestEntry> added;
+    added.reserve(new_index_files.size());
+
+    for (const auto& entry : new_index_files) {
+        if (entry.kind == FileKind::Delete()) {
+            removed.emplace(
+                BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()),
+                entry);
+        } else if (entry.kind == FileKind::Add()) {
+            added.emplace(
+                BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()),
+                entry);
+        }
+    }
+
+    // The deleted entry is processed first to avoid overwriting a new entry.
+    for (const auto& entry : removed) {
+        index_entries.erase(entry.first);
+    }
+    for (const auto& entry : added) {
+        index_entries.emplace(entry.first, entry.second);
+    }
+
+    std::vector<IndexManifestEntry> result_entries;
+    result_entries.reserve(index_entries.size());
+    for (const auto& [_, entry] : index_entries) {
+        result_entries.push_back(entry);
+    }
+    return result_entries;
+}
+
 std::vector<IndexManifestEntry> IndexManifestFileHandler::GlobalFileNameCombiner::Combine(
     const std::vector<IndexManifestEntry>& prev_index_files,
     const std::vector<IndexManifestEntry>& new_index_files) const {
-    // TODO(liancheng.lsz): support dv
     std::map<std::string, IndexManifestEntry> index_entries;
     for (const auto& entry : prev_index_files) {
         index_entries.emplace(entry.index_file->FileName(), entry);
@@ -121,8 +166,11 @@ IndexManifestFileHandler::GetIndexManifestFileCombine(const std::string& index_t
     if (index_type != DeletionVectorsIndexFile::DELETION_VECTORS_INDEX && index_type != "HASH") {
         return std::make_unique<GlobalFileNameCombiner>();
     }
-    return Status::NotImplemented(
-        "Do not support handle dv index or hash index in commit process.");
+    if (index_type == DeletionVectorsIndexFile::DELETION_VECTORS_INDEX && bucket_mode == -1) {
+        return Status::NotImplemented("not yet support dv with BUCKET_UNAWARE mode");
+    } else {
+        return std::make_unique<BucketedCombiner>();
+    }
 }
 
 }  // namespace paimon

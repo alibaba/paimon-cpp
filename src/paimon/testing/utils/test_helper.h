@@ -56,18 +56,19 @@ class TestHelper {
         const std::string& root_path, const std::shared_ptr<arrow::Schema>& schema,
         const std::vector<std::string>& partition_keys,
         const std::vector<std::string>& primary_keys,
-        const std::map<std::string, std::string>& options, bool is_streaming_mode) {
+        const std::map<std::string, std::string>& options, bool is_streaming_mode,
+        bool ignore_if_exists = false) {
         // only for test && only check the key
         auto new_options = options;
         new_options["enable-object-store-catalog-in-inte-test"] = "";
         PAIMON_ASSIGN_OR_RAISE(auto catalog, Catalog::Create(root_path, new_options));
-        PAIMON_RETURN_NOT_OK(
-            catalog->CreateDatabase("foo", new_options, /*ignore_if_exists=*/false));
+        PAIMON_RETURN_NOT_OK(catalog->CreateDatabase("foo", new_options, ignore_if_exists));
         ::ArrowSchema c_schema;
+        ScopeGuard guard([schema = &c_schema]() { ArrowSchemaRelease(schema); });
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &c_schema));
         PAIMON_RETURN_NOT_OK(catalog->CreateTable(Identifier("foo", "bar"), &c_schema,
                                                   partition_keys, primary_keys, new_options,
-                                                  /*ignore_if_exists=*/false));
+                                                  ignore_if_exists));
         std::string table_path = PathUtil::JoinPath(root_path, "foo.db/bar");
         return Create(table_path, new_options, is_streaming_mode);
     }

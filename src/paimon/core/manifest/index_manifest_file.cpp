@@ -61,7 +61,7 @@ Result<std::unique_ptr<IndexManifestFile>> IndexManifestFile::Create(
         path_factory->CreateIndexManifestFileFactory();
     return std::unique_ptr<IndexManifestFile>(
         new IndexManifestFile(file_system, reader_builder, writer_builder, compression,
-                              index_manifest_file_factory, pool));
+                              index_manifest_file_factory, bucket_mode, pool));
 }
 
 IndexManifestFile::IndexManifestFile(const std::shared_ptr<FileSystem>& file_system,
