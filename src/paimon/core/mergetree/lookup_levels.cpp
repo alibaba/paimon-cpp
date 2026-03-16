@@ -214,7 +214,9 @@ Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFile
         lookup_store_factory_->CreateWriter(fs_, kv_file_path, bloom_filter, pool_));
 
     ScopeGuard write_guard([&]() -> void {
-        [[maybe_unused]] auto status = fs_->Delete(kv_file_path, /*recursive=*/false);
+        [[maybe_unused]] auto status = kv_writer->Close();
+        reader->Close();
+        [[maybe_unused]] auto delete_status = fs_->Delete(kv_file_path, /*recursive=*/false);
     });
 
     // Read each KeyValue and write to lookup file with or without position.
