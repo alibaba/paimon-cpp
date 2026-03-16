@@ -64,12 +64,12 @@ class CompactFutureManager : public CompactManager {
         if (ready) {
             Result<std::shared_ptr<CompactResult>> result =
                 ObtainCompactResult(std::move(task_future_));
-            if (result.status.OK()) {
+            if (result.status().ok()) {
                 return std::make_optional(std::move(result).value());
             } else if (result.status().IsCancelled()) {
                 return std::optional<std::shared_ptr<CompactResult>>();
             } else {
-                return result;
+                return result.status();
             }
         }
         return std::optional<std::shared_ptr<CompactResult>>();
