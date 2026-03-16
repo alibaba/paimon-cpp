@@ -16,6 +16,7 @@
 
 #include "paimon/core/operation/append_only_file_store_write.h"
 
+#include <atomic>
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
@@ -108,7 +109,8 @@ Result<std::unique_ptr<FileStoreScan>> AppendOnlyFileStoreWrite::CreateFileStore
 
 Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::CompactRewrite(
     const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
-    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) {
+    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
     if (to_compact.empty()) {
         return std::vector<std::shared_ptr<DataFileMeta>>{};
     }
@@ -133,6 +135,9 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
     });
 
     while (true) {
+        if (cancel_flag->load(std::memory_order_relaxed)) {
+            return Status::Cancelled("Compaction cancelled while rewriting files.");
+        }
         PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
         if (BatchReader::IsEofBatch(batch)) {
             break;
@@ -181,11 +186,12 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             }
             return std::shared_ptr<DeletionVector>();
         };
+        auto cancel_flag = std::make_shared<std::atomic_bool>(false);
 
-        auto rewriter = [this, partition, bucket,
-                         dv_factory](const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
+        auto rewriter = [this, partition, bucket, dv_factory,
+                         cancel_flag](const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
             -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
-            return CompactRewrite(partition, bucket, dv_factory, to_compact);
+            return CompactRewrite(partition, bucket, dv_factory, to_compact, cancel_flag);
         };
 
         compact_manager = std::make_shared<BucketedAppendCompactManager>(
@@ -194,7 +200,7 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
             options_.GetCompactionFileSize(/*has_primary_key=*/false),
             options_.CompactionForceRewriteAllFiles(), rewriter,
-            compaction_metrics_->CreateReporter(partition, bucket));
+            compaction_metrics_->CreateReporter(partition, bucket), cancel_flag);
     }
 
     auto writer = std::make_shared<AppendOnlyWriter>(

@@ -93,6 +93,9 @@ std::string Status::CodeAsString(StatusCode code) {
         case StatusCode::IndexError:
             type = "Index error";
             break;
+        case StatusCode::Cancelled:
+            type = "Cancelled";
+            break;
         case StatusCode::UnknownError:
             type = "Unknown error";
             break;

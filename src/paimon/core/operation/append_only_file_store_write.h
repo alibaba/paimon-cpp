@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -92,7 +93,8 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
 
     Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
         const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
-        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact);
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+        const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     SingleFileWriterCreator GetDataFileWriterCreator(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
