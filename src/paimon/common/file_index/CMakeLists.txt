@@ -27,7 +27,8 @@ set(PAIMON_FILE_INDEX_SRC
     rangebitmap/dictionary/chunked_dictionary.cpp
     rangebitmap/dictionary/fixed_length_chunk.cpp
     rangebitmap/dictionary/key_factory.cpp
-    rangebitmap/utils/literal_serialization_utils.cpp)
+    rangebitmap/utils/literal_serialization_utils.cpp
+    rangebitmap/bit_slice_index_bitmap.cpp)
 
 add_paimon_lib(paimon_file_index
                SOURCES
