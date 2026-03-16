@@ -102,7 +102,7 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
     bool ignore_previous_files = ctx->IgnorePreviousFiles();
     if (schema->PrimaryKeys().empty()) {
         // append table
-        bool need_dv_maintainer_factory = true;
+        bool need_dv_maintainer_factory = options.DeletionVectorsEnabled();
         if (options.GetBucket() == -1) {
             need_dv_maintainer_factory = false;
             ignore_previous_files = true;
