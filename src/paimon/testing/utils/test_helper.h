@@ -340,17 +340,17 @@ class TestHelper {
 
     Result<std::optional<Snapshot>> LatestSnapshot() const {
         auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit_.get());
-        return commit_impl->snapshot_manager_->LatestSnapshotOfUser(commit_user_);
+        return commit_impl->TEST_GetSnapshotManager()->LatestSnapshotOfUser(commit_user_);
     }
 
     Result<std::optional<std::shared_ptr<TableSchema>>> LatestSchema() const {
         auto commit_impl = dynamic_cast<FileStoreCommitImpl*>(commit_.get());
-        return commit_impl->schema_manager_->Latest();
+        return commit_impl->TEST_GetSchemaManager()->Latest();
     }
 
     Result<std::string> PartitionStr(const BinaryRow& partition) const {
         auto abstract_write = dynamic_cast<AbstractFileStoreWrite*>(write_.get());
-        return abstract_write->file_store_path_factory_->GetPartitionString(partition);
+        return abstract_write->TEST_GetFileStorePathFactory()->GetPartitionString(partition);
     }
 
     static void CheckCommitMessages(std::vector<std::shared_ptr<CommitMessage>> expected,

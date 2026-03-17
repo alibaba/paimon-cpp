@@ -202,6 +202,14 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     static int64_t NumChangedBuckets(const std::vector<std::vector<ManifestEntry>>& changes);
 
+    std::shared_ptr<SchemaManager> TEST_GetSchemaManager() const {
+        return schema_manager_;
+    }
+
+    std::shared_ptr<SnapshotManager> TEST_GetSnapshotManager() const {
+        return snapshot_manager_;
+    }
+
  private:
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
