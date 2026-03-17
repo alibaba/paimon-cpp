@@ -23,30 +23,30 @@
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 namespace paimon {
 
-using BucketIdentifer = std::tuple<BinaryRow, int32_t, std::string>;
+using BucketIdentifier = std::tuple<BinaryRow, int32_t, std::string>;
 
 std::vector<IndexManifestEntry> IndexManifestFileHandler::BucketedCombiner::Combine(
     const std::vector<IndexManifestEntry>& prev_index_files,
     const std::vector<IndexManifestEntry>& new_index_files) const {
-    std::unordered_map<BucketIdentifer, IndexManifestEntry> index_entries;
+    std::unordered_map<BucketIdentifier, IndexManifestEntry> index_entries;
     for (const auto& entry : prev_index_files) {
         index_entries.emplace(
-            BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()), entry);
+            BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()), entry);
     }
 
-    std::unordered_map<BucketIdentifer, IndexManifestEntry> removed;
+    std::unordered_map<BucketIdentifier, IndexManifestEntry> removed;
     removed.reserve(new_index_files.size());
-    std::unordered_map<BucketIdentifer, IndexManifestEntry> added;
+    std::unordered_map<BucketIdentifier, IndexManifestEntry> added;
     added.reserve(new_index_files.size());
 
     for (const auto& entry : new_index_files) {
         if (entry.kind == FileKind::Delete()) {
             removed.emplace(
-                BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()),
+                BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()),
                 entry);
         } else if (entry.kind == FileKind::Add()) {
             added.emplace(
-                BucketIdentifer(entry.partition, entry.bucket, entry.index_file->IndexType()),
+                BucketIdentifier(entry.partition, entry.bucket, entry.index_file->IndexType()),
                 entry);
         }
     }
