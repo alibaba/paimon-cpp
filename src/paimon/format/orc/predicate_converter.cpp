@@ -24,7 +24,6 @@
 #include "orc/Type.hh"
 #include "orc/sargs/Literal.hh"
 #include "orc/sargs/SearchArgument.hh"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -34,6 +33,7 @@
 #include "paimon/predicate/leaf_predicate.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate.h"
+#include "paimon/predicate/predicate_utils.h"
 
 namespace paimon::orc {
 

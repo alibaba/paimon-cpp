@@ -27,7 +27,6 @@
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/predicate/predicate_filter.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -37,6 +36,7 @@
 #include "paimon/core/stats/simple_stats_evolution.h"
 #include "paimon/core/stats/simple_stats_evolutions.h"
 #include "paimon/predicate/predicate.h"
+#include "paimon/predicate/predicate_utils.h"
 
 namespace arrow {
 class Schema;

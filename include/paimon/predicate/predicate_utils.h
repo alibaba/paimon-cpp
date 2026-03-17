@@ -24,7 +24,6 @@
 #include <string>
 #include <vector>
 
-#include "fmt/format.h"
 #include "paimon/predicate/function.h"
 #include "paimon/predicate/function_visitor.h"
 #include "paimon/predicate/leaf_predicate.h"
@@ -114,8 +113,8 @@ class PAIMON_EXPORT PredicateUtils {
                 return visitor->VisitLike(predicate->Literals()[0]);
             }
             default:
-                return Status::Invalid(fmt::format("invalid {} function in leaf predicate",
-                                                   predicate->GetFunction().ToString()));
+                return Status::Invalid("invalid " + predicate->GetFunction().ToString() +
+                                       " function in leaf predicate");
         }
     }
 
