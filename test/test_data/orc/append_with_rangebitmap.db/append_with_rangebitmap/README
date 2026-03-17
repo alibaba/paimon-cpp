@@ -1,0 +1,16 @@
+f0:int (nullable), f1:long (nullable), f2:float (nullable), f3:double (nullable), f4:date (nullable), f5:string (nullable)
+no partition key
+no bucket key
+bucket count: -1
+range-bitmap index: f0,f1,f2,f3,f4
+
+Rows (snapshot-1):
+Add: [17, 100L, 1.1f, 11.11, date('2024-01-17'), 'row0']
+Add: [3, 200L, 2.2f, 22.22, date('2024-01-03'), 'row1']
+Add: [5, 300L, 3.3f, 33.33, date('2024-01-05'), 'row2']
+Add: [7, 400L, 4.4f, 44.44, date('2024-01-07'), 'row3']
+Add: [9, 500L, 5.5f, 55.55, date('2024-01-09'), 'row4']
+Add: [null, null, null, null, null, null]
+Add: [null, null, null, null, null, 'null_row']
+Add: [10, 600L, 6.6f, 66.66, date('2024-01-10'), 'row7']
+NoCompact

@@ -54,7 +54,7 @@ class KeyFactory : public std::enable_shared_from_this<KeyFactory> {
     static Result<std::shared_ptr<KeyFactory>> Create(FieldType field_type);
 
  public:
-    static constexpr char DEFAULT_CHUNK_SIZE[] = "16kb";
+    static constexpr char kDefaultChunkSize[] = "16kb";
 };
 
 class FixedLengthKeyFactory : public KeyFactory {

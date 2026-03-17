@@ -45,6 +45,7 @@
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
 #include "paimon/factories/factory_creator.h"
+#include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/metrics.h"
@@ -369,6 +370,295 @@ class ReadInteWithIndexTest : public testing::Test,
                                                                  &expected_array);
             ASSERT_TRUE(array_status.ok());
             CheckResult(path, {split}, predicate, expected_array);
+        }
+    }
+
+    void CheckResultForRangeBitmap(const std::string& path,
+                                   const std::shared_ptr<arrow::DataType>& arrow_data_type,
+                                   const std::shared_ptr<Split>& split) const {
+        {
+            // test with no predicate - return all 8 rows
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status = arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type,
+                                                                                 {
+                                                                                     R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 3, 200, 2.2, 22.22, 19725, "row1"]
+])",
+                                                                                     R"([
+[0, 5, 300, 3.3, 33.33, 19727, "row2"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"]
+])",
+                                                                                     R"([
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, null, null, null, null, null, null]
+])",
+                                                                                     R"([
+[0, null, null, null, null, null, "null_row"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                                 &expected_array);
+            std::cout << array_status.message() << std::endl;
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
+        }
+        {
+            // Test equal predicate: f0 = 17 -> row 0
+            auto predicate = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
+                                                     FieldType::INT, Literal(17));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test less than predicate: f0 < 10 -> rows 1,2,3,4 (values 3,5,7,9)
+            auto predicate = PredicateBuilder::LessThan(/*field_index=*/0, /*field_name=*/"f0",
+                                                        FieldType::INT, Literal(10));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 3, 200, 2.2, 22.22, 19725, "row1"],
+[0, 5, 300, 3.3, 33.33, 19727, "row2"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test greater than predicate: f0 > 5 -> rows 0,3,4,7 (values 17,7,9,10)
+            auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
+                                                           FieldType::INT, Literal(5));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test is null predicate on f0 -> rows 5, 6
+            auto predicate =
+                PredicateBuilder::IsNull(/*field_index=*/0, /*field_name=*/"f0", FieldType::INT);
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, null, null, null, null, null, null],
+[0, null, null, null, null, null, "null_row"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test is not null predicate on f0 -> rows 0,1,2,3,4,7
+            auto predicate =
+                PredicateBuilder::IsNotNull(/*field_index=*/0, /*field_name=*/"f0", FieldType::INT);
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 3, 200, 2.2, 22.22, 19725, "row1"],
+[0, 5, 300, 3.3, 33.33, 19727, "row2"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test in predicate: f0 in (3, 7) -> rows 1, 3
+            auto predicate = PredicateBuilder::In(
+                /*field_index=*/0, /*field_name=*/"f0", FieldType::INT, {Literal(3), Literal(7)});
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 3, 200, 2.2, 22.22, 19725, "row1"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test not in predicate: f0 not in (3, 7) -> rows 0,2,4,7 (excluding null rows 5,6)
+            auto predicate = PredicateBuilder::NotIn(
+                /*field_index=*/0, /*field_name=*/"f0", FieldType::INT, {Literal(3), Literal(7)});
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 5, 300, 3.3, 33.33, 19727, "row2"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+    ])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+
+        // Test f1 (BIGINT) predicates
+        {
+            // Test greater than predicate: f1 > 300 -> rows 3,4,7 (values 400,500,600)
+            auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                           FieldType::BIGINT, Literal(300L));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+
+        // Test f2 (FLOAT) predicates
+        {
+            // Test less than predicate: f2 < 4.0 -> rows 0,1,2 (values 1.1,2.2,3.3)
+            auto predicate = PredicateBuilder::LessThan(/*field_index=*/2, /*field_name=*/"f2",
+                                                        FieldType::FLOAT, Literal(4.0f));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 3, 200, 2.2, 22.22, 19725, "row1"],
+[0, 5, 300, 3.3, 33.33, 19727, "row2"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        // Test date type
+        {
+            // Test greater than predicate: f0 > 5 -> rows 0,3,4,7 (values 17,7,9,10)
+            auto predicate =
+                PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"f4",
+                                              FieldType::DATE, Literal(FieldType::DATE, 19725));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 3, 200, 2.2, 22.22, 19725, "row1"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+
+        // Test f3 (DOUBLE) predicates
+        {
+            // Test greater or equal predicate: f3 >= 40.0 -> rows 3,4,7 (values 44.44,55.55,66.66)
+            auto predicate = PredicateBuilder::GreaterOrEqual(
+                /*field_index=*/3, /*field_name=*/"f3", FieldType::DOUBLE, Literal(44.44));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+
+        // Test BETWEEN predicate on f1 (BIGINT)
+        {
+            // Test f1 BETWEEN 200 AND 500 -> rows 1,2,3,4 (values 200,300,400,500)
+            auto predicate =
+                PredicateBuilder::Between(/*field_index=*/1, /*field_name=*/"f1", FieldType::BIGINT,
+                                          Literal(200L), Literal(500L));
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 3, 200, 2.2, 22.22, 19725, "row1"],
+[0, 5, 300, 3.3, 33.33, 19727, "row2"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+
+        // Test IN predicate on f2 (FLOAT)
+        {
+            // Test f2 IN (1.1, 4.4, 6.6) -> rows 0,3,7 (values 1.1,4.4,6.6)
+            auto predicate =
+                PredicateBuilder::In(/*field_index=*/2, /*field_name=*/"f2", FieldType::FLOAT,
+                                     {Literal(1.1f), Literal(4.4f), Literal(6.6f)});
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"],
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, predicate, expected_array);
+        }
+        {
+            // Test nested composite: (f0 = 3 OR f0 = 17) AND f1 < 200
+            // (f0 = 3 OR f0 = 17): matches rows 0,1
+            // f1 < 200: matches rows 0 (f1=100)
+            // Combined AND: matches rows 0
+            auto predicate1 = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
+                                                      FieldType::INT, Literal(3));
+            auto predicate2 = PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0",
+                                                      FieldType::INT, Literal(17));
+            ASSERT_OK_AND_ASSIGN(auto or_predicate, PredicateBuilder::Or({predicate1, predicate2}));
+
+            auto predicate3 = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                         FieldType::BIGINT, Literal(200L));
+            ASSERT_OK_AND_ASSIGN(auto and_predicate,
+                                 PredicateBuilder::And({or_predicate, predicate3}));
+
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 17, 100, 1.1, 11.11, 19739, "row0"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, and_predicate, expected_array);
+        }
+        {
+            // Test AND predicate with mixed types: f0 >= 5 AND f1 > 100
+            // f0 >= 5: matches rows 3,4,7
+            // f1 > 100: matches rows 2,3,4,7
+            // Combined AND: matches rows 3,4,7
+            auto predicate1 = PredicateBuilder::GreaterThan(/*field_index=*/0, /*field_name=*/"f0",
+                                                            FieldType::INT, Literal(5));
+            auto predicate2 = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                            FieldType::BIGINT, Literal(100L));
+            ASSERT_OK_AND_ASSIGN(auto and_predicate,
+                                 PredicateBuilder::And({predicate1, predicate2}));
+
+            std::shared_ptr<arrow::ChunkedArray> expected_array;
+            auto array_status =
+                arrow::ipc::internal::json::ChunkedArrayFromJSON(arrow_data_type, {R"([
+[0, 7, 400, 4.4, 44.44, 19729, "row3"],
+[0, 9, 500, 5.5, 55.55, 19731, "row4"],
+[0, 10, 600, 6.6, 66.66, 19732, "row7"]
+])"},
+                                                                 &expected_array);
+            ASSERT_TRUE(array_status.ok());
+            CheckResult(path, {split}, and_predicate, expected_array);
         }
     }
 
@@ -2070,6 +2360,95 @@ TEST_P(ReadInteWithIndexTest, TestWithIndexWithoutRegistered) {
             CheckResult(path, {split}, predicate, expected_array);
         }
     }
+}
+
+TEST_P(ReadInteWithIndexTest, TestRangeBitmapIndex) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string path =
+        GetDataDir() + file_format + "/append_with_rangebitmap.db/append_with_rangebitmap/";
+    std::string file_name;
+    if (file_format == "orc") {
+        file_name = "data-5759403d-17fc-4031-b5bb-5e22b02fdb3b-0.orc";
+    } else if (file_format == "parquet") {
+        file_name = "data-2fb852e2-e4b5-4807-bf92-04401ed10560-0.parquet";
+    }
+
+    std::vector<DataField> read_fields = {SpecialFields::ValueKind(),
+                                          DataField(0, arrow::field("f0", arrow::int32())),
+                                          DataField(1, arrow::field("f1", arrow::int64())),
+                                          DataField(2, arrow::field("f2", arrow::float32())),
+                                          DataField(3, arrow::field("f3", arrow::float64())),
+                                          DataField(4, arrow::field("f4", arrow::date32())),
+                                          DataField(5, arrow::field("f5", arrow::utf8()))};
+    std::shared_ptr<arrow::DataType> arrow_data_type =
+        DataField::ConvertDataFieldsToArrowStructType(read_fields);
+
+    auto data_file_meta = std::make_shared<DataFileMeta>(
+        file_name, /*file_size=*/1288,
+        /*row_count=*/8, /*min_key=*/BinaryRow::EmptyRow(),
+        /*max_key=*/BinaryRow::EmptyRow(), /*key_stats=*/SimpleStats::EmptyStats(),
+        /*value_stats=*/SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+        /*max_sequence_number=*/7, /*schema_id=*/0,
+        /*level=*/0,
+        /*extra_files=*/
+        std::vector<std::optional<std::string>>({file_name + ".index"}),
+        /*creation_time=*/Timestamp(0ll, 0), /*delete_row_count=*/0,
+        /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt,
+        /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
+
+    DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
+                                   /*bucket_path=*/path + "bucket-0/", {data_file_meta});
+    ASSERT_OK_AND_ASSIGN(auto split,
+                         builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
+
+    // Run comprehensive range bitmap index tests
+    CheckResultForRangeBitmap(path, arrow_data_type, split);
+}
+
+TEST_P(ReadInteWithIndexTest, TestRangeBitmapIndexMultiChunk) {
+    auto [file_format, enable_prefetch] = GetParam();
+    std::string path =
+        GetDataDir() + file_format +
+        "/append_with_rangebitmap_multi_chunk.db/append_with_rangebitmap_multi_chunk/";
+    std::string file_name;
+    if (file_format == "orc") {
+        file_name = "data-b6b64e1e-e3d2-4f08-9a36-726a96cde1be-0.orc";
+    } else if (file_format == "parquet") {
+        file_name = "data-e4673af1-afcb-4b84-b69a-ae472ba517f2-0.parquet";
+    }
+
+    std::vector<DataField> read_fields = {SpecialFields::ValueKind(),
+                                          DataField(0, arrow::field("f0", arrow::int32())),
+                                          DataField(1, arrow::field("f1", arrow::int64())),
+                                          DataField(2, arrow::field("f2", arrow::float32())),
+                                          DataField(3, arrow::field("f3", arrow::float64())),
+                                          DataField(4, arrow::field("f4", arrow::date32())),
+                                          DataField(5, arrow::field("f5", arrow::utf8()))};
+    std::shared_ptr<arrow::DataType> arrow_data_type =
+        DataField::ConvertDataFieldsToArrowStructType(read_fields);
+
+    auto data_file_meta = std::make_shared<DataFileMeta>(
+        file_name, /*file_size=*/1413,
+        /*row_count=*/8, /*min_key=*/BinaryRow::EmptyRow(),
+        /*max_key=*/BinaryRow::EmptyRow(), /*key_stats=*/SimpleStats::EmptyStats(),
+        /*value_stats=*/SimpleStats::EmptyStats(), /*min_sequence_number=*/0,
+        /*max_sequence_number=*/7, /*schema_id=*/0,
+        /*level=*/0,
+        /*extra_files=*/
+        std::vector<std::optional<std::string>>({file_name + ".index"}),
+        /*creation_time=*/Timestamp(0ll, 0), /*delete_row_count=*/0,
+        /*embedded_index=*/nullptr, FileSource::Append(),
+        /*value_stats_cols=*/std::nullopt,
+        /*external_path=*/std::nullopt, /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
+
+    DataSplitImpl::Builder builder(BinaryRow::EmptyRow(), /*bucket=*/0,
+                                   /*bucket_path=*/path + "bucket-0/", {data_file_meta});
+    ASSERT_OK_AND_ASSIGN(auto split,
+                         builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
+
+    // Run range bitmap index tests with multi-chunk test data
+    CheckResultForRangeBitmap(path, arrow_data_type, split);
 }
 
 TEST_P(ReadInteWithIndexTest, TestWithIOException) {
