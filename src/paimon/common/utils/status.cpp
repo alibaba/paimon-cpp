@@ -132,7 +132,7 @@ void Status::Abort() const {
 }
 
 void Status::Abort(const std::string& message) const {
-    std::cerr << "-- Arrow Fatal Error --\n";
+    std::cerr << "-- Paimon Fatal Error --\n";
     if (!message.empty()) {
         std::cerr << message << "\n";
     }
