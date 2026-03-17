@@ -17,9 +17,9 @@
 #include "paimon/core/global_index/global_index_evaluator_impl.h"
 
 #include "fmt/format.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/predicate/leaf_predicate.h"
+#include "paimon/predicate/predicate_utils.h"
 
 namespace paimon {
 Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexEvaluatorImpl::Evaluate(

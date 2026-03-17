@@ -28,7 +28,6 @@
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "paimon/common/predicate/predicate_filter.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -40,6 +39,7 @@
 #include "paimon/core/stats/simple_stats_evolutions.h"
 #include "paimon/core/utils/field_mapping.h"
 #include "paimon/file_index/file_index_result.h"
+#include "paimon/predicate/predicate_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {

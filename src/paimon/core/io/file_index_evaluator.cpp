@@ -26,7 +26,6 @@
 #include "arrow/type.h"
 #include "fmt/format.h"
 #include "fmt/ranges.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
@@ -42,6 +41,7 @@
 #include "paimon/predicate/leaf_predicate.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate.h"
+#include "paimon/predicate/predicate_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {
