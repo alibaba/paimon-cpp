@@ -106,7 +106,7 @@ std::vector<IndexManifestEntry> IndexManifestFileHandler::GlobalFileNameCombiner
 
 Result<std::string> IndexManifestFileHandler::Write(
     const std::optional<std::string>& previous_index_manifest,
-    const std::vector<IndexManifestEntry>& new_index_entries,
+    const std::vector<IndexManifestEntry>& new_index_entries, int32_t bucket_mode,
     IndexManifestFile* index_manifest_file) {
     std::vector<IndexManifestEntry> entries;
     if (previous_index_manifest != std::nullopt) {
@@ -135,7 +135,7 @@ Result<std::string> IndexManifestFileHandler::Write(
     for (const auto& index_type : index_types) {
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<IndexManifestFileHandler::IndexManifestFileCombiner> combiner,
-            GetIndexManifestFileCombine(index_type));
+            GetIndexManifestFileCombine(index_type, bucket_mode));
         std::vector<IndexManifestEntry> typed_previous_entries = previous[index_type];
         std::vector<IndexManifestEntry> typed_current_entries = current[index_type];
         std::vector<IndexManifestEntry> combined_entries =
@@ -162,15 +162,15 @@ IndexManifestFileHandler::SeparateIndexEntries(
 }
 
 Result<std::unique_ptr<IndexManifestFileHandler::IndexManifestFileCombiner>>
-IndexManifestFileHandler::GetIndexManifestFileCombine(const std::string& index_type) {
+IndexManifestFileHandler::GetIndexManifestFileCombine(const std::string& index_type,
+                                                      int32_t bucket_mode) {
     if (index_type != DeletionVectorsIndexFile::DELETION_VECTORS_INDEX && index_type != "HASH") {
         return std::make_unique<GlobalFileNameCombiner>();
     }
     if (index_type == DeletionVectorsIndexFile::DELETION_VECTORS_INDEX && bucket_mode == -1) {
         return Status::NotImplemented("not yet support dv with BUCKET_UNAWARE mode");
-    } else {
-        return std::make_unique<BucketedCombiner>();
     }
+    return std::make_unique<BucketedCombiner>();
 }
 
 }  // namespace paimon

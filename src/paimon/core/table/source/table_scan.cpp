@@ -140,10 +140,10 @@ class TableScanImpl {
         const CoreOptions& core_options, const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<MemoryPool>& memory_pool) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<IndexManifestFile> index_manifest_file,
-                               IndexManifestFile::Create(core_options.GetFileSystem(),
-                                                         core_options.GetManifestFormat(),
-                                                         core_options.GetManifestCompression(),
-                                                         path_factory, memory_pool, core_options));
+                               IndexManifestFile::Create(
+                                   core_options.GetFileSystem(), core_options.GetManifestFormat(),
+                                   core_options.GetManifestCompression(), path_factory,
+                                   core_options.GetBucket(), memory_pool, core_options));
         return std::make_unique<IndexFileHandler>(
             core_options.GetFileSystem(), std::move(index_manifest_file),
             std::make_shared<IndexFilePathFactories>(path_factory),

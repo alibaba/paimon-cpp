@@ -66,6 +66,6 @@ class IndexManifestFileHandler {
         const std::vector<IndexManifestEntry>& index_entries);
 
     static Result<std::unique_ptr<IndexManifestFileCombiner>> GetIndexManifestFileCombine(
-        const std::string& index_type);
+        const std::string& index_type, int32_t bucket_mode);
 };
 }  // namespace paimon
