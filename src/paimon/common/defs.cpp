@@ -63,6 +63,9 @@ const char Options::SORT_ENGINE[] = "sort-engine";
 const char Options::IGNORE_DELETE[] = "ignore-delete";
 const char Options::FIELDS_DEFAULT_AGG_FUNC[] = "fields.default-aggregate-function";
 const char Options::DELETION_VECTORS_ENABLED[] = "deletion-vectors.enabled";
+const char Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[] =
+    "deletion-vector.index-file.target-size";
+const char Options::DELETION_VECTOR_BITMAP64[] = "deletion-vectors.bitmap64";
 const char Options::CHANGELOG_PRODUCER[] = "changelog-producer";
 const char Options::FORCE_LOOKUP[] = "force-lookup";
 const char Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE[] =

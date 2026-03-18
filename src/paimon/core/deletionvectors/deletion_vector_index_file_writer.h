@@ -31,10 +31,14 @@ class DeletionVectorIndexFileWriter {
  public:
     DeletionVectorIndexFileWriter(const std::shared_ptr<FileSystem>& fs,
                                   const std::shared_ptr<IndexPathFactory>& path_factory,
-                                  int64_t target_size_per_index_file,
                                   const std::shared_ptr<MemoryPool>& pool)
         : index_path_factory_(path_factory), fs_(fs), pool_(pool) {}
 
+    /// The deletion file of the bucketed table is updated according to the bucket. If a compaction
+    /// occurs and there is no longer a deletion file, an empty deletion file needs to be generated
+    /// to overwrite the old file.
+    /// TODO(yonghao.fyh): We can consider sending a message to delete the deletion file in the
+    /// future.
     Result<std::shared_ptr<IndexFileMeta>> WriteSingleFile(
         const std::map<std::string, std::shared_ptr<DeletionVector>>& input);
 

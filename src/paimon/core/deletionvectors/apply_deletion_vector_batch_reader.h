@@ -37,8 +37,8 @@ class Metrics;
 class ApplyDeletionVectorBatchReader : public FileBatchReader {
  public:
     ApplyDeletionVectorBatchReader(std::unique_ptr<FileBatchReader>&& reader,
-                                   PAIMON_UNIQUE_PTR<DeletionVector>&& deletion_vector)
-        : reader_(std::move(reader)), deletion_vector_(std::move(deletion_vector)) {
+                                   const std::shared_ptr<DeletionVector>& deletion_vector)
+        : reader_(std::move(reader)), deletion_vector_(deletion_vector) {
         assert(reader_);
     }
 
@@ -103,6 +103,6 @@ class ApplyDeletionVectorBatchReader : public FileBatchReader {
 
  private:
     std::unique_ptr<FileBatchReader> reader_;
-    PAIMON_UNIQUE_PTR<DeletionVector> deletion_vector_;
+    std::shared_ptr<DeletionVector> deletion_vector_;
 };
 }  // namespace paimon

@@ -264,6 +264,7 @@ struct CoreOptions::Impl {
     int64_t source_split_target_size = 128 * 1024 * 1024;
     int64_t source_split_open_file_cost = 4 * 1024 * 1024;
     int64_t manifest_target_file_size = 8 * 1024 * 1024;
+    int64_t deletion_vector_target_file_size = 2 * 1024 * 1024;
     int64_t manifest_full_compaction_file_size = 16 * 1024 * 1024;
     int64_t write_buffer_size = 256 * 1024 * 1024;
     int64_t commit_timeout = std::numeric_limits<int64_t>::max();
@@ -310,6 +311,7 @@ struct CoreOptions::Impl {
     bool ignore_delete = false;
     bool write_only = false;
     bool deletion_vectors_enabled = false;
+    bool deletion_vectors_bitmap64 = false;
     bool force_lookup = false;
     bool partial_update_remove_record_on_delete = false;
     bool file_index_read_enabled = true;
@@ -448,6 +450,12 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::DELETION_VECTORS_ENABLED, &impl->deletion_vectors_enabled));
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::FORCE_LOOKUP, &impl->force_lookup));
+
+    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE,
+                                                &impl->deletion_vector_target_file_size));
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<bool>(Options::DELETION_VECTOR_BITMAP64, &impl->deletion_vectors_bitmap64));
+
     // Parse changelog producer
     PAIMON_RETURN_NOT_OK(parser.ParseChangelogProducer(&impl->changelog_producer));
 
@@ -781,6 +789,13 @@ Result<bool> CoreOptions::FieldAggIgnoreRetract(const std::string& field_name) c
 
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
+}
+
+bool CoreOptions::DeletionVectorsBitmap64() const {
+    return impl_->deletion_vectors_bitmap64;
+}
+int64_t CoreOptions::DeletionVectorTargetFileSize() const {
+    return impl_->deletion_vector_target_file_size;
 }
 
 ChangelogProducer CoreOptions::GetChangelogProducer() const {

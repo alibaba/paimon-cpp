@@ -78,6 +78,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(std::nullopt, core_options.GetFieldAggFunc("f0").value());
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
+    ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
+    ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::NONE, core_options.GetChangelogProducer());
     ASSERT_FALSE(core_options.NeedLookup());
     ASSERT_TRUE(core_options.GetFieldsSequenceGroups().empty());
@@ -146,6 +148,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {"fields.f0.aggregate-function", "min"},
         {"fields.f1.ignore-retract", "true"},
         {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::DELETION_VECTOR_BITMAP64, "true"},
+        {Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE, "4MB"},
         {Options::CHANGELOG_PRODUCER, "full-compaction"},
         {Options::FORCE_LOOKUP, "true"},
         {"fields.g_1,g_3.sequence-group", "c,d"},
@@ -227,6 +231,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.DeletionVectorsEnabled());
+    ASSERT_TRUE(core_options.DeletionVectorsBitmap64());
+    ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::FULL_COMPACTION, core_options.GetChangelogProducer());
     ASSERT_TRUE(core_options.NeedLookup());
     std::map<std::string, std::string> seq_grp;

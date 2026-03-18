@@ -114,12 +114,15 @@ Status GlobalIndexScanImpl::Scan() {
             options_.DataFilePrefix(), options_.LegacyPartitionNameEnabled(), external_paths,
             global_index_external_path, options_.IndexFileInDataFileDir(), pool_));
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<IndexManifestFile> index_manifest_file,
-                           IndexManifestFile::Create(
-                               options_.GetFileSystem(), options_.GetManifestFormat(),
-                               options_.GetManifestCompression(), path_factory_, pool_, options_));
-    auto index_file_handler = std::make_unique<IndexFileHandler>(
-        std::move(index_manifest_file), std::make_shared<IndexFilePathFactories>(path_factory_));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<IndexManifestFile> index_manifest_file,
+        IndexManifestFile::Create(options_.GetFileSystem(), options_.GetManifestFormat(),
+                                  options_.GetManifestCompression(), path_factory_,
+                                  options_.GetBucket(), pool_, options_));
+    auto index_file_handler =
+        std::make_unique<IndexFileHandler>(options_.GetFileSystem(), std::move(index_manifest_file),
+                                           std::make_shared<IndexFilePathFactories>(path_factory_),
+                                           options_.DeletionVectorsBitmap64(), pool_);
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
                            table_schema_->GetFields(table_schema_->PartitionKeys()));

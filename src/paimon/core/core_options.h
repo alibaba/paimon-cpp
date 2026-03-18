@@ -97,6 +97,8 @@ class PAIMON_EXPORT CoreOptions {
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
     bool DeletionVectorsEnabled() const;
+    bool DeletionVectorsBitmap64() const;
+    int64_t DeletionVectorTargetFileSize() const;
     ChangelogProducer GetChangelogProducer() const;
     bool NeedLookup() const;
     bool FileIndexReadEnabled() const;

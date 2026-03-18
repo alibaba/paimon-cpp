@@ -19,6 +19,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
@@ -35,8 +36,7 @@ TEST(DeletionVectorsIndexFileTest, Basic) {
                          FileSystemFactory::Get("local", dir->Str(), {}));
     auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
     auto pool = GetDefaultPool();
-    DeletionVectorsIndexFile index_file(
-        fs, path_factory, /*target_size_per_index_file=*/1024 * 1024, /*bitmap64=*/false, pool);
+    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
 
     std::map<std::string, std::shared_ptr<DeletionVector>> input;
     RoaringBitmap32 roaring_1;
@@ -56,6 +56,21 @@ TEST(DeletionVectorsIndexFileTest, Basic) {
     ASSERT_EQ(meta->IndexType(), DeletionVectorsIndexFile::DELETION_VECTORS_INDEX);
     ASSERT_EQ(meta->FileName(), "index-0");
     ASSERT_EQ(meta->ExternalPath(), std::nullopt);
+
+    // Round trip: write then read all deletion vectors from index file.
+    ASSERT_OK_AND_ASSIGN(auto read_back, index_file.ReadAllDeletionVectors(meta));
+    ASSERT_EQ(read_back.size(), input.size());
+    ASSERT_EQ(read_back.at("dv1")->GetCardinality(), 10);
+    ASSERT_EQ(read_back.at("dv2")->GetCardinality(), 10);
+
+    ASSERT_OK_AND_ASSIGN(bool is_deleted, read_back.at("dv1")->IsDeleted(0));
+    ASSERT_TRUE(is_deleted);
+    ASSERT_OK_AND_ASSIGN(is_deleted, read_back.at("dv1")->IsDeleted(10));
+    ASSERT_FALSE(is_deleted);
+    ASSERT_OK_AND_ASSIGN(is_deleted, read_back.at("dv2")->IsDeleted(100));
+    ASSERT_TRUE(is_deleted);
+    ASSERT_OK_AND_ASSIGN(is_deleted, read_back.at("dv2")->IsDeleted(99));
+    ASSERT_FALSE(is_deleted);
 }
 
 TEST(DeletionVectorsIndexFileTest, ExternalPathAndIndexFileMeta) {
@@ -66,7 +81,6 @@ TEST(DeletionVectorsIndexFileTest, ExternalPathAndIndexFileMeta) {
     path_factory->SetExternal(true);
     auto pool = GetDefaultPool();
     DeletionVectorsIndexFile index_file(fs, path_factory,
-                                        /*target_size_per_index_file=*/1024 * 1024,
                                         /*bitmap64=*/false, pool);
 
     std::map<std::string, std::shared_ptr<DeletionVector>> input;
@@ -78,6 +92,93 @@ TEST(DeletionVectorsIndexFileTest, ExternalPathAndIndexFileMeta) {
 
     ASSERT_OK_AND_ASSIGN(auto meta, index_file.WriteSingleFile(input));
     ASSERT_EQ(meta->ExternalPath().value(), PathUtil::JoinPath(dir->Str(), "index-0"));
+
+    // Round trip for external path index file.
+    ASSERT_OK_AND_ASSIGN(auto read_back, index_file.ReadAllDeletionVectors(meta));
+    ASSERT_EQ(read_back.size(), 1);
+    ASSERT_EQ(read_back.at("dv_ext")->GetCardinality(), 5);
+    ASSERT_OK_AND_ASSIGN(bool is_deleted, read_back.at("dv_ext")->IsDeleted(0));
+    ASSERT_TRUE(is_deleted);
+    ASSERT_OK_AND_ASSIGN(is_deleted, read_back.at("dv_ext")->IsDeleted(5));
+    ASSERT_FALSE(is_deleted);
+}
+
+TEST(DeletionVectorsIndexFileTest, RoundTripEmptyInput) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> input;
+    ASSERT_OK_AND_ASSIGN(auto meta, index_file.WriteSingleFile(input));
+    ASSERT_EQ(meta->RowCount(), 0);
+    ASSERT_OK_AND_ASSIGN(auto read_back, index_file.ReadAllDeletionVectors(meta));
+    ASSERT_TRUE(read_back.empty());
+}
+
+TEST(DeletionVectorsIndexFileTest, RoundTripMultipleIndexFilesMerge) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> input1;
+    RoaringBitmap32 roaring_1;
+    roaring_1.Add(1);
+    roaring_1.Add(3);
+    input1["dv_a"] = std::make_shared<BitmapDeletionVector>(roaring_1);
+    ASSERT_OK_AND_ASSIGN(auto meta1, index_file.WriteSingleFile(input1));
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> input2;
+    RoaringBitmap32 roaring_2;
+    roaring_2.Add(8);
+    input2["dv_b"] = std::make_shared<BitmapDeletionVector>(roaring_2);
+    ASSERT_OK_AND_ASSIGN(auto meta2, index_file.WriteSingleFile(input2));
+
+    ASSERT_OK_AND_ASSIGN(auto read_back,
+                         index_file.ReadAllDeletionVectors(
+                             std::vector<std::shared_ptr<IndexFileMeta>>{meta1, meta2}));
+    ASSERT_EQ(read_back.size(), 2);
+
+    ASSERT_OK_AND_ASSIGN(bool is_deleted, read_back.at("dv_a")->IsDeleted(1));
+    ASSERT_TRUE(is_deleted);
+    ASSERT_OK_AND_ASSIGN(is_deleted, read_back.at("dv_b")->IsDeleted(8));
+    ASSERT_TRUE(is_deleted);
+}
+
+TEST(DeletionVectorsIndexFileTest, RoundTripMultipleIndexFilesLastWriteWinsOnSameKey) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> input1;
+    RoaringBitmap32 roaring_old;
+    roaring_old.Add(2);
+    input1["same_dv"] = std::make_shared<BitmapDeletionVector>(roaring_old);
+    ASSERT_OK_AND_ASSIGN(auto meta1, index_file.WriteSingleFile(input1));
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> input2;
+    RoaringBitmap32 roaring_new;
+    roaring_new.Add(9);
+    input2["same_dv"] = std::make_shared<BitmapDeletionVector>(roaring_new);
+    ASSERT_OK_AND_ASSIGN(auto meta2, index_file.WriteSingleFile(input2));
+
+    ASSERT_OK_AND_ASSIGN(auto read_back,
+                         index_file.ReadAllDeletionVectors(
+                             std::vector<std::shared_ptr<IndexFileMeta>>{meta1, meta2}));
+    ASSERT_EQ(read_back.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(bool is_deleted_old, read_back.at("same_dv")->IsDeleted(2));
+    ASSERT_FALSE(is_deleted_old);
+    ASSERT_OK_AND_ASSIGN(bool is_deleted_new, read_back.at("same_dv")->IsDeleted(9));
+    ASSERT_TRUE(is_deleted_new);
 }
 
 }  // namespace paimon::test
