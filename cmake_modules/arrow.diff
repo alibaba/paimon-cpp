@@ -196,3 +196,18 @@ index 4d3acb491e..3906ff3c59 100644
    int64_t pagesize_;
    ParquetDataPageVersion parquet_data_page_version_;
    ParquetVersion::type parquet_version_;
+diff --git a/cpp/cmake_modules/ThirdpartyToolchain.cmake b/cpp/cmake_modules/ThirdpartyToolchain.cmake
+--- a/cpp/cmake_modules/ThirdpartyToolchain.cmake
++++ b/cpp/cmake_modules/ThirdpartyToolchain.cmake
+@@ -981,6 +981,11 @@ if(CMAKE_TOOLCHAIN_FILE)
+   list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+ endif()
+
++# Compatibility with bundled dependencies that require old CMake versions.
++if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
++  list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
++endif()
++
+ # and crosscompiling emulator (for try_run() )
+ if(CMAKE_CROSSCOMPILING_EMULATOR)
+   string(REPLACE ";" ${EP_LIST_SEPARATOR} EP_CMAKE_CROSSCOMPILING_EMULATOR
