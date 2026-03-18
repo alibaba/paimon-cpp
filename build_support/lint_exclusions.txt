@@ -10,3 +10,4 @@
 *vendored/*
 *RcppExports.cpp*
 *arrowExports.cpp*
+test_helper.h
