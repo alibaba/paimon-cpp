@@ -35,7 +35,7 @@ class IndexManifestFileHandler {
 
     static Result<std::string> Write(const std::optional<std::string>& previous_index_manifest,
                                      const std::vector<IndexManifestEntry>& new_index_entries,
-                                     IndexManifestFile* index_manifest_file);
+                                     int32_t bucket_mode, IndexManifestFile* index_manifest_file);
 
  private:
     class IndexManifestFileCombiner {
@@ -44,6 +44,14 @@ class IndexManifestFileHandler {
         virtual std::vector<IndexManifestEntry> Combine(
             const std::vector<IndexManifestEntry>& prev_index_files,
             const std::vector<IndexManifestEntry>& new_index_files) const = 0;
+    };
+
+    /// Combine previous and new global index files by file `BucketIdentifier`.
+    class BucketedCombiner : public IndexManifestFileCombiner {
+     public:
+        std::vector<IndexManifestEntry> Combine(
+            const std::vector<IndexManifestEntry>& prev_index_files,
+            const std::vector<IndexManifestEntry>& new_index_files) const override;
     };
 
     /// Combine previous and new global index files by file name.
@@ -58,6 +66,6 @@ class IndexManifestFileHandler {
         const std::vector<IndexManifestEntry>& index_entries);
 
     static Result<std::unique_ptr<IndexManifestFileCombiner>> GetIndexManifestFileCombine(
-        const std::string& index_type);
+        const std::string& index_type, int32_t bucket_mode);
 };
 }  // namespace paimon

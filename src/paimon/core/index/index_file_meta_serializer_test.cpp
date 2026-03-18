@@ -21,6 +21,7 @@
 #include "gtest/gtest.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/common/memory/memory_segment_utils.h"
+#include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 #include "paimon/core/index/index_file_meta.h"
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/io/data_input_stream.h"
@@ -47,8 +48,9 @@ class IndexFileMetaSerializerTest : public testing::Test {
             "my_file_name2",
             DeletionVectorMeta("my_file_name2", std::rand(), std::rand(), std::nullopt));
         return std::make_shared<IndexFileMeta>(
-            "DELETION_VECTORS", "deletion_vectors_index_file_name" + std::to_string(std::rand()),
-            std::rand(), rand(), deletion_vectors_ranges, /*external_path=*/std::nullopt);
+            std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+            "deletion_vectors_index_file_name" + std::to_string(std::rand()), std::rand(), rand(),
+            deletion_vectors_ranges, /*external_path=*/std::nullopt);
     }
 
     const int32_t TRIES = 100;
@@ -82,7 +84,8 @@ TEST_F(IndexFileMetaSerializerTest, TestToFromRow) {
 TEST_F(IndexFileMetaSerializerTest, TestToFromRowWithNullDeletionVectorMetas) {
     IndexFileMetaSerializer serializer(memory_pool_);
     auto expected = std::make_shared<IndexFileMeta>(
-        "DELETION_VECTORS", "deletion_vectors_index_file_0", /*file_size=*/10,
+        std::string(DeletionVectorsIndexFile::DELETION_VECTORS_INDEX),
+        "deletion_vectors_index_file_0", /*file_size=*/10,
         /*row_count=*/5,
         /*dv_ranges=*/std::nullopt, /*external_path=*/std::nullopt);
     ASSERT_OK_AND_ASSIGN(BinaryRow row, serializer.ToRow(expected));

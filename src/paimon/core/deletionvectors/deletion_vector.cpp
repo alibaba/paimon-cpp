@@ -20,6 +20,7 @@
 #include <string>
 
 #include "fmt/format.h"
+#include "paimon/core/deletionvectors/bitmap64_deletion_vector.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/fs/file_system.h"
@@ -43,12 +44,49 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::Read(const FileSystem*
     PAIMON_ASSIGN_OR_RAISE(int32_t actual_length, file_input_stream.ReadValue<int32_t>());
     if (actual_length != deletion_file.length) {
         return Status::Invalid(
-            fmt::format("Size not match, actual size: {}, expect size: {}, , file path: {}",
+            fmt::format("Size not match, actual size: {}, expect size: {}, file path: {}",
                         actual_length, deletion_file.length, deletion_file.path));
     }
     auto bytes = Bytes::AllocateBytes(deletion_file.length, pool);
     PAIMON_RETURN_NOT_OK(file_input_stream.ReadBytes(bytes.get()));
     return DeserializeFromBytes(bytes.get(), pool);
+}
+
+Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::Read(DataInputStream* input_stream,
+                                                               std::optional<int64_t> length,
+                                                               MemoryPool* pool) {
+    PAIMON_ASSIGN_OR_RAISE(int32_t bitmap_length, input_stream->ReadValue<int32_t>());
+    PAIMON_ASSIGN_OR_RAISE(int32_t magic_number, input_stream->ReadValue<int32_t>());
+
+    if (magic_number == BitmapDeletionVector::MAGIC_NUMBER) {
+        if (length.has_value() && bitmap_length != length.value()) {
+            return Status::Invalid(fmt::format("Size not match, actual size: {}, expected size: {}",
+                                               bitmap_length, length.value()));
+        }
+
+        int32_t payload_length = bitmap_length - BitmapDeletionVector::MAGIC_NUMBER_SIZE_BYTES;
+        if (payload_length < 0) {
+            return Status::Invalid(fmt::format("Invalid bitmap length: {}", bitmap_length));
+        }
+
+        auto bytes = Bytes::AllocateBytes(payload_length, pool);
+        PAIMON_RETURN_NOT_OK(input_stream->ReadBytes(bytes.get()));
+        // skip crc (4 bytes)
+        PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] int32_t unused_crc,
+                               input_stream->ReadValue<int32_t>());
+
+        return BitmapDeletionVector::DeserializeWithoutMagicNumber(bytes->data(), bytes->size(),
+                                                                   pool);
+    } else if (EndianSwapValue(magic_number) == Bitmap64DeletionVector::MAGIC_NUMBER) {
+        return Status::NotImplemented(
+            "bitmap64 deletion vectors are not supported in this version, "
+            "please use bitmap deletion vectors instead or upgrade to a version "
+            "that supports bitmap64.");
+    }
+
+    return Status::Invalid(fmt::format(
+        "Invalid magic number: {}, v1 dv magic number: {}, v2 magic number: {}", magic_number,
+        BitmapDeletionVector::MAGIC_NUMBER, Bitmap64DeletionVector::MAGIC_NUMBER));
 }
 
 PAIMON_UNIQUE_PTR<DeletionVector> DeletionVector::FromPrimitiveArray(

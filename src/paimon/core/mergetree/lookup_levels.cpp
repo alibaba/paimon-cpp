@@ -187,10 +187,21 @@ template <typename T>
 Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFileMeta>& file,
                                                   const std::string& kv_file_path) {
     // Prepare reader to iterate KeyValue
+    auto dv_factory =
+        [this](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+        auto iter = deletion_file_map_.find(file_name);
+        if (iter != deletion_file_map_.end()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<DeletionVector> dv,
+                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
+            return dv;
+        }
+        return std::shared_ptr<DeletionVector>();
+    };
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_readers,
         split_read_->CreateRawFileReaders(partition_, {file}, read_schema_,
-                                          /*predicate=*/nullptr, deletion_file_map_,
+                                          /*predicate=*/nullptr, dv_factory,
                                           /*row_ranges=*/std::nullopt, data_file_path_factory_));
     if (raw_readers.size() != 1) {
         return Status::Invalid("Unexpected, CreateSstFileFromDataFile only create single reader");

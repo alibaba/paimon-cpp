@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -160,6 +161,19 @@ struct hash<std::pair<paimon::BinaryRow, int32_t>> {
         const auto& [partition, bucket] = partition_bucket;
         return paimon::MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<const void*>(&bucket), 0,
                                                         sizeof(bucket), partition.HashCode());
+    }
+};
+
+/// for std::unordered_map<std::tuple<paimon::BinaryRow, int32_t, std::string>, ...>
+template <>
+struct hash<std::tuple<paimon::BinaryRow, int32_t, std::string>> {
+    size_t operator()(
+        const std::tuple<paimon::BinaryRow, int32_t, std::string>& partition_bucket_type) const {
+        const auto& [partition, bucket, index_type] = partition_bucket_type;
+        size_t hash = paimon::MurmurHashUtils::HashUnsafeBytes(
+            reinterpret_cast<const void*>(&bucket), 0, sizeof(bucket), partition.HashCode());
+        return paimon::MurmurHashUtils::HashUnsafeBytes(index_type.data(), 0, index_type.size(),
+                                                        hash);
     }
 };
 

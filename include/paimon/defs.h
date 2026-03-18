@@ -232,6 +232,15 @@ struct PAIMON_EXPORT Options {
     /// Default value is false.
     static const char DELETION_VECTORS_ENABLED[];
 
+    /// "deletion-vector.index-file.target-size" - The target size of deletion vector index file.
+    /// Default value is 2MB.
+    static const char DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[];
+
+    /// "deletion-vectors.bitmap64" - Enable 64 bit bitmap implementation. Note that only 64 bit
+    /// bitmap implementation is compatible with Iceberg. Default value is "false".
+    /// @note: bitmap64 dv is not supported.
+    static const char DELETION_VECTOR_BITMAP64[];
+
     ///  @note `CHANGELOG_PRODUCER` currently only support `none`
     ///
     /// "changelog-producer" - Whether to double write to a changelog file. This changelog file

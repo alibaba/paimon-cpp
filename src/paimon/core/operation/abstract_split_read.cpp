@@ -64,8 +64,7 @@ AbstractSplitRead::AbstractSplitRead(const std::shared_ptr<FileStorePathFactory>
 Result<std::vector<std::unique_ptr<FileBatchReader>>> AbstractSplitRead::CreateRawFileReaders(
     const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::optional<std::vector<Range>>& row_ranges,
+    DeletionVector::Factory dv_factory, const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     if (data_files.empty()) {
         return std::vector<std::unique_ptr<FileBatchReader>>();
@@ -84,7 +83,7 @@ Result<std::vector<std::unique_ptr<FileBatchReader>>> AbstractSplitRead::CreateR
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<FileBatchReader> file_reader,
             CreateFieldMappingReader(data_file_path, file, partition, reader_builder.get(),
-                                     field_mapping_builder.get(), deletion_file_map, row_ranges,
+                                     field_mapping_builder.get(), dv_factory, row_ranges,
                                      data_file_path_factory));
         if (file_reader) {
             raw_file_readers.push_back(std::move(file_reader));
@@ -123,6 +122,21 @@ std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionF
         }
     }
     return deletion_file_map;
+}
+
+DeletionVector::Factory AbstractSplitRead::CreateDeletionVectorFactory(
+    const std::unordered_map<std::string, DeletionFile>& deletion_file_map) const {
+    return [this, deletion_file_map](
+               const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+        auto iter = deletion_file_map.find(file_name);
+        if (iter != deletion_file_map.end()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<DeletionVector> dv,
+                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
+            return dv;
+        }
+        return std::shared_ptr<DeletionVector>();
+    };
 }
 
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
@@ -173,8 +187,7 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFileBatchReade
 Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingReader(
     const std::string& data_file_path, const std::shared_ptr<DataFileMeta>& file_meta,
     const BinaryRow& partition, const ReaderBuilder* reader_builder,
-    const FieldMappingBuilder* field_mapping_builder,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const FieldMappingBuilder* field_mapping_builder, DeletionVector::Factory dv_factory,
     const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
     std::shared_ptr<TableSchema> data_schema;
@@ -216,7 +229,7 @@ Result<std::unique_ptr<FileBatchReader>> AbstractSplitRead::CreateFieldMappingRe
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileBatchReader> final_reader,
                            ApplyIndexAndDvReaderIfNeeded(
                                std::move(file_reader), file_meta, all_data_schema, read_schema,
-                               predicate, deletion_file_map, row_ranges, data_file_path_factory));
+                               predicate, dv_factory, row_ranges, data_file_path_factory));
     if (!final_reader) {
         // file is skipped by index or dv
         return std::unique_ptr<FileBatchReader>();

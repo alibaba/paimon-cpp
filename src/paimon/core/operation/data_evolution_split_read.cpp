@@ -158,7 +158,7 @@ Result<std::unique_ptr<BatchReader>> DataEvolutionSplitRead::InnerCreateReader(
                 std::vector<std::unique_ptr<FileBatchReader>> raw_file_readers,
                 CreateRawFileReaders(split_impl->Partition(), need_merge_files, raw_read_schema_,
                                      /*predicate=*/nullptr,
-                                     /*deletion_file_map=*/{}, row_ranges, data_file_path_factory));
+                                     /*dv_factory=*/nullptr, row_ranges, data_file_path_factory));
             assert(raw_file_readers.size() == 1);
             sub_readers.push_back(std::move(raw_file_readers[0]));
         } else {
@@ -178,10 +178,9 @@ Result<std::unique_ptr<FileBatchReader>> DataEvolutionSplitRead::ApplyIndexAndDv
     std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
     const std::shared_ptr<arrow::Schema>& data_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::shared_ptr<Predicate>& predicate,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-    const std::optional<std::vector<Range>>& row_ranges,
+    DeletionVector::Factory dv_factory, const std::optional<std::vector<Range>>& row_ranges,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    if (!deletion_file_map.empty()) {
+    if (dv_factory) {
         return Status::Invalid("DataEvolutionSplitRead do not support deletion vector");
     }
     if (predicate) {
@@ -334,11 +333,10 @@ Result<std::unique_ptr<DataEvolutionFileReader>> DataEvolutionSplitRead::CreateU
         if (!read_fields_in_file.empty()) {
             // create new FieldMappingReader for read partial fields
             auto file_read_schema = DataField::ConvertDataFieldsToArrowSchema(read_fields_in_file);
-            PAIMON_ASSIGN_OR_RAISE(
-                std::vector<std::unique_ptr<FileBatchReader>> file_readers,
-                CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
-                                     /*predicate=*/nullptr, /*deletion_file_map=*/{}, row_ranges,
-                                     data_file_path_factory));
+            PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<FileBatchReader>> file_readers,
+                                   CreateRawFileReaders(partition, bunch->Files(), file_read_schema,
+                                                        /*predicate=*/nullptr, /*dv_factory=*/{},
+                                                        row_ranges, data_file_path_factory));
             if (file_readers.size() == 1) {
                 file_batch_readers[file_idx] = std::move(file_readers[0]);
             } else {

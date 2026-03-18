@@ -41,6 +41,14 @@ class CommitIncrement {
         return compact_increment_;
     }
 
+    DataIncrement& GetNewFilesIncrement() {
+        return data_increment_;
+    }
+
+    CompactIncrement& GetCompactIncrement() {
+        return compact_increment_;
+    }
+
     std::shared_ptr<CompactDeletionFile> GetCompactDeletionFile() const {
         return compact_deletion_file_;
     }
