@@ -120,14 +120,6 @@ class FileStoreCommitImpl : public FileStoreCommit {
 
     Status Init(std::unique_ptr<CommitContext> ctx);
 
-    std::shared_ptr<SchemaManager> TEST_GetSchemaManager() const {
-        return schema_manager_;
-    }
-
-    std::shared_ptr<SnapshotManager> TEST_GetSnapshotManager() const {
-        return snapshot_manager_;
-    }
-
  private:
     Status Commit(const std::shared_ptr<ManifestCommittable>& manifest_committable,
                   bool check_append_files);

@@ -72,7 +72,6 @@ namespace paimon {
 class BinaryRow;
 class DataFilePathFactory;
 class Executor;
-struct DeletionFile;
 struct KeyValue;
 template <typename T>
 class MergeFunctionWrapper;
@@ -217,19 +216,7 @@ Result<std::unique_ptr<FileBatchReader>> MergeFileSplitRead::ApplyIndexAndDvRead
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) {
-    auto deletion_file_map = AbstractSplitRead::CreateDeletionFileMap(*data_split);
-
-    auto dv_factory = [this, deletion_file_map](
-                          const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        auto iter = deletion_file_map.find(file_name);
-        if (iter != deletion_file_map.end()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DeletionVector> dv,
-                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    auto dv_factory = CreateDeletionVectorFactory(CreateDeletionFileMap(*data_split));
 
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(data_split->DataFiles(), interval_partition_comparator_).Partition();
@@ -250,18 +237,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split, bool only_filter_key,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const {
-    auto deletion_file_map = AbstractSplitRead::CreateDeletionFileMap(*data_split);
-    auto dv_factory = [this, deletion_file_map](
-                          const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        auto iter = deletion_file_map.find(file_name);
-        if (iter != deletion_file_map.end()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DeletionVector> dv,
-                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    auto dv_factory = CreateDeletionVectorFactory(CreateDeletionFileMap(*data_split));
 
     // create read schema without extra fields (e.g., completed key, sequence fields)
     auto row_kind_field = DataField::ConvertDataFieldToArrowField(SpecialFields::ValueKind());

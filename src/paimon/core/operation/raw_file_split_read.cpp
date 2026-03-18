@@ -49,7 +49,6 @@ namespace paimon {
 class DataFilePathFactory;
 class Executor;
 class Predicate;
-struct DeletionFile;
 
 RawFileSplitRead::RawFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                                    const std::shared_ptr<InternalReadContext>& context,
@@ -96,18 +95,8 @@ Result<std::unique_ptr<BatchReader>> RawFileSplitRead::CreateReader(
     const BinaryRow& partition, int32_t bucket,
     const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
     const std::vector<std::optional<DeletionFile>>& deletion_files) {
-    auto deletion_file_map = CreateDeletionFileMap(data_files, deletion_files);
-    auto dv_factory = [this, deletion_file_map](
-                          const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        auto iter = deletion_file_map.find(file_name);
-        if (iter != deletion_file_map.end()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DeletionVector> dv,
-                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    auto dv_factory =
+        CreateDeletionVectorFactory(CreateDeletionFileMap(data_files, deletion_files));
     return CreateReader(partition, bucket, data_files, dv_factory);
 }
 

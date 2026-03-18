@@ -113,9 +113,7 @@ TEST(DeletionVectorIndexFileWriterTest, WriteSingleFileShouldReturnSerializeErro
     std::map<std::string, std::shared_ptr<DeletionVector>> input;
     input["bad"] = std::make_shared<FailingDeletionVector>();
 
-    auto result = writer.WriteSingleFile(input);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("injected serialize failure") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(writer.WriteSingleFile(input), "injected serialize failure");
 }
 
 }  // namespace paimon::test

@@ -114,10 +114,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamLengthMismatch) {
         reinterpret_cast<const char*>(data.data()), data.size());
     DataInputStream in(input_stream);
     auto pool = GetDefaultPool();
-
-    auto result = DeletionVector::Read(&in, /*length=*/9, pool.get());
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("Size not match") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, /*length=*/9, pool.get()), "Size not match");
 }
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidBitmapLength) {
@@ -130,9 +127,8 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidBitmapLength) {
     DataInputStream in(input_stream);
     auto pool = GetDefaultPool();
 
-    auto result = DeletionVector::Read(&in, std::nullopt, pool.get());
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("Invalid bitmap length") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()),
+                        "Invalid bitmap length");
 }
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
@@ -146,9 +142,7 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
     DataInputStream in(input_stream);
     auto pool = GetDefaultPool();
 
-    auto result = DeletionVector::Read(&in, std::nullopt, pool.get());
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().IsNotImplemented());
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()), "Not implemented");
 }
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
@@ -161,9 +155,8 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
     DataInputStream in(input_stream);
     auto pool = GetDefaultPool();
 
-    auto result = DeletionVector::Read(&in, std::nullopt, pool.get());
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("Invalid magic number") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()),
+                        "Invalid magic number");
 }
 
 }  // namespace paimon::test

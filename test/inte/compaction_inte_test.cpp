@@ -109,6 +109,9 @@ class CompactionInteTest : public testing::Test, public ::testing::WithParamInte
         ASSERT_EQ(10, snapshot3.value().TotalRecordCount().value());
         ASSERT_EQ(1, snapshot3.value().DeltaRecordCount().value());
 
+        // @note: for append-only tables in Spark, native row-level deletes aren't supported during
+        // writing. Instead, deletions are expressed by committing a Deletion Vector (DV) file
+        // externally.
         if (with_dv) {
             auto partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
             int32_t bucket = 1;

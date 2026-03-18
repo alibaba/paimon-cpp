@@ -238,6 +238,7 @@ struct PAIMON_EXPORT Options {
 
     /// "deletion-vectors.bitmap64" - Enable 64 bit bitmap implementation. Note that only 64 bit
     /// bitmap implementation is compatible with Iceberg. Default value is "false".
+    /// @note: bitmap64 dv is not supported.
     static const char DELETION_VECTOR_BITMAP64[];
 
     ///  @note `CHANGELOG_PRODUCER` currently only support `none`

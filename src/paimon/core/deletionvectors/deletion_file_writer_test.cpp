@@ -92,10 +92,7 @@ TEST(DeletionFileWriterTest, GetResultWithoutCloseShouldFail) {
     auto pool = GetDefaultPool();
 
     ASSERT_OK_AND_ASSIGN(auto writer, DeletionFileWriter::Create(path_factory, fs, pool));
-    auto result = writer->GetResult();
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("result length -1 out of int32 range") !=
-                std::string::npos);
+    ASSERT_NOK_WITH_MSG(writer->GetResult(), "result length -1 out of int32 range");
 }
 
 TEST(DeletionFileWriterTest, ExternalPathInResult) {

@@ -102,10 +102,6 @@ class AbstractFileStoreWrite : public FileStoreWrite {
         int32_t total_buckets = -1;
     };
 
-    std::shared_ptr<FileStorePathFactory> TEST_GetFileStorePathFactory() const {
-        return file_store_path_factory_;
-    }
-
  protected:
     virtual Result<std::shared_ptr<BatchWriter>> CreateWriter(
         const BinaryRow& partition, int32_t bucket,

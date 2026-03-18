@@ -128,10 +128,7 @@ TEST(CompactDeletionFileTest, MergeOldFileShouldRejectNonGeneratedType) {
     auto current = std::make_shared<GeneratedDeletionFile>(meta, dv_index_file);
     auto old = std::make_shared<NonGeneratedCompactDeletionFile>();
 
-    auto result = current->MergeOldFile(old);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("old should be a GeneratedDeletionFile") !=
-                std::string::npos);
+    ASSERT_NOK_WITH_MSG(current->MergeOldFile(old), "old should be a GeneratedDeletionFile");
 }
 
 TEST(CompactDeletionFileTest, MergeOldFileShouldRejectInvokedOldFile) {
@@ -154,9 +151,7 @@ TEST(CompactDeletionFileTest, MergeOldFileShouldRejectInvokedOldFile) {
     auto old = std::make_shared<GeneratedDeletionFile>(old_meta, dv_index_file);
     ASSERT_TRUE(old->GetOrCompute().has_value());
 
-    auto result = current->MergeOldFile(old);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("old should not be get") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(current->MergeOldFile(old), "old should not be get");
 }
 
 TEST(CompactDeletionFileTest, MergeOldFileShouldReturnOldWhenCurrentIsNull) {
