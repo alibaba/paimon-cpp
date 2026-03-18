@@ -10,4 +10,4 @@
 *vendored/*
 *RcppExports.cpp*
 *arrowExports.cpp*
-test_helper.h
+*src/paimon/testing/utils/test_helper.h
