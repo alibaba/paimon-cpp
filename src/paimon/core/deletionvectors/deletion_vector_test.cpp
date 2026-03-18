@@ -142,7 +142,9 @@ TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
     DataInputStream in(input_stream);
     auto pool = GetDefaultPool();
 
-    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()), "Not implemented");
+    ASSERT_NOK_WITH_MSG(
+        DeletionVector::Read(&in, std::nullopt, pool.get()),
+        "NotImplemented: bitmap64 deletion vectors are not supported in this version");
 }
 
 TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
