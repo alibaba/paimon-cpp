@@ -38,6 +38,7 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
                                const CoreOptions& options,
                                const std::shared_ptr<arrow::Schema>& data_schema,
                                const std::shared_ptr<arrow::Schema>& write_schema,
+                               DeletionVector::Factory dv_factory,
                                const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
                                std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                                MergeFunctionWrapperFactory merge_function_wrapper_factory,

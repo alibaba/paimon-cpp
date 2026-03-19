@@ -40,10 +40,14 @@ class MergeTreeCompactRewriterTest : public testing::Test {
         int32_t bucket, const BinaryRow& partition) const {
         PAIMON_ASSIGN_OR_RAISE(auto options, CoreOptions::FromMap(table_schema->Options()));
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+        auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
+            return std::shared_ptr<DeletionVector>();
+        };
+
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
-        return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, path_factory_cache,
-                                                options, pool_);
+        return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, dv_factory,
+                                                path_factory_cache, options, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(

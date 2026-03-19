@@ -20,21 +20,20 @@ ChangelogMergeTreeRewriter::ChangelogMergeTreeRewriter(
     int32_t max_level, bool force_drop_delete, const BinaryRow& partition, int32_t bucket,
     int64_t schema_id, const std::vector<std::string>& trimmed_primary_keys,
     const CoreOptions& options, const std::shared_ptr<arrow::Schema>& data_schema,
-    const std::shared_ptr<arrow::Schema>& write_schema,
+    const std::shared_ptr<arrow::Schema>& write_schema, DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<MemoryPool>& pool)
     : MergeTreeCompactRewriter(partition, bucket, schema_id, trimmed_primary_keys, options,
-                               data_schema, write_schema, path_factory_cache,
+                               data_schema, write_schema, std::move(dv_factory), path_factory_cache,
                                std::move(merge_file_split_read),
                                std::move(merge_function_wrapper_factory), pool),
       max_level_(max_level),
       force_drop_delete_(force_drop_delete) {}
 
 Result<CompactResult> ChangelogMergeTreeRewriter::Rewrite(
-    int32_t output_level, bool drop_delete,
-    const std::vector<std::vector<SortedRun>>& sections)  {
+    int32_t output_level, bool drop_delete, const std::vector<std::vector<SortedRun>>& sections) {
     if (RewriteChangelog(output_level, drop_delete, sections)) {
         return RewriteOrProduceChangelog(output_level, sections, drop_delete,
                                          /*rewrite_compact_file=*/true);
@@ -44,7 +43,7 @@ Result<CompactResult> ChangelogMergeTreeRewriter::Rewrite(
 }
 
 Result<CompactResult> ChangelogMergeTreeRewriter::Upgrade(
-    int32_t output_level, const std::shared_ptr<DataFileMeta>& file)  {
+    int32_t output_level, const std::shared_ptr<DataFileMeta>& file) {
     UpgradeStrategy upgrade_strategy = GenerateUpgradeStrategy(output_level, file);
     if (upgrade_strategy.changelog) {
         return RewriteOrProduceChangelog(output_level, {{SortedRun::FromSingle(file)}},

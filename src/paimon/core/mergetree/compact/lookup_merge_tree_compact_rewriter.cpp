@@ -30,15 +30,16 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     const BinaryRow& partition, int32_t bucket, int64_t schema_id,
     const std::vector<std::string>& trimmed_primary_keys, const CoreOptions& options,
     const std::shared_ptr<arrow::Schema>& data_schema,
-    const std::shared_ptr<arrow::Schema>& write_schema,
+    const std::shared_ptr<arrow::Schema>& write_schema, DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
     const std::shared_ptr<MemoryPool>& pool)
-    : ChangelogMergeTreeRewriter(
-          max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
-          trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
-          std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool),
+    : ChangelogMergeTreeRewriter(max_level, /*force_drop_delete=*/dv_maintainer != nullptr,
+                                 partition, bucket, schema_id, trimmed_primary_keys, options,
+                                 data_schema, write_schema, std::move(dv_factory),
+                                 path_factory_cache, std::move(merge_file_split_read),
+                                 std::move(merge_function_wrapper_factory), pool),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer) {}
 
@@ -49,6 +50,7 @@ LookupMergeTreeCompactRewriter<T>::Create(
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
     MergeFunctionWrapperFactory merge_function_wrapper_factory, int32_t bucket,
     const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
+    DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
@@ -65,16 +67,17 @@ LookupMergeTreeCompactRewriter<T>::Create(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<InternalReadContext> internal_context,
         InternalReadContext::Create(read_context, table_schema, options.ToMap()));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStorePathFactory> path_factory,
-                           path_factory_cache->GetOrCreatePathFactory(
-                               options.GetFileFormat()->Identifier()));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<FileStorePathFactory> path_factory,
+        path_factory_cache->GetOrCreatePathFactory(options.GetFileFormat()->Identifier()));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
-        trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
-        std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool));
+        trimmed_primary_keys, options, data_schema, write_schema, std::move(dv_factory),
+        path_factory_cache, std::move(merge_file_split_read),
+        std::move(merge_function_wrapper_factory), pool));
 }
 
 template <typename T>

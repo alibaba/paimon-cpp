@@ -246,7 +246,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.NeedLookup());
     LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
                                                /*produce_changelog=*/false,
-                                               /*deletion_vector=*/true, /*need_lookup=*/true};
+                                               /*deletion_vector=*/true, /*force_lookup=*/true};
     ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
 
     std::map<std::string, std::string> seq_grp;

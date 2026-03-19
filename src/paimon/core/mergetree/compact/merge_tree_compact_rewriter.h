@@ -36,7 +36,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
 
     static Result<std::unique_ptr<MergeTreeCompactRewriter>> Create(
         int32_t bucket, const BinaryRow& partition,
-        const std::shared_ptr<TableSchema>& table_schema,
+        const std::shared_ptr<TableSchema>& table_schema, DeletionVector::Factory dv_factory,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
         const CoreOptions& options, const std::shared_ptr<MemoryPool>& memory_pool);
 
@@ -70,6 +70,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
                              const CoreOptions& options,
                              const std::shared_ptr<arrow::Schema>& data_schema,
                              const std::shared_ptr<arrow::Schema>& write_schema,
+                             DeletionVector::Factory dv_factory,
                              const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
                              std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                              MergeFunctionWrapperFactory merge_function_wrapper_factory,
@@ -109,6 +110,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     std::shared_ptr<arrow::Schema> data_schema_;
     // SequenceNumber + ValueKind + data_schema_
     std::shared_ptr<arrow::Schema> write_schema_;
+    DeletionVector::Factory dv_factory_;
     std::shared_ptr<FileStorePathFactoryCache> path_factory_cache_;
     MergeFunctionWrapperFactory merge_function_wrapper_factory_;
 };
