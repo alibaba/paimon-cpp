@@ -46,30 +46,24 @@ class SstFileReader {
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
-    /**
-     * Lookup the specified key in the file.
-     *
-     * @param key serialized key
-     * @return corresponding serialized value, nullptr if not found.
-     */
+    /// Lookup the specified key in the file.
+    ///
+    /// @param key serialized key
+    /// @return corresponding serialized value, nullptr if not found.
     Result<std::shared_ptr<Bytes>> Lookup(const std::shared_ptr<Bytes>& key);
 
     Result<std::unique_ptr<BlockIterator>> GetNextBlock(
         std::unique_ptr<BlockIterator>& index_iterator);
 
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
+    /// @param handle The block handle.
+    /// @param index Whether read the block as an index.
+    /// @return The reader of the target block.
     Result<std::shared_ptr<BlockReader>> ReadBlock(std::shared_ptr<BlockHandle>&& handle,
                                                    bool index);
 
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
+    /// @param handle The block handle.
+    /// @param index Whether read the block as an index.
+    /// @return The reader of the target block.
     Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
                                                    bool index);
 
@@ -98,10 +92,8 @@ class SstFileIterator {
  public:
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 
-    /**
-     * Seek to the position of the record whose key is exactly equal to or greater than the
-     * specified key.
-     */
+    /// Seek to the position of the record whose key is exactly equal to or greater than the
+    /// specified key.
     Status SeekTo(const std::shared_ptr<Bytes>& key);
 
  private:
