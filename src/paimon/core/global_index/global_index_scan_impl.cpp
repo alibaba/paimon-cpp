@@ -111,7 +111,7 @@ Status GlobalIndexScanImpl::Scan() {
         FileStorePathFactory::Create(
             root_path_, arrow_schema, table_schema_->PartitionKeys(),
             options_.GetPartitionDefaultName(),
-            options_.GetWriteFileFormat(/*level=*/0)->Identifier(), options_.DataFilePrefix(),
+            options_.GetFileFormat()->Identifier(), options_.DataFilePrefix(),
             options_.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
             options_.IndexFileInDataFileDir(), pool_));
 

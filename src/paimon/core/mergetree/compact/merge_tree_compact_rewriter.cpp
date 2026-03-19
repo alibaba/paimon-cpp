@@ -71,7 +71,7 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
         InternalReadContext::Create(read_context, table_schema, options.ToMap()));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileStorePathFactory> path_factory,
                            path_factory_cache->GetOrCreatePathFactory(
-                               options.GetWriteFileFormat(/*level=*/0)->Identifier()));
+                               options.GetFileFormat()->Identifier()));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<MergeFileSplitRead> merge_file_split_read,
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
@@ -183,7 +183,7 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
     // prepare sort merge reader
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<DataFilePathFactory> data_file_path_factory,
-        CreateDataFilePathFactory(options_.GetWriteFileFormat(/*level=*/0)->Identifier()));
+        CreateDataFilePathFactory(options_.GetFileFormat()->Identifier()));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MergeFunctionWrapper<KeyValue>> wrapper,
                            merge_function_wrapper_factory_(output_level));
     merge_file_split_read_->SetMergeFunctionWrapper(wrapper);

@@ -128,7 +128,7 @@ class LookupLevelsTest : public testing::Test {
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 table_path, arrow_schema_, /*partition_keys=*/{}, options.GetPartitionDefaultName(),
-                options.GetWriteFileFormat(/*level=*/0)->Identifier(), options.DataFilePrefix(),
+                options.GetFileFormat()->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
         return path_factory;

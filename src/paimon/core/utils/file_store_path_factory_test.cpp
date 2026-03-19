@@ -68,7 +68,7 @@ class FileStorePathFactoryTest : public ::testing::Test {
         EXPECT_OK_AND_ASSIGN(auto path_factory,
                              FileStorePathFactory::Create(
                                  root, schema, {"f0", "f3"}, options.GetPartitionDefaultName(),
-                                 options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                                 options.GetFileFormat()->Identifier(),
                                  options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
                                  external_paths, /*global_index_external_path=*/std::nullopt,
                                  options.IndexFileInDataFileDir(), mem_pool_));

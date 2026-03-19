@@ -341,7 +341,7 @@ class MergeFileSplitReadTest : public ::testing::Test,
             FileStorePathFactory::Create(
                 internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
                 core_options.GetPartitionDefaultName(),
-                core_options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                core_options.GetFileFormat()->Identifier(),
                 core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
                 external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
                 pool_));

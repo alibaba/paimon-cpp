@@ -33,6 +33,7 @@ namespace paimon::test {
 TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
     ASSERT_EQ(core_options.GetManifestFormat()->Identifier(), "avro");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "parquet");
     ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "parquet");
     ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
     ASSERT_TRUE(core_options.GetFileSystem());
@@ -197,8 +198,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     auto fs = core_options.GetFileSystem();
     ASSERT_TRUE(fs);
 
-    auto format = core_options.GetWriteFileFormat(0);
-    ASSERT_EQ(format->Identifier(), "avro");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "avro");
     ASSERT_EQ(core_options.GetWriteFileFormat(1)->Identifier(), "orc");
     ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
 

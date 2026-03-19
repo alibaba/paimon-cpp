@@ -54,6 +54,7 @@ class PAIMON_EXPORT CoreOptions {
     ~CoreOptions();
 
     int32_t GetBucket() const;
+    std::shared_ptr<FileFormat> GetFileFormat() const;
     std::shared_ptr<FileFormat> GetWriteFileFormat(int32_t level) const;
     std::shared_ptr<FileSystem> GetFileSystem() const;
     const std::string& GetFileCompression() const;

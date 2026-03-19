@@ -19,37 +19,17 @@
 #include "arrow/api.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
-#include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
-#include "paimon/core/mergetree/merge_tree_writer.h"
-#include "paimon/core/operation/merge_file_split_read.h"
-#include "paimon/core/schema/table_schema.h"
-#include "paimon/core/utils/file_store_path_factory.h"
 namespace paimon {
 /// A `MergeTreeCompactRewriter` which produces changelog files while performing compaction.
 class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
  public:
     Result<CompactResult> Rewrite(int32_t output_level, bool drop_delete,
-                                  const std::vector<std::vector<SortedRun>>& sections) override {
-        if (RewriteChangelog(output_level, drop_delete, sections)) {
-            return RewriteOrProduceChangelog(output_level, sections, drop_delete,
-                                             /*rewrite_compact_file=*/true);
-        } else {
-            return RewriteCompaction(output_level, drop_delete, sections);
-        }
-    }
+                                  const std::vector<std::vector<SortedRun>>& sections) override;
 
     Result<CompactResult> Upgrade(int32_t output_level,
-                                  const std::shared_ptr<DataFileMeta>& file) override {
-        UpgradeStrategy upgrade_strategy = GenerateUpgradeStrategy(output_level, file);
-        if (upgrade_strategy.changelog) {
-            return RewriteOrProduceChangelog(output_level, {{SortedRun::FromSingle(file)}},
-                                             force_drop_delete_, upgrade_strategy.rewrite);
-        } else {
-            return MergeTreeCompactRewriter::Upgrade(output_level, file);
-        }
-    }
+                                  const std::shared_ptr<DataFileMeta>& file) override;
 
  protected:
     ChangelogMergeTreeRewriter(int32_t max_level, bool force_drop_delete,
@@ -61,13 +41,7 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
                                const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
                                std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                                MergeFunctionWrapperFactory merge_function_wrapper_factory,
-                               const std::shared_ptr<MemoryPool>& pool)
-        : MergeTreeCompactRewriter(partition, bucket, schema_id, trimmed_primary_keys, options,
-                                   data_schema, write_schema, path_factory_cache,
-                                   std::move(merge_file_split_read),
-                                   std::move(merge_function_wrapper_factory), pool),
-          max_level_(max_level),
-          force_drop_delete_(force_drop_delete) {}
+                               const std::shared_ptr<MemoryPool>& pool);
 
     struct UpgradeStrategy {
         static UpgradeStrategy NoChangelogNoRewrite() {
@@ -100,73 +74,12 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
                                   const std::vector<std::vector<SortedRun>>& sections) const = 0;
 
     bool RewriteLookupChangelog(int32_t output_level,
-                                const std::vector<std::vector<SortedRun>>& sections) const {
-        if (output_level == 0) {
-            return false;
-        }
-        for (const auto& runs : sections) {
-            for (const auto& run : runs) {
-                for (const auto& file : run.Files()) {
-                    if (file->level == 0) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
+                                const std::vector<std::vector<SortedRun>>& sections) const;
 
  private:
     Result<CompactResult> RewriteOrProduceChangelog(
         int32_t output_level, const std::vector<std::vector<SortedRun>>& sections, bool drop_delete,
-        bool rewrite_compact_file) {
-        PAIMON_ASSIGN_OR_RAISE(MergeTreeCompactRewriter::KeyValueConsumerCreator create_consumer,
-                               GenerateKeyValueConsumer());
-        std::vector<std::shared_ptr<MergeTreeCompactRewriter::KeyValueMergeReader>> reader_holders;
-
-        std::unique_ptr<MergeTreeCompactRewriter::KeyValueRollingFileWriter> compact_file_writer;
-        if (rewrite_compact_file) {
-            compact_file_writer = CreateRollingRowWriter(output_level);
-        }
-        // TODO(xinyu.lxy): produce changelog
-        ScopeGuard write_guard([&]() -> void {
-            if (compact_file_writer) {
-                compact_file_writer->Abort();
-            }
-            merge_file_split_read_.reset();
-            for (const auto& reader : reader_holders) {
-                reader->Close();
-            }
-        });
-
-        for (const auto& section : sections) {
-            PAIMON_RETURN_NOT_OK(MergeReadAndWrite(output_level, drop_delete, section,
-                                                   create_consumer, compact_file_writer.get(),
-                                                   &reader_holders));
-        }
-        if (compact_file_writer) {
-            PAIMON_RETURN_NOT_OK(compact_file_writer->Close());
-        }
-        auto before = ExtractFilesFromSections(sections);
-        std::vector<std::shared_ptr<DataFileMeta>> after;
-        if (compact_file_writer) {
-            PAIMON_ASSIGN_OR_RAISE(after, compact_file_writer->GetResult());
-        } else {
-            after.reserve(before.size());
-            for (const auto& file : before) {
-                PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> new_file,
-                                       file->Upgrade(output_level));
-                after.emplace_back(std::move(new_file));
-            }
-        }
-        if (rewrite_compact_file) {
-            NotifyRewriteCompactBefore(before);
-        }
-        write_guard.Release();
-
-        after = NotifyRewriteCompactAfter(after);
-        return CompactResult(before, after);
-    }
+        bool rewrite_compact_file);
 
  protected:
     int32_t max_level_;

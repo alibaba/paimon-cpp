@@ -653,6 +653,10 @@ std::shared_ptr<FileFormat> CoreOptions::GetWriteFileFormat(int32_t level) const
     return impl_->file_format;
 }
 
+std::shared_ptr<FileFormat> CoreOptions::GetFileFormat() const {
+    return impl_->file_format;
+}
+
 std::shared_ptr<FileSystem> CoreOptions::GetFileSystem() const {
     return impl_->file_system;
 }
@@ -1002,4 +1006,5 @@ const CompressOptions& CoreOptions::GetLookupCompressOptions() const {
 int32_t CoreOptions::GetCachePageSize() const {
     return static_cast<int32_t>(impl_->cache_page_size);
 }
+
 }  // namespace paimon
