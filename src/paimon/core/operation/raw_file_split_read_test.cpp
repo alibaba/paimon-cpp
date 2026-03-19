@@ -150,8 +150,7 @@ class RawFileSplitReadTest : public ::testing::Test {
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-                core_options.GetPartitionDefaultName(),
-                core_options.GetFileFormat()->Identifier(),
+                core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
                 core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
                 external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
                 pool_));
@@ -395,8 +394,7 @@ TEST_F(RawFileSplitReadTest, TestEmptyPlan) {
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-            core_options.GetPartitionDefaultName(),
-            core_options.GetFileFormat()->Identifier(),
+            core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
             pool_));
@@ -497,9 +495,7 @@ TEST_F(RawFileSplitReadTest, TestMatch) {
                              split_read->Match(data_split, /*force_keep_delete=*/false));
         ASSERT_FALSE(match_result);
     }
-    {
-        ASSERT_NOK(split_read->Match(nullptr, /*force_keep_delete=*/false));
-    }
+    { ASSERT_NOK(split_read->Match(nullptr, /*force_keep_delete=*/false)); }
 }
 
 }  // namespace paimon::test

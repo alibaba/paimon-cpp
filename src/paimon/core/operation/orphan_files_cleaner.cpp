@@ -185,12 +185,11 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
-        FileStorePathFactory::Create(ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
-                                     options.GetPartitionDefaultName(),
-                                     options.GetFileFormat()->Identifier(),
-                                     options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
-                                     external_paths, global_index_external_path,
-                                     options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
+        FileStorePathFactory::Create(
+            ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
+            options.GetPartitionDefaultName(), options.GetFileFormat()->Identifier(),
+            options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
+            global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =
         std::make_shared<SnapshotManager>(options.GetFileSystem(), ctx->GetRootPath());
     PAIMON_ASSIGN_OR_RAISE(
