@@ -128,7 +128,7 @@ class LookupLevelsTest : public testing::Test {
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 table_path, arrow_schema_, /*partition_keys=*/{}, options.GetPartitionDefaultName(),
-                options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
+                options.GetWriteFileFormat(/*level=*/0)->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
         return path_factory;
@@ -141,8 +141,6 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
         auto io_manager = IOManager::Create(tmp_dir_->Str());
-
-        auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
         auto processor_factory =
             std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
@@ -218,6 +216,16 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
     ASSERT_EQ(lookup_levels->schema_id_and_ser_version_to_processors_.size(), 1);
     ASSERT_EQ(lookup_levels->GetLevels()->NonEmptyHighestLevel(), 2);
+
+    // test lookup file in tmp dir
+    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_EQ(file_status_list.size(), 2);
+    // test close will rm local lookup file
+    ASSERT_OK(lookup_levels->Close());
+    file_status_list.clear();
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_TRUE(file_status_list.empty());
     // TODO(lisizhuo.lsz): test lookuplevels close
 }
 

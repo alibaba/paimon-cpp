@@ -62,7 +62,14 @@ class ReducerMergeFunctionWrapper : public MergeFunctionWrapper<KeyValue> {
 
     /// Get current value of the `MergeFunction` helper.
     Result<std::optional<KeyValue>> GetResult() override {
-        return is_initialized_ ? merge_function_->GetResult() : std::move(initial_kv_);
+        std::optional<KeyValue> result;
+        if (is_initialized_) {
+            PAIMON_ASSIGN_OR_RAISE(result, merge_function_->GetResult());
+        } else {
+            result = std::move(initial_kv_);
+        }
+        Reset();
+        return result;
     }
 
  private:

@@ -56,6 +56,12 @@ class LookupLevels {
     Result<std::optional<T>> Lookup(const std::shared_ptr<InternalRow>& key,
                                     const SortedRun& level);
 
+    Status Close() {
+        // TODDO(xinyu.lxy): invalid cache
+        lookup_file_cache_.clear();
+        return Status::OK();
+    }
+
  private:
     LookupLevels(const std::shared_ptr<FileSystem>& fs, const BinaryRow& partition, int32_t bucket,
                  const CoreOptions& options, const std::shared_ptr<SchemaManager>& schema_manager,

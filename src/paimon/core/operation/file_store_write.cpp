@@ -92,11 +92,12 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> file_store_path_factory,
-        FileStorePathFactory::Create(
-            ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
-            options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
-            options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
-            global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
+        FileStorePathFactory::Create(ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
+                                     options.GetPartitionDefaultName(),
+                                     options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                                     options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
+                                     external_paths, global_index_external_path,
+                                     options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =
         std::make_shared<SnapshotManager>(options.GetFileSystem(), ctx->GetRootPath(), branch);
     bool ignore_previous_files = ctx->IgnorePreviousFiles();

@@ -151,9 +151,10 @@ class RawFileSplitReadTest : public ::testing::Test {
             FileStorePathFactory::Create(
                 internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
                 core_options.GetPartitionDefaultName(),
-                core_options.GetWriteFileFormat()->Identifier(), core_options.DataFilePrefix(),
-                core_options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, core_options.IndexFileInDataFileDir(), pool_));
+                core_options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+                external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+                pool_));
         auto split_read =
             std::make_unique<RawFileSplitRead>(path_factory, std::move(internal_context), pool_,
                                                CreateDefaultExecutor(/*thread_count=*/2));
@@ -394,7 +395,8 @@ TEST_F(RawFileSplitReadTest, TestEmptyPlan) {
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-            core_options.GetPartitionDefaultName(), core_options.GetWriteFileFormat()->Identifier(),
+            core_options.GetPartitionDefaultName(),
+            core_options.GetWriteFileFormat(/*level=*/0)->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
             pool_));
@@ -495,9 +497,7 @@ TEST_F(RawFileSplitReadTest, TestMatch) {
                              split_read->Match(data_split, /*force_keep_delete=*/false));
         ASSERT_FALSE(match_result);
     }
-    {
-        ASSERT_NOK(split_read->Match(nullptr, /*force_keep_delete=*/false));
-    }
+    { ASSERT_NOK(split_read->Match(nullptr, /*force_keep_delete=*/false)); }
 }
 
 }  // namespace paimon::test

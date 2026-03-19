@@ -38,12 +38,28 @@ struct KeyValue {
     KeyValue() = default;
 
     KeyValue(const RowKind* _value_kind, int64_t _sequence_number, int32_t _level,
-             std::shared_ptr<InternalRow>&& _key, std::unique_ptr<InternalRow>&& _value)
+             std::shared_ptr<InternalRow> _key, std::shared_ptr<InternalRow> _value)
         : value_kind(_value_kind),
           sequence_number(_sequence_number),
           level(_level),
           key(std::move(_key)),
           value(std::move(_value)) {}
+
+    KeyValue(const KeyValue& other) noexcept {
+        *this = other;
+    }
+
+    KeyValue& operator=(const KeyValue& other) noexcept {
+        if (&other == this) {
+            return *this;
+        }
+        value_kind = other.value_kind;
+        sequence_number = other.sequence_number;
+        level = other.level;
+        key = other.key;
+        value = other.value;
+        return *this;
+    }
 
     KeyValue(KeyValue&& other) noexcept {
         *this = std::move(other);
@@ -67,7 +83,7 @@ struct KeyValue {
     // determined after read from file
     int32_t level = -1;
     std::shared_ptr<InternalRow> key;
-    std::unique_ptr<InternalRow> value;
+    std::shared_ptr<InternalRow> value;
 };
 
 struct KeyValueBatch {

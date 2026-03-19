@@ -560,7 +560,10 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp
                     core/mergetree/compact/deduplicate_merge_function_test.cpp
                     core/mergetree/compact/first_row_merge_function_test.cpp
+                    core/mergetree/compact/first_row_merge_function_wrapper_test.cpp
                     core/mergetree/compact/interval_partition_test.cpp
+                    core/mergetree/compact/lookup_changelog_merge_function_wrapper_test.cpp
+                    core/mergetree/compact/lookup_merge_tree_compact_rewriter_test.cpp
                     core/mergetree/compact/lookup_merge_function_test.cpp
                     core/mergetree/compact/partial_update_merge_function_test.cpp
                     core/mergetree/compact/reducer_merge_function_wrapper_test.cpp
@@ -621,6 +624,7 @@ if(PAIMON_BUILD_TESTS)
                     core/table/source/table_scan_test.cpp
                     core/tag/tag_test.cpp
                     core/utils/branch_manager_test.cpp
+                    core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
                     core/utils/fields_comparator_test.cpp
                     core/utils/file_store_path_factory_test.cpp

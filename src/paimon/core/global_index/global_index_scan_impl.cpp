@@ -110,9 +110,10 @@ Status GlobalIndexScanImpl::Scan() {
         path_factory_,
         FileStorePathFactory::Create(
             root_path_, arrow_schema, table_schema_->PartitionKeys(),
-            options_.GetPartitionDefaultName(), options_.GetWriteFileFormat()->Identifier(),
-            options_.DataFilePrefix(), options_.LegacyPartitionNameEnabled(), external_paths,
-            global_index_external_path, options_.IndexFileInDataFileDir(), pool_));
+            options_.GetPartitionDefaultName(),
+            options_.GetWriteFileFormat(/*level=*/0)->Identifier(), options_.DataFilePrefix(),
+            options_.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
+            options_.IndexFileInDataFileDir(), pool_));
 
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<IndexManifestFile> index_manifest_file,

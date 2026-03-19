@@ -105,6 +105,9 @@ class MergeFileSplitRead : public AbstractSplitRead {
         return value_schema_;
     }
 
+    void SetMergeFunctionWrapper(
+        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper);
+
  private:
     Result<std::unique_ptr<BatchReader>> CreateMergeReader(
         const std::shared_ptr<DataSplitImpl>& data_split,
@@ -127,6 +130,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReader(
         std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers);
 
+    Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> GetMergeFunctionWrapper();
+
     MergeFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                        const std::shared_ptr<InternalReadContext>& context,
                        std::unique_ptr<SchemaManager>&& schema_manager,
@@ -140,9 +145,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
                        const std::shared_ptr<Predicate>& predicate_for_keys,
                        const std::shared_ptr<MemoryPool>& memory_pool,
                        const std::shared_ptr<Executor>& executor);
-
- private:
-    Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> GetMergeFunctionWrapper();
 
     static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(
         const CoreOptions& core_options, const std::shared_ptr<TableSchema>& table_schema,

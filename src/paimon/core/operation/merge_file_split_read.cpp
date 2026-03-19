@@ -145,6 +145,11 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
     return std::make_unique<CompleteRowKindBatchReader>(std::move(batch_reader), pool_);
 }
 
+void MergeFileSplitRead::SetMergeFunctionWrapper(
+    const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper) {
+    merge_function_wrapper_ = merge_function_wrapper;
+}
+
 Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>>
 MergeFileSplitRead::GetMergeFunctionWrapper() {
     if (!merge_function_wrapper_) {
