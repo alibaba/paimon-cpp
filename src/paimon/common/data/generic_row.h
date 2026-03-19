@@ -103,8 +103,8 @@ class GenericRow : public InternalRow {
         return DataDefine::IsVariantNull(fields_[pos]);
     }
 
-    void AddDataHolder(const std::shared_ptr<InternalRow>& holder) {
-        holders_.push_back(holder);
+    void AddDataHolder(std::unique_ptr<InternalRow>&& holder) {
+        holders_.push_back(std::move(holder));
     }
 
     bool GetBoolean(int32_t pos) const override {
@@ -219,7 +219,7 @@ class GenericRow : public InternalRow {
     std::vector<VariantType> fields_;
     /// As GenericRow only holds string view for string data to avoid deep copy, original data must
     /// be held in holders_
-    std::vector<std::shared_ptr<InternalRow>> holders_;
+    std::vector<std::unique_ptr<InternalRow>> holders_;
     /// The kind of change that a row describes in a changelog.
     const RowKind* kind_;
 };

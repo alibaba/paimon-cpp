@@ -70,24 +70,25 @@ class LookupChangelogMergeFunctionWrapper : public MergeFunctionWrapper<KeyValue
 
     Result<std::optional<KeyValue>> GetResult() override {
         // 1. Find the latest high level record and compute containLevel0
-        std::optional<KeyValue> high_level = merge_function_->PickHighLevel();
+        std::optional<int32_t> high_level_idx = merge_function_->PickHighLevelIdx();
 
         // 2. Lookup if latest high level record is absent
-        if (high_level == std::nullopt) {
+        if (high_level_idx == std::nullopt) {
+            std::optional<KeyValue> lookup_high_level;
             PAIMON_ASSIGN_OR_RAISE(std::optional<T> lookup_result,
                                    lookup_(merge_function_->GetKey()));
             if (lookup_result) {
                 std::string file_name;
                 int64_t row_position = -1;
                 if constexpr (std::is_same_v<T, PositionedKeyValue>) {
-                    high_level = lookup_result->key_value;
+                    lookup_high_level = std::move(lookup_result->key_value);
                     file_name = lookup_result->file_name;
                     row_position = lookup_result->row_position;
                 } else if constexpr (std::is_same_v<T, FilePosition>) {
                     file_name = lookup_result->file_name;
                     row_position = lookup_result->row_position;
                 } else if constexpr (std::is_same_v<T, KeyValue>) {
-                    high_level = lookup_result;
+                    lookup_high_level = std::move(lookup_result);
                 } else {
                     return Status::Invalid(
                         "deletion vector mode must have PositionedKeyValue or FilePosition "
@@ -98,8 +99,8 @@ class LookupChangelogMergeFunctionWrapper : public MergeFunctionWrapper<KeyValue
                         deletion_vectors_maintainer_->NotifyNewDeletion(file_name, row_position));
                 }
             }
-            if (high_level) {
-                merge_function_->InsertInto(std::move(high_level), comparator_);
+            if (lookup_high_level) {
+                merge_function_->InsertInto(std::move(lookup_high_level), comparator_);
             }
         }
 

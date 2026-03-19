@@ -58,21 +58,13 @@ class LookupMergeFunction : public MergeFunction {
         return current_key_;
     }
 
-    std::optional<KeyValue> PickHighLevel() const {
-        int32_t idx = PickHighLevelIdx();
-        if (idx == -1) {
-            return std::optional<KeyValue>();
-        }
-        return candidates_[idx];
-    }
-
     Result<std::optional<KeyValue>> GetResult() override {
         merge_function_->Reset();
-        int32_t high_level_idx = PickHighLevelIdx();
+        std::optional<int32_t> high_level_idx = PickHighLevelIdx();
         for (int32_t i = 0; i < static_cast<int32_t>(candidates_.size()); ++i) {
             // records that has not been stored on the disk yet, such as the data in the write
             // buffer being at level -1
-            if (candidates_[i].level <= 0 || i == high_level_idx) {
+            if (candidates_[i].level <= 0 || i == high_level_idx.value()) {
                 PAIMON_RETURN_NOT_OK(merge_function_->Add(std::move(candidates_[i])));
             }
         }
@@ -88,9 +80,8 @@ class LookupMergeFunction : public MergeFunction {
         std::sort(candidates_.begin(), candidates_.end(), cmp_function);
     }
 
- private:
-    int32_t PickHighLevelIdx() const {
-        int32_t high_level_idx = -1;
+    std::optional<int32_t> PickHighLevelIdx() const {
+        std::optional<int32_t> high_level_idx;
         for (int32_t i = 0; i < static_cast<int32_t>(candidates_.size()); i++) {
             const auto& kv = candidates_[i];
             // records that has not been stored on the disk yet, such as the data in the write
@@ -100,7 +91,7 @@ class LookupMergeFunction : public MergeFunction {
             }
             // For high-level comparison logic (not involving Level 0), only the value of the
             // minimum Level should be selected
-            if (high_level_idx == -1 || kv.level < candidates_[high_level_idx].level) {
+            if (!high_level_idx || kv.level < candidates_[high_level_idx.value()].level) {
                 high_level_idx = i;
             }
         }

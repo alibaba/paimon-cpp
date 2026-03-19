@@ -127,7 +127,7 @@ TEST(LookupMergeFunctionTest, TestPickHighLevel) {
     auto pool = GetDefaultPool();
 
     merge_func->Reset();
-    ASSERT_FALSE(merge_func->PickHighLevel());
+    ASSERT_FALSE(merge_func->PickHighLevelIdx());
     ASSERT_FALSE(merge_func->ContainLevel0());
 
     merge_func->Reset();
@@ -145,12 +145,8 @@ TEST(LookupMergeFunctionTest, TestPickHighLevel) {
     ASSERT_OK(merge_func->Add(std::move(kv2)));
     ASSERT_OK(merge_func->Add(std::move(kv3)));
     ASSERT_TRUE(merge_func->ContainLevel0());
-    ASSERT_EQ(merge_func->GetKey()->GetInt(0), 10);
-    auto result_kv = std::move(merge_func->PickHighLevel().value());
-    KeyValue expected(RowKind::Insert(), /*sequence_number=*/2, /*level=*/1, /*key=*/
-                      BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
-                      /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
-    KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+    ASSERT_EQ(merge_func->GetKey()->GetInt(0), 10);    
+    ASSERT_EQ(merge_func->PickHighLevelIdx(), 1);
 }
 
 TEST(LookupMergeFunctionTest, TestInsertInto) {
