@@ -32,14 +32,12 @@ class PAIMON_EXPORT CRC32C {
 
  private:
 #if defined(PAIMON_HAVE_SSE4_2)
-    /**
-     * Simd implementation for crc32c.
-     *
-     * @param data data to be calculated
-     * @param length length of data
-     * @param crc initial crc value
-     * @return crc32c value
-     */
+    /// Simd implementation for crc32c.
+    ///
+    /// @param data data to be calculated
+    /// @param length length of data
+    /// @param crc initial crc value
+    /// @return crc32c value
     static uint32_t crc32c_hw(const char* data, size_t length, uint32_t crc);
 #endif
 };
