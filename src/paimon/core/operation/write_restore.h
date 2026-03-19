@@ -40,7 +40,8 @@ class WriteRestore {
 
     virtual Result<int64_t> LatestCommittedIdentifier(const std::string& user) const = 0;
 
-    virtual Result<std::shared_ptr<RestoreFiles>> GetRestoreFiles() const = 0;
+    virtual Result<std::shared_ptr<RestoreFiles>> GetRestoreFiles(
+        const BinaryRow& partition, int32_t bucket, bool scan_delete_vectors_index) const = 0;
 };
 
 }  // namespace paimon

@@ -26,10 +26,14 @@
 
 namespace paimon {
 
+/// Deletion File from compaction.
 class CompactDeletionFile {
  public:
     virtual ~CompactDeletionFile() = default;
 
+    /// Used by async compaction, when compaction task is completed, deletions file will be
+    /// generated immediately, so when updateCompactResult, we need to merge old deletion files
+    /// (just delete them).
     static Result<std::shared_ptr<CompactDeletionFile>> GenerateFiles(
         const std::shared_ptr<BucketedDvMaintainer>& maintainer);
 
@@ -41,6 +45,7 @@ class CompactDeletionFile {
     virtual void Clean() = 0;
 };
 
+/// A generated files implementation of `CompactDeletionFile`.
 class GeneratedDeletionFile : public CompactDeletionFile,
                               public std::enable_shared_from_this<GeneratedDeletionFile> {
  public:

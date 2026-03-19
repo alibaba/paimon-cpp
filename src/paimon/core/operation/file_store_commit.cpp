@@ -121,7 +121,7 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
         std::shared_ptr<IndexManifestFile> index_manifest_file,
         IndexManifestFile::Create(options.GetFileSystem(), options.GetManifestFormat(),
                                   options.GetManifestCompression(), path_factory,
-                                  ctx->GetMemoryPool(), options));
+                                  options.GetBucket(), ctx->GetMemoryPool(), options));
 
     auto expire_snapshots = std::make_shared<ExpireSnapshots>(
         snapshot_manager, path_factory, manifest_list, manifest_file, options.GetFileSystem(),

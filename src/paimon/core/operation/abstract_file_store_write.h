@@ -28,6 +28,7 @@
 #include "paimon/commit_message.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/file_store_write.h"
 #include "paimon/logging.h"
 #include "paimon/metrics.h"
@@ -64,18 +65,18 @@ class AbstractFileStoreWrite : public FileStoreWrite {
  public:
     // schema indicates all fields in table schema, write_schema indicates actual write fields while
     // "data-evolution.enabled" is true
-    AbstractFileStoreWrite(const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
-                           const std::shared_ptr<SnapshotManager>& snapshot_manager,
-                           const std::shared_ptr<SchemaManager>& schema_manager,
-                           const std::string& commit_user, const std::string& root_path,
-                           const std::shared_ptr<TableSchema>& table_schema,
-                           const std::shared_ptr<arrow::Schema>& schema,
-                           const std::shared_ptr<arrow::Schema>& write_schema,
-                           const std::shared_ptr<arrow::Schema>& partition_schema,
-                           const CoreOptions& options, bool ignore_previous_files,
-                           bool is_streaming_mode, bool ignore_num_bucket_check,
-                           const std::shared_ptr<Executor>& executor,
-                           const std::shared_ptr<MemoryPool>& pool);
+    AbstractFileStoreWrite(
+        const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
+        const std::shared_ptr<SnapshotManager>& snapshot_manager,
+        const std::shared_ptr<SchemaManager>& schema_manager, const std::string& commit_user,
+        const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
+        const std::shared_ptr<arrow::Schema>& schema,
+        const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::shared_ptr<arrow::Schema>& partition_schema,
+        const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
+        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
     Status Compact(const std::map<std::string, std::string>& partition, int32_t bucket,
@@ -102,9 +103,11 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     };
 
  protected:
-    // return actual total bucket and writer in the specific partition
-    virtual Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> CreateWriter(
-        const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) = 0;
+    virtual Result<std::shared_ptr<BatchWriter>> CreateWriter(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& restore_data_files,
+        int64_t restore_max_seq_number,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) = 0;
 
     virtual Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const = 0;
@@ -124,6 +127,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<arrow::Schema> write_schema_;
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> partition_schema_;
+    std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory_;
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;
     std::shared_ptr<CompactionMetrics> compaction_metrics_;

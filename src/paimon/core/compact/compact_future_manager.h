@@ -62,9 +62,15 @@ class CompactFutureManager : public CompactManager {
         bool ready = blocking ||
                      (task_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
         if (ready) {
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactResult> result,
-                                   ObtainCompactResult(std::move(task_future_)));
-            return std::make_optional(std::move(result));
+            Result<std::shared_ptr<CompactResult>> result =
+                ObtainCompactResult(std::move(task_future_));
+            if (result.status().ok()) {
+                return std::make_optional(std::move(result).value());
+            } else if (result.status().IsCancelled()) {
+                return std::optional<std::shared_ptr<CompactResult>>();
+            } else {
+                return result.status();
+            }
         }
         return std::optional<std::shared_ptr<CompactResult>>();
     }

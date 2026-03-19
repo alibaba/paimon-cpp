@@ -56,9 +56,11 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
     const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<arrow::Schema>& write_schema,
-    const std::shared_ptr<arrow::Schema>& partition_schema, const CoreOptions& options,
-    bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
-    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<arrow::Schema>& partition_schema,
+    const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+    const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
+    bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
+    const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       executor_(executor),
       file_store_path_factory_(file_store_path_factory),
@@ -70,16 +72,15 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       write_schema_(write_schema),
       table_schema_(table_schema),
       partition_schema_(partition_schema),
+      dv_maintainer_factory_(dv_maintainer_factory),
       options_(options),
+      compact_executor_(CreateDefaultExecutor(4)),
+      compaction_metrics_(std::make_shared<CompactionMetrics>()),
       ignore_previous_files_(ignore_previous_files),
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
-      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
-    // TODO(yonghao.fyh): support with
-    compact_executor_ = CreateDefaultExecutor(4);
-    compaction_metrics_ = std::make_shared<CompactionMetrics>();
-}
+      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {}
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     if (PAIMON_UNLIKELY(batch == nullptr)) {
@@ -183,9 +184,19 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             WriterContainer<BatchWriter>& writer_container = bucket_iter->second;
             PAIMON_ASSIGN_OR_RAISE(CommitIncrement increment,
                                    writer_container.writer->PrepareCommit(wait_compaction));
+            auto compact_deletion_file = increment.GetCompactDeletionFile();
+            auto& compact_increment = increment.GetCompactIncrement();
+            if (compact_deletion_file) {
+                std::optional<std::shared_ptr<IndexFileMeta>> dv_index_file_meta =
+                    compact_deletion_file->GetOrCompute();
+                if (dv_index_file_meta) {
+                    compact_increment.AddNewIndexFiles({dv_index_file_meta.value()});
+                }
+            }
+
             auto committable = std::make_shared<CommitMessageImpl>(
                 partition, bucket, writer_container.total_buckets, increment.GetNewFilesIncrement(),
-                increment.GetCompactIncrement());
+                compact_increment);
             result.push_back(committable);
             if (!committable->IsEmpty()) {
                 writer_container.last_modified_commit_identifier = commit_identifier;
@@ -274,9 +285,14 @@ Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMe
         /*vector_search=*/nullptr);
 
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStoreScan> scan, CreateFileStoreScan(scan_filter));
-    // TODO(yonghao.fyh): create index file handler
-    FileSystemWriteRestore restore(snapshot_manager_, std::move(scan));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files, restore.GetRestoreFiles());
+    std::shared_ptr<IndexFileHandler> index_file_handler;
+    if (dv_maintainer_factory_) {
+        index_file_handler = dv_maintainer_factory_->GetIndexFileHandler();
+    }
+    FileSystemWriteRestore restore(snapshot_manager_, std::move(scan), index_file_handler);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<RestoreFiles> restore_files,
+        restore.GetRestoreFiles(partition, bucket, dv_maintainer_factory_ != nullptr));
 
     std::optional<int32_t> restored_total_buckets = restore_files->TotalBuckets();
     int32_t total_buckets = GetDefaultBucketNum();
@@ -296,30 +312,43 @@ Result<std::shared_ptr<RestoreFiles>> AbstractFileStoreWrite::ScanExistingFileMe
 
 Result<std::shared_ptr<BatchWriter>> AbstractFileStoreWrite::GetWriter(const BinaryRow& partition,
                                                                        int32_t bucket) {
-    auto iter = writers_.find(partition);
-    if (PAIMON_UNLIKELY(iter == writers_.end())) {
-        PAIMON_ASSIGN_OR_RAISE(auto result,
-                               CreateWriter(partition, bucket, ignore_previous_files_));
-        int32_t total_buckets = result.first;
-        std::shared_ptr<BatchWriter> writer = result.second;
+    auto partition_iter = writers_.find(partition);
+    if (partition_iter != writers_.end()) {
+        auto& buckets = partition_iter->second;
+        auto bucket_iter = buckets.find(bucket);
+        if (PAIMON_LIKELY(bucket_iter != buckets.end())) {
+            return bucket_iter->second.writer;
+        }
+    }
+
+    std::shared_ptr<RestoreFiles> restored = RestoreFiles::Empty();
+    if (!ignore_previous_files_) {
+        PAIMON_ASSIGN_OR_RAISE(restored, ScanExistingFileMetas(partition, bucket));
+    }
+
+    auto restore_data_files = restored->DataFiles();
+    int64_t max_sequence_number = DataFileMeta::GetMaxSequenceNumber(restore_data_files);
+    std::shared_ptr<BucketedDvMaintainer> dv_maintainer;
+    if (dv_maintainer_factory_) {
+        PAIMON_ASSIGN_OR_RAISE(
+            dv_maintainer,
+            dv_maintainer_factory_->Create(partition, bucket, restored->DeleteVectorsIndex()));
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<BatchWriter> writer,
+        CreateWriter(partition, bucket, restore_data_files, max_sequence_number, dv_maintainer));
+    int32_t total_buckets = restored->TotalBuckets().value_or(GetDefaultBucketNum());
+
+    if (partition_iter == writers_.end()) {
         writers_.emplace(partition,
                          std::unordered_map<int32_t, WriterContainer<BatchWriter>>(
                              {{bucket, WriterContainer<BatchWriter>(writer, total_buckets)}}));
-        return writer;
     } else {
-        auto& buckets = iter->second;
-        auto iter = buckets.find(bucket);
-        if (PAIMON_LIKELY(iter != buckets.end())) {
-            return iter->second.writer;
-        } else {
-            PAIMON_ASSIGN_OR_RAISE(auto result,
-                                   CreateWriter(partition, bucket, ignore_previous_files_));
-            int32_t total_buckets = result.first;
-            std::shared_ptr<BatchWriter> writer = result.second;
-            buckets.emplace(bucket, WriterContainer<BatchWriter>(writer, total_buckets));
-            return writer;
-        }
+        partition_iter->second.emplace(bucket, WriterContainer<BatchWriter>(writer, total_buckets));
     }
+
+    return writer;
 }
 
 }  // namespace paimon

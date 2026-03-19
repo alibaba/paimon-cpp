@@ -75,8 +75,7 @@ class DataEvolutionSplitRead : public AbstractSplitRead {
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 

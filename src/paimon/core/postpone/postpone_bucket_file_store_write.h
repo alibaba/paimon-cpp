@@ -86,8 +86,9 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         // Because there is no merging when reading, sequence id across files are useless.
         return std::unique_ptr<PostponeBucketFileStoreWrite>(new PostponeBucketFileStoreWrite(
             file_store_path_factory, snapshot_manager, schema_manager, commit_user, root_path,
-            table_schema, schema, partition_schema, new_options, /*ignore_previous_files=*/true,
-            is_streaming_mode, ignore_num_bucket_check, executor, pool));
+            table_schema, schema, partition_schema, /*dv_maintainer_factory=*/nullptr, new_options,
+            /*ignore_previous_files=*/true, is_streaming_mode, ignore_num_bucket_check, executor,
+            pool));
     }
 
  private:
@@ -97,16 +98,22 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<SchemaManager>& schema_manager, const std::string& commit_user,
         const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<arrow::Schema>& schema,
-        const std::shared_ptr<arrow::Schema>& partition_schema, const CoreOptions& options,
-        bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
-        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
-        : AbstractFileStoreWrite(
-              file_store_path_factory, snapshot_manager, schema_manager, commit_user, root_path,
-              table_schema, schema, /*write_schema=*/schema, partition_schema, options,
-              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check, executor, pool) {}
+        const std::shared_ptr<arrow::Schema>& partition_schema,
+        const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
+        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool)
+        : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager,
+                                 commit_user, root_path, table_schema, schema,
+                                 /*write_schema=*/schema, partition_schema, dv_maintainer_factory,
+                                 options, ignore_previous_files, is_streaming_mode,
+                                 ignore_num_bucket_check, executor, pool) {}
 
-    Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> CreateWriter(
-        const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) override {
+    Result<std::shared_ptr<BatchWriter>> CreateWriter(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& restore_data_files,
+        int64_t restore_max_seq_number,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) override {
         PAIMON_RETURN_NOT_OK(
             Preconditions::CheckState(bucket == BucketModeDefine::POSTPONE_BUCKET,
                                       "bucket mode is supposed to be postpone bucket"));
@@ -118,8 +125,7 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         auto writer =
             std::make_shared<PostponeBucketWriter>(trimmed_primary_keys, data_file_path_factory,
                                                    table_schema_->Id(), schema_, options_, pool_);
-        int32_t total_buckets = GetDefaultBucketNum();
-        return std::pair<int32_t, std::shared_ptr<BatchWriter>>(total_buckets, writer);
+        return std::shared_ptr<BatchWriter>(writer);
     }
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(

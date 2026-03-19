@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -27,6 +28,7 @@
 #include "arrow/type.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/table/bucket_mode.h"
@@ -46,6 +48,7 @@ namespace paimon {
 
 struct DataFileMeta;
 class BatchWriter;
+class BucketedDvMaintainer;
 class FileStorePathFactory;
 class FileStoreScan;
 class SnapshotManager;
@@ -61,33 +64,37 @@ class TableSchema;
 
 class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
  public:
-    AppendOnlyFileStoreWrite(const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
-                             const std::shared_ptr<SnapshotManager>& snapshot_manager,
-                             const std::shared_ptr<SchemaManager>& schema_manager,
-                             const std::string& commit_user, const std::string& root_path,
-                             const std::shared_ptr<TableSchema>& table_schema,
-                             const std::shared_ptr<arrow::Schema>& schema,
-                             const std::shared_ptr<arrow::Schema>& write_schema,
-                             const std::shared_ptr<arrow::Schema>& partition_schema,
-                             const CoreOptions& options, bool ignore_previous_files,
-                             bool is_streaming_mode, bool ignore_num_bucket_check,
-                             const std::shared_ptr<Executor>& executor,
-                             const std::shared_ptr<MemoryPool>& pool);
+    AppendOnlyFileStoreWrite(
+        const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
+        const std::shared_ptr<SnapshotManager>& snapshot_manager,
+        const std::shared_ptr<SchemaManager>& schema_manager, const std::string& commit_user,
+        const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
+        const std::shared_ptr<arrow::Schema>& schema,
+        const std::shared_ptr<arrow::Schema>& write_schema,
+        const std::shared_ptr<arrow::Schema>& partition_schema,
+        const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
+        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
+        const std::shared_ptr<MemoryPool>& pool);
     ~AppendOnlyFileStoreWrite() override;
 
  private:
     using SingleFileWriterCreator = std::function<
         Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
 
-    Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> CreateWriter(
-        const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) override;
+    Result<std::shared_ptr<BatchWriter>> CreateWriter(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& restore_data_files,
+        int64_t restore_max_seq_number,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) override;
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
     Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
-        const BinaryRow& partition, int32_t bucket,
-        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact);
+        const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+        const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     SingleFileWriterCreator GetDataFileWriterCreator(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
@@ -95,7 +102,7 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) const;
 
     Result<std::unique_ptr<BatchReader>> CreateFilesReader(
-        const BinaryRow& partition, int32_t bucket,
+        const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
         const std::vector<std::shared_ptr<DataFileMeta>>& files) const;
 
     std::optional<std::vector<std::string>> write_cols_;

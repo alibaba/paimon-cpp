@@ -93,6 +93,9 @@ std::string Status::CodeAsString(StatusCode code) {
         case StatusCode::IndexError:
             type = "Index error";
             break;
+        case StatusCode::Cancelled:
+            type = "Cancelled";
+            break;
         case StatusCode::UnknownError:
             type = "Unknown error";
             break;
@@ -129,7 +132,7 @@ void Status::Abort() const {
 }
 
 void Status::Abort(const std::string& message) const {
-    std::cerr << "-- Arrow Fatal Error --\n";
+    std::cerr << "-- Paimon Fatal Error --\n";
     if (!message.empty()) {
         std::cerr << message << "\n";
     }

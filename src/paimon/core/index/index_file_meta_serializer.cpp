@@ -91,11 +91,11 @@ BinaryArray IndexFileMetaSerializer::DvRangesToRowArrayData(
         const auto& meta = dv_meta.second;
         BinaryRow dv_data(4);
         BinaryRowWriter writer(&dv_data, 1024, pool);
-        writer.WriteString(/*pos=*/0, BinaryString::FromString(meta.data_file_name, pool));
-        writer.WriteInt(/*pos=*/1, meta.offset);
-        writer.WriteInt(/*pos=*/2, meta.length);
-        if (meta.cardinality) {
-            writer.WriteLong(/*pos=*/3, meta.cardinality.value());
+        writer.WriteString(/*pos=*/0, BinaryString::FromString(meta.GetDataFileName(), pool));
+        writer.WriteInt(/*pos=*/1, meta.GetOffset());
+        writer.WriteInt(/*pos=*/2, meta.GetLength());
+        if (meta.GetCardinality()) {
+            writer.WriteLong(/*pos=*/3, meta.GetCardinality().value());
         } else {
             writer.SetNullAt(3);
         }

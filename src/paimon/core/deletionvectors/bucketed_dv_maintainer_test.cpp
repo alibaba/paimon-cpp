@@ -30,14 +30,13 @@ namespace paimon::test {
 
 namespace {
 
-std::shared_ptr<DeletionVectorsIndexFile> CreateDvIndexFile(const std::string& root_path) {
+std::shared_ptr<DeletionVectorsIndexFile> CreateDvIndexFile(const std::string& root_path,
+                                                            bool bitmap64 = false) {
     auto memory_pool = GetDefaultPool();
     EXPECT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
                          FileSystemFactory::Get("local", root_path, {}));
     auto path_factory = std::make_shared<MockIndexPathFactory>(root_path);
-    return std::make_shared<DeletionVectorsIndexFile>(fs, path_factory,
-                                                      /*target_size_per_index_file=*/1024 * 1024,
-                                                      /*bitmap64=*/false, memory_pool);
+    return std::make_shared<DeletionVectorsIndexFile>(fs, path_factory, bitmap64, memory_pool);
 }
 
 std::shared_ptr<DeletionVector> CreateDeletionVector(int32_t begin, int32_t end) {
@@ -95,6 +94,61 @@ TEST(BucketedDvMaintainerTest, TestWriteDeletionVectorsIndexOnlyWhenModified) {
     // Modification flag should be reset after a successful write.
     ASSERT_OK_AND_ASSIGN(auto write_after_reset, maintainer.WriteDeletionVectorsIndex());
     ASSERT_FALSE(write_after_reset.has_value());
+}
+
+TEST(BucketedDvMaintainerTest, TestNotifyNewDeletionCreatesVectorAndMarksModified) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto index_file = CreateDvIndexFile(dir->Str());
+    BucketedDvMaintainer maintainer(index_file, /*deletion_vectors=*/{});
+
+    ASSERT_OK(maintainer.NotifyNewDeletion("file-new", /*position=*/7));
+
+    auto created = maintainer.DeletionVectorOf("file-new");
+    ASSERT_TRUE(created.has_value());
+    ASSERT_OK_AND_ASSIGN(bool deleted, created.value()->IsDeleted(/*position=*/7));
+    ASSERT_TRUE(deleted);
+
+    ASSERT_OK_AND_ASSIGN(auto modified_write, maintainer.WriteDeletionVectorsIndex());
+    ASSERT_TRUE(modified_write.has_value());
+
+    ASSERT_OK_AND_ASSIGN(auto write_after_reset, maintainer.WriteDeletionVectorsIndex());
+    ASSERT_FALSE(write_after_reset.has_value());
+}
+
+TEST(BucketedDvMaintainerTest, TestNotifyNewDeletionOnExistingVectorOnlyMarksWhenUpdated) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto index_file = CreateDvIndexFile(dir->Str());
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {
+        {"file-a", CreateDeletionVector(0, 3)}};  // already contains 0,1,2
+    BucketedDvMaintainer maintainer(index_file, deletion_vectors);
+
+    // Deleting an existing position should not mark modified.
+    ASSERT_OK(maintainer.NotifyNewDeletion("file-a", /*position=*/2));
+    ASSERT_OK_AND_ASSIGN(auto not_modified_write, maintainer.WriteDeletionVectorsIndex());
+    ASSERT_FALSE(not_modified_write.has_value());
+
+    // Deleting a new position should mark modified.
+    ASSERT_OK(maintainer.NotifyNewDeletion("file-a", /*position=*/9));
+    ASSERT_OK_AND_ASSIGN(auto modified_write, maintainer.WriteDeletionVectorsIndex());
+    ASSERT_TRUE(modified_write.has_value());
+}
+
+TEST(BucketedDvMaintainerTest, TestNotifyNewDeletionReturnsNotImplementedForBitmap64) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto index_file = CreateDvIndexFile(dir->Str(), /*bitmap64=*/true);
+    BucketedDvMaintainer maintainer(index_file, /*deletion_vectors=*/{});
+
+    Status status = maintainer.NotifyNewDeletion("file-new", /*position=*/1);
+    ASSERT_TRUE(status.IsNotImplemented());
+
+    auto lookup = maintainer.DeletionVectorOf("file-new");
+    ASSERT_FALSE(lookup.has_value());
+
+    ASSERT_OK_AND_ASSIGN(auto write_result, maintainer.WriteDeletionVectorsIndex());
+    ASSERT_FALSE(write_result.has_value());
 }
 
 }  // namespace paimon::test

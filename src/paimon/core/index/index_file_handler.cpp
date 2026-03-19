@@ -57,4 +57,17 @@ Result<std::vector<IndexManifestEntry>> IndexFileHandler::Scan(
     return index_entries;
 }
 
+Result<std::vector<std::shared_ptr<IndexFileMeta>>> IndexFileHandler::Scan(
+    const Snapshot& snapshot, const std::string& index_type, const BinaryRow& partition,
+    int32_t bucket) const {
+    PAIMON_ASSIGN_OR_RAISE(IndexFileHandler::IndexFileMetaGroups index_file_meta_groups,
+                           Scan(snapshot, index_type, {partition}));
+    std::pair<BinaryRow, int32_t> key(partition, bucket);
+    auto iter = index_file_meta_groups.find(key);
+    if (iter != index_file_meta_groups.end()) {
+        return iter->second;
+    }
+    return std::vector<std::shared_ptr<IndexFileMeta>>{};
+}
+
 }  // namespace paimon

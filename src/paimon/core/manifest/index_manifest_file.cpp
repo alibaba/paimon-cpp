@@ -44,7 +44,7 @@ class MemoryPool;
 Result<std::unique_ptr<IndexManifestFile>> IndexManifestFile::Create(
     const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<FileFormat>& file_format,
     const std::string& compression, const std::shared_ptr<FileStorePathFactory>& path_factory,
-    const std::shared_ptr<MemoryPool>& pool, const CoreOptions& options) {
+    int32_t bucket_mode, const std::shared_ptr<MemoryPool>& pool, const CoreOptions& options) {
     std::shared_ptr<arrow::DataType> data_type =
         VersionedObjectSerializer<IndexManifestEntry>::VersionType(IndexManifestEntry::DataType());
 
@@ -61,7 +61,7 @@ Result<std::unique_ptr<IndexManifestFile>> IndexManifestFile::Create(
         path_factory->CreateIndexManifestFileFactory();
     return std::unique_ptr<IndexManifestFile>(
         new IndexManifestFile(file_system, reader_builder, writer_builder, compression,
-                              index_manifest_file_factory, pool));
+                              index_manifest_file_factory, bucket_mode, pool));
 }
 
 IndexManifestFile::IndexManifestFile(const std::shared_ptr<FileSystem>& file_system,
@@ -69,10 +69,11 @@ IndexManifestFile::IndexManifestFile(const std::shared_ptr<FileSystem>& file_sys
                                      const std::shared_ptr<WriterBuilder>& writer_builder,
                                      const std::string& compression,
                                      const std::shared_ptr<PathFactory>& path_factory,
-                                     const std::shared_ptr<MemoryPool>& pool)
+                                     int32_t bucket_mode, const std::shared_ptr<MemoryPool>& pool)
     : ObjectsFile<IndexManifestEntry>(file_system, reader_builder, writer_builder,
                                       std::make_unique<IndexManifestEntrySerializer>(pool),
-                                      compression, path_factory, pool) {}
+                                      compression, path_factory, pool),
+      bucket_mode_(bucket_mode) {}
 
 Result<std::optional<std::string>> IndexManifestFile::WriteIndexFiles(
     const std::optional<std::string>& previous_index_manifest,
@@ -80,8 +81,9 @@ Result<std::optional<std::string>> IndexManifestFile::WriteIndexFiles(
     if (new_index_files.empty()) {
         return previous_index_manifest;
     }
-    PAIMON_ASSIGN_OR_RAISE(std::string file, IndexManifestFileHandler::Write(
-                                                 previous_index_manifest, new_index_files, this));
+    PAIMON_ASSIGN_OR_RAISE(std::string file,
+                           IndexManifestFileHandler::Write(previous_index_manifest, new_index_files,
+                                                           bucket_mode_, this));
     return std::optional<std::string>(file);
 }
 
