@@ -423,7 +423,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::LIST: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::ListBuilder * list_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* list_builder,
                                    CastToTypedBuilder<arrow::ListBuilder>(array_builder));
             PAIMON_ASSIGN_OR_RAISE(AppendValueFunc value_func,
                                    (RowToArrowArrayConverter<T, R>::AppendField(
