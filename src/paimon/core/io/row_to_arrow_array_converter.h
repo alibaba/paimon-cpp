@@ -265,7 +265,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
     (*reserve_count)++;
     switch (type) {
         case arrow::Type::type::BOOL: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::BooleanBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::BooleanBuilder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -275,7 +275,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::INT8: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Int8Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Int8Builder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -285,7 +285,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::INT16: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Int16Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Int16Builder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -295,7 +295,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::INT32: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Int32Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Int32Builder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -305,7 +305,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::DATE32: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Date32Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Date32Builder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -315,7 +315,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::INT64: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Int64Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Int64Builder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -325,7 +325,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::FLOAT: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::FloatBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::FloatBuilder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -336,7 +336,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
         }
 
         case arrow::Type::type::DOUBLE: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::DoubleBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::DoubleBuilder>(array_builder));
             return RowToArrowArrayConverter<T, R>::AppendValueFunc(
                 [field_builder](const DataGetters& data_getter, int32_t pos) -> arrow::Status {
@@ -347,7 +347,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
         }
         case arrow::Type::type::STRING: {
             (*reserve_count)++;
-            PAIMON_ASSIGN_OR_RAISE(arrow::BinaryBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::BinaryBuilder>(array_builder));
             if (use_view) {
                 return RowToArrowArrayConverter<T, R>::AppendValueFunc(
@@ -366,7 +366,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
         }
         case arrow::Type::type::BINARY: {
             (*reserve_count)++;
-            PAIMON_ASSIGN_OR_RAISE(arrow::BinaryBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::BinaryBuilder>(array_builder));
             if (use_view) {
                 return RowToArrowArrayConverter<T, R>::AppendValueFunc(
@@ -385,7 +385,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::TIMESTAMP: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::TimestampBuilder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::TimestampBuilder>(array_builder));
             auto ts_type =
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(field_builder->type());
@@ -404,7 +404,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::DECIMAL: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::Decimal128Builder * field_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* field_builder,
                                    CastToTypedBuilder<arrow::Decimal128Builder>(array_builder));
             auto decimal_type =
                 arrow::internal::checked_cast<arrow::Decimal128Type*>(field_builder->type().get());
@@ -442,7 +442,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::MAP: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::MapBuilder * map_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* map_builder,
                                    CastToTypedBuilder<arrow::MapBuilder>(array_builder));
             PAIMON_ASSIGN_OR_RAISE(AppendValueFunc key_func,
                                    (RowToArrowArrayConverter<T, R>::AppendField(
@@ -467,7 +467,7 @@ RowToArrowArrayConverter<T, R>::AppendField(bool use_view, arrow::ArrayBuilder* 
                 });
         }
         case arrow::Type::type::STRUCT: {
-            PAIMON_ASSIGN_OR_RAISE(arrow::StructBuilder * struct_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* struct_builder,
                                    CastToTypedBuilder<arrow::StructBuilder>(array_builder));
             std::vector<RowToArrowArrayConverter<T, R>::AppendValueFunc> sub_funcs;
             sub_funcs.reserve(struct_builder->num_fields());
