@@ -145,7 +145,7 @@ TEST(LookupMergeFunctionTest, TestPickHighLevel) {
     ASSERT_OK(merge_func->Add(std::move(kv2)));
     ASSERT_OK(merge_func->Add(std::move(kv3)));
     ASSERT_TRUE(merge_func->ContainLevel0());
-    ASSERT_EQ(merge_func->GetKey()->GetInt(0), 10);    
+    ASSERT_EQ(merge_func->GetKey()->GetInt(0), 10);
     ASSERT_EQ(merge_func->PickHighLevelIdx(), 1);
 }
 

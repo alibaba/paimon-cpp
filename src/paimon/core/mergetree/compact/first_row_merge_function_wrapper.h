@@ -46,12 +46,14 @@ class FirstRowMergeFunctionWrapper : public MergeFunctionWrapper<KeyValue> {
     Result<std::optional<KeyValue>> GetResult() override {
         PAIMON_ASSIGN_OR_RAISE(std::optional<KeyValue> result, merge_function_->GetResult());
         if (merge_function_->ContainsHighLevel()) {
+            Reset();
             return result;
         }
         assert(result);
         PAIMON_ASSIGN_OR_RAISE(bool contains, contains_(result.value().key));
         if (contains) {
             // empty
+            Reset();
             return std::optional<KeyValue>();
         }
         // new record, output changelog
