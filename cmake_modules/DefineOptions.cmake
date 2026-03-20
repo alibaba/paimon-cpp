@@ -116,7 +116,8 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                   "If on, only git-diff files will be passed to linting tools" ON)
 
     define_option_string(PAIMON_LINT_GIT_TARGET_COMMIT
-                         "target commit/branch for comparison in git diff" "origin/main")
+                         "target commit/branch for comparison in git diff"
+                         "origin/release-0.1")
 
     define_option(PAIMON_GENERATE_COVERAGE "Build with C++ code coverage enabled" OFF)
 
