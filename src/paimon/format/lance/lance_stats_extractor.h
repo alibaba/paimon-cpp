@@ -45,8 +45,7 @@ class LanceStatsExtractor : public FormatStatsExtractor {
     Result<ColumnStatsVector> Extract(const std::shared_ptr<FileSystem>& file_system,
                                       const std::string& path,
                                       const std::shared_ptr<MemoryPool>& pool) override {
-        PAIMON_ASSIGN_OR_RAISE(std::pair<ColumnStatsVector, FileInfo> result,
-                               ExtractWithFileInfo(file_system, path, pool));
+        PAIMON_ASSIGN_OR_RAISE(auto result, ExtractWithFileInfo(file_system, path, pool));
         return result.first;
     }
 
