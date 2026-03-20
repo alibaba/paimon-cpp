@@ -133,7 +133,7 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
             break;
         case arrow::Type::type::STRING: {
             // reserve string data buffer
-            PAIMON_ASSIGN_OR_RAISE((arrow::StringBuilder*)string_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* string_builder,
                                    CastToTypedBuilder<arrow::StringBuilder>(array_builder));
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 string_builder->ReserveData(INFLATION_FACTOR * reserved_sizes_[(*idx)++]));
@@ -141,21 +141,21 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
         }
         case arrow::Type::type::BINARY: {
             // reserve binary data buffer
-            PAIMON_ASSIGN_OR_RAISE((arrow::BinaryBuilder*)binary_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* binary_builder,
                                    CastToTypedBuilder<arrow::BinaryBuilder>(array_builder));
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 binary_builder->ReserveData(INFLATION_FACTOR * reserved_sizes_[(*idx)++]));
             break;
         }
         case arrow::Type::type::LIST: {
-            PAIMON_ASSIGN_OR_RAISE((arrow::ListBuilder*)list_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* list_builder,
                                    CastToTypedBuilder<arrow::ListBuilder>(array_builder));
             // reserve value builder in list
             PAIMON_RETURN_NOT_OK(Reserve(list_builder->value_builder(), idx));
             break;
         }
         case arrow::Type::type::MAP: {
-            PAIMON_ASSIGN_OR_RAISE((arrow::MapBuilder*)map_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* map_builder,
                                    CastToTypedBuilder<arrow::MapBuilder>(array_builder));
             // reserve key builder in map
             PAIMON_RETURN_NOT_OK(Reserve(map_builder->key_builder(), idx));
@@ -164,7 +164,7 @@ Status RowToArrowArrayConverter<T, R>::Reserve(arrow::ArrayBuilder* array_builde
             break;
         }
         case arrow::Type::type::STRUCT: {
-            PAIMON_ASSIGN_OR_RAISE((arrow::StructBuilder*)struct_builder,
+            PAIMON_ASSIGN_OR_RAISE(auto* struct_builder,
                                    CastToTypedBuilder<arrow::StructBuilder>(array_builder));
             for (int32_t i = 0; i < struct_builder->num_fields(); i++) {
                 // reserve item builder in struct
