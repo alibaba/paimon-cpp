@@ -47,7 +47,7 @@ class PAIMON_EXPORT BloomFilter {
         return bit_set_->ByteLength();
     }
 
-    std::shared_ptr<BitSet> GetBitSet() {
+    std::shared_ptr<BitSet> GetBitSet() const {
         return bit_set_;
     }
 

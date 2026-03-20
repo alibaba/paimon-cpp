@@ -354,9 +354,9 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
                 return nullable ? NullableSchema(map_schema) : map_schema;
             } else {
                 // convert to list<record<key,value>>
-                PAIMON_ASSIGN_OR_RAISE(auto key_schema,
+                PAIMON_ASSIGN_OR_RAISE(::avro::Schema key_schema,
                                        ArrowTypeToAvroSchema(key_field, row_name + "_key"));
-                PAIMON_ASSIGN_OR_RAISE(auto item_schema,
+                PAIMON_ASSIGN_OR_RAISE(::avro::Schema item_schema,
                                        ArrowTypeToAvroSchema(item_field, row_name + "_value"));
                 ::avro::LogicalType logical_map_type =
                     ::avro::LogicalType(std::make_shared<MapLogicalType>());

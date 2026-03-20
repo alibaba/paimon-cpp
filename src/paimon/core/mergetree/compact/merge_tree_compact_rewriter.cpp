@@ -80,7 +80,8 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
 
 Result<CompactResult> MergeTreeCompactRewriter::Upgrade(
     int32_t output_level, const std::shared_ptr<DataFileMeta>& file) const {
-    PAIMON_ASSIGN_OR_RAISE(auto upgraded_file, file->Upgrade(output_level));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> upgraded_file,
+                           file->Upgrade(output_level));
     return CompactResult({file}, {upgraded_file});
 }
 

@@ -106,7 +106,7 @@ Result<std::shared_ptr<arrow::Field>> TableSchema::AssignFieldIdsRecursively(
         return arrow::field(field->name(), arrow::struct_(new_childs), field->nullable(), metadata);
     } else if (type->id() == arrow::Type::LIST) {
         auto list_type = arrow::internal::checked_pointer_cast<arrow::ListType>(field->type());
-        PAIMON_ASSIGN_OR_RAISE(auto new_value_field,
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> new_value_field,
                                AssignFieldIdsRecursively(list_type->value_field(),
                                                          /*set_field_id=*/false, field_id));
         return arrow::field(field->name(), arrow::list(new_value_field), field->nullable(),

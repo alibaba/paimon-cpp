@@ -1569,8 +1569,9 @@ Result<std::shared_ptr<const arrow::KeyValueMetadata>> OrcAdapter::GetFieldMetad
 Result<std::shared_ptr<arrow::Field>> OrcAdapter::GetArrowField(const std::string& name,
                                                                 const ::orc::Type* type,
                                                                 bool nullable) {
-    PAIMON_ASSIGN_OR_RAISE(auto arrow_type, GetArrowType(type));
-    PAIMON_ASSIGN_OR_RAISE(auto metadata, GetFieldMetadata(type));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::DataType> arrow_type, GetArrowType(type));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<const arrow::KeyValueMetadata> metadata,
+                           GetFieldMetadata(type));
     return field(name, std::move(arrow_type), nullable, std::move(metadata));
 }
 
