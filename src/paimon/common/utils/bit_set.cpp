@@ -17,14 +17,11 @@
 #include "paimon/common/utils/bit_set.h"
 namespace paimon {
 
-Status BitSet::SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset) {
-    if (!segment) {
-        return Status::Invalid("MemorySegment can not be null.");
-    }
+Status BitSet::SetMemorySegment(MemorySegment segment, int32_t offset) {
     if (offset < 0) {
         return Status::Invalid("Offset should be positive integer.");
     }
-    if (offset + byte_length_ > segment->Size()) {
+    if (offset + byte_length_ > segment.Size()) {
         return Status::Invalid("Could not set MemorySegment, the remain buffers is not enough.");
     }
     segment_ = segment;
@@ -33,7 +30,7 @@ Status BitSet::SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t 
 }
 
 void BitSet::UnsetMemorySegment() {
-    segment_.reset();
+    segment_ = MemorySegment();
 }
 
 Status BitSet::Set(unsigned int index) {
@@ -41,9 +38,9 @@ Status BitSet::Set(unsigned int index) {
         return Status::IndexError("Index out of bound");
     }
     unsigned int byte_index = index >> 3;
-    auto val = segment_->Get(offset_ + byte_index);
+    auto val = segment_.Get(offset_ + byte_index);
     val |= (1 << (index & BYTE_INDEX_MASK));
-    segment_->PutValue(offset_ + byte_index, val);
+    segment_.PutValue(offset_ + byte_index, val);
     return Status::OK();
 }
 
@@ -52,18 +49,18 @@ bool BitSet::Get(unsigned int index) {
         return false;
     }
     unsigned int byte_index = index >> 3;
-    auto val = segment_->Get(offset_ + byte_index);
+    auto val = segment_.Get(offset_ + byte_index);
     return (val & (1 << (index & BYTE_INDEX_MASK))) != 0;
 }
 
 void BitSet::Clear() {
     int index = 0;
     while (index + 8 <= byte_length_) {
-        segment_->PutValue(offset_ + index, 0L);
+        segment_.PutValue(offset_ + index, 0L);
         index += 8;
     }
     while (index < byte_length_) {
-        segment_->PutValue(offset_ + index, static_cast<char>(0));
+        segment_.PutValue(offset_ + index, static_cast<char>(0));
         index += 1;
     }
 }

@@ -30,11 +30,9 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
         std::make_shared<BlockCache>(file_path, in, pool, std::make_unique<CacheManager>());
 
     // read footer
-    auto segment = block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,
-                                         BlockFooter::ENCODED_LENGTH, true);
-    if (!segment.get()) {
-        return Status::Invalid("Read footer error");
-    }
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment segment,
+                           block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH,
+                                                 BlockFooter::ENCODED_LENGTH, true));
     auto slice = MemorySlice::Wrap(segment);
     auto input = slice->ToInput();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockFooter> footer,
@@ -47,20 +45,24 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
                                 bloom_filter_handle->Size() || bloom_filter_handle->Offset())) {
         bloom_filter = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
                                                      bloom_filter_handle->Size());
-        PAIMON_RETURN_NOT_OK(bloom_filter->SetMemorySegment(block_cache->GetBlock(
-            bloom_filter_handle->Offset(), bloom_filter_handle->Size(), true)));
+        PAIMON_ASSIGN_OR_RAISE(MemorySegment bloom_filter_data,
+                               block_cache->GetBlock(bloom_filter_handle->Offset(),
+                                                     bloom_filter_handle->Size(), true));
+        PAIMON_RETURN_NOT_OK(bloom_filter->SetMemorySegment(bloom_filter_data));
     }
 
     // create index block reader
     auto index_block_handle = footer->GetIndexBlockHandle();
-    auto trailer_data =
+    PAIMON_ASSIGN_OR_RAISE(
+        MemorySegment trailer_data,
         block_cache->GetBlock(index_block_handle->Offset() + index_block_handle->Size(),
-                              BlockTrailer::ENCODED_LENGTH, true);
+                              BlockTrailer::ENCODED_LENGTH, true));
     auto trailer_input = MemorySlice::Wrap(trailer_data)->ToInput();
     auto trailer = BlockTrailer::ReadBlockTrailer(trailer_input);
-    auto block_data =
-        block_cache->GetBlock(index_block_handle->Offset(), index_block_handle->Size(), true);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MemorySegment> uncompressed_data,
+    PAIMON_ASSIGN_OR_RAISE(
+        MemorySegment block_data,
+        block_cache->GetBlock(index_block_handle->Offset(), index_block_handle->Size(), true));
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment uncompressed_data,
                            DecompressBlock(block_data, trailer, pool));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockReader> reader,
                            BlockReader::Create(MemorySlice::Wrap(uncompressed_data), comparator));
@@ -107,10 +109,11 @@ Result<std::shared_ptr<Bytes>> SstFileReader::Lookup(const std::shared_ptr<Bytes
 
 Result<std::unique_ptr<BlockIterator>> SstFileReader::GetNextBlock(
     std::unique_ptr<BlockIterator>& index_iterator) {
-    PAIMON_ASSIGN_OR_RAISE(auto ret, index_iterator->Next());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> ret, index_iterator->Next());
     auto& slice = ret->value;
     auto input = slice->ToInput();
-    PAIMON_ASSIGN_OR_RAISE(auto reader, ReadBlock(BlockHandle::ReadBlockHandle(input), false));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockReader> reader,
+                           ReadBlock(BlockHandle::ReadBlockHandle(input), false));
     return reader->Iterator();
 }
 
@@ -122,20 +125,22 @@ Result<std::shared_ptr<BlockReader>> SstFileReader::ReadBlock(std::shared_ptr<Bl
 
 Result<std::shared_ptr<BlockReader>> SstFileReader::ReadBlock(
     const std::shared_ptr<BlockHandle>& handle, bool index) {
-    auto trailer_data = block_cache_->GetBlock(handle->Offset() + handle->Size(),
-                                               BlockTrailer::ENCODED_LENGTH, true);
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment trailer_data,
+                           block_cache_->GetBlock(handle->Offset() + handle->Size(),
+                                                  BlockTrailer::ENCODED_LENGTH, true));
     auto trailer_input = MemorySlice::Wrap(trailer_data)->ToInput();
     auto trailer = BlockTrailer::ReadBlockTrailer(trailer_input);
-    auto block_data = block_cache_->GetBlock(handle->Offset(), handle->Size(), index);
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<MemorySegment> uncompressed_data,
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment block_data,
+                           block_cache_->GetBlock(handle->Offset(), handle->Size(), index));
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment uncompressed_data,
                            DecompressBlock(block_data, trailer, pool_));
     return BlockReader::Create(MemorySlice::Wrap(uncompressed_data), comparator_);
 }
 
-Result<std::shared_ptr<MemorySegment>> SstFileReader::DecompressBlock(
-    const std::shared_ptr<MemorySegment>& compressed_data,
-    const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool) {
-    auto input_memory = compressed_data->GetHeapMemory();
+Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compressed_data,
+                                                     const std::unique_ptr<BlockTrailer>& trailer,
+                                                     const std::shared_ptr<MemoryPool>& pool) {
+    auto input_memory = compressed_data.GetHeapMemory();
 
     // check crc32c
     auto crc32c_code = CRC32C::calculate(input_memory->data(), input_memory->size());
@@ -167,7 +172,7 @@ Result<std::shared_ptr<MemorySegment>> SstFileReader::DecompressBlock(
         if (static_cast<size_t>(uncompressed_length) != output_memory->size()) {
             return Status::Invalid("Invalid data");
         }
-        return std::make_shared<MemorySegment>(output);
+        return output;
     }
 }
 

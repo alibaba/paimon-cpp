@@ -22,7 +22,7 @@
 
 #include "paimon/common/io/cache/cache_key.h"
 #include "paimon/common/memory/memory_segment.h"
-#include "paimon/status.h"
+#include "paimon/result.h"
 
 namespace paimon {
 class CacheValue;
@@ -30,9 +30,10 @@ class CacheValue;
 class Cache {
  public:
     virtual ~Cache() = default;
-    virtual std::shared_ptr<CacheValue> Get(
+    virtual Result<std::shared_ptr<CacheValue>> Get(
         const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier) = 0;
+        std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
+            supplier) = 0;
 
     virtual void Put(const std::shared_ptr<CacheKey>& key,
                      const std::shared_ptr<CacheValue>& value) = 0;
@@ -46,10 +47,10 @@ class Cache {
 
 class NoCache : public Cache {
  public:
-    std::shared_ptr<CacheValue> Get(
+    Result<std::shared_ptr<CacheValue>> Get(
         const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier)
-        override;
+        std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
+            supplier) override;
     void Put(const std::shared_ptr<CacheKey>& key,
              const std::shared_ptr<CacheValue>& value) override;
     void Invalidate(const std::shared_ptr<CacheKey>& key) override;
@@ -59,13 +60,13 @@ class NoCache : public Cache {
 
 class CacheValue {
  public:
-    explicit CacheValue(const std::shared_ptr<MemorySegment>& segment) : segment_(segment) {}
+    explicit CacheValue(const MemorySegment& segment) : segment_(segment) {}
 
-    std::shared_ptr<MemorySegment> GetSegment() {
+    const MemorySegment& GetSegment() const {
         return segment_;
     }
 
  private:
-    std::shared_ptr<MemorySegment> segment_;
+    MemorySegment segment_;
 };
 }  // namespace paimon

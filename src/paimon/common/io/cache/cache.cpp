@@ -17,9 +17,9 @@
 #include "paimon/common/io/cache/cache.h"
 
 namespace paimon {
-std::shared_ptr<CacheValue> NoCache::Get(
+Result<std::shared_ptr<CacheValue>> NoCache::Get(
     const std::shared_ptr<CacheKey>& key,
-    std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier) {
+    std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)> supplier) {
     return supplier(key);
 }
 

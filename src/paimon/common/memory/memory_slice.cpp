@@ -21,16 +21,14 @@
 namespace paimon {
 std::shared_ptr<MemorySlice> MemorySlice::Wrap(const std::shared_ptr<Bytes>& bytes) {
     auto segment = MemorySegment::Wrap(bytes);
-    auto ptr = std::make_shared<MemorySegment>(segment);
-    return std::make_shared<MemorySlice>(ptr, 0, ptr->Size());
+    return std::make_shared<MemorySlice>(segment, 0, segment.Size());
 }
 
-std::shared_ptr<MemorySlice> MemorySlice::Wrap(const std::shared_ptr<MemorySegment>& segment) {
-    return std::make_shared<MemorySlice>(segment, 0, segment->Size());
+std::shared_ptr<MemorySlice> MemorySlice::Wrap(const MemorySegment& segment) {
+    return std::make_shared<MemorySlice>(segment, 0, segment.Size());
 }
 
-MemorySlice::MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset,
-                         int32_t length)
+MemorySlice::MemorySlice(const MemorySegment& segment, int32_t offset, int32_t length)
     : segment_(segment), offset_(offset), length_(length) {}
 
 std::shared_ptr<MemorySlice> MemorySlice::Slice(int32_t index, int32_t length) {
@@ -49,38 +47,38 @@ int32_t MemorySlice::Offset() const {
 }
 
 std::shared_ptr<Bytes> MemorySlice::GetHeapMemory() const {
-    return segment_->GetHeapMemory();
+    return segment_.GetHeapMemory();
 }
 
-std::shared_ptr<MemorySegment> MemorySlice::GetSegment() const {
+const MemorySegment& MemorySlice::GetSegment() const {
     return segment_;
 }
 
 int8_t MemorySlice::ReadByte(int32_t position) {
-    return segment_->GetValue<int8_t>(offset_ + position);
+    return segment_.GetValue<int8_t>(offset_ + position);
 }
 
 int32_t MemorySlice::ReadInt(int32_t position) {
-    return segment_->GetValue<int32_t>(offset_ + position);
+    return segment_.GetValue<int32_t>(offset_ + position);
 }
 
 int16_t MemorySlice::ReadShort(int32_t position) {
-    return segment_->GetValue<int16_t>(offset_ + position);
+    return segment_.GetValue<int16_t>(offset_ + position);
 }
 
 int64_t MemorySlice::ReadLong(int32_t position) {
-    return segment_->GetValue<int64_t>(offset_ + position);
+    return segment_.GetValue<int64_t>(offset_ + position);
 }
 
 std::string_view MemorySlice::ReadStringView() {
-    auto array = segment_->GetArray();
+    auto array = segment_.GetArray();
     return {array->data() + offset_, static_cast<size_t>(length_)};
 }
 
 std::shared_ptr<Bytes> MemorySlice::CopyBytes(MemoryPool* pool) {
     auto bytes = std::make_shared<Bytes>(length_, pool);
     auto target = MemorySegment::Wrap(bytes);
-    segment_->CopyTo(offset_, &target, 0, length_);
+    segment_.CopyTo(offset_, &target, 0, length_);
     return bytes;
 }
 
@@ -110,8 +108,8 @@ std::shared_ptr<MemorySliceInput> MemorySlice::ToInput() {
 int32_t MemorySlice::Compare(const MemorySlice& other) const {
     int32_t len = std::min(length_, other.length_);
     for (int32_t i = 0; i < len; ++i) {
-        auto byte1 = static_cast<unsigned char>(segment_->Get(offset_ + i));
-        auto byte2 = static_cast<unsigned char>(other.segment_->Get(other.offset_ + i));
+        auto byte1 = static_cast<unsigned char>(segment_.Get(offset_ + i));
+        auto byte2 = static_cast<unsigned char>(other.segment_.Get(other.offset_ + i));
         if (byte1 != byte2) {
             return static_cast<int>(byte1) - static_cast<int>(byte2);
         }
