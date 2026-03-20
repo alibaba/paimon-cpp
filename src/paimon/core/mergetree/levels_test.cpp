@@ -66,6 +66,22 @@ TEST_F(LevelsTest, TestNonEmptyHighestLevelNo) {
     ASSERT_EQ(levels->NonEmptyHighestLevel(), -1);
 }
 
+TEST_F(LevelsTest, TestInvalidNumberLevels) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files;
+    ASSERT_NOK_WITH_MSG(Levels::Create(CreateComparator(), input_files, /*num_levels=*/1),
+                        "Number of levels must be at least 2.");
+}
+
+TEST_F(LevelsTest, TestAddLevel0FileInvalid) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(0, 0, 1, 0),
+                                                              CreateDataFileMeta(0, 2, 3, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+    std::vector<std::shared_ptr<DataFileMeta>> new_files = {CreateDataFileMeta(1, 0, 1, 0)};
+    ASSERT_NOK_WITH_MSG(levels->AddLevel0File(new_files[0]),
+                        "must add level0 file in AddLevel0File");
+}
+
 TEST_F(LevelsTest, TestNonEmptyHighestLevel0) {
     std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(0, 0, 1, 0),
                                                               CreateDataFileMeta(0, 2, 3, 0)};
@@ -105,6 +121,11 @@ TEST_F(LevelsTest, TestNonEmptyHighestLevel2) {
 
     ASSERT_EQ(levels->LevelSortedRuns(), expected_sorted_run);
     ASSERT_EQ(levels->NumberOfSortedRuns(), 6);
+
+    std::vector<std::shared_ptr<DataFileMeta>> expected_all_files = {
+        input_files[2], input_files[3], input_files[1],
+        input_files[0], input_files[4], input_files[5]};
+    ASSERT_EQ(levels->AllFiles(), expected_all_files);
 }
 
 TEST_F(LevelsTest, TestAddLevel0File) {

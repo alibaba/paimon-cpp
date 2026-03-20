@@ -30,6 +30,24 @@
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+TEST(LookupChangelogMergeFunctionWrapperTest, TestCreateInvalid) {
+    auto pool = GetDefaultPool();
+    auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/true);
+    auto lookup_mfunc = std::make_unique<LookupMergeFunction>(std::move(mfunc));
+    auto lookup = [&](const std::shared_ptr<InternalRow>& key) -> Result<std::optional<KeyValue>> {
+        return std::optional<KeyValue>(
+            KeyValue(RowKind::Insert(), /*sequence_number=*/1000, /*level=*/3, key,
+                     BinaryRowGenerator::GenerateRowPtr({1001}, pool.get())));
+    };
+    LookupStrategy lookup_strategy(/*is_first_row=*/false, /*produce_changelog=*/false,
+                                   /*deletion_vector=*/true, /*force_lookup=*/true);
+    ASSERT_NOK_WITH_MSG(LookupChangelogMergeFunctionWrapper<KeyValue>::Create(
+                            std::move(lookup_mfunc), lookup, lookup_strategy,
+                            /*deletion_vectors_maintainer=*/nullptr,
+                            /*comparator=*/nullptr),
+                        "deletionVectorsMaintainer should not be null, there is a bug.");
+}
+
 TEST(LookupChangelogMergeFunctionWrapperTest, TestSimple) {
     auto pool = GetDefaultPool();
     KeyValue kv1(RowKind::Insert(), /*sequence_number=*/0, /*level=*/2, /*key=*/

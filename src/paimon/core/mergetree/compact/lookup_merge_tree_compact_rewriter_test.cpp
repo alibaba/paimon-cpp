@@ -1104,4 +1104,63 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
     }
 }
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteLookupChangelogWithOutputLevelZero) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "deduplicate"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 2 files with level 0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, "[[1, 11], [3, 33]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/1, table_path,
+                                              core_options, "[[2, 22], [4, 44]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    auto processor_factory = std::make_shared<PersistPositionProcessor::Factory>();
+    ASSERT_OK_AND_ASSIGN(
+        auto lookup_levels,
+        CreateLookupLevels<FilePosition>(table_path, table_schema, processor_factory, files));
+
+    // compact and rewrite with output_level=0
+    ASSERT_OK_AND_ASSIGN(
+        auto rewriter, CreateCompactRewriterForFilePosition(table_path, table_schema, core_options,
+                                                            std::move(lookup_levels)));
+    ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file0, file1}));
+
+    // When output_level is 0, RewriteLookupChangelog should return false
+    // This tests the condition at line 59 in changelog_merge_tree_rewriter.cpp
+    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
+                                                  /*output_level=*/0, /*drop_delete=*/true, runs));
+    ASSERT_EQ(2, compact_result.Before().size());
+    // When output_level is 0, rewrite should still produce valid result
+    ASSERT_GE(compact_result.After().size(), 1);
+
+    const auto& compact_file_meta = compact_result.After()[0];
+    // check compact file exist
+    std::string compact_file_name = table_path + "/bucket-0/" + compact_file_meta->file_name;
+    ASSERT_OK_AND_ASSIGN(bool exist, fs_->Exists(compact_file_name));
+    ASSERT_TRUE(exist);
+
+    // check file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[0,  0,  1, 11],
+[2,  0,  2, 22],
+[1,  0,  3, 33],
+[3,  0,  4, 44]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+}
+
 }  // namespace paimon::test
