@@ -34,8 +34,7 @@ void MemorySliceOutput::Reset() {
 }
 
 std::unique_ptr<MemorySlice> MemorySliceOutput::ToSlice() {
-    auto segment = std::make_shared<MemorySegment>(segment_);
-    return std::make_unique<MemorySlice>(segment, 0, size_);
+    return std::make_unique<MemorySlice>(segment_, 0, size_);
 }
 
 template <typename T>

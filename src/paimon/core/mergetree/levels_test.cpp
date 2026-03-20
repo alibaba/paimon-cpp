@@ -164,4 +164,19 @@ TEST_F(LevelsTest, TestUpdate) {
     ASSERT_EQ(levels->NumberOfSortedRuns(), 4);
 }
 
+TEST_F(LevelsTest, TestRunOfLevelInvalidLevel) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(2, 0, 1, 0),
+                                                              CreateDataFileMeta(1, 2, 3, 1)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+
+    // Test invalid level 0
+    auto result = Levels::RunOfLevel(0, levels->GetLevels());
+    ASSERT_NOK_WITH_MSG(result, "Level0 does not have one single sorted run.");
+
+    // Test invalid negative level
+    auto result_neg = Levels::RunOfLevel(-1, levels->GetLevels());
+    ASSERT_NOK_WITH_MSG(result_neg, "Level0 does not have one single sorted run.");
+}
+
 }  // namespace paimon::test

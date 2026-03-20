@@ -35,8 +35,7 @@ TEST(BloomFilterTest, TestOneSegmentBuilder) {
     auto pool = GetDefaultPool();
     auto bloom_filter = BloomFilter::Create(items, 0.01);
     auto seg = MemorySegment::AllocateHeapMemory(1024, pool.get());
-    auto ptr = std::make_shared<MemorySegment>(seg);
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg));
 
     std::mt19937_64 engine(std::random_device{}());  // NOLINT(whitespace/braces)
     std::uniform_int_distribution<int32_t> distribution(0, items);
@@ -109,8 +108,7 @@ TEST(BloomFilterTest, TestBloomFilter) {
 
     // segments 1
     auto seg1 = MemorySegment::AllocateHeapMemory(1024, pool.get());
-    auto ptr1 = std::make_shared<MemorySegment>(seg1);
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr1));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg1));
 
     std::set<int32_t> test_data1;
     for (int32_t i = 0; i < items; i++) {
@@ -125,8 +123,7 @@ TEST(BloomFilterTest, TestBloomFilter) {
     // segments 2
     std::set<int32_t> test_data2;
     auto seg2 = MemorySegment::AllocateHeapMemory(1024, pool.get());
-    auto ptr2 = std::make_shared<MemorySegment>(seg2);
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr2));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg2));
     for (int32_t i = 0; i < items; i++) {
         int32_t random = distribution(engine);
         test_data2.insert(random);
@@ -136,7 +133,7 @@ TEST(BloomFilterTest, TestBloomFilter) {
         ASSERT_TRUE(bloom_filter->TestHash(value));
     }
     // switch to segment1
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr1));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg1));
     for (const auto& value : test_data1) {
         ASSERT_TRUE(bloom_filter->TestHash(value));
     }
@@ -148,7 +145,7 @@ TEST(BloomFilterTest, TestBloomFilter) {
     }
 
     // switch to segment2 and clear
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr2));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg2));
     bloom_filter->Reset();
     for (const auto& value : test_data2) {
         ASSERT_FALSE(bloom_filter->TestHash(value));

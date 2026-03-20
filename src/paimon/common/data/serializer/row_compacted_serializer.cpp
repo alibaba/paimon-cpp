@@ -59,8 +59,8 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
     auto comparator = [row_reader1, row_reader2, readers, comparators](
                           const std::shared_ptr<MemorySlice>& slice1,
                           const std::shared_ptr<MemorySlice>& slice2) -> Result<int32_t> {
-        row_reader1->PointTo(*slice1->GetSegment(), slice1->Offset());
-        row_reader2->PointTo(*slice2->GetSegment(), slice2->Offset());
+        row_reader1->PointTo(slice1->GetSegment(), slice1->Offset());
+        row_reader2->PointTo(slice2->GetSegment(), slice2->Offset());
         for (int32_t i = 0; i < static_cast<int32_t>(readers.size()); i++) {
             bool is_null1 = row_reader1->IsNullAt(i);
             bool is_null2 = row_reader2->IsNullAt(i);

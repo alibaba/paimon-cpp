@@ -34,7 +34,7 @@ class CacheManager {
         index_cache_ = std::make_shared<NoCache>();
     }
 
-    std::shared_ptr<MemorySegment> GetPage(
+    Result<MemorySegment> GetPage(
         std::shared_ptr<CacheKey>& key,
         std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader);
 

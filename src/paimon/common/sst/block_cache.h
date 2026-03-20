@@ -36,18 +36,18 @@ class BlockCache {
 
     ~BlockCache() = default;
 
-    std::shared_ptr<MemorySegment> GetBlock(int64_t position, int32_t length, bool is_index) {
+    Result<MemorySegment> GetBlock(int64_t position, int32_t length, bool is_index) {
         auto key = CacheKey::ForPosition(file_path_, position, length, is_index);
 
         auto it = blocks_.find(key);
         if (it == blocks_.end()) {
-            auto segment = cache_manager_->GetPage(
-                key, [&](const std::shared_ptr<paimon::CacheKey>&) -> Result<MemorySegment> {
-                    return ReadFrom(position, length);
-                });
-            if (!segment.get()) {
-                blocks_.insert({key, std::make_shared<CacheValue>(segment)});
-            }
+            PAIMON_ASSIGN_OR_RAISE(
+                MemorySegment segment,
+                cache_manager_->GetPage(
+                    key, [&](const std::shared_ptr<paimon::CacheKey>&) -> Result<MemorySegment> {
+                        return ReadFrom(position, length);
+                    }));
+            blocks_.insert({key, std::make_shared<CacheValue>(segment)});
             return segment;
         }
         return it->second->GetSegment();
