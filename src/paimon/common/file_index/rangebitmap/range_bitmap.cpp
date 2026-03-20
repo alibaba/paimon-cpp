@@ -190,7 +190,7 @@ Result<RoaringBitmap32> RangeBitmap::IsNotNull() {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* const bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap * bit_slice_ptr, this->GetBitSliceIndex());
     PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 result, bit_slice_ptr->IsNotNull({}));
     return result;
 }

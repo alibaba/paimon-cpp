@@ -137,9 +137,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitEqual(
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Eq(literal);
         });
 }
@@ -148,9 +145,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitNotEqu
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Neq(literal);
         });
 }
@@ -159,9 +153,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitIn(
     const std::vector<Literal>& literals) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literals]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->In(literals);
         });
 }
@@ -170,9 +161,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitNotIn(
     const std::vector<Literal>& literals) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literals]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->NotIn(literals);
         });
 }
@@ -180,9 +168,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitNotIn(
 Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitIsNull() {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this()]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->IsNull();
         });
 }
@@ -190,9 +175,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitIsNull
 Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitIsNotNull() {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this()]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->IsNotNull();
         });
 }
@@ -201,9 +183,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitGreate
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Gt(literal);
         });
 }
@@ -212,9 +191,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitLessTh
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Lt(literal);
         });
 }
@@ -223,9 +199,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitGreate
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Gte(literal);
         });
 }
@@ -234,9 +207,6 @@ Result<std::shared_ptr<FileIndexResult>> RangeBitmapFileIndexReader::VisitLessOr
     const Literal& literal) {
     return std::make_shared<BitmapIndexResult>(
         [self = shared_from_this(), literal]() -> Result<RoaringBitmap32> {
-            if (!self->range_bitmap_) {
-                return RoaringBitmap32();
-            }
             return self->range_bitmap_->Lte(literal);
         });
 }
