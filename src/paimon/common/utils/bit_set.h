@@ -35,7 +35,7 @@ class PAIMON_EXPORT BitSet {
     Status SetMemorySegment(MemorySegment segment, int32_t offset = 0);
     void UnsetMemorySegment();
 
-    MemorySegment& GetMemorySegment() {
+    const MemorySegment& GetMemorySegment() const {
         return segment_;
     }
 

@@ -62,7 +62,7 @@ class CacheValue {
  public:
     explicit CacheValue(const MemorySegment& segment) : segment_(segment) {}
 
-    MemorySegment GetSegment() {
+    const MemorySegment& GetSegment() const {
         return segment_;
     }
 

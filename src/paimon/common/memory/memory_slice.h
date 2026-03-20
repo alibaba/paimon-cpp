@@ -48,7 +48,7 @@ class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlic
     int32_t Length() const;
     int32_t Offset() const;
     std::shared_ptr<Bytes> GetHeapMemory() const;
-    MemorySegment GetSegment() const;
+    const MemorySegment& GetSegment() const;
 
     int8_t ReadByte(int32_t position);
     int32_t ReadInt(int32_t position);

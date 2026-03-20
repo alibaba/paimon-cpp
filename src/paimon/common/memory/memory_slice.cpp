@@ -50,7 +50,7 @@ std::shared_ptr<Bytes> MemorySlice::GetHeapMemory() const {
     return segment_.GetHeapMemory();
 }
 
-MemorySegment MemorySlice::GetSegment() const {
+const MemorySegment& MemorySlice::GetSegment() const {
     return segment_;
 }
 
