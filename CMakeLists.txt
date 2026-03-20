@@ -32,7 +32,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 project(paimon
-        VERSION 0.1.0
+        VERSION 0.1.1
         DESCRIPTION "Paimon C++ Project")
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPERCASE_BUILD_TYPE)
@@ -52,8 +52,8 @@ option(PAIMON_ENABLE_AVRO "Whether to enable avro file format" ON)
 option(PAIMON_ENABLE_ORC "Whether to enable orc file format" ON)
 option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
-option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" ON)
-option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" ON)
+option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
+option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
 
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)

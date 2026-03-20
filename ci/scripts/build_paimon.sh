@@ -31,6 +31,8 @@ CMAKE_ARGS=(
     "-DPAIMON_BUILD_TESTS=ON"
     "-DPAIMON_ENABLE_LANCE=ON"
     "-DPAIMON_ENABLE_JINDO=ON"
+    "-DPAIMON_ENABLE_LUMINA=ON"
+    "-DPAIMON_ENABLE_LUCENE=ON"
 )
 
 if [[ "${enable_sanitizer}" == "true" ]]; then
