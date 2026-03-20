@@ -74,14 +74,14 @@ Result<RoaringBitmap32> RangeBitmap::Eq(const Literal& key) {
     }
     PAIMON_ASSIGN_OR_RAISE(int32_t min_compare, key.CompareTo(min_));
     PAIMON_ASSIGN_OR_RAISE(int32_t max_compare, key.CompareTo(max_));
-    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap * bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* bit_slice_ptr, this->GetBitSliceIndex());
     if (min_compare == 0 && max_compare == 0) {
         return bit_slice_ptr->IsNotNull({});
     }
     if (min_compare < 0 || max_compare > 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(Dictionary * dictionary, this->GetDictionary());
+    PAIMON_ASSIGN_OR_RAISE(Dictionary* dictionary, this->GetDictionary());
     PAIMON_ASSIGN_OR_RAISE(int32_t code, dictionary->Find(key));
     if (code < 0) {
         return RoaringBitmap32();
@@ -134,9 +134,9 @@ Result<RoaringBitmap32> RangeBitmap::Gt(const Literal& key) {
     if (min_compare < 0) {
         return IsNotNull();
     }
-    PAIMON_ASSIGN_OR_RAISE(Dictionary * dictionary, this->GetDictionary());
+    PAIMON_ASSIGN_OR_RAISE(Dictionary* dictionary, this->GetDictionary());
     PAIMON_ASSIGN_OR_RAISE(int32_t code, dictionary->Find(key));
-    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap * bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* bit_slice_ptr, this->GetBitSliceIndex());
     if (code >= 0) {
         return bit_slice_ptr->Gt(code);
     }
@@ -190,7 +190,7 @@ Result<RoaringBitmap32> RangeBitmap::IsNotNull() {
     if (cardinality_ <= 0) {
         return RoaringBitmap32();
     }
-    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap * bit_slice_ptr, this->GetBitSliceIndex());
+    PAIMON_ASSIGN_OR_RAISE(BitSliceIndexBitmap* bit_slice_ptr, this->GetBitSliceIndex());
     PAIMON_ASSIGN_OR_RAISE(RoaringBitmap32 result, bit_slice_ptr->IsNotNull({}));
     return result;
 }
