@@ -306,3 +306,5 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
 // test multiple RowKind
 // test external path
 // test branch
+// test with parititon
+// test key appears before value

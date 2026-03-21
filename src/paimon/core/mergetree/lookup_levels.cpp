@@ -67,7 +67,7 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
 
     return std::unique_ptr<LookupLevels>(new LookupLevels(
         fs, partition, bucket, options, schema_manager, io_manager, std::move(key_comparator),
-        data_file_path_factory, std::move(split_read), table_schema, partition_schema,
+        data_file_path_factory, std::move(split_read), table_schema, partition_schema, pk_schema,
         std::move(levels), deletion_file_map, processor_factory, std::move(key_serializer),
         serializer_factory, lookup_store_factory, pool));
 }
@@ -116,7 +116,8 @@ LookupLevels<T>::LookupLevels(
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory,
     std::unique_ptr<RawFileSplitRead>&& split_read,
     const std::shared_ptr<TableSchema>& table_schema,
-    const std::shared_ptr<arrow::Schema>& partition_schema, std::unique_ptr<Levels>&& levels,
+    const std::shared_ptr<arrow::Schema>& partition_schema,
+    const std::shared_ptr<arrow::Schema>& key_schema, std::unique_ptr<Levels>&& levels,
     const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
     const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
     std::unique_ptr<RowCompactedSerializer>&& key_serializer,
@@ -134,6 +135,8 @@ LookupLevels<T>::LookupLevels(
       data_file_path_factory_(data_file_path_factory),
       split_read_(std::move(split_read)),
       table_schema_(table_schema),
+      partition_schema_(partition_schema),
+      key_schema_(key_schema),
       levels_(std::move(levels)),
       deletion_file_map_(deletion_file_map),
       processor_factory_(processor_factory),
@@ -207,10 +210,8 @@ Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFile
         return Status::Invalid("Unexpected, CreateSstFileFromDataFile only create single reader");
     }
     auto& raw_reader = raw_readers[0];
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_pk,
-                           table_schema_->TrimmedPrimaryKeys());
-    auto reader = std::make_unique<KeyValueDataFileRecordReader>(
-        std::move(raw_reader), trimmed_pk.size(), value_schema_, file->level, pool_);
+    auto reader = std::make_unique<KeyValueDataFileRecordReader>(std::move(raw_reader), key_schema_,
+                                                                 value_schema_, file->level, pool_);
 
     // Create processor to persist value
     PAIMON_ASSIGN_OR_RAISE(

@@ -65,7 +65,7 @@ class LookupLevels {
                  std::unique_ptr<RawFileSplitRead>&& split_read,
                  const std::shared_ptr<TableSchema>& table_schema,
                  const std::shared_ptr<arrow::Schema>& partition_schema,
-                 std::unique_ptr<Levels>&& levels,
+                 const std::shared_ptr<arrow::Schema>& key_schema, std::unique_ptr<Levels>&& levels,
                  const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
                  const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
                  std::unique_ptr<RowCompactedSerializer>&& key_serializer,
@@ -99,6 +99,7 @@ class LookupLevels {
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> partition_schema_;
     std::shared_ptr<arrow::Schema> read_schema_;
+    std::shared_ptr<arrow::Schema> key_schema_;
     std::shared_ptr<arrow::Schema> value_schema_;
     std::unique_ptr<Levels> levels_;
     std::unordered_map<std::string, DeletionFile> deletion_file_map_;

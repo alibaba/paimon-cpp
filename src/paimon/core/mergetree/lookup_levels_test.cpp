@@ -437,4 +437,60 @@ TEST_F(LookupLevelsTest, TestWithPosistion) {
     ASSERT_FALSE(positioned_kv);
 }
 
+TEST_F(LookupLevelsTest, TestLevelsWithValueFieldAppearBeforeKey) {
+    arrow::FieldVector fields = {
+        arrow::field("value", arrow::int32()),
+        arrow::field("key", arrow::int32()),
+    };
+    arrow_schema_ = arrow::schema(fields);
+    key_schema_ = arrow::schema({fields[1]});
+
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[11, 1], [33, 3], [5, 5]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
+                                              core_options, "[[22, 2], [55, 5]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+
+    // only in level 1
+    ASSERT_OK_AND_ASSIGN(auto positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 11);
+
+    // only in level 2
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 4);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 2);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 22);
+
+    // both in level 1 and level 2
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({5}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 3);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 5);
+
+    // no exists
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({4}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_FALSE(positioned_kv);
+}
+
 }  // namespace paimon::test

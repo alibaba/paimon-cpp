@@ -129,7 +129,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     MergeFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                        const std::shared_ptr<InternalReadContext>& context,
-                       std::unique_ptr<SchemaManager>&& schema_manager, int32_t key_arity,
+                       std::unique_ptr<SchemaManager>&& schema_manager,
+                       const std::shared_ptr<arrow::Schema>& key_schema,
                        const std::shared_ptr<arrow::Schema>& value_schema,
                        const std::shared_ptr<arrow::Schema>& read_schema,
                        const std::vector<int32_t>& projection,
@@ -167,7 +168,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<Predicate>& predicate, const TableSchema& table_schema);
 
  private:
-    int32_t key_arity_;
+    // schema of key member in KeyValue object (trimmed pk)
+    std::shared_ptr<arrow::Schema> key_schema_;
     // schema of value member in KeyValue object
     std::shared_ptr<arrow::Schema> value_schema_;
     // actual read schema, e.g., complete all key fields, user defined sequence fields

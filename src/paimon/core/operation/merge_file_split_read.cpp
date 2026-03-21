@@ -103,8 +103,9 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key,
                            table_schema->TrimmedPrimaryKeys());
-    // key_arity is trimmed pk field count
-    int32_t key_arity = trimmed_primary_key.size();
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
+                           table_schema->GetFields(trimmed_primary_key));
+    auto key_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
 
     // projection is the mapping from value_schema in KeyValue object to raw_read_schema
     PAIMON_ASSIGN_OR_RAISE(
@@ -115,7 +116,7 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
         path_factory, context,
         std::make_unique<SchemaManager>(core_options.GetFileSystem(), context->GetPath(),
                                         context->GetCoreOptions().GetBranch()),
-        key_arity, value_schema, read_schema, projection, key_comparator,
+        key_schema, value_schema, read_schema, projection, key_comparator,
         interval_partition_comparator, user_defined_seq_comparator, predicate_for_keys, memory_pool,
         executor));
 }
@@ -260,7 +261,8 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateNoMergeReader(
 MergeFileSplitRead::MergeFileSplitRead(
     const std::shared_ptr<FileStorePathFactory>& path_factory,
     const std::shared_ptr<InternalReadContext>& context,
-    std::unique_ptr<SchemaManager>&& schema_manager, int32_t key_arity,
+    std::unique_ptr<SchemaManager>&& schema_manager,
+    const std::shared_ptr<arrow::Schema>& key_schema,
     const std::shared_ptr<arrow::Schema>& value_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::vector<int32_t>& projection,
     const std::shared_ptr<FieldsComparator>& key_comparator,
@@ -269,7 +271,7 @@ MergeFileSplitRead::MergeFileSplitRead(
     const std::shared_ptr<Predicate>& predicate_for_keys,
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor)
     : AbstractSplitRead(path_factory, context, std::move(schema_manager), memory_pool, executor),
-      key_arity_(key_arity),
+      key_schema_(key_schema),
       value_schema_(value_schema),
       read_schema_(read_schema),
       projection_(projection),
@@ -460,7 +462,7 @@ Result<std::unique_ptr<KeyValueRecordReader>> MergeFileSplitRead::CreateReaderFo
     file_record_readers.reserve(data_files.size());
     for (size_t i = 0; i < data_files.size(); i++) {
         file_record_readers.push_back(std::make_unique<KeyValueDataFileRecordReader>(
-            std::move(raw_file_readers[i]), key_arity_, value_schema_, data_files[i]->level,
+            std::move(raw_file_readers[i]), key_schema_, value_schema_, data_files[i]->level,
             pool_));
     }
     return std::make_unique<ConcatKeyValueRecordReader>(std::move(file_record_readers));

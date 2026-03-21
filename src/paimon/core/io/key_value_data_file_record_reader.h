@@ -47,7 +47,8 @@ struct ColumnarBatchContext;
 // VALUE_KIND columns)
 class KeyValueDataFileRecordReader : public KeyValueRecordReader {
  public:
-    KeyValueDataFileRecordReader(std::unique_ptr<FileBatchReader>&& reader, int32_t key_arity,
+    KeyValueDataFileRecordReader(std::unique_ptr<FileBatchReader>&& reader,
+                                 const std::shared_ptr<arrow::Schema>& key_schema,
                                  const std::shared_ptr<arrow::Schema>& value_schema, int32_t level,
                                  const std::shared_ptr<MemoryPool>& pool);
 
@@ -80,10 +81,10 @@ class KeyValueDataFileRecordReader : public KeyValueRecordReader {
     virtual void Reset();
 
  private:
-    int32_t key_arity_;
     int32_t level_;
     std::shared_ptr<MemoryPool> pool_;
     std::unique_ptr<FileBatchReader> reader_;
+    std::shared_ptr<arrow::Schema> key_schema_;
     std::shared_ptr<arrow::Schema> value_schema_;
     std::vector<std::string> value_names_;
     RoaringBitmap32 selection_bitmap_;
