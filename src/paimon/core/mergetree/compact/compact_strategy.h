@@ -17,6 +17,7 @@
 #pragma once
 
 #include "paimon/core/compact/compact_unit.h"
+#include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/mergetree/level_sorted_run.h"
 namespace paimon {
@@ -33,9 +34,9 @@ class CompactStrategy {
                                                     const std::vector<LevelSortedRun>& runs) = 0;
     /// Pick a compaction unit consisting of all existing files.
     // TODO(xinyu.lxy): support RecordLevelExpire and BucketedDvMaintainer
-    static std::optional<CompactUnit> PickFullCompaction(int32_t num_levels,
-                                                         const std::vector<LevelSortedRun>& runs,
-                                                         bool force_rewrite_all_files) {
+    static std::optional<CompactUnit> PickFullCompaction(
+        int32_t num_levels, const std::vector<LevelSortedRun>& runs,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, bool force_rewrite_all_files) {
         int32_t max_level = num_levels - 1;
         if (runs.empty()) {
             // no sorted run, no need to compact
@@ -49,8 +50,11 @@ class CompactStrategy {
                 if (force_rewrite_all_files) {
                     // add all files when force compacted
                     files_to_be_compacted.push_back(file);
+                } else if (dv_maintainer && dv_maintainer->DeletionVectorOf(file->file_name)) {
+                    // check deletion vector for large files
+                    files_to_be_compacted.push_back(file);
                 }
-                // TODO(xinyu.lxy): support RecordLevelExpire and BucketedDvMaintainer
+                // TODO(xinyu.lxy): support RecordLevelExpire
             }
             if (files_to_be_compacted.empty()) {
                 return std::nullopt;

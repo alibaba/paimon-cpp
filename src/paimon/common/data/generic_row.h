@@ -148,6 +148,12 @@ class GenericRow : public InternalRow {
 
     BinaryString GetString(int32_t pos) const override {
         assert(static_cast<size_t>(pos) < fields_.size());
+        auto* value_ptr = DataDefine::GetVariantPtr<std::string_view>(fields_[pos]);
+        if (value_ptr) {
+            auto bytes = std::make_shared<Bytes>(value_ptr->size(), GetDefaultPool().get());
+            memcpy(bytes->data(), value_ptr->data(), value_ptr->size());
+            return BinaryString::FromBytes(bytes);
+        }
         return DataDefine::GetVariantValue<BinaryString>(fields_[pos]);
     }
 

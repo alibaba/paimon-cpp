@@ -70,6 +70,10 @@ class RowCompactedSerializer {
             return WriteSegments(value.GetSegments(), value.GetOffset(), value.GetSizeInBytes());
         }
 
+        Status WriteStringView(const std::string_view& view) {
+            return WriteBinary(&view);
+        }
+
         template <typename T>
         Status WriteBinary(const T* bytes) {
             PAIMON_RETURN_NOT_OK(WriteUnsignedInt(bytes->size()));

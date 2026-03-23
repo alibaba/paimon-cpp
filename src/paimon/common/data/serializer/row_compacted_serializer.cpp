@@ -35,7 +35,7 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
         auto field_type = schema->field(i)->type();
         // TODO(xinyu.lxy): check if we can enable use view
         PAIMON_ASSIGN_OR_RAISE(getters[i],
-                               InternalRow::CreateFieldGetter(i, field_type, /*use_view=*/false));
+                               InternalRow::CreateFieldGetter(i, field_type, /*use_view=*/true));
         PAIMON_ASSIGN_OR_RAISE(writers[i], CreateFieldWriter(field_type, pool));
         PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
     }
@@ -307,8 +307,7 @@ Result<RowCompactedSerializer::FieldWriter> RowCompactedSerializer::CreateFieldW
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
                     // TODO(xinyu.lxy): remove copy from view
-                    return writer->WriteString(
-                        BinaryString::FromString(std::string(*view), GetDefaultPool().get()));
+                    return writer->WriteStringView(*view);
                 }
                 return writer->WriteString(DataDefine::GetVariantValue<BinaryString>(field));
             };
@@ -318,9 +317,7 @@ Result<RowCompactedSerializer::FieldWriter> RowCompactedSerializer::CreateFieldW
             field_writer = [](int32_t pos, const VariantType& field, RowWriter* writer) -> Status {
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
-                    auto bytes =
-                        std::make_shared<Bytes>(std::string(*view), GetDefaultPool().get());
-                    return writer->WriteBinary(bytes.get());
+                    return writer->WriteStringView(*view);
                 }
                 return writer->WriteBinary(
                     DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(field).get());
