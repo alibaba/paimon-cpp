@@ -91,7 +91,7 @@ TEST(LookupFileTest, TestLocalFilePrefix) {
             arrow::field("f0", arrow::utf8()),
             arrow::field("f1", arrow::int32()),
         });
-        auto partition = BinaryRowGenerator::GenerateRow({"20240731", 10}, pool.get());
+        auto partition = BinaryRowGenerator::GenerateRow({std::string("20240731"), 10}, pool.get());
         ASSERT_OK_AND_ASSIGN(std::string ret, LookupFile::LocalFilePrefix(
                                                   schema, partition, /*bucket=*/3, "test.orc"));
         ASSERT_EQ(ret, "20240731-10-3-test.orc");

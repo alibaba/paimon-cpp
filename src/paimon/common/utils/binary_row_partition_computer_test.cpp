@@ -297,7 +297,7 @@ TEST(BinaryRowPartitionComputerTest, TestPartToSimpleString) {
             arrow::field("f0", arrow::utf8()),
             arrow::field("f1", arrow::int32()),
         });
-        auto partition = BinaryRowGenerator::GenerateRow({"20240731", 10}, pool.get());
+        auto partition = BinaryRowGenerator::GenerateRow({std::string("20240731"), 10}, pool.get());
         ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
                                                   schema, partition, "-", 30));
         ASSERT_EQ(ret, "20240731-10");
@@ -317,7 +317,7 @@ TEST(BinaryRowPartitionComputerTest, TestPartToSimpleString) {
             arrow::field("f0", arrow::utf8()),
             arrow::field("f1", arrow::int32()),
         });
-        auto partition = BinaryRowGenerator::GenerateRow({"20240731", 10}, pool.get());
+        auto partition = BinaryRowGenerator::GenerateRow({std::string("20240731"), 10}, pool.get());
         ASSERT_OK_AND_ASSIGN(std::string ret, BinaryRowPartitionComputer::PartToSimpleString(
                                                   schema, partition, "-", 5));
         ASSERT_EQ(ret, "20240");
