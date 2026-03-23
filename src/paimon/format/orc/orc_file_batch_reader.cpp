@@ -134,7 +134,8 @@ Status OrcFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                 "for orc");
         }
     }
-    PAIMON_ASSIGN_OR_RAISE(auto orc_target_type, OrcAdapter::GetOrcType(*arrow_schema));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::orc::Type> orc_target_type,
+                           OrcAdapter::GetOrcType(*arrow_schema));
     const auto& orc_src_type = reader_->GetOrcType();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::orc::SearchArgument> search_arg,
                            PredicateConverter::Convert(orc_src_type, predicate));

@@ -46,12 +46,10 @@ class PAIMON_EXPORT SstFileReader {
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
-    /**
-     * Lookup the specified key in the file.
-     *
-     * @param key serialized key
-     * @return corresponding serialized value, nullptr if not found.
-     */
+    /// Lookup the specified key in the file.
+    ///
+    /// @param key serialized key
+    /// @return corresponding serialized value, nullptr if not found.
     Result<std::shared_ptr<Bytes>> Lookup(const std::shared_ptr<Bytes>& key);
 
     Result<std::unique_ptr<BlockIterator>> GetNextBlock(
@@ -72,9 +70,9 @@ class PAIMON_EXPORT SstFileReader {
     Status Close();
 
  private:
-    static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
-        const std::shared_ptr<paimon::MemorySegment>& compressed_data,
-        const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool);
+    static Result<MemorySegment> DecompressBlock(const MemorySegment& compressed_data,
+                                                 const std::unique_ptr<BlockTrailer>& trailer,
+                                                 const std::shared_ptr<MemoryPool>& pool);
 
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,
@@ -94,10 +92,8 @@ class SstFileIterator {
  public:
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 
-    /**
-     * Seek to the position of the record whose key is exactly equal to or greater than the
-     * specified key.
-     */
+    /// Seek to the position of the record whose key is exactly equal to or greater than the
+    /// specified key.
     Status SeekTo(const std::shared_ptr<Bytes>& key);
 
  private:

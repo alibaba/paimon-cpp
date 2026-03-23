@@ -98,7 +98,13 @@ class BlobFileBatchReader : public FileBatchReader {
 
     Result<ReadBatch> NextBatch() override;
 
-    uint64_t GetPreviousBatchFirstRowNumber() const override {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        if (all_blob_lengths_.size() != target_blob_lengths_.size()) {
+            return Status::Invalid(
+                "Cannot call GetPreviousBatchFirstRowNumber in BlobFileBatchReader because, after "
+                "bitmap pushdown, rows in the array returned by NextBatch are no longer "
+                "contiguous.");
+        }
         return previous_batch_first_row_number_;
     }
 

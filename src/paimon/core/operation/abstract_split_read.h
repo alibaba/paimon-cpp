@@ -24,6 +24,7 @@
 
 #include "arrow/type_fwd.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/field_mapping_reader.h"
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/core/operation/split_read.h"
@@ -59,20 +60,19 @@ class AbstractSplitRead : public SplitRead {
  public:
     ~AbstractSplitRead() override = default;
 
+    Result<std::vector<std::unique_ptr<FileBatchReader>>> CreateRawFileReaders(
+        const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
+        const std::shared_ptr<arrow::Schema>& read_schema,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
+        const std::optional<std::vector<Range>>& row_ranges,
+        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
+
  protected:
     AbstractSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                       const std::shared_ptr<InternalReadContext>& context,
                       std::unique_ptr<SchemaManager>&& schema_manager,
                       const std::shared_ptr<MemoryPool>& memory_pool,
                       const std::shared_ptr<Executor>& executor);
-
-    Result<std::vector<std::unique_ptr<BatchReader>>> CreateRawFileReaders(
-        const BinaryRow& partition, const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
-        const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-        const std::optional<std::vector<Range>>& row_ranges,
-        const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     static std::unordered_map<std::string, DeletionFile> CreateDeletionFileMap(
         const DataSplitImpl& data_split);
@@ -81,17 +81,19 @@ class AbstractSplitRead : public SplitRead {
         const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
         const std::vector<std::optional<DeletionFile>>& deletion_files);
 
+    DeletionVector::Factory CreateDeletionVectorFactory(
+        const std::unordered_map<std::string, DeletionFile>& deletion_file_map) const;
+
     Result<std::unique_ptr<BatchReader>> ApplyPredicateFilterIfNeeded(
         std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const;
 
  protected:
     // return nullptr if file is skipped by index or dv
-    virtual Result<std::unique_ptr<BatchReader>> ApplyIndexAndDvReaderIfNeeded(
+    virtual Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const = 0;
 
@@ -111,11 +113,10 @@ class AbstractSplitRead : public SplitRead {
         const ReaderBuilder* reader_builder) const;
 
     // return nullptr if data file is skipped by index or dv
-    Result<std::unique_ptr<BatchReader>> CreateFieldMappingReader(
+    Result<std::unique_ptr<FileBatchReader>> CreateFieldMappingReader(
         const std::string& data_file_path, const std::shared_ptr<DataFileMeta>& file_meta,
         const BinaryRow& partition, const ReaderBuilder* reader_builder,
-        const FieldMappingBuilder* field_mapping_builder,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const FieldMappingBuilder* field_mapping_builder, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& row_ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 

@@ -178,9 +178,9 @@ TEST_F(FileReaderWrapperTest, EmptyFile) {
     ASSERT_EQ(0, reader_wrapper->GetNumberOfRowGroups());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader_wrapper->GetPreviousBatchFirstRowNumber());
+              reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch, reader_wrapper->Next());
-    ASSERT_EQ(0, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(0, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_EQ(0, reader_wrapper->GetNextRowToRead());
     ASSERT_TRUE(reader_wrapper->GetAllRowGroupRanges().empty());
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::RecordBatch> record_batch, reader_wrapper->Next());
@@ -200,7 +200,7 @@ TEST_F(FileReaderWrapperTest, Simple) {
     ASSERT_EQ(6, reader_wrapper->GetNumberOfRowGroups());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader_wrapper->GetPreviousBatchFirstRowNumber());
+              reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     std::vector<std::pair<uint64_t, uint64_t>> expected_all_row_group_ranges = {
         {0, 1000}, {1000, 2000}, {2000, 3000}, {3000, 4000}, {4000, 5000}, {5000, 5500}};
     ASSERT_EQ(expected_all_row_group_ranges, reader_wrapper->GetAllRowGroupRanges());
@@ -208,17 +208,17 @@ TEST_F(FileReaderWrapperTest, Simple) {
     ASSERT_TRUE(record_batch);
     ASSERT_EQ(512, record_batch->num_rows());
     ASSERT_EQ(512, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(0, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(0, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_TRUE(record_batch);
     ASSERT_EQ(488, record_batch->num_rows());
     ASSERT_EQ(1000, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(512, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(512, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_TRUE(record_batch);
     ASSERT_EQ(512, record_batch->num_rows());
     ASSERT_EQ(1512, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_NOK_WITH_MSG(reader_wrapper->SeekToRow(1001),
                         "should not be in the middle of readable range");
     ASSERT_OK(reader_wrapper->SeekToRow(1000));
@@ -226,16 +226,16 @@ TEST_F(FileReaderWrapperTest, Simple) {
     ASSERT_TRUE(record_batch);
     ASSERT_EQ(512, record_batch->num_rows());
     ASSERT_EQ(1512, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
 
     ASSERT_OK(reader_wrapper->SeekToRow(5600));
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(6, reader_wrapper->current_row_group_idx_);
-    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_FALSE(record_batch);
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(5500, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(5500, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
 }
 
 TEST_F(FileReaderWrapperTest, GetRowGroupRanges) {
@@ -294,17 +294,17 @@ TEST_F(FileReaderWrapperTest, PrepareForReading) {
     ASSERT_OK(reader_wrapper->SeekToRow(0));
     ASSERT_EQ(1000, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader_wrapper->GetPreviousBatchFirstRowNumber());
+              reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto record_batch, reader_wrapper->Next());
     ASSERT_EQ(512, record_batch->num_rows());
     ASSERT_EQ(1, record_batch->num_columns());
     ASSERT_EQ(1512, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1000, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_TRUE(record_batch);
     ASSERT_EQ(488, record_batch->num_rows());
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
-    ASSERT_EQ(1512, reader_wrapper->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1512, reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_FALSE(record_batch);
 
@@ -313,7 +313,7 @@ TEST_F(FileReaderWrapperTest, PrepareForReading) {
                                                 /*column_indices=*/{}));
     ASSERT_EQ(0, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader_wrapper->GetPreviousBatchFirstRowNumber());
+              reader_wrapper->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(record_batch, reader_wrapper->Next());
     ASSERT_EQ(512, record_batch->num_rows());
     ASSERT_EQ(0, record_batch->num_columns());
@@ -323,7 +323,7 @@ TEST_F(FileReaderWrapperTest, PrepareForReading) {
                                                 /*column_indices=*/{0}));
     ASSERT_EQ(5500, reader_wrapper->GetNextRowToRead());
     ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
-              reader_wrapper->GetPreviousBatchFirstRowNumber());
+              reader_wrapper->GetPreviousBatchFirstRowNumber().value());
 }
 
 }  // namespace paimon::parquet::test

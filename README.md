@@ -16,6 +16,9 @@
 
 # Paimon C++
 
+[![GitHub License](https://img.shields.io/github/license/alibaba/paimon-cpp?color=blue)](https://github.com/alibaba/paimon-cpp/blob/main/LICENSE)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/alibaba/paimon-cpp)
+
 Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://paimon.apache.org). Paimon C++ aims to provide a native, high-performance and extensible implementation that allows native engines to access the Paimon datalake format with maximum efficiency.
 
 ## What's in the Paimon C++ library

@@ -87,6 +87,44 @@ TEST_F(SortedRunTest, TestSortedRunIsValid) {
     }
 }
 
+TEST_F(SortedRunTest, TestFromUnsorted) {
+    ASSERT_OK_AND_ASSIGN(
+        std::shared_ptr<FieldsComparator> comparator,
+        FieldsComparator::Create({DataField(0, arrow::field("test", arrow::int32()))},
+                                 /*is_ascending_order=*/true, /*use_view=*/false));
+
+    // m1 [10, 20]
+    auto m1 = CreateDataFileMeta(10, 20);
+
+    // m2 [30, 40]
+    auto m2 = CreateDataFileMeta(30, 40);
+
+    // m3 [15, 35]
+    auto m3 = CreateDataFileMeta(15, 35);
+
+    ASSERT_OK_AND_ASSIGN(auto run1, SortedRun::FromUnsorted({m2, m1}, comparator));
+    auto run2 = SortedRun::FromSorted({m1, m2});
+    ASSERT_EQ(run1, run2);
+
+    ASSERT_NOK_WITH_MSG(SortedRun::FromUnsorted({m2, m1, m3}, comparator),
+                        "from unsorted validate failed");
+}
+
+TEST_F(SortedRunTest, TestEqual) {
+    auto empty = SortedRun::Empty();
+    auto m1 = CreateDataFileMeta(10, 20);
+    auto run1 = SortedRun::FromSingle({m1});
+    auto other_run1 = SortedRun::FromSingle({m1});
+
+    auto m2 = CreateDataFileMeta(100, 200);
+    auto run2 = SortedRun::FromSingle({m2});
+
+    ASSERT_EQ(run1, run1);
+    ASSERT_EQ(run1, other_run1);
+    ASSERT_FALSE(run1 == run2);
+    ASSERT_FALSE(empty == run2);
+}
+
 TEST_F(SortedRunTest, TestSortedRunToString) {
     auto m1 = CreateDataFileMeta(10, 20);
     auto m2 = CreateDataFileMeta(30, 40);
@@ -98,4 +136,5 @@ TEST_F(SortedRunTest, TestSortedRunToString) {
                 std::string::npos);
     ASSERT_TRUE(level_sorted_run_str.find(sorted_run_str) != std::string::npos);
 }
+
 }  // namespace paimon::test

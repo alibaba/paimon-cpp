@@ -140,12 +140,14 @@ class TableScanImpl {
         const CoreOptions& core_options, const std::shared_ptr<FileStorePathFactory>& path_factory,
         const std::shared_ptr<MemoryPool>& memory_pool) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<IndexManifestFile> index_manifest_file,
-                               IndexManifestFile::Create(core_options.GetFileSystem(),
-                                                         core_options.GetManifestFormat(),
-                                                         core_options.GetManifestCompression(),
-                                                         path_factory, memory_pool, core_options));
+                               IndexManifestFile::Create(
+                                   core_options.GetFileSystem(), core_options.GetManifestFormat(),
+                                   core_options.GetManifestCompression(), path_factory,
+                                   core_options.GetBucket(), memory_pool, core_options));
         return std::make_unique<IndexFileHandler>(
-            std::move(index_manifest_file), std::make_shared<IndexFilePathFactories>(path_factory));
+            core_options.GetFileSystem(), std::move(index_manifest_file),
+            std::make_shared<IndexFilePathFactories>(path_factory),
+            core_options.DeletionVectorsBitmap64(), memory_pool);
     }
 };
 
@@ -213,7 +215,7 @@ Result<std::unique_ptr<TableScan>> TableScan::Create(std::unique_ptr<ScanContext
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-            core_options.GetPartitionDefaultName(), core_options.GetWriteFileFormat()->Identifier(),
+            core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
             core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
             external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
             context->GetMemoryPool()));

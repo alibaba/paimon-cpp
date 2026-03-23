@@ -100,6 +100,8 @@ TEST(DataFileMetaTest, TestGetMaxSequenceNumber) {
     ASSERT_EQ(4, DataFileMeta::GetMaxSequenceNumber({file_meta1}));
     ASSERT_EQ(10, DataFileMeta::GetMaxSequenceNumber({file_meta1, file_meta2}));
     ASSERT_EQ(-1, DataFileMeta::GetMaxSequenceNumber({}));
+    ASSERT_EQ(file_meta1, file_meta1);
+    ASSERT_NE(file_meta1, file_meta2);
 }
 
 TEST(DataFileMetaTest, TestNonNullFirstRowId) {

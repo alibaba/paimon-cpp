@@ -54,7 +54,7 @@ class DelegatingPrefetchReader : public FileBatchReader {
         return prefetch_reader_->SetReadSchema(read_schema, predicate, selection_bitmap);
     }
 
-    uint64_t GetPreviousBatchFirstRowNumber() const override {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
         return GetReader()->GetPreviousBatchFirstRowNumber();
     }
 

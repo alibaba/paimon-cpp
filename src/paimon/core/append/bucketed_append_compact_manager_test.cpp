@@ -16,8 +16,12 @@
 
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 
+#include <atomic>
+#include <chrono>
+#include <future>
 #include <optional>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -27,6 +31,7 @@
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/executor.h"
 #include "paimon/result.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -70,7 +75,8 @@ class BucketedAppendCompactManagerTest : public testing::Test {
         BucketedAppendCompactManager manager(
             executor_, to_compact_before_pick,
             /*dv_maintainer=*/nullptr, min_file_num, target_file_size, threshold,
-            /*force_rewrite_all_files=*/false, /*rewriter=*/nullptr, /*reporter=*/nullptr);
+            /*force_rewrite_all_files=*/false, /*rewriter=*/nullptr, /*reporter=*/nullptr,
+            /*cancel_flag=*/std::make_shared<std::atomic_bool>(false));
         auto actual = manager.PickCompactBefore();
         if (expected_present) {
             ASSERT_TRUE(actual.has_value());
@@ -258,6 +264,54 @@ TEST_F(BucketedAppendCompactManagerTest, TestPick) {
               {NewFile(2521, 2530), NewFile(2531, 2540), NewFile(2541, 2550), NewFile(2551, 2560),
                NewFile(2561, 2570), NewFile(2571, 2580), NewFile(2581, 2590), NewFile(2591, 2600),
                NewFile(2601, 2610), NewFile(2611, 2620), NewFile(2621, 2630)});
+}
+
+TEST_F(BucketedAppendCompactManagerTest, TestCancelCompactionPropagatesToRewriteLoop) {
+    auto cancel_flag = std::make_shared<std::atomic_bool>(false);
+    auto exit_signal = std::make_shared<std::promise<void>>();
+    auto exit_future = exit_signal->get_future();
+
+    auto rewriter = [cancel_flag,
+                     exit_signal](const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
+        -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
+        while (!cancel_flag->load(std::memory_order_relaxed)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        exit_signal->set_value();
+        return Status::Invalid("compaction cancelled in rewrite loop");
+    };
+
+    BucketedAppendCompactManager manager(
+        executor_, {NewFile(1, 100), NewFile(101, 200), NewFile(201, 300), NewFile(301, 400)},
+        /*dv_maintainer=*/nullptr,
+        /*min_file_num=*/4,
+        /*target_file_size=*/1024,
+        /*compaction_file_size=*/700,
+        /*force_rewrite_all_files=*/false, rewriter,
+        /*reporter=*/nullptr, cancel_flag);
+
+    ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
+    manager.CancelCompaction();
+
+    EXPECT_EQ(exit_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
+}
+
+TEST_F(BucketedAppendCompactManagerTest, TestTriggerCompactionResetsCancelFlag) {
+    auto cancel_flag = std::make_shared<std::atomic_bool>(true);
+    auto rewriter = [](const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
+        -> Result<std::vector<std::shared_ptr<DataFileMeta>>> { return to_compact; };
+
+    BucketedAppendCompactManager manager(
+        executor_, {NewFile(1, 100), NewFile(101, 200), NewFile(201, 300), NewFile(301, 400)},
+        /*dv_maintainer=*/nullptr,
+        /*min_file_num=*/4,
+        /*target_file_size=*/1024,
+        /*compaction_file_size=*/700,
+        /*force_rewrite_all_files=*/false, rewriter,
+        /*reporter=*/nullptr, cancel_flag);
+
+    ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
+    EXPECT_FALSE(cancel_flag->load(std::memory_order_relaxed));
 }
 
 }  // namespace paimon::test

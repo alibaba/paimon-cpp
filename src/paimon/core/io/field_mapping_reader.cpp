@@ -41,7 +41,8 @@
 namespace paimon {
 class MemoryPool;
 
-FieldMappingReader::FieldMappingReader(int32_t field_count, std::unique_ptr<BatchReader>&& reader,
+FieldMappingReader::FieldMappingReader(int32_t field_count,
+                                       std::unique_ptr<FileBatchReader>&& reader,
                                        const BinaryRow& partition,
                                        std::unique_ptr<FieldMapping>&& mapping,
                                        const std::shared_ptr<MemoryPool>& pool)

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -72,8 +73,11 @@ class BucketedAppendCompactManager : public CompactFutureManager {
                                  int32_t min_file_num, int64_t target_file_size,
                                  int64_t compaction_file_size, bool force_rewrite_all_files,
                                  CompactRewriter rewriter,
-                                 const std::shared_ptr<CompactionMetrics::Reporter>& reporter);
+                                 const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
+                                 const std::shared_ptr<std::atomic_bool>& cancel_flag);
     ~BucketedAppendCompactManager() override = default;
+
+    void CancelCompaction() override;
 
     Status TriggerCompaction(bool full_compaction) override;
 
@@ -195,6 +199,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     std::shared_ptr<CompactionMetrics::Reporter> reporter_;
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> compacting_;
     DataFileMetaPriorityQueue to_compact_;
+    std::shared_ptr<std::atomic_bool> cancel_flag_;
     std::unique_ptr<Logger> logger_;
 };
 

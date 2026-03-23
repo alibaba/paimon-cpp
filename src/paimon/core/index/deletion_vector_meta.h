@@ -29,7 +29,8 @@
 namespace paimon {
 /// Indicates the deletion vector info of member data_file_name, e.g., the length of dv.
 /// * DeletionVectorMeta is used when serialize to manifest file.
-struct DeletionVectorMeta {
+class DeletionVectorMeta {
+ public:
     static const std::shared_ptr<arrow::DataType>& DataType() {
         static std::shared_ptr<arrow::DataType> schema = arrow::struct_(
             {arrow::field("f0", arrow::utf8(), false), arrow::field("f1", arrow::int32(), false),
@@ -37,19 +38,19 @@ struct DeletionVectorMeta {
              arrow::field("_CARDINALITY", arrow::int64(), true)});
         return schema;
     }
-    DeletionVectorMeta(const std::string& _data_file_name, int32_t _offset, int32_t _length,
-                       const std::optional<int64_t>& _cardinality)
-        : data_file_name(_data_file_name),
-          offset(_offset),
-          length(_length),
-          cardinality(_cardinality) {}
+    DeletionVectorMeta(const std::string& data_file_name, int32_t offset, int32_t length,
+                       const std::optional<int64_t>& cardinality)
+        : data_file_name_(data_file_name),
+          offset_(offset),
+          length_(length),
+          cardinality_(cardinality) {}
 
     bool operator==(const DeletionVectorMeta& other) const {
         if (this == &other) {
             return true;
         }
-        return data_file_name == other.data_file_name && offset == other.offset &&
-               length == other.length && cardinality == other.cardinality;
+        return data_file_name_ == other.data_file_name_ && offset_ == other.offset_ &&
+               length_ == other.length_ && cardinality_ == other.cardinality_;
     }
 
     bool TEST_Equal(const DeletionVectorMeta& other) const {
@@ -57,19 +58,37 @@ struct DeletionVectorMeta {
             return true;
         }
         // ignore data_file_name
-        return offset == other.offset && length == other.length && cardinality == other.cardinality;
+        return offset_ == other.offset_ && length_ == other.length_ &&
+               cardinality_ == other.cardinality_;
     }
 
     std::string ToString() const {
         return fmt::format(
             "DeletionVectorMeta{{data_file_name = {}, offset = {}, length = {}, cardinality = {}}}",
-            data_file_name, offset, length,
-            cardinality == std::nullopt ? "null" : std::to_string(cardinality.value()));
+            data_file_name_, offset_, length_,
+            cardinality_ == std::nullopt ? "null" : std::to_string(cardinality_.value()));
     }
 
-    std::string data_file_name = "";
-    int32_t offset = -1;
-    int32_t length = -1;
-    std::optional<int64_t> cardinality;
+    const std::string& GetDataFileName() const {
+        return data_file_name_;
+    }
+
+    int32_t GetOffset() const {
+        return offset_;
+    }
+
+    int32_t GetLength() const {
+        return length_;
+    }
+
+    std::optional<int64_t> GetCardinality() const {
+        return cardinality_;
+    }
+
+ private:
+    std::string data_file_name_;
+    int32_t offset_;
+    int32_t length_;
+    std::optional<int64_t> cardinality_;
 };
 }  // namespace paimon

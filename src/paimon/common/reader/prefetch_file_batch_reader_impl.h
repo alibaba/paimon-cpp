@@ -76,7 +76,7 @@ class PrefetchFileBatchReaderImpl : public PrefetchFileBatchReader {
                          const std::optional<RoaringBitmap32>& selection_bitmap) override;
 
     Status SeekToRow(uint64_t row_number) override;
-    uint64_t GetPreviousBatchFirstRowNumber() const override;
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override;
     Result<uint64_t> GetNumberOfRows() const override;
     uint64_t GetNextRowToRead() const override;
     void Close() override;

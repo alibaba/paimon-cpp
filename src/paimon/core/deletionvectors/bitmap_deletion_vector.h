@@ -71,6 +71,9 @@ class BitmapDeletionVector : public DeletionVector {
     static Result<PAIMON_UNIQUE_PTR<DeletionVector>> Deserialize(const char* buffer, int32_t length,
                                                                  MemoryPool* pool);
 
+    static Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeserializeWithoutMagicNumber(
+        const char* buffer, int32_t length, MemoryPool* pool);
+
  private:
     Status CheckPosition(int64_t position) const;
 

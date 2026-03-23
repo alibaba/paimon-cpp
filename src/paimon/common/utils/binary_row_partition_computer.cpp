@@ -21,6 +21,7 @@
 
 #include "arrow/type.h"
 #include "fmt/format.h"
+#include "fmt/ranges.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/utils/string_utils.h"
@@ -133,4 +134,28 @@ Result<arrow::Type::type> BinaryRowPartitionComputer::GetTypeFromArrowSchema(
     return field->type()->id();
 }
 
+Result<std::string> BinaryRowPartitionComputer::PartToSimpleString(
+    const std::shared_ptr<arrow::Schema>& partition_type, const BinaryRow& partition,
+    const std::string& delimiter, int32_t max_length) {
+    std::vector<DataConverterUtils::BinaryRowFieldToStrConverter> partition_converters;
+    partition_converters.reserve(partition_type->num_fields());
+    for (const auto& field : partition_type->fields()) {
+        PAIMON_ASSIGN_OR_RAISE(DataConverterUtils::BinaryRowFieldToStrConverter converter,
+                               DataConverterUtils::CreateBinaryRowFieldToStringConverter(
+                                   field->type()->id(), /*legacy_partition_name_enabled=*/true));
+        partition_converters.emplace_back(converter);
+    }
+    std::vector<std::string> partition_vec;
+    partition_vec.reserve(partition_converters.size());
+    for (size_t field_idx = 0; field_idx < partition_converters.size(); field_idx++) {
+        const auto& to_str = partition_converters[field_idx];
+        if (partition.IsNullAt(field_idx)) {
+            partition_vec.push_back("null");
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(std::string partition_field_str, to_str(partition, field_idx));
+            partition_vec.push_back(partition_field_str);
+        }
+    }
+    return fmt::format("{}", fmt::join(partition_vec, delimiter)).substr(0, max_length);
+}
 }  // namespace paimon

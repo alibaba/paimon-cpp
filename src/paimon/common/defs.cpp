@@ -63,6 +63,9 @@ const char Options::SORT_ENGINE[] = "sort-engine";
 const char Options::IGNORE_DELETE[] = "ignore-delete";
 const char Options::FIELDS_DEFAULT_AGG_FUNC[] = "fields.default-aggregate-function";
 const char Options::DELETION_VECTORS_ENABLED[] = "deletion-vectors.enabled";
+const char Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[] =
+    "deletion-vector.index-file.target-size";
+const char Options::DELETION_VECTOR_BITMAP64[] = "deletion-vectors.bitmap64";
 const char Options::CHANGELOG_PRODUCER[] = "changelog-producer";
 const char Options::FORCE_LOOKUP[] = "force-lookup";
 const char Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE[] =
@@ -98,4 +101,5 @@ const char Options::LOOKUP_CACHE_BLOOM_FILTER_FPP[] = "lookup.cache.bloom.filter
 const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compression";
 const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
 const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
+const char Options::FILE_FORMAT_PER_LEVEL[] = "file.format.per.level";
 }  // namespace paimon

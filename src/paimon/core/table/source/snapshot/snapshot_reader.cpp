@@ -121,7 +121,7 @@ Result<std::vector<std::optional<DeletionFile>>> SnapshotReader::GetDeletionFile
             for (const auto& dv_meta_iter : dv_metas.value()) {
                 const auto& dv_meta = dv_meta_iter.second;
                 data_file_to_index_file_meta.insert(
-                    std::make_pair(dv_meta.data_file_name, index_file_meta));
+                    std::make_pair(dv_meta.GetDataFileName(), index_file_meta));
             }
         }
     }
@@ -139,9 +139,9 @@ Result<std::vector<std::optional<DeletionFile>>> SnapshotReader::GetDeletionFile
                 PAIMON_ASSIGN_OR_RAISE(
                     std::string index_file_path,
                     index_file_handler_->FilePath(partition, bucket, index_file_meta_iter->second));
-                deletion_files.emplace_back(
-                    DeletionFile(index_file_path, dv_meta_iter->second.offset,
-                                 dv_meta_iter->second.length, dv_meta_iter->second.cardinality));
+                deletion_files.emplace_back(DeletionFile(
+                    index_file_path, dv_meta_iter->second.GetOffset(),
+                    dv_meta_iter->second.GetLength(), dv_meta_iter->second.GetCardinality()));
                 continue;
             }
         }

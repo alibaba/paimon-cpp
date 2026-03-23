@@ -88,6 +88,7 @@ struct DataFileMeta {
     std::optional<std::string> ExternalPathDir() const;
 
     bool operator==(const DataFileMeta& other) const;
+    bool operator!=(const DataFileMeta& other) const;
     bool TEST_Equal(const DataFileMeta& other) const;
     std::string ToString() const;
 

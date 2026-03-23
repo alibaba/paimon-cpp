@@ -42,7 +42,8 @@ class ConcatKeyValueRecordReaderTest : public testing::Test {
     }
 
     void CheckResult(const std::vector<std::shared_ptr<arrow::StructArray>>& src_array_vec,
-                     const std::vector<KeyValue>& expected, int32_t key_arity,
+                     const std::vector<KeyValue>& expected,
+                     const std::shared_ptr<arrow::Schema>& key_schema,
                      const std::shared_ptr<arrow::Schema>& value_schema) const {
         for (auto batch_size : {1, 2, 3, 4, 100}) {
             std::vector<std::unique_ptr<KeyValueRecordReader>> record_readers;
@@ -51,7 +52,7 @@ class ConcatKeyValueRecordReaderTest : public testing::Test {
                 auto file_batch_reader = std::make_unique<MockFileBatchReader>(
                     src_array, src_type, /*batch_size=*/batch_size);
                 auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-                    std::move(file_batch_reader), key_arity, value_schema, /*level=*/0, pool_);
+                    std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
                 record_readers.push_back(std::move(record_reader));
             }
 
@@ -62,7 +63,8 @@ class ConcatKeyValueRecordReaderTest : public testing::Test {
                 (ReadResultCollector::CollectKeyValueResult<ConcatKeyValueRecordReader,
                                                             KeyValueRecordReader::Iterator>(
                     concat_record_reader.get())));
-            KeyValueChecker::CheckResult(expected, results, key_arity, value_schema->num_fields());
+            KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                         value_schema->num_fields());
         }
     }
 
@@ -78,6 +80,8 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSimple) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -111,7 +115,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSimple) {
          {3, 2, 16, 26, 36},
          {3, 3, 17, 27, 37}},
         pool_);
-    CheckResult({src_array1, src_array2}, expected, /*key_arity=*/2, value_schema);
+    CheckResult({src_array1, src_array2}, expected, key_schema, value_schema);
 }
 
 TEST_F(ConcatKeyValueRecordReaderTest, TestSingleReaderInConcat) {
@@ -122,6 +126,8 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSingleReaderInConcat) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -138,7 +144,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSingleReaderInConcat) {
         /*seq_vec=*/{0, 0, 1, 2}, /*key_vec=*/{{1, 1}, {1, 2}, {2, 2}, {2, 3}},
         /*value_vec=*/
         {{1, 1, 10, 20, 30}, {1, 2, 11, 21, 31}, {2, 2, 12, 22, 32}, {2, 3, 13, 23, 33}}, pool_);
-    CheckResult({src_array1}, expected, /*key_arity=*/2, value_schema);
+    CheckResult({src_array1}, expected, key_schema, value_schema);
 }
 
 TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyResult) {
@@ -149,6 +155,8 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyResult) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -157,7 +165,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyResult) {
     ])")
             .ValueOrDie());
 
-    CheckResult({src_array1}, {}, /*key_arity=*/2, value_schema);
+    CheckResult({src_array1}, {}, key_schema, value_schema);
 }
 
 TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyReader) {
@@ -168,6 +176,8 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyReader) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -190,8 +200,8 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyReader) {
         /*value_vec=*/
         {{1, 1, 10, 20, 30}, {1, 2, 11, 21, 31}, {2, 2, 12, 22, 32}, {2, 3, 13, 23, 33}}, pool_);
 
-    CheckResult({src_array1, src_array2}, expected, /*key_arity=*/2, value_schema);
-    CheckResult({src_array2, src_array1}, expected, /*key_arity=*/2, value_schema);
+    CheckResult({src_array1, src_array2}, expected, key_schema, value_schema);
+    CheckResult({src_array2, src_array1}, expected, key_schema, value_schema);
 }
 
 }  // namespace paimon::test

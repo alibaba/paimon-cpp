@@ -239,11 +239,11 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchSimple) {
         auto parquet_batch_reader =
             PrepareParquetFileBatchReader(file_name, schema_, /*predicate=*/nullptr,
                                           /*selection_bitmap=*/std::nullopt, batch_size);
-        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(),
+        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(),
                   std::numeric_limits<uint64_t>::max());
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                     parquet_batch_reader.get()));
-        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(), 6);
+        ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 6);
         parquet_batch_reader->Close();
         auto expected_array = std::make_shared<arrow::ChunkedArray>(struct_array_);
         ASSERT_TRUE(result_array->Equals(expected_array));
@@ -527,19 +527,19 @@ TEST_F(ParquetFileBatchReaderTest, TestReadNoField) {
         PrepareParquetFileBatchReader(file_name, read_schema, /*predicate=*/nullptr,
                                       /*selection_bitmap=*/std::nullopt, /*batch_size=*/2);
     // read 2 rows
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(),
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(),
               std::numeric_limits<uint64_t>::max());
     ASSERT_OK_AND_ASSIGN(auto batch1, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(), 0);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 0);
     //  read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch2, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(), 2);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 2);
     // read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch3, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(), 4);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 4);
     // read rows with eof
     ASSERT_OK_AND_ASSIGN(auto batch4, parquet_batch_reader->NextBatch());
-    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber(), 6);
+    ASSERT_EQ(parquet_batch_reader->GetPreviousBatchFirstRowNumber().value(), 6);
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
     parquet_batch_reader->Close();
 

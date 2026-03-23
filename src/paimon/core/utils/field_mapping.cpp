@@ -25,7 +25,6 @@
 #include "fmt/format.h"
 #include "paimon/common/predicate/compound_predicate_impl.h"
 #include "paimon/common/predicate/leaf_predicate_impl.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/casting/cast_executor_factory.h"
@@ -33,6 +32,7 @@
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
+#include "paimon/predicate/predicate_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {

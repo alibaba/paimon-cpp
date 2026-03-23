@@ -74,7 +74,8 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
         return std::shared_ptr<BloomFilterHandle>();
     }
     auto data = bloom_filter_->GetBitSet()->ToSlice()->ReadStringView();
-    auto handle = std::make_shared<BloomFilterHandle>(out_->GetPos().value(), data.size(),
+    PAIMON_ASSIGN_OR_RAISE(int64_t bloom_filter_pos, out_->GetPos());
+    auto handle = std::make_shared<BloomFilterHandle>(bloom_filter_pos, data.size(),
                                                       bloom_filter_->ExpectedEntries());
 
     PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
@@ -121,7 +122,8 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     auto trailer_memory_slice =
         std::make_shared<BlockTrailer>(static_cast<int8_t>(compression_type), crc32c)
             ->WriteBlockTrailer(pool_.get());
-    auto block_handle = std::make_shared<BlockHandle>(out_->GetPos().value_or(0), view.size());
+    PAIMON_ASSIGN_OR_RAISE(int64_t block_pos, out_->GetPos());
+    auto block_handle = std::make_shared<BlockHandle>(block_pos, view.size());
 
     // 1. write data
     PAIMON_RETURN_NOT_OK(WriteBytes(view.data(), view.size()));

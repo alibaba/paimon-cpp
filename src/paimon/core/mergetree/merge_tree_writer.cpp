@@ -181,7 +181,7 @@ MergeTreeWriter::CreateRollingRowWriter() const {
         ::ArrowSchema arrow_schema;
         ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*write_schema_, &arrow_schema));
-        auto format = options_.GetWriteFileFormat();
+        auto format = options_.GetWriteFileFormat(/*level=*/0);
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<WriterBuilder> writer_builder,
             format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));

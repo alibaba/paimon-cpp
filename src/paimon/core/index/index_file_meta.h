@@ -163,7 +163,6 @@ class IndexFileMeta {
         return result;
     }
 
- private:
     std::string index_type_;
     std::string file_name_;
     int64_t file_size_ = 0;

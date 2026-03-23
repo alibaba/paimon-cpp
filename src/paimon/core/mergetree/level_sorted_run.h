@@ -28,6 +28,13 @@ struct LevelSortedRun {
         return fmt::format("LevelSortedRun{{ level={}, run={} }}", level, run.ToString());
     }
 
+    bool operator==(const LevelSortedRun& other) const {
+        if (this == &other) {
+            return true;
+        }
+        return level == other.level && run == other.run;
+    }
+
     int32_t level;
     SortedRun run;
 };

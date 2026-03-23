@@ -29,7 +29,6 @@
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/common/predicate/literal_converter.h"
-#include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -48,6 +47,7 @@
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/predicate/predicate_builder.h"
+#include "paimon/predicate/predicate_utils.h"
 #include "paimon/scan_context.h"
 
 namespace paimon {

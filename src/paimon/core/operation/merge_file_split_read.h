@@ -84,19 +84,17 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     Result<bool> Match(const std::shared_ptr<Split>& split, bool force_keep_delete) const override;
 
-    Result<std::unique_ptr<BatchReader>> ApplyIndexAndDvReaderIfNeeded(
+    Result<std::unique_ptr<FileBatchReader>> ApplyIndexAndDvReaderIfNeeded(
         std::unique_ptr<FileBatchReader>&& file_reader, const std::shared_ptr<DataFileMeta>& file,
         const std::shared_ptr<arrow::Schema>& data_schema,
         const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<Predicate>& predicate, DeletionVector::Factory dv_factory,
         const std::optional<std::vector<Range>>& ranges,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const override;
 
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReaderForSection(
         const std::vector<SortedRun>& section, const BinaryRow& partition,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
-        const std::shared_ptr<Predicate>& predicate,
+        DeletionVector::Factory dv_factory, const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory, bool drop_delete);
 
     std::shared_ptr<FileStorePathFactory> GetPathFactory() const {
@@ -106,6 +104,9 @@ class MergeFileSplitRead : public AbstractSplitRead {
     std::shared_ptr<arrow::Schema> GetValueSchema() const {
         return value_schema_;
     }
+
+    void SetMergeFunctionWrapper(
+        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper);
 
  private:
     Result<std::unique_ptr<BatchReader>> CreateMergeReader(
@@ -118,21 +119,23 @@ class MergeFileSplitRead : public AbstractSplitRead {
 
     Result<std::unique_ptr<BatchReader>> CreateReaderForSection(
         const std::vector<SortedRun>& section, const BinaryRow& partition,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        DeletionVector::Factory dv_factory,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory);
 
     Result<std::unique_ptr<KeyValueRecordReader>> CreateReaderForRun(
-        const BinaryRow& partition, const SortedRun& sorted_run,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const BinaryRow& partition, const SortedRun& sorted_run, DeletionVector::Factory dv_factory,
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) const;
 
     Result<std::unique_ptr<SortMergeReader>> CreateSortMergeReader(
         std::vector<std::unique_ptr<KeyValueRecordReader>>&& record_readers);
 
+    Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> GetMergeFunctionWrapper();
+
     MergeFileSplitRead(const std::shared_ptr<FileStorePathFactory>& path_factory,
                        const std::shared_ptr<InternalReadContext>& context,
-                       std::unique_ptr<SchemaManager>&& schema_manager, int32_t key_arity,
+                       std::unique_ptr<SchemaManager>&& schema_manager,
+                       const std::shared_ptr<arrow::Schema>& key_schema,
                        const std::shared_ptr<arrow::Schema>& value_schema,
                        const std::shared_ptr<arrow::Schema>& read_schema,
                        const std::vector<int32_t>& projection,
@@ -142,9 +145,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
                        const std::shared_ptr<Predicate>& predicate_for_keys,
                        const std::shared_ptr<MemoryPool>& memory_pool,
                        const std::shared_ptr<Executor>& executor);
-
- private:
-    Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> GetMergeFunctionWrapper();
 
     static Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> CreateMergeFunctionWrapper(
         const CoreOptions& core_options, const std::shared_ptr<TableSchema>& table_schema,
@@ -170,7 +170,8 @@ class MergeFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<Predicate>& predicate, const TableSchema& table_schema);
 
  private:
-    int32_t key_arity_;
+    // schema of key member in KeyValue object (trimmed pk)
+    std::shared_ptr<arrow::Schema> key_schema_;
     // schema of value member in KeyValue object
     std::shared_ptr<arrow::Schema> value_schema_;
     // actual read schema, e.g., complete all key fields, user defined sequence fields

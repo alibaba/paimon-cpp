@@ -232,6 +232,15 @@ struct PAIMON_EXPORT Options {
     /// Default value is false.
     static const char DELETION_VECTORS_ENABLED[];
 
+    /// "deletion-vector.index-file.target-size" - The target size of deletion vector index file.
+    /// Default value is 2MB.
+    static const char DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[];
+
+    /// "deletion-vectors.bitmap64" - Enable 64 bit bitmap implementation. Note that only 64 bit
+    /// bitmap implementation is compatible with Iceberg. Default value is "false".
+    /// @note: bitmap64 dv is not supported.
+    static const char DELETION_VECTOR_BITMAP64[];
+
     ///  @note `CHANGELOG_PRODUCER` currently only support `none`
     ///
     /// "changelog-producer" - Whether to double write to a changelog file. This changelog file
@@ -345,6 +354,10 @@ struct PAIMON_EXPORT Options {
     static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
     /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
     static const char CACHE_PAGE_SIZE[];
+    /// "file.format.per.level" - Define different file format for different level, you can add the
+    /// conf like this:  'file.format.per.level' = '0:avro,3:parquet', if the file format for level
+    /// is not provided, the default format which set by FILE_FORMAT will be used.
+    static const char FILE_FORMAT_PER_LEVEL[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

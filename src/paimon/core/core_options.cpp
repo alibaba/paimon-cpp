@@ -123,7 +123,8 @@ class ConfigParser {
             std::string normalized_value = StringUtils::ToLowerCase(iter->second);
             PAIMON_ASSIGN_OR_RAISE(*value, Factory::Get(normalized_value, config_map_));
         } else {
-            PAIMON_ASSIGN_OR_RAISE(*value, Factory::Get(default_identifier, config_map_));
+            PAIMON_ASSIGN_OR_RAISE(
+                *value, Factory::Get(StringUtils::ToLowerCase(default_identifier), config_map_));
         }
         return Status::OK();
     }
@@ -247,6 +248,37 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // parse file.format.per.level
+    Status ParseFileFormatPerLevel(
+        std::map<int32_t, std::shared_ptr<FileFormat>>* file_format_per_level_ptr) const {
+        auto& file_format_per_level = *file_format_per_level_ptr;
+        std::string file_format_per_level_str;
+        PAIMON_RETURN_NOT_OK(
+            ParseString(Options::FILE_FORMAT_PER_LEVEL, &file_format_per_level_str));
+        if (!file_format_per_level_str.empty()) {
+            auto level2format =
+                StringUtils::Split(file_format_per_level_str, std::string(","), std::string(":"));
+            for (const auto& single_level : level2format) {
+                if (single_level.size() != 2) {
+                    return Status::Invalid(fmt::format(
+                        "fail to parse key {}, value {} (usage example: 0:avro,3:parquet)",
+                        Options::FILE_FORMAT_PER_LEVEL, file_format_per_level_str));
+                }
+                auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
+                if (!level || level.value() < 0) {
+                    return Status::Invalid(
+                        fmt::format("fail to parse level {} from string to int in {}",
+                                    single_level[0], Options::FILE_FORMAT_PER_LEVEL));
+                }
+                std::shared_ptr<FileFormat> file_format;
+                PAIMON_RETURN_NOT_OK(ParseObject<FileFormatFactory>(
+                    "_no_use", /*default_identifier=*/single_level[1], &file_format));
+                file_format_per_level[level.value()] = file_format;
+            }
+        }
+        return Status::OK();
+    }
+
     bool ContainsKey(const std::string& key) const {
         return config_map_.find(key) != config_map_.end();
     }
@@ -264,6 +296,7 @@ struct CoreOptions::Impl {
     int64_t source_split_target_size = 128 * 1024 * 1024;
     int64_t source_split_open_file_cost = 4 * 1024 * 1024;
     int64_t manifest_target_file_size = 8 * 1024 * 1024;
+    int64_t deletion_vector_target_file_size = 2 * 1024 * 1024;
     int64_t manifest_full_compaction_file_size = 16 * 1024 * 1024;
     int64_t write_buffer_size = 256 * 1024 * 1024;
     int64_t commit_timeout = std::numeric_limits<int64_t>::max();
@@ -310,6 +343,7 @@ struct CoreOptions::Impl {
     bool ignore_delete = false;
     bool write_only = false;
     bool deletion_vectors_enabled = false;
+    bool deletion_vectors_bitmap64 = false;
     bool force_lookup = false;
     bool partial_update_remove_record_on_delete = false;
     bool file_index_read_enabled = true;
@@ -334,6 +368,7 @@ struct CoreOptions::Impl {
     double lookup_cache_bloom_filter_fpp = 0.05;
     CompressOptions lookup_compress_options{"zstd", 1};
     int64_t cache_page_size = 64 * 1024;  // 64KB
+    std::map<int32_t, std::shared_ptr<FileFormat>> file_format_per_level;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -448,6 +483,12 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::DELETION_VECTORS_ENABLED, &impl->deletion_vectors_enabled));
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::FORCE_LOOKUP, &impl->force_lookup));
+
+    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE,
+                                                &impl->deletion_vector_target_file_size));
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<bool>(Options::DELETION_VECTOR_BITMAP64, &impl->deletion_vectors_bitmap64));
+
     // Parse changelog producer
     PAIMON_RETURN_NOT_OK(parser.ParseChangelogProducer(&impl->changelog_producer));
 
@@ -588,6 +629,8 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse cache-page-size
     PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::CACHE_PAGE_SIZE, &impl->cache_page_size));
 
+    // parse file.format.per.level
+    PAIMON_RETURN_NOT_OK(parser.ParseFileFormatPerLevel(&impl->file_format_per_level));
     return options;
 }
 
@@ -609,7 +652,15 @@ int32_t CoreOptions::GetBucket() const {
     return impl_->bucket;
 }
 
-std::shared_ptr<FileFormat> CoreOptions::GetWriteFileFormat() const {
+std::shared_ptr<FileFormat> CoreOptions::GetWriteFileFormat(int32_t level) const {
+    auto iter = impl_->file_format_per_level.find(level);
+    if (iter != impl_->file_format_per_level.end()) {
+        return iter->second;
+    }
+    return impl_->file_format;
+}
+
+std::shared_ptr<FileFormat> CoreOptions::GetFileFormat() const {
     return impl_->file_format;
 }
 
@@ -783,6 +834,13 @@ bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }
 
+bool CoreOptions::DeletionVectorsBitmap64() const {
+    return impl_->deletion_vectors_bitmap64;
+}
+int64_t CoreOptions::DeletionVectorTargetFileSize() const {
+    return impl_->deletion_vector_target_file_size;
+}
+
 ChangelogProducer CoreOptions::GetChangelogProducer() const {
     return impl_->changelog_producer;
 }
@@ -792,9 +850,13 @@ const std::map<std::string, std::string>& CoreOptions::ToMap() const {
 }
 
 bool CoreOptions::NeedLookup() const {
-    return GetMergeEngine() == MergeEngine::FIRST_ROW ||
-           GetChangelogProducer() == ChangelogProducer::LOOKUP || DeletionVectorsEnabled() ||
-           impl_->force_lookup;
+    return GetLookupStrategy().need_lookup;
+}
+
+LookupStrategy CoreOptions::GetLookupStrategy() const {
+    return {GetMergeEngine() == MergeEngine::FIRST_ROW,
+            GetChangelogProducer() == ChangelogProducer::LOOKUP, DeletionVectorsEnabled(),
+            impl_->force_lookup};
 }
 
 bool CoreOptions::CompactionForceRewriteAllFiles() const {
@@ -951,4 +1013,5 @@ const CompressOptions& CoreOptions::GetLookupCompressOptions() const {
 int32_t CoreOptions::GetCachePageSize() const {
     return static_cast<int32_t>(impl_->cache_page_size);
 }
+
 }  // namespace paimon

@@ -26,14 +26,17 @@
 #include "arrow/array/builder_primitive.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/factories/io_hook.h"
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/common/sst/sst_file_writer.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/defs.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_batch_reader.h"
+#include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
 namespace paimon {
@@ -89,8 +92,7 @@ TEST_P(SstFileIOTest, TestSimple) {
     // write data
     auto bf = BloomFilter::Create(30, 0.01);
     auto seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
-    auto seg_ptr = std::make_shared<MemorySegment>(seg_for_bf);
-    ASSERT_OK(bf->SetMemorySegment(seg_ptr));
+    ASSERT_OK(bf->SetMemorySegment(seg_for_bf));
     auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, factory);
     std::set<int32_t> value_hash;
     // k1-k5
@@ -131,9 +133,8 @@ TEST_P(SstFileIOTest, TestSimple) {
     auto bloom_filer_bytes = Bytes::AllocateBytes(size, pool_.get());
     ASSERT_OK(in->Read(bloom_filer_bytes->data(), bloom_filer_bytes->size()));
     auto seg = MemorySegment::Wrap(std::move(bloom_filer_bytes));
-    auto ptr = std::make_shared<MemorySegment>(seg);
     auto bloom_filter = std::make_shared<BloomFilter>(entries, size);
-    ASSERT_OK(bloom_filter->SetMemorySegment(ptr));
+    ASSERT_OK(bloom_filter->SetMemorySegment(seg));
     for (const auto& value : value_hash) {
         ASSERT_TRUE(bloom_filter->TestHash(value));
     }
@@ -205,6 +206,82 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     ASSERT_TRUE(v1999999);
     std::string string1999999{v1999999->data(), v1999999->size()};
     ASSERT_EQ("1999999", string1999999);
+}
+
+TEST_F(SstFileIOTest, TestIOException) {
+    bool run_complete = false;
+    auto io_hook = paimon::IOHook::GetInstance();
+    for (size_t i = 0; i < 200; i++) {
+        auto test_dir = paimon::test::UniqueTestDirectory::Create();
+        ASSERT_TRUE(test_dir);
+        paimon::ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, paimon::IOHook::Mode::RETURN_ERROR);
+
+        auto index_path = test_dir->Str() + "/sst_io_exception_test.data";
+
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<BlockCompressionFactory> factory,
+                             BlockCompressionFactory::Create(BlockCompressionType::ZSTD));
+
+        // write
+        auto out_result = fs_->Create(index_path, /*overwrite=*/false);
+        CHECK_HOOK_STATUS(out_result.status(), i);
+        std::shared_ptr<OutputStream> out = std::move(out_result).value();
+
+        auto bf = BloomFilter::Create(30, 0.01);
+        MemorySegment seg_for_bf = MemorySegment::AllocateHeapMemory(bf->ByteLength(), pool_.get());
+        ASSERT_OK(bf->SetMemorySegment(seg_for_bf));
+        auto writer = std::make_shared<SstFileWriter>(out, pool_, bf, 50, factory);
+
+        bool write_failed = false;
+        for (size_t j = 1; j <= 5; j++) {
+            std::string key = "k" + std::to_string(j);
+            std::string value = std::to_string(j);
+            auto write_status = writer->Write(std::make_shared<Bytes>(key, pool_.get()),
+                                              std::make_shared<Bytes>(value, pool_.get()));
+            if (!write_status.ok()) {
+                CHECK_HOOK_STATUS(write_status, i);
+                write_failed = true;
+                break;
+            }
+        }
+        if (write_failed) {
+            continue;
+        }
+
+        CHECK_HOOK_STATUS(writer->Flush(), i);
+
+        auto bloom_filter_handle_result = writer->WriteBloomFilter();
+        CHECK_HOOK_STATUS(bloom_filter_handle_result.status(), i);
+        auto index_block_handle_result = writer->WriteIndexBlock();
+        CHECK_HOOK_STATUS(index_block_handle_result.status(), i);
+        CHECK_HOOK_STATUS(writer->WriteFooter(index_block_handle_result.value(),
+                                              bloom_filter_handle_result.value()),
+                          i);
+
+        CHECK_HOOK_STATUS(out->Flush(), i);
+        CHECK_HOOK_STATUS(out->Close(), i);
+
+        // read
+        auto in_result = fs_->Open(index_path);
+        CHECK_HOOK_STATUS(in_result.status(), i);
+        std::shared_ptr<InputStream> in = std::move(in_result).value();
+
+        auto reader_result = SstFileReader::Create(pool_, in, comparator_);
+        CHECK_HOOK_STATUS(reader_result.status(), i);
+        std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
+
+        std::string k4 = "k4";
+        auto v4_result = reader->Lookup(std::make_shared<Bytes>(k4, pool_.get()));
+        CHECK_HOOK_STATUS(v4_result.status(), i);
+        ASSERT_TRUE(v4_result.value());
+        std::string string4{v4_result.value()->data(), v4_result.value()->size()};
+        ASSERT_EQ("4", string4);
+
+        ASSERT_OK(reader->Close());
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
 
 INSTANTIATE_TEST_SUITE_P(Group, SstFileIOTest,
