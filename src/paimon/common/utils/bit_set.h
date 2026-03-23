@@ -32,10 +32,10 @@ class PAIMON_EXPORT BitSet {
  public:
     explicit BitSet(int64_t byte_length) : byte_length_(byte_length), bit_size_(byte_length << 3) {}
 
-    Status SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset = 0);
+    Status SetMemorySegment(MemorySegment segment, int32_t offset = 0);
     void UnsetMemorySegment();
 
-    std::shared_ptr<MemorySegment>& GetMemorySegment() {
+    const MemorySegment& GetMemorySegment() const {
         return segment_;
     }
 
@@ -64,6 +64,6 @@ class PAIMON_EXPORT BitSet {
     int64_t byte_length_;
     int64_t bit_size_;
     int32_t offset_;
-    std::shared_ptr<MemorySegment> segment_;
+    MemorySegment segment_;
 };
 }  // namespace paimon

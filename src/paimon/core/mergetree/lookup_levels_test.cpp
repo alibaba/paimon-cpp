@@ -217,6 +217,7 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
 
     ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
     ASSERT_EQ(lookup_levels->schema_id_and_ser_version_to_processors_.size(), 1);
+    ASSERT_EQ(lookup_levels->GetLevels()->NonEmptyHighestLevel(), 2);
     // TODO(lisizhuo.lsz): test lookuplevels close
 }
 

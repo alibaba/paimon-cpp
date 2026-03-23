@@ -70,9 +70,9 @@ class SstFileReader {
     Status Close();
 
  private:
-    static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
-        const std::shared_ptr<paimon::MemorySegment>& compressed_data,
-        const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool);
+    static Result<MemorySegment> DecompressBlock(const MemorySegment& compressed_data,
+                                                 const std::unique_ptr<BlockTrailer>& trailer,
+                                                 const std::shared_ptr<MemoryPool>& pool);
 
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,

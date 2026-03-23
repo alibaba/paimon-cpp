@@ -51,7 +51,7 @@ class PAIMON_EXPORT BloomFilter {
         return bit_set_;
     }
 
-    Status SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset = 0);
+    Status SetMemorySegment(MemorySegment segment, int32_t offset = 0);
 
     Status AddHash(int32_t hash1);
 

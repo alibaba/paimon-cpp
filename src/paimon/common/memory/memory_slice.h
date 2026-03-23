@@ -34,7 +34,7 @@ class MemorySliceInput;
 class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlice> {
  public:
     static std::shared_ptr<MemorySlice> Wrap(const std::shared_ptr<Bytes>& bytes);
-    static std::shared_ptr<MemorySlice> Wrap(const std::shared_ptr<MemorySegment>& segment);
+    static std::shared_ptr<MemorySlice> Wrap(const MemorySegment& segment);
 
     using SliceComparator = std::function<Result<int32_t>(const std::shared_ptr<MemorySlice>&,
                                                           const std::shared_ptr<MemorySlice>&)>;
@@ -42,13 +42,13 @@ class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlic
  public:
     MemorySlice() = default;
 
-    MemorySlice(const std::shared_ptr<MemorySegment>& segment, int32_t offset, int32_t length);
+    MemorySlice(const MemorySegment& segment, int32_t offset, int32_t length);
     std::shared_ptr<MemorySlice> Slice(int32_t index, int32_t length);
 
     int32_t Length() const;
     int32_t Offset() const;
     std::shared_ptr<Bytes> GetHeapMemory() const;
-    std::shared_ptr<MemorySegment> GetSegment() const;
+    const MemorySegment& GetSegment() const;
 
     int8_t ReadByte(int32_t position);
     int32_t ReadInt(int32_t position);
@@ -71,7 +71,7 @@ class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlic
     int32_t Compare(const MemorySlice& other) const;
 
  private:
-    std::shared_ptr<MemorySegment> segment_;
+    MemorySegment segment_;
     int32_t offset_;
     int32_t length_;
 };

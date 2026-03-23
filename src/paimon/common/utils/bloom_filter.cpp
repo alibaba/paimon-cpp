@@ -87,7 +87,7 @@ bool BloomFilter::TestHash(int32_t hash1) const {
     return true;
 }
 
-Status BloomFilter::SetMemorySegment(std::shared_ptr<MemorySegment> segment, int32_t offset) {
+Status BloomFilter::SetMemorySegment(MemorySegment segment, int32_t offset) {
     return bit_set_->SetMemorySegment(segment, offset);
 }
 

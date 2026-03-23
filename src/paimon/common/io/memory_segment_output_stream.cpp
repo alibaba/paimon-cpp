@@ -30,8 +30,7 @@ MemorySegmentOutputStream::MemorySegmentOutputStream(int32_t segment_size,
 }
 
 void MemorySegmentOutputStream::Advance() {
-    MemorySegment next_segment = NextSegment();
-    current_segment_ = std::make_shared<MemorySegment>(next_segment);
+    current_segment_ = NextSegment();
     position_in_segment_ = 0;
 }
 
@@ -61,7 +60,7 @@ void MemorySegmentOutputStream::Write(const char* data, uint32_t size) {
 void MemorySegmentOutputStream::Write(const MemorySegment& segment, int32_t offset, int32_t len) {
     int32_t remaining = segment_size_ - position_in_segment_;
     if (remaining >= len) {
-        segment.CopyTo(offset, current_segment_.get(), position_in_segment_, len);
+        segment.CopyTo(offset, &current_segment_, position_in_segment_, len);
         position_in_segment_ += len;
     } else {
         if (remaining == 0) {
@@ -70,7 +69,7 @@ void MemorySegmentOutputStream::Write(const MemorySegment& segment, int32_t offs
         }
         while (true) {
             int32_t to_put = std::min(remaining, len);
-            segment.CopyTo(offset, current_segment_.get(), position_in_segment_, to_put);
+            segment.CopyTo(offset, &current_segment_, position_in_segment_, to_put);
             offset += to_put;
             len -= to_put;
 

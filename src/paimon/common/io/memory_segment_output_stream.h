@@ -79,7 +79,7 @@ class PAIMON_EXPORT MemorySegmentOutputStream {
     int32_t segment_size_;
     int32_t position_in_segment_;
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<MemorySegment> current_segment_;
+    MemorySegment current_segment_;
     std::vector<MemorySegment> memory_segments_;
 
     ByteOrder byte_order_ = ByteOrder::PAIMON_BIG_ENDIAN;
@@ -88,7 +88,7 @@ class PAIMON_EXPORT MemorySegmentOutputStream {
 template <typename T>
 void MemorySegmentOutputStream::WriteValueImpl(T v) {
     if (position_in_segment_ <= segment_size_ - static_cast<int32_t>(sizeof(T))) {
-        current_segment_->PutValue<T>(position_in_segment_, v);
+        current_segment_.PutValue<T>(position_in_segment_, v);
         position_in_segment_ += sizeof(T);
     } else if (position_in_segment_ == segment_size_) {
         Advance();
