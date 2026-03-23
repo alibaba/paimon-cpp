@@ -231,6 +231,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/loser_tree.cpp
     core/mergetree/compact/merge_tree_compact_manager.cpp
     core/mergetree/compact/merge_tree_compact_rewriter.cpp
+    core/mergetree/compact/merge_tree_compact_task.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
     core/mergetree/compact/sort_merge_reader_with_min_heap.cpp
