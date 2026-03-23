@@ -15,6 +15,9 @@
  */
 
 #pragma once
+
+#include <atomic>
+
 #include "arrow/api.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/async_key_value_producer_and_consumer.h"
@@ -38,7 +41,8 @@ class MergeTreeCompactRewriter : public CompactRewriter {
         int32_t bucket, const BinaryRow& partition,
         const std::shared_ptr<TableSchema>& table_schema, DeletionVector::Factory dv_factory,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& memory_pool);
+        const CoreOptions& options, const std::shared_ptr<MemoryPool>& memory_pool,
+        const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     Result<CompactResult> Rewrite(int32_t output_level, bool drop_delete,
                                   const std::vector<std::vector<SortedRun>>& sections) override;
@@ -74,7 +78,8 @@ class MergeTreeCompactRewriter : public CompactRewriter {
                              const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
                              std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                              MergeFunctionWrapperFactory merge_function_wrapper_factory,
-                             const std::shared_ptr<MemoryPool>& pool);
+                             const std::shared_ptr<MemoryPool>& pool,
+                             const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     using KeyValueRollingFileWriter =
         RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>;
@@ -113,6 +118,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     DeletionVector::Factory dv_factory_;
     std::shared_ptr<FileStorePathFactoryCache> path_factory_cache_;
     MergeFunctionWrapperFactory merge_function_wrapper_factory_;
+    std::shared_ptr<std::atomic_bool> cancel_flag_;
 };
 
 }  // namespace paimon

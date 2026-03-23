@@ -16,6 +16,7 @@
 
 #include "paimon/core/operation/key_value_file_store_write.h"
 
+#include <atomic>
 #include <limits>
 #include <map>
 #include <optional>
@@ -160,9 +161,11 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         return std::make_shared<NoopCompactManager>();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactRewriter> rewriter,
-                           CreateRewriter(partition, bucket, key_comparator_,
-                                          user_defined_seq_comparator_, levels, dv_maintainer));
+    auto cancel_flag = std::make_shared<std::atomic_bool>(false);
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<CompactRewriter> rewriter,
+        CreateRewriter(partition, bucket, key_comparator_, user_defined_seq_comparator_, levels,
+                       dv_maintainer, cancel_flag));
     auto reporter =
         compaction_metrics_ ? compaction_metrics_->CreateReporter(partition, bucket) : nullptr;
 
@@ -172,7 +175,7 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
         /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
         options_.CompactionForceRewriteAllFiles(),
-        /*force_keep_delete=*/false);
+        /*force_keep_delete=*/false, cancel_flag);
 }
 
 Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
@@ -180,7 +183,8 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<Levels>& levels,
-    const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
+    const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
+    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
     (void)key_comparator;
     (void)user_defined_seq_comparator;
     (void)levels;
@@ -191,10 +195,10 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     } else if (lookup_strategy.need_lookup) {
         return Status::NotImplemented("not support lookup merge tree compact rewriter");
     } else {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MergeTreeCompactRewriter> rewriter,
-            MergeTreeCompactRewriter::Create(bucket, partition, table_schema_,
-                                             file_store_path_factory_, options_, pool_));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeTreeCompactRewriter> rewriter,
+                               MergeTreeCompactRewriter::Create(bucket, partition, table_schema_,
+                                                                file_store_path_factory_, options_,
+                                                                pool_, cancel_flag));
         return std::shared_ptr<CompactRewriter>(std::move(rewriter));
     }
 }

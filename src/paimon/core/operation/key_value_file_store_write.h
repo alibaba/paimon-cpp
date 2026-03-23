@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -93,7 +94,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<FieldsComparator>& key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
+        const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -44,7 +45,8 @@ class MergeTreeCompactManager : public CompactFutureManager {
                             const std::shared_ptr<CompactionMetrics::Reporter>& metrics_reporter,
                             const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                             bool lazy_gen_deletion_file, bool need_lookup,
-                            bool force_rewrite_all_files, bool force_keep_delete);
+                            bool force_rewrite_all_files, bool force_keep_delete,
+                            const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     ~MergeTreeCompactManager() override = default;
 
@@ -57,6 +59,8 @@ class MergeTreeCompactManager : public CompactFutureManager {
     std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const override;
 
     Status TriggerCompaction(bool full_compaction) override;
+
+    void CancelCompaction() override;
 
     Result<std::optional<std::shared_ptr<CompactResult>>> GetCompactionResult(
         bool blocking) override;
@@ -91,6 +95,7 @@ class MergeTreeCompactManager : public CompactFutureManager {
     bool need_lookup_;
     bool force_rewrite_all_files_;
     bool force_keep_delete_;
+    std::shared_ptr<std::atomic_bool> cancel_flag_;
     std::unique_ptr<Logger> logger_;
 };
 

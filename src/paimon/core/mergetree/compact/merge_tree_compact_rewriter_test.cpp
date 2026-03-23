@@ -16,6 +16,8 @@
 
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
+#include <atomic>
+
 #include "arrow/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
