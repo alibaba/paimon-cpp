@@ -102,4 +102,14 @@ const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compr
 const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
 const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
 const char Options::FILE_FORMAT_PER_LEVEL[] = "file.format.per.level";
+const char Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[] =
+    "compaction.max-size-amplification-percent";
+const char Options::COMPACTION_SIZE_RATIO[] = "compaction.size-ratio";
+const char Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER[] = "num-sorted-run.compaction-trigger";
+const char Options::NUM_SORTED_RUNS_STOP_TRIGGER[] = "num-sorted-run.stop-trigger";
+const char Options::NUM_LEVELS[] = "num-levels";
+const char Options::COMPACTION_FORCE_UP_LEVEL_0[] = "compaction.force-up-level-0";
+const char Options::LOOKUP_COMPACT[] = "lookup-compact";
+const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
+
 }  // namespace paimon

@@ -31,7 +31,7 @@ class CompactManager {
  public:
     virtual ~CompactManager() = default;
     /// Add a new file.
-    virtual void AddNewFile(const std::shared_ptr<DataFileMeta>& file) = 0;
+    virtual Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) = 0;
 
     virtual std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const = 0;
 

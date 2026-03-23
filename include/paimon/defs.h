@@ -203,6 +203,42 @@ struct PAIMON_EXPORT Options {
     /// "commit.max-retries" - Maximum number of retries when commit failed. Default value is 10.
     static const char COMMIT_MAX_RETRIES[];
 
+    /// "compaction.max-size-amplification-percent" - The size amplification is defined as the
+    /// amount (in percentage) of additional storage " needed to store a single byte of data in the
+    /// merge tree for changelog mode table. Default value is 200.
+    static const char COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[];
+
+    /// "compaction.size-ratio" - Percentage flexibility while comparing sorted run size for
+    /// changelog mode table. If the candidate sorted run(s) " size is 1% smaller than the next
+    /// sorted run's size, then include next sorted run into this candidate set. Default value is 1.
+    static const char COMPACTION_SIZE_RATIO[];
+
+    /// "num-sorted-run.compaction-trigger" - The sorted run number to trigger compaction. Includes
+    /// level0 files (one file one sorted run) and high-level runs (one level one sorted run).
+    /// Default value is 5.
+    static const char NUM_SORTED_RUNS_COMPACTION_TRIGGER[];
+
+    /// "num-sorted-run.stop-trigger" - The number of sorted runs that trigger the stopping of
+    /// writes, the default value is 'num-sorted-run.compaction-trigger' + 3.
+    static const char NUM_SORTED_RUNS_STOP_TRIGGER[];
+
+    /// "num-levels" - Total level number, for example, there are 3 levels, including 0,1,2 levels.
+    static const char NUM_LEVELS[];
+
+    /// "lookup-compact" - Lookup compact mode used for lookup compaction. Default value is
+    /// LookupCompactMode::RADICAL.
+    static const char LOOKUP_COMPACT[];
+
+    /// "compaction.force-up-level-0" - If set to true, compaction strategy will always include all
+    /// level 0 files in candidates. Default value is false.
+    static const char COMPACTION_FORCE_UP_LEVEL_0[];
+
+    /// "lookup-compact.max-interval" - The max interval for a gentle mode lookup compaction to be
+    /// triggered. For every interval, a forced lookup compaction will be performed to flush L0
+    /// files to higher level. This option is only valid when lookup-compact mode is gentle. No
+    /// default value.
+    static const char LOOKUP_COMPACT_MAX_INTERVAL[];
+
     /// "sequence.field" - The field that generates the sequence number for primary key table, the
     /// sequence number determines which data is the most recent. Value use "," as delimiter.
     static const char SEQUENCE_FIELD[];

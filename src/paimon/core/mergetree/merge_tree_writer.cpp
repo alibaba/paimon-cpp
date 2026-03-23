@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <unordered_set>
 #include <utility>
 
 #include "arrow/api.h"
@@ -67,7 +68,8 @@ MergeTreeWriter::MergeTreeWriter(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool)
+    const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
+    const std::shared_ptr<MemoryPool>& pool)
     : last_sequence_number_(last_sequence_number + 1),
       current_memory_in_bytes_(0),
       pool_(pool),
@@ -79,6 +81,7 @@ MergeTreeWriter::MergeTreeWriter(
       merge_function_wrapper_(merge_function_wrapper),
       schema_id_(schema_id),
       value_type_(arrow::struct_(value_schema->fields())),
+      compact_manager_(compact_manager),
       metrics_(std::make_shared<MetricsImpl>()) {
     write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 }
@@ -101,21 +104,114 @@ Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     batch_vec_.push_back(std::move(value_struct_array));
     row_kinds_vec_.push_back(batch->GetRowKind());
     if (current_memory_in_bytes_ >= options_.GetWriteBufferSize()) {
-        return Flush();
+        return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
+    }
+    return Status::OK();
+}
+
+Status MergeTreeWriter::Compact(bool full_compaction) {
+    return Flush(/*wait_for_latest_compaction=*/true, full_compaction);
+}
+
+Status MergeTreeWriter::Sync() {
+    return TrySyncLatestCompaction(/*blocking=*/true);
+}
+
+Status MergeTreeWriter::TrySyncLatestCompaction(bool blocking) {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<CompactResult>> result,
+                           compact_manager_->GetCompactionResult(blocking));
+    if (result) {
+        PAIMON_RETURN_NOT_OK(UpdateCompactResult(result.value()));
+    }
+    return Status::OK();
+}
+
+Status MergeTreeWriter::UpdateCompactResult(const std::shared_ptr<CompactResult>& compact_result) {
+    std::unordered_set<std::string> after_files;
+    after_files.reserve(compact_result->After().size());
+    for (const auto& file : compact_result->After()) {
+        after_files.insert(file->file_name);
+    }
+
+    auto in_compact_before = [this](const std::string& file_name) {
+        return std::any_of(compact_before_.begin(), compact_before_.end(),
+                           [&file_name](const std::shared_ptr<DataFileMeta>& meta) {
+                               return meta->file_name == file_name;
+                           });
+    };
+
+    for (const auto& file : compact_result->Before()) {
+        auto compact_after_it =
+            std::find_if(compact_after_.begin(), compact_after_.end(),
+                         [&file](const std::shared_ptr<DataFileMeta>& candidate) {
+                             return candidate->file_name == file->file_name;
+                         });
+        if (compact_after_it != compact_after_.end()) {
+            compact_after_.erase(compact_after_it);
+            // This is an intermediate file (not a new data file), which is no longer needed
+            // after compaction and can be deleted directly, but upgrade file is required by
+            // previous snapshot and following snapshot, so we should ensure:
+            // 1. This file is not the output of upgraded.
+            // 2. This file is not the input of upgraded.
+            if (!in_compact_before(file->file_name) &&
+                after_files.find(file->file_name) == after_files.end()) {
+                auto fs = options_.GetFileSystem();
+                [[maybe_unused]] auto s = fs->Delete(path_factory_->ToPath(file));
+            }
+        } else {
+            compact_before_.push_back(file);
+        }
+    }
+
+    compact_after_.insert(compact_after_.end(), compact_result->After().begin(),
+                          compact_result->After().end());
+    // TODO(yonghao.fyh): support compact changelog
+    return UpdateCompactDeletionFile(compact_result->DeletionFile());
+}
+
+Status MergeTreeWriter::UpdateCompactDeletionFile(
+    const std::shared_ptr<CompactDeletionFile>& new_deletion_file) {
+    if (new_deletion_file) {
+        if (compact_deletion_file_ == nullptr) {
+            compact_deletion_file_ = new_deletion_file;
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(compact_deletion_file_,
+                                   new_deletion_file->MergeOldFile(compact_deletion_file_));
+        }
     }
     return Status::OK();
 }
 
 Result<CommitIncrement> MergeTreeWriter::PrepareCommit(bool wait_compaction) {
     // TODO(xinyu.lxy): support wait_compaction
-    PAIMON_RETURN_NOT_OK(Flush());
+    PAIMON_RETURN_NOT_OK(Flush(wait_compaction, /*forced_full_compaction=*/false));
+    if (options_.CommitForceCompact()) {
+        wait_compaction = true;
+    }
+    // Decide again whether to wait here.
+    // For example, in the case of repeated failures in writing, it is possible that Level 0
+    // files were successfully committed, but failed to restart during the compaction phase,
+    // which may result in an increasing number of Level 0 files. This wait can avoid this
+    // situation.
+    if (compact_manager_->ShouldWaitForPreparingCheckpoint()) {
+        wait_compaction = true;
+    }
+    PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_compaction));
     return DrainIncrement();
 }
 
-Status MergeTreeWriter::Flush() {
+Result<bool> MergeTreeWriter::CompactNotCompleted() {
+    PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(/*full_compaction=*/false));
+    return compact_manager_->CompactNotCompleted();
+}
+
+Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_compaction) {
     if (batch_vec_.empty()) {
         return Status::OK();
     }
+    // TODO(yonghao.fyh): same as java?
+    wait_for_latest_compaction = compact_manager_->ShouldWaitForLatestCompaction();
+
     // 1. create key value iter for each record batch
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
     readers.reserve(batch_vec_.size());
@@ -161,17 +257,29 @@ Status MergeTreeWriter::Flush() {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
                            rolling_writer->GetResult());
     write_guard.Release();
-    new_files_.insert(new_files_.end(), flushed_files.begin(), flushed_files.end());
+
+    for (const auto& flushed_file : flushed_files) {
+        new_files_.emplace_back(flushed_file);
+        PAIMON_RETURN_NOT_OK(compact_manager_->AddNewFile(flushed_file));
+    }
     metrics_->Merge(rolling_writer->GetMetrics());
+    PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_for_latest_compaction));
+    PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(forced_full_compaction));
     return Status::OK();
 }
 
 Result<CommitIncrement> MergeTreeWriter::DrainIncrement() {
     DataIncrement data_increment(std::move(new_files_), std::move(deleted_files_), {});
-    CompactIncrement compact_increment({}, {}, {});
+    CompactIncrement compact_increment(std::move(compact_before_), std::move(compact_after_), {});
+    auto drain_deletion_file = compact_deletion_file_;
+
     new_files_.clear();
     deleted_files_.clear();
-    return CommitIncrement(data_increment, compact_increment, /*compact_deletion_file=*/nullptr);
+    compact_before_.clear();
+    compact_after_.clear();
+    compact_deletion_file_ = nullptr;
+
+    return CommitIncrement(data_increment, compact_increment, drain_deletion_file);
 }
 
 std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>

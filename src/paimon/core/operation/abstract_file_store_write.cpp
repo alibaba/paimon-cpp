@@ -187,8 +187,9 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AbstractFileStoreWrite::Prep
             auto compact_deletion_file = increment.GetCompactDeletionFile();
             auto& compact_increment = increment.GetCompactIncrement();
             if (compact_deletion_file) {
-                std::optional<std::shared_ptr<IndexFileMeta>> dv_index_file_meta =
-                    compact_deletion_file->GetOrCompute();
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::optional<std::shared_ptr<IndexFileMeta>> dv_index_file_meta,
+                    compact_deletion_file->GetOrCompute());
                 if (dv_index_file_meta) {
                     compact_increment.AddNewIndexFiles({dv_index_file_meta.value()});
                 }

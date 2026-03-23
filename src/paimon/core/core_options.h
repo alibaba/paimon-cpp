@@ -27,6 +27,7 @@
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
+#include "paimon/core/options/lookup_compact_mode.h"
 #include "paimon/core/options/lookup_strategy.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
@@ -84,9 +85,17 @@ class PAIMON_EXPORT CoreOptions {
 
     bool CommitForceCompact() const;
     bool CompactionForceRewriteAllFiles() const;
+    bool CompactionForceUpLevel0() const;
     int64_t GetCommitTimeout() const;
     int32_t GetCommitMaxRetries() const;
     int32_t GetCompactionMinFileNum() const;
+    int32_t GetCompactionMaxSizeAmplificationPercent() const;
+    int32_t GetCompactionSizeRatio() const;
+    int32_t GetNumSortedRunsCompactionTrigger() const;
+    int32_t GetNumSortedRunsStopTrigger() const;
+    int32_t GetNumLevels() const;
+    LookupCompactMode GetLookupCompactMode() const;
+    int32_t GetLookupCompactMaxInterval() const;
 
     const std::vector<std::string>& GetSequenceField() const;
     bool SequenceFieldSortOrderIsAscending() const;
@@ -102,8 +111,9 @@ class PAIMON_EXPORT CoreOptions {
     bool DeletionVectorsBitmap64() const;
     int64_t DeletionVectorTargetFileSize() const;
     ChangelogProducer GetChangelogProducer() const;
-    bool NeedLookup() const;
     LookupStrategy GetLookupStrategy() const;
+
+    bool NeedLookup() const;
     bool FileIndexReadEnabled() const;
 
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;

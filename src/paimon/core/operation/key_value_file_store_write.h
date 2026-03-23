@@ -37,9 +37,13 @@ class FieldsComparator;
 class FileStoreScan;
 class ScanFilter;
 class BinaryRow;
+class CompactStrategy;
+class CompactManager;
+class CompactRewriter;
 class CoreOptions;
 class Executor;
 class FileStorePathFactory;
+class Levels;
 class MemoryPool;
 class SchemaManager;
 class SnapshotManager;
@@ -59,6 +63,7 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
         const std::shared_ptr<FieldsComparator>& key_comparator,
+        const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
         const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
@@ -75,8 +80,26 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
+    std::shared_ptr<CompactStrategy> CreateCompactStrategy(const CoreOptions& options) const;
+
+    Result<std::shared_ptr<CompactManager>> CreateCompactManager(
+        const BinaryRow& partition, int32_t bucket,
+        const std::shared_ptr<CompactStrategy>& compact_strategy,
+        const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
+
+    Result<std::shared_ptr<CompactRewriter>> CreateRewriter(
+        const BinaryRow& partition, int32_t bucket,
+        const std::shared_ptr<FieldsComparator>& key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
+
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;
+    // key_comparator_for_compact_ uses use_view=false, safe to compare BinaryRow
+    // min_key/max_key stored in DataFileMeta (not backed by a live Arrow buffer).
+    std::shared_ptr<FieldsComparator> key_comparator_for_compact_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
     std::unique_ptr<Logger> logger_;

@@ -29,6 +29,7 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/options/expire_config.h"
+#include "paimon/core/options/lookup_strategy.h"
 #include "paimon/core/options/sort_order.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/defs.h"
@@ -159,6 +160,22 @@ class ConfigParser {
                 *sort_order = SortOrder::DESCENDING;
             } else {
                 return Status::Invalid(fmt::format("invalid sort order: {}", str));
+            }
+        }
+        return Status::OK();
+    }
+
+    // Parse LookupCompactMode
+    Status ParseLookupCompactMode(LookupCompactMode* mode) {
+        auto iter = config_map_.find(Options::LOOKUP_COMPACT);
+        if (iter != config_map_.end()) {
+            std::string str = StringUtils::ToLowerCase(iter->second);
+            if (str == "radical") {
+                *mode = LookupCompactMode::RADICAL;
+            } else if (str == "gentle") {
+                *mode = LookupCompactMode::GENTLE;
+            } else {
+                return Status::Invalid(fmt::format("invalid lookup mode: {}", str));
             }
         }
         return Status::OK();
@@ -331,12 +348,19 @@ struct CoreOptions::Impl {
     int32_t write_batch_size = 1024;
     int32_t commit_max_retries = 10;
     int32_t compaction_min_file_num = 5;
+    int32_t compaction_max_size_amplification_percent = 200;
+    int32_t compaction_size_ratio = 1;
+    int32_t num_sorted_runs_compaction_trigger = 5;
+    std::optional<int32_t> num_sorted_runs_stop_trigger;
+    std::optional<int32_t> num_levels;
 
     SortOrder sequence_field_sort_order = SortOrder::ASCENDING;
     MergeEngine merge_engine = MergeEngine::DEDUPLICATE;
     SortEngine sort_engine = SortEngine::LOSER_TREE;
     ChangelogProducer changelog_producer = ChangelogProducer::NONE;
     ExternalPathStrategy external_path_strategy = ExternalPathStrategy::NONE;
+    LookupCompactMode lookup_compact_mode = LookupCompactMode::RADICAL;
+    std::optional<int32_t> lookup_compact_max_interval;
 
     int32_t file_compression_zstd_level = 1;
 
@@ -355,6 +379,7 @@ struct CoreOptions::Impl {
     bool global_index_enabled = true;
     bool commit_force_compact = false;
     bool compaction_force_rewrite_all_files = false;
+    bool compaction_force_up_level_0 = false;
     std::optional<std::string> global_index_external_path;
 
     std::optional<std::string> scan_tag_name;
@@ -571,6 +596,10 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::COMPACTION_FORCE_REWRITE_ALL_FILES,
                                             &impl->compaction_force_rewrite_all_files));
 
+    // Parse compaction.force-up-level-0
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::COMPACTION_FORCE_UP_LEVEL_0,
+                                            &impl->compaction_force_up_level_0));
+
     // Parse compaction.optimization-interval
     std::string optimized_compaction_interval_str;
     PAIMON_RETURN_NOT_OK(parser.ParseString(Options::COMPACTION_OPTIMIZATION_INTERVAL,
@@ -631,6 +660,21 @@ Result<CoreOptions> CoreOptions::FromMap(
 
     // parse file.format.per.level
     PAIMON_RETURN_NOT_OK(parser.ParseFileFormatPerLevel(&impl->file_format_per_level));
+
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT,
+                                               &impl->compaction_max_size_amplification_percent));
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<int32_t>(Options::COMPACTION_SIZE_RATIO, &impl->compaction_size_ratio));
+
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER,
+                                               &impl->num_sorted_runs_compaction_trigger));
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_SORTED_RUNS_STOP_TRIGGER,
+                                               &impl->num_sorted_runs_stop_trigger));
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_LEVELS, &impl->num_levels));
+
+    PAIMON_RETURN_NOT_OK(parser.ParseLookupCompactMode(&impl->lookup_compact_mode));
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse(Options::LOOKUP_COMPACT_MAX_INTERVAL, &impl->lookup_compact_max_interval));
     return options;
 }
 
@@ -772,6 +816,70 @@ int32_t CoreOptions::GetCompactionMinFileNum() const {
     return impl_->compaction_min_file_num;
 }
 
+int32_t CoreOptions::GetCompactionMaxSizeAmplificationPercent() const {
+    return impl_->compaction_max_size_amplification_percent;
+}
+
+int32_t CoreOptions::GetCompactionSizeRatio() const {
+    return impl_->compaction_size_ratio;
+}
+
+int32_t CoreOptions::GetNumSortedRunsCompactionTrigger() const {
+    return impl_->num_sorted_runs_compaction_trigger;
+}
+
+int32_t CoreOptions::GetNumSortedRunsStopTrigger() const {
+    int32_t compact_trigger = GetNumSortedRunsCompactionTrigger();
+    int32_t stop_trigger = 0;
+    if (impl_->num_sorted_runs_stop_trigger.has_value()) {
+        stop_trigger = impl_->num_sorted_runs_stop_trigger.value();
+    } else {
+        int64_t computed = static_cast<int64_t>(compact_trigger) + 3;
+        if (computed > std::numeric_limits<int32_t>::max()) {
+            computed = std::numeric_limits<int32_t>::max();
+        }
+        stop_trigger = static_cast<int32_t>(computed);
+    }
+    return std::max(compact_trigger, stop_trigger);
+}
+
+int32_t CoreOptions::GetNumLevels() const {
+    // By default, this ensures that the compaction does not fall to level 0, but at least to
+    // level 1
+    if (impl_->num_levels.has_value()) {
+        return impl_->num_levels.value();
+    }
+
+    int64_t incremented = static_cast<int64_t>(GetNumSortedRunsCompactionTrigger()) + 1;
+    if (incremented > std::numeric_limits<int32_t>::max()) {
+        incremented = std::numeric_limits<int32_t>::max();
+    }
+    return static_cast<int32_t>(incremented);
+}
+
+LookupCompactMode CoreOptions::GetLookupCompactMode() const {
+    return impl_->lookup_compact_mode;
+}
+
+int32_t CoreOptions::GetLookupCompactMaxInterval() const {
+    int32_t compact_trigger = GetNumSortedRunsCompactionTrigger();
+    int32_t max_interval = compact_trigger;
+    if (impl_->lookup_compact_max_interval.has_value()) {
+        max_interval = impl_->lookup_compact_max_interval.value();
+    } else {
+        int64_t doubled = static_cast<int64_t>(compact_trigger) * 2;
+        if (doubled > std::numeric_limits<int32_t>::max()) {
+            doubled = std::numeric_limits<int32_t>::max();
+        }
+        max_interval = static_cast<int32_t>(doubled);
+    }
+
+    if (max_interval < compact_trigger) {
+        max_interval = compact_trigger;
+    }
+    return max_interval;
+}
+
 const ExpireConfig& CoreOptions::GetExpireConfig() const {
     return impl_->expire_config;
 }
@@ -845,6 +953,14 @@ ChangelogProducer CoreOptions::GetChangelogProducer() const {
     return impl_->changelog_producer;
 }
 
+LookupStrategy CoreOptions::GetLookupStrategy() const {
+    return LookupStrategy::From(
+        /*is_first_row=*/GetMergeEngine() == MergeEngine::FIRST_ROW,
+        /*produce_changelog=*/GetChangelogProducer() == ChangelogProducer::LOOKUP,
+        /*deletion_vector=*/DeletionVectorsEnabled(),
+        /*force_lookup=*/impl_->force_lookup);
+}
+
 const std::map<std::string, std::string>& CoreOptions::ToMap() const {
     return impl_->raw_options;
 }
@@ -853,14 +969,12 @@ bool CoreOptions::NeedLookup() const {
     return GetLookupStrategy().need_lookup;
 }
 
-LookupStrategy CoreOptions::GetLookupStrategy() const {
-    return {GetMergeEngine() == MergeEngine::FIRST_ROW,
-            GetChangelogProducer() == ChangelogProducer::LOOKUP, DeletionVectorsEnabled(),
-            impl_->force_lookup};
-}
-
 bool CoreOptions::CompactionForceRewriteAllFiles() const {
     return impl_->compaction_force_rewrite_all_files;
+}
+
+bool CoreOptions::CompactionForceUpLevel0() const {
+    return impl_->compaction_force_up_level_0;
 }
 
 std::map<std::string, std::string> CoreOptions::GetFieldsSequenceGroups() const {

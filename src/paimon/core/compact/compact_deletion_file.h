@@ -37,7 +37,11 @@ class CompactDeletionFile {
     static Result<std::shared_ptr<CompactDeletionFile>> GenerateFiles(
         const std::shared_ptr<BucketedDvMaintainer>& maintainer);
 
-    virtual std::optional<std::shared_ptr<IndexFileMeta>> GetOrCompute() = 0;
+    /// For sync compaction, only create deletion files when prepare commit.
+    static Result<std::shared_ptr<CompactDeletionFile>> LazyGeneration(
+        const std::shared_ptr<BucketedDvMaintainer>& maintainer);
+
+    virtual Result<std::optional<std::shared_ptr<IndexFileMeta>>> GetOrCompute() = 0;
 
     virtual Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
         const std::shared_ptr<CompactDeletionFile>& old) = 0;
@@ -53,7 +57,7 @@ class GeneratedDeletionFile : public CompactDeletionFile,
                           const std::shared_ptr<DeletionVectorsIndexFile>& dv_index_file)
         : deletion_file_(deletion_file), dv_index_file_(dv_index_file) {}
 
-    std::optional<std::shared_ptr<IndexFileMeta>> GetOrCompute() override {
+    Result<std::optional<std::shared_ptr<IndexFileMeta>>> GetOrCompute() override {
         get_invoked_ = true;
         return deletion_file_ ? std::optional<std::shared_ptr<IndexFileMeta>>(deletion_file_)
                               : std::nullopt;
@@ -87,12 +91,50 @@ class GeneratedDeletionFile : public CompactDeletionFile,
     bool get_invoked_ = false;
 };
 
+/// A lazy generation implementation of `CompactDeletionFile`.
+class LazyCompactDeletionFile : public CompactDeletionFile,
+                                public std::enable_shared_from_this<LazyCompactDeletionFile> {
+ public:
+    explicit LazyCompactDeletionFile(const std::shared_ptr<BucketedDvMaintainer>& maintainer)
+        : maintainer_(maintainer) {}
+
+    Result<std::optional<std::shared_ptr<IndexFileMeta>>> GetOrCompute() override {
+        generated_ = true;
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactDeletionFile> generated,
+                               CompactDeletionFile::GenerateFiles(maintainer_));
+        return generated->GetOrCompute();
+    }
+
+    Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
+        const std::shared_ptr<CompactDeletionFile>& old) override {
+        auto derived = dynamic_cast<LazyCompactDeletionFile*>(old.get());
+        if (derived == nullptr) {
+            return Status::Invalid("old should be a LazyCompactDeletionFile, but it is not");
+        }
+        if (derived->generated_) {
+            return Status::Invalid("old should not be generated, this is a bug.");
+        }
+        return shared_from_this();
+    }
+
+    void Clean() override {}
+
+ private:
+    std::shared_ptr<BucketedDvMaintainer> maintainer_;
+    bool generated_ = false;
+};
+
 inline Result<std::shared_ptr<CompactDeletionFile>> CompactDeletionFile::GenerateFiles(
     const std::shared_ptr<BucketedDvMaintainer>& maintainer) {
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<IndexFileMeta>> file,
                            maintainer->WriteDeletionVectorsIndex());
     return std::make_shared<GeneratedDeletionFile>(file.value_or(nullptr),
                                                    maintainer->DvIndexFile());
+}
+
+inline Result<std::shared_ptr<CompactDeletionFile>> CompactDeletionFile::LazyGeneration(
+    const std::shared_ptr<BucketedDvMaintainer>& maintainer) {
+    return std::make_shared<LazyCompactDeletionFile>(maintainer);
 }
 
 }  // namespace paimon

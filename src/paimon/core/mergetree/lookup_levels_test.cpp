@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
@@ -51,6 +52,7 @@ class LookupLevelsTest : public testing::Test {
         tmp_dir_ = UniqueTestDirectory::Create("local");
         dir_ = UniqueTestDirectory::Create("local");
         fs_ = dir_->GetFileSystem();
+        noop_compact_manager_ = std::make_shared<NoopCompactManager>();
     }
 
     void TearDown() override {}
@@ -77,7 +79,7 @@ class LookupLevelsTest : public testing::Test {
             /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
             data_path_factory, key_comparator,
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, pool_);
+            arrow_schema_, options, noop_compact_manager_, pool_);
 
         // write data
         ArrowArray c_src_array;
@@ -163,6 +165,7 @@ class LookupLevelsTest : public testing::Test {
     std::unique_ptr<UniqueTestDirectory> tmp_dir_;
     std::unique_ptr<UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
+    std::shared_ptr<NoopCompactManager> noop_compact_manager_;
 };
 
 TEST_F(LookupLevelsTest, TestMultiLevels) {

@@ -32,7 +32,10 @@ class NoopCompactManager : public CompactManager {
     NoopCompactManager() = default;
     ~NoopCompactManager() override = default;
 
-    void AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {}
+    Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {
+        (void)file;
+        return Status::OK();
+    }
 
     std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const override {
         static std::vector<std::shared_ptr<DataFileMeta>> empty;

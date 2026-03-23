@@ -88,8 +88,9 @@ class BucketedAppendCompactManager : public CompactFutureManager {
         return false;
     }
 
-    void AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {
+    Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {
         to_compact_.push(file);
+        return Status::OK();
     }
 
     std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const override;

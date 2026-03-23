@@ -16,14 +16,23 @@
 
 #include "paimon/core/operation/key_value_file_store_write.h"
 
+#include <limits>
+#include <map>
 #include <optional>
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/utils/string_utils.h"
+#include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/mergetree/compact/force_up_level0_compaction.h"
+#include "paimon/core/mergetree/compact/merge_tree_compact_manager.h"
+#include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
+#include "paimon/core/mergetree/compact/universal_compaction.h"
+#include "paimon/core/mergetree/levels.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/key_value_file_store_scan.h"
@@ -55,6 +64,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
     const std::shared_ptr<FieldsComparator>& key_comparator,
+    const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
@@ -66,6 +76,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
                              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check,
                              executor, pool),
       key_comparator_(key_comparator),
+      key_comparator_for_compact_(key_comparator_for_compact),
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
       logger_(Logger::GetLogger("KeyValueFileStoreWrite")) {}
@@ -99,11 +110,93 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema_->TrimmedPrimaryKeys());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<Levels> levels,
+        Levels::Create(key_comparator_for_compact_, restore_data_files, options_.GetNumLevels()));
+    auto compact_strategy = CreateCompactStrategy(options_);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactManager> compact_manager,
+                           CreateCompactManager(partition, bucket, compact_strategy,
+                                                compact_executor_, levels, dv_maintainer));
+
     auto writer = std::make_shared<MergeTreeWriter>(
         restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
         user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
-        options_, pool_);
+        options_, compact_manager, pool_);
     return std::shared_ptr<BatchWriter>(writer);
+}
+
+std::shared_ptr<CompactStrategy> KeyValueFileStoreWrite::CreateCompactStrategy(
+    const CoreOptions& options) const {
+    auto universal = std::make_shared<UniversalCompaction>(
+        options.GetCompactionMaxSizeAmplificationPercent(), options.GetCompactionSizeRatio(),
+        options.GetNumSortedRunsCompactionTrigger(), EarlyFullCompaction::Create(options),
+        OffPeakHours::Create(options));
+
+    if (options.NeedLookup()) {
+        std::optional<int32_t> compact_max_interval = std::nullopt;
+        switch (options.GetLookupCompactMode()) {
+            case LookupCompactMode::GENTLE:
+                compact_max_interval = options.GetLookupCompactMaxInterval();
+                break;
+            case LookupCompactMode::RADICAL:
+                break;
+        }
+        return std::make_shared<ForceUpLevel0Compaction>(universal, compact_max_interval);
+    }
+
+    if (options.CompactionForceUpLevel0()) {
+        return std::make_shared<ForceUpLevel0Compaction>(universal,
+                                                         /*max_compact_interval=*/std::nullopt);
+    }
+    return universal;
+}
+
+Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactManager(
+    const BinaryRow& partition, int32_t bucket,
+    const std::shared_ptr<CompactStrategy>& compact_strategy,
+    const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
+    const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
+    if (options_.WriteOnly()) {
+        return std::make_shared<NoopCompactManager>();
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactRewriter> rewriter,
+                           CreateRewriter(partition, bucket, key_comparator_,
+                                          user_defined_seq_comparator_, levels, dv_maintainer));
+    auto reporter =
+        compaction_metrics_ ? compaction_metrics_->CreateReporter(partition, bucket) : nullptr;
+
+    return std::make_shared<MergeTreeCompactManager>(
+        compact_executor, levels, compact_strategy, key_comparator_for_compact_,
+        options_.GetCompactionFileSize(/*has_primary_key=*/true),
+        options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
+        /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
+        options_.CompactionForceRewriteAllFiles(),
+        /*force_keep_delete=*/false);
+}
+
+Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
+    const BinaryRow& partition, int32_t bucket,
+    const std::shared_ptr<FieldsComparator>& key_comparator,
+    const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+    const std::shared_ptr<Levels>& levels,
+    const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
+    (void)key_comparator;
+    (void)user_defined_seq_comparator;
+    (void)levels;
+    LookupStrategy lookup_strategy = options_.GetLookupStrategy();
+    ChangelogProducer changelog_producer = options_.GetChangelogProducer();
+    if (changelog_producer == ChangelogProducer::FULL_COMPACTION) {
+        return Status::NotImplemented("not support full changelog merge tree compact rewriter");
+    } else if (lookup_strategy.need_lookup) {
+        return Status::NotImplemented("not support lookup merge tree compact rewriter");
+    } else {
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<MergeTreeCompactRewriter> rewriter,
+            MergeTreeCompactRewriter::Create(bucket, partition, table_schema_,
+                                             file_store_path_factory_, options_, pool_));
+        return std::shared_ptr<CompactRewriter>(std::move(rewriter));
+    }
 }
 
 }  // namespace paimon

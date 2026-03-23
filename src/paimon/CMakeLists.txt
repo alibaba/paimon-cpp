@@ -229,6 +229,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
     core/mergetree/compact/loser_tree.cpp
+    core/mergetree/compact/merge_tree_compact_manager.cpp
     core/mergetree/compact/merge_tree_compact_rewriter.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
@@ -510,6 +511,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
                     core/core_options_test.cpp
+                    core/options/lookup_strategy_test.cpp
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
                     core/deletionvectors/bitmap_deletion_vector_test.cpp
                     core/deletionvectors/bucketed_dv_maintainer_test.cpp
@@ -577,6 +579,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/universal_compaction_test.cpp
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
+                    core/mergetree/compact/merge_tree_compact_manager_test.cpp
                     core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
                     core/mergetree/lookup/persist_processor_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
