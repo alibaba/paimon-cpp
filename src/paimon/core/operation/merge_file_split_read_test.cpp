@@ -340,10 +340,10 @@ class MergeFileSplitReadTest : public ::testing::Test,
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-                core_options.GetPartitionDefaultName(),
-                core_options.GetWriteFileFormat()->Identifier(), core_options.DataFilePrefix(),
-                core_options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, core_options.IndexFileInDataFileDir(), pool_));
+                core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
+                core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+                external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+                pool_));
         PAIMON_ASSIGN_OR_RAISE(auto split_read,
                                MergeFileSplitRead::Create(path_factory, std::move(internal_context),
                                                           pool_, executor_));

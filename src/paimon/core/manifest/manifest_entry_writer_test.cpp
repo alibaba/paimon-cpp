@@ -88,7 +88,7 @@ class ManifestEntryWriterTest : public ::testing::Test {
 
         EXPECT_OK_AND_ASSIGN(CoreOptions options,
                              CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
-        auto file_format = options.GetWriteFileFormat();
+        auto file_format = options.GetWriteFileFormat(/*level=*/0);
         std::shared_ptr<arrow::DataType> data_type =
             VersionedObjectSerializer<ManifestEntry>::VersionType(ManifestEntry::DataType());
         ArrowSchema arrow_schema;

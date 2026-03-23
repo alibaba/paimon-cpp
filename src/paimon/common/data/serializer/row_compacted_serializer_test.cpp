@@ -506,6 +506,38 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal2) {
     }
 }
 
+TEST(RowCompactedSerializerTest, TestListType) {
+    auto pool = GetDefaultPool();
+    // prepare data
+    auto inner_child1 = arrow::field("inner1", arrow::list(arrow::int32()));
+    auto arrow_type = arrow::struct_({inner_child1});
+    // each inner child per row
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(arrow_type,
+                                                                                    R"([
+[[5, 6, 7]],
+[[1, 2, 3]],
+[[4]]
+    ])")
+                                              .ValueOrDie();
+    auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
+    ASSERT_TRUE(struct_array);
+    auto columnar_row =
+        std::make_shared<ColumnarRow>(/*struct_array=*/nullptr, struct_array->fields(), pool,
+                                      /*row_id=*/0);
+
+    // serialize and deserialize
+    ASSERT_OK_AND_ASSIGN(auto serializer,
+                         RowCompactedSerializer::Create(arrow::schema(arrow_type->fields()), pool));
+    ASSERT_OK_AND_ASSIGN(auto bytes, serializer->SerializeToBytes(*columnar_row));
+    ASSERT_OK_AND_ASSIGN(auto row, serializer->Deserialize(bytes));
+
+    // check result
+    ASSERT_EQ(row->GetFieldCount(), 1);
+
+    // for inner_child1
+    ASSERT_EQ(row->GetArray(0)->ToIntArray().value(), std::vector<int32_t>({5, 6, 7}));
+}
+
 TEST(RowCompactedSerializerTest, TestSliceComparator) {
     auto pool = GetDefaultPool();
     arrow::FieldVector fields = {

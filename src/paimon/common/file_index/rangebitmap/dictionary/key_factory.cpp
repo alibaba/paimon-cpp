@@ -57,7 +57,7 @@ Result<std::unique_ptr<Chunk>> FixedLengthKeyFactory::CreateChunk(
     const std::shared_ptr<MemoryPool>& pool) {
     auto keys_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
-    PAIMON_ASSIGN_OR_RAISE(auto serializer,
+    PAIMON_ASSIGN_OR_RAISE(LiteralSerDeUtils::Serializer serializer,
                            LiteralSerDeUtils::CreateValueWriter(this->GetFieldType()));
     return std::make_unique<FixedLengthChunk>(key, code, keys_length_limit,
                                               this->shared_from_this(), this->GetFieldSize(),

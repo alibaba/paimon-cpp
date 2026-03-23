@@ -23,7 +23,7 @@ std::shared_ptr<CacheKey> CacheKey::ForPosition(const std::string& file_path, in
     return std::make_shared<PositionCacheKey>(file_path, position, length, is_index);
 }
 
-bool PositionCacheKey::IsIndex() {
+bool PositionCacheKey::IsIndex() const {
     return is_index_;
 }
 

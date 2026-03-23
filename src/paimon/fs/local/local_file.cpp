@@ -148,7 +148,7 @@ Result<uint64_t> LocalFile::Length() const {
 
 Result<int64_t> LocalFile::LastModifiedTimeMs() const {
     CHECK_HOOK();
-    PAIMON_ASSIGN_OR_RAISE(auto file_status, GetFileStatus());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFileStatus> file_status, GetFileStatus());
     return file_status->GetModificationTime();
 }
 

@@ -125,7 +125,7 @@ class ManifestFileMergerTest : public testing::Test {
             static std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 path_str, schema, /*partition_keys=*/{"f0"}, options.GetPartitionDefaultName(),
-                options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
+                options.GetFileFormat()->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> partition_schema,

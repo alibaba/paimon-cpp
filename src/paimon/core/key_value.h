@@ -38,7 +38,7 @@ struct KeyValue {
     KeyValue() = default;
 
     KeyValue(const RowKind* _value_kind, int64_t _sequence_number, int32_t _level,
-             std::shared_ptr<InternalRow>&& _key, std::unique_ptr<InternalRow>&& _value)
+             std::shared_ptr<InternalRow> _key, std::unique_ptr<InternalRow> _value)
         : value_kind(_value_kind),
           sequence_number(_sequence_number),
           level(_level),

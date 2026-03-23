@@ -32,7 +32,7 @@ class CacheKey {
  public:
     virtual ~CacheKey() = default;
 
-    virtual bool IsIndex() = 0;
+    virtual bool IsIndex() const = 0;
 };
 
 class PositionCacheKey : public CacheKey {
@@ -40,7 +40,7 @@ class PositionCacheKey : public CacheKey {
     PositionCacheKey(const std::string& file_path, int64_t position, int32_t length, bool is_index)
         : file_path_(file_path), position_(position), length_(length), is_index_(is_index) {}
 
-    bool IsIndex() override;
+    bool IsIndex() const override;
 
     int64_t Position() const;
     int32_t Length() const;

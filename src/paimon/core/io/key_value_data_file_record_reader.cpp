@@ -38,13 +38,13 @@ namespace paimon {
 class MemoryPool;
 
 KeyValueDataFileRecordReader::KeyValueDataFileRecordReader(
-    std::unique_ptr<FileBatchReader>&& reader, int32_t key_arity,
+    std::unique_ptr<FileBatchReader>&& reader, const std::shared_ptr<arrow::Schema>& key_schema,
     const std::shared_ptr<arrow::Schema>& value_schema, int32_t level,
     const std::shared_ptr<MemoryPool>& pool)
-    : key_arity_(key_arity),
-      level_(level),
+    : level_(level),
       pool_(pool),
       reader_(std::move(reader)),
+      key_schema_(key_schema),
       value_schema_(value_schema),
       value_names_(value_schema_->field_names()) {}
 
@@ -117,11 +117,10 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
         return Status::Invalid("cannot cast VALUE_KIND column to int8 arrow array");
     }
     arrow::ArrayVector key_fields;
-    key_fields.reserve(key_arity_);
-    for (int32_t i = 0; i < key_arity_; i++) {
+    key_fields.reserve(key_schema_->num_fields());
+    for (const auto& key_field : key_schema_->fields()) {
         // skip special fields
-        key_fields.emplace_back(
-            data_batch->field(i + SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT));
+        key_fields.emplace_back(data_batch->GetFieldByName(key_field->name()));
     }
     // e.g., file schema:    seq, kind, key1, key2, s1, s2, v1, v2
     // user raw read schema: key1, v1, s1

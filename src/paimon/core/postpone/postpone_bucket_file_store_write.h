@@ -71,12 +71,13 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
 
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<FileStorePathFactory> file_store_path_factory,
-            FileStorePathFactory::Create(
-                root_path, schema, table_schema->PartitionKeys(),
-                new_options.GetPartitionDefaultName(),
-                new_options.GetWriteFileFormat()->Identifier(), new_options.DataFilePrefix(),
-                new_options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, new_options.IndexFileInDataFileDir(), pool));
+            FileStorePathFactory::Create(root_path, schema, table_schema->PartitionKeys(),
+                                         new_options.GetPartitionDefaultName(),
+                                         new_options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                                         new_options.DataFilePrefix(),
+                                         new_options.LegacyPartitionNameEnabled(), external_paths,
+                                         global_index_external_path,
+                                         new_options.IndexFileInDataFileDir(), pool));
 
         // Ignoring previous files saves scanning time.
         // For postpone bucket tables, we only append new files to bucket = -2 directories.

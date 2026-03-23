@@ -121,7 +121,7 @@ class ExpireSnapshotsTest : public testing::Test {
             auto path_factory,
             FileStorePathFactory::Create(
                 root, schema_, partition_keys_, options.GetPartitionDefaultName(),
-                options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
+                options.GetFileFormat()->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), mem_pool_));
         return path_factory;

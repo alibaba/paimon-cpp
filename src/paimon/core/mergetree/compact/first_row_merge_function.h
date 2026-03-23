@@ -36,6 +36,10 @@ class FirstRowMergeFunction : public MergeFunction {
         contains_high_level_ = false;
     }
 
+    bool ContainsHighLevel() const {
+        return contains_high_level_;
+    }
+
     Status Add(KeyValue&& moved_kv) override {
         KeyValue kv = std::move(moved_kv);
         if (kv.value_kind->IsRetract()) {

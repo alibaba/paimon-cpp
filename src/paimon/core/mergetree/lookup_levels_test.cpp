@@ -128,7 +128,7 @@ class LookupLevelsTest : public testing::Test {
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 table_path, arrow_schema_, /*partition_keys=*/{}, options.GetPartitionDefaultName(),
-                options.GetWriteFileFormat()->Identifier(), options.DataFilePrefix(),
+                options.GetFileFormat()->Identifier(), options.DataFilePrefix(),
                 options.LegacyPartitionNameEnabled(), external_paths, global_index_external_path,
                 options.IndexFileInDataFileDir(), pool_));
         return path_factory;
@@ -141,8 +141,6 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
         auto io_manager = IOManager::Create(tmp_dir_->Str());
-
-        auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
         auto processor_factory =
             std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
@@ -218,6 +216,16 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
     ASSERT_EQ(lookup_levels->schema_id_and_ser_version_to_processors_.size(), 1);
     ASSERT_EQ(lookup_levels->GetLevels()->NonEmptyHighestLevel(), 2);
+
+    // test lookup file in tmp dir
+    std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_EQ(file_status_list.size(), 2);
+    // test close will rm local lookup file
+    ASSERT_OK(lookup_levels->Close());
+    file_status_list.clear();
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_TRUE(file_status_list.empty());
     // TODO(lisizhuo.lsz): test lookuplevels close
 }
 
@@ -429,6 +437,62 @@ TEST_F(LookupLevelsTest, TestWithPosistion) {
                                                /*start_level=*/1));
     ASSERT_TRUE(positioned_kv);
     ASSERT_EQ(positioned_kv.value().row_position, 2);
+
+    // no exists
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({4}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_FALSE(positioned_kv);
+}
+
+TEST_F(LookupLevelsTest, TestLevelsWithValueFieldAppearBeforeKey) {
+    arrow::FieldVector fields = {
+        arrow::field("value", arrow::int32()),
+        arrow::field("key", arrow::int32()),
+    };
+    arrow_schema_ = arrow::schema(fields);
+    key_schema_ = arrow::schema({fields[1]});
+
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[11, 1], [33, 3], [5, 5]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
+                                              core_options, "[[22, 2], [55, 5]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+
+    // only in level 1
+    ASSERT_OK_AND_ASSIGN(auto positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 11);
+
+    // only in level 2
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 4);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 2);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 22);
+
+    // both in level 1 and level 2
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({5}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_EQ(positioned_kv.value().key_value.sequence_number, 3);
+    ASSERT_EQ(positioned_kv.value().key_value.level, 1);
+    ASSERT_EQ(positioned_kv.value().key_value.value->GetInt(0), 5);
 
     // no exists
     ASSERT_OK_AND_ASSIGN(positioned_kv,

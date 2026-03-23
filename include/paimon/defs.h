@@ -354,6 +354,10 @@ struct PAIMON_EXPORT Options {
     static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
     /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
     static const char CACHE_PAGE_SIZE[];
+    /// "file.format.per.level" - Define different file format for different level, you can add the
+    /// conf like this:  'file.format.per.level' = '0:avro,3:parquet', if the file format for level
+    /// is not provided, the default format which set by FILE_FORMAT will be used.
+    static const char FILE_FORMAT_PER_LEVEL[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

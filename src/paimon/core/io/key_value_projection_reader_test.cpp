@@ -60,15 +60,16 @@ class KeyValueProjectionReaderTest : public testing::Test,
     std::unique_ptr<BatchReader> GenerateProjectionReader(
         const std::shared_ptr<arrow::Array>& src_array,
         const std::shared_ptr<arrow::Schema>& target_schema,
-        const std::vector<int32_t>& target_to_src_mapping, int32_t key_arity,
+        const std::vector<int32_t>& target_to_src_mapping,
+        const std::shared_ptr<arrow::Schema>& key_schema,
         const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size,
         bool multi_thread_row_to_batch) const {
-        auto src_type = src_array->type();
+        std::vector<int32_t> key_sort_fields(key_schema->num_fields());
+        std::iota(key_sort_fields.begin(), key_sort_fields.end(), 0);
         std::vector<DataField> key_fields;
-        std::vector<int32_t> key_sort_fields;
-        for (int32_t i = 0; i < key_arity; i++) {
-            key_fields.emplace_back(/*id=*/0, src_type->field(i));
-            key_sort_fields.push_back(i);
+        for (int32_t i = 0; i < key_schema->num_fields(); i++) {
+            const auto& key_field = key_schema->field(i);
+            key_fields.emplace_back(i, key_field);
         }
         EXPECT_OK_AND_ASSIGN(
             std::shared_ptr<FieldsComparator> user_key_comparator,
@@ -81,7 +82,7 @@ class KeyValueProjectionReaderTest : public testing::Test,
         auto file_batch_reader = std::make_unique<MockFileBatchReader>(src_array, src_array->type(),
                                                                        /*batch_size=*/batch_size);
         auto record_reader = std::make_unique<KeyValueDataFileRecordReader>(
-            std::move(file_batch_reader), key_arity, value_schema, /*level=*/0, pool_);
+            std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
         std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
         readers.push_back(std::move(record_reader));
         std::vector<std::unique_ptr<KeyValueRecordReader>> concat_readers;
@@ -105,7 +106,8 @@ class KeyValueProjectionReaderTest : public testing::Test,
 
     void CheckResult(const std::shared_ptr<arrow::Array>& src_array,
                      const std::shared_ptr<arrow::StructType>& target_type,
-                     const std::vector<int32_t>& target_to_src_mapping, int32_t key_arity,
+                     const std::vector<int32_t>& target_to_src_mapping,
+                     const std::shared_ptr<arrow::Schema>& key_schema,
                      const std::shared_ptr<arrow::Schema>& value_schema,
                      const std::shared_ptr<arrow::ChunkedArray>& expected_array,
                      const std::shared_ptr<arrow::Schema>& expected_sort_schema,
@@ -113,9 +115,9 @@ class KeyValueProjectionReaderTest : public testing::Test,
         bool multi_thread_row_to_batch = GetParam();
         auto target_schema = arrow::schema(target_type->fields());
         for (const auto& batch_size : {1, 2, 3, 4, 100}) {
-            auto projection_reader =
-                GenerateProjectionReader(src_array, target_schema, target_to_src_mapping, key_arity,
-                                         value_schema, batch_size, multi_thread_row_to_batch);
+            auto projection_reader = GenerateProjectionReader(
+                src_array, target_schema, target_to_src_mapping, key_schema, value_schema,
+                batch_size, multi_thread_row_to_batch);
             ASSERT_OK_AND_ASSIGN(auto result, paimon::test::ReadResultCollector::CollectResult(
                                                   projection_reader.get()));
             // after read eof, always return nullptr
@@ -162,6 +164,7 @@ TEST_P(KeyValueProjectionReaderTest, TestBulkData) {
                                  arrow::field("v0", arrow::int16()),
                                  arrow::field("v1", arrow::float32()),
                                  arrow::field("v2", arrow::utf8())};
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -212,8 +215,8 @@ TEST_P(KeyValueProjectionReaderTest, TestBulkData) {
 
     std::shared_ptr<arrow::Schema> expected_sort_schema =
         arrow::schema(arrow::FieldVector({fields[2]}));
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/1, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/6);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/6);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestSimple) {
@@ -225,6 +228,8 @@ TEST_P(KeyValueProjectionReaderTest, TestSimple) {
                                  arrow::field("v1", arrow::int64()),
                                  arrow::field("v2", arrow::float32()),
                                  arrow::field("v3", arrow::float64())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -251,8 +256,8 @@ TEST_P(KeyValueProjectionReaderTest, TestSimple) {
                                                                          &expected);
     ASSERT_TRUE(array_status.ok());
     std::shared_ptr<arrow::Schema> expected_sort_schema = arrow::schema(target_type->fields());
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/2, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/5);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/5);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestTimestampType) {
@@ -268,9 +273,9 @@ TEST_P(KeyValueProjectionReaderTest, TestTimestampType) {
         arrow::field("ts_tz_milli", arrow::timestamp(arrow::TimeUnit::MILLI, timezone)),
         arrow::field("ts_tz_micro", arrow::timestamp(arrow::TimeUnit::MICRO, timezone)),
         arrow::field("ts_tz_nano", arrow::timestamp(arrow::TimeUnit::NANO, timezone))};
-    std::shared_ptr<arrow::Schema> value_schema = std::make_shared<arrow::Schema>(
-        arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7],
-                            fields[8], fields[9]}));
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema = arrow::schema(arrow::FieldVector(
+        {fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8], fields[9]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
@@ -293,9 +298,9 @@ TEST_P(KeyValueProjectionReaderTest, TestTimestampType) {
                                                                          &expected);
     ASSERT_TRUE(array_status.ok());
     std::shared_ptr<arrow::Schema> expected_sort_schema =
-        std::make_shared<arrow::Schema>(arrow::FieldVector({fields[2]}));
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/1, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/9);
+        arrow::schema(arrow::FieldVector({fields[2]}));
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/9);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestComplexType) {
@@ -307,6 +312,8 @@ TEST_P(KeyValueProjectionReaderTest, TestComplexType) {
                                  arrow::field("v1", arrow::date32()),
                                  arrow::field("v2", arrow::timestamp(arrow::TimeUnit::NANO)),
                                  arrow::field("v3", arrow::decimal128(5, 2))};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -333,8 +340,8 @@ TEST_P(KeyValueProjectionReaderTest, TestComplexType) {
                                                                          &expected);
     ASSERT_TRUE(array_status.ok());
     std::shared_ptr<arrow::Schema> expected_sort_schema = arrow::schema(target_type->fields());
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/2, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/9);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/9);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestNestedType) {
@@ -347,6 +354,7 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType) {
         arrow::field("f2",
                      arrow::struct_({field("sub1", arrow::int64()), field("sub2", arrow::float64()),
                                      field("sub3", arrow::boolean())}))};
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -380,8 +388,8 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType) {
     ASSERT_TRUE(array_status.ok());
     std::shared_ptr<arrow::Schema> expected_sort_schema =
         arrow::schema(arrow::FieldVector({fields[2]}));
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/1, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/13);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/13);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestNestedType2) {
@@ -397,6 +405,7 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType2) {
         arrow::field("f2", arrow::struct_({field("a", arrow::list(arrow::int32())),
                                            field("b", arrow::boolean())})),
     };
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -423,8 +432,8 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType2) {
     std::shared_ptr<arrow::Schema> expected_sort_schema =
         arrow::schema(arrow::FieldVector({fields[2]}));
 
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/1, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/16);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/16);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestDictionary) {
@@ -435,6 +444,8 @@ TEST_P(KeyValueProjectionReaderTest, TestDictionary) {
         arrow::field("key", arrow::utf8()),
         arrow::field("f0", dict_type),
     };
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     auto indices =
@@ -468,8 +479,8 @@ TEST_P(KeyValueProjectionReaderTest, TestDictionary) {
         target_type, /*length=*/5, arrow::ArrayVector({f0_string_array, key_array})));
 
     std::shared_ptr<arrow::Schema> expected_sort_schema = arrow::schema(target_type->fields());
-    CheckResult(src_array, target_type, target_to_src_mapping, /*key_arity=*/1, value_schema,
-                expected, expected_sort_schema, /*expected_reserve_count=*/5);
+    CheckResult(src_array, target_type, target_to_src_mapping, key_schema, value_schema, expected,
+                expected_sort_schema, /*expected_reserve_count=*/5);
 }
 
 TEST_P(KeyValueProjectionReaderTest, TestInvalidProducer) {
@@ -482,6 +493,8 @@ TEST_P(KeyValueProjectionReaderTest, TestInvalidProducer) {
                                  arrow::field("v1", arrow::int64()),
                                  arrow::field("v2", arrow::float32()),
                                  arrow::field("v3", arrow::float64())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -501,9 +514,9 @@ TEST_P(KeyValueProjectionReaderTest, TestInvalidProducer) {
 
     bool multi_thread_row_to_batch = GetParam();
     auto target_schema = arrow::schema(target_type->fields());
-    auto projection_reader = GenerateProjectionReader(
-        src_array, target_schema, target_to_src_mapping,
-        /*key_arity=*/2, value_schema, /*batch_size=*/1, multi_thread_row_to_batch);
+    auto projection_reader =
+        GenerateProjectionReader(src_array, target_schema, target_to_src_mapping, key_schema,
+                                 value_schema, /*batch_size=*/1, multi_thread_row_to_batch);
     ASSERT_NOK_WITH_MSG(paimon::test::ReadResultCollector::CollectResult(projection_reader.get()),
                         "cannot cast VALUE_KIND column to int8 arrow array");
 }

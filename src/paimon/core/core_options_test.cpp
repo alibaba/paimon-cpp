@@ -33,7 +33,9 @@ namespace paimon::test {
 TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
     ASSERT_EQ(core_options.GetManifestFormat()->Identifier(), "avro");
-    ASSERT_EQ(core_options.GetWriteFileFormat()->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
     ASSERT_TRUE(core_options.GetFileSystem());
     ASSERT_EQ(-1, core_options.GetBucket());
     ASSERT_EQ(64 * 1024L, core_options.GetPageSize());
@@ -82,6 +84,10 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::NONE, core_options.GetChangelogProducer());
     ASSERT_FALSE(core_options.NeedLookup());
+    LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
+                                               /*produce_changelog=*/false,
+                                               /*deletion_vector=*/false, /*force_lookup=*/false};
+    ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
     ASSERT_TRUE(core_options.GetFieldsSequenceGroups().empty());
     ASSERT_FALSE(core_options.PartialUpdateRemoveRecordOnDelete());
     ASSERT_TRUE(core_options.GetPartialUpdateRemoveRecordOnSequenceGroup().empty());
@@ -185,14 +191,17 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_BLOOM_FILTER_FPP, "0.5"},
         {Options::LOOKUP_CACHE_SPILL_COMPRESSION, "lz4"},
         {Options::SPILL_COMPRESSION_ZSTD_LEVEL, "2"},
-        {Options::CACHE_PAGE_SIZE, "6MB"}};
+        {Options::CACHE_PAGE_SIZE, "6MB"},
+        {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
     ASSERT_TRUE(fs);
 
-    auto format = core_options.GetWriteFileFormat();
-    ASSERT_EQ(format->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "avro");
+    ASSERT_EQ(core_options.GetWriteFileFormat(1)->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
 
     auto manifest_format = core_options.GetManifestFormat();
     ASSERT_EQ(manifest_format->Identifier(), "avro");
@@ -235,6 +244,11 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::FULL_COMPACTION, core_options.GetChangelogProducer());
     ASSERT_TRUE(core_options.NeedLookup());
+    LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
+                                               /*produce_changelog=*/false,
+                                               /*deletion_vector=*/true, /*force_lookup=*/true};
+    ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
+
     std::map<std::string, std::string> seq_grp;
     seq_grp["g_1,g_3"] = "c,d";
     ASSERT_EQ(core_options.GetFieldsSequenceGroups(), seq_grp);
@@ -292,6 +306,13 @@ TEST(CoreOptionsTest, TestInvalidCase) {
                         "invalid merge engine: invalid");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}}),
                         "invalid changelog producer: invalid");
+}
+
+TEST(CoreOptionsTest, TestInvalidFileFormatPerLevel) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_FORMAT_PER_LEVEL, "0:AVRO:parquet"}}),
+                        "fail to parse key file.format.per.level, value 0:AVRO:parquet");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_FORMAT_PER_LEVEL, "aaa:avro"}}),
+                        "fail to parse level aaa from string to int in file.format.per.level");
 }
 
 TEST(CoreOptionsTest, TestCreateExternalPath) {

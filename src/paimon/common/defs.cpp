@@ -101,4 +101,5 @@ const char Options::LOOKUP_CACHE_BLOOM_FILTER_FPP[] = "lookup.cache.bloom.filter
 const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compression";
 const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
 const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
+const char Options::FILE_FORMAT_PER_LEVEL[] = "file.format.per.level";
 }  // namespace paimon

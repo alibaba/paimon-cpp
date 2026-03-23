@@ -27,6 +27,7 @@
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
+#include "paimon/core/options/lookup_strategy.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
 #include "paimon/format/file_format.h"
@@ -53,7 +54,8 @@ class PAIMON_EXPORT CoreOptions {
     ~CoreOptions();
 
     int32_t GetBucket() const;
-    std::shared_ptr<FileFormat> GetWriteFileFormat() const;
+    std::shared_ptr<FileFormat> GetFileFormat() const;
+    std::shared_ptr<FileFormat> GetWriteFileFormat(int32_t level) const;
     std::shared_ptr<FileSystem> GetFileSystem() const;
     const std::string& GetFileCompression() const;
     int32_t GetFileCompressionZstdLevel() const;
@@ -101,6 +103,7 @@ class PAIMON_EXPORT CoreOptions {
     int64_t DeletionVectorTargetFileSize() const;
     ChangelogProducer GetChangelogProducer() const;
     bool NeedLookup() const;
+    LookupStrategy GetLookupStrategy() const;
     bool FileIndexReadEnabled() const;
 
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;
@@ -150,7 +153,6 @@ class PAIMON_EXPORT CoreOptions {
 
  private:
     struct Impl;
-
     std::unique_ptr<Impl> impl_;
 };
 

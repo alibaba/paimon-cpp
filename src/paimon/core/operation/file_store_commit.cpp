@@ -79,7 +79,7 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
     PAIMON_ASSIGN_OR_RAISE(CoreOptions options,
                            CoreOptions::FromMap(opts, ctx->GetSpecificFileSystem()));
     assert(options.GetFileSystem());
-    assert(options.GetWriteFileFormat());
+    assert(options.GetFileFormat());
     PAIMON_ASSIGN_OR_RAISE(bool is_object_store, FileSystem::IsObjectStore(root_path));
     if (is_object_store && opts.find("enable-object-store-commit-in-inte-test") == opts.end()) {
         return Status::NotImplemented(
@@ -98,7 +98,7 @@ Result<std::unique_ptr<FileStoreCommit>> FileStoreCommit::Create(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             root_path, arrow_schema, table_schema.value()->PartitionKeys(),
-            options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
+            options.GetPartitionDefaultName(), options.GetFileFormat()->Identifier(),
             options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
             global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
 

@@ -85,10 +85,10 @@ class KeyValueFileStoreScanTest : public testing::Test {
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 table_path, arrow_schema, table_schema->PartitionKeys(),
-                core_options.GetPartitionDefaultName(),
-                core_options.GetWriteFileFormat()->Identifier(), core_options.DataFilePrefix(),
-                core_options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, core_options.IndexFileInDataFileDir(), pool_));
+                core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
+                core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+                external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+                pool_));
         auto manifest_file_format = core_options.GetManifestFormat();
         auto snapshot_manager = std::make_shared<SnapshotManager>(fs, table_path);
 

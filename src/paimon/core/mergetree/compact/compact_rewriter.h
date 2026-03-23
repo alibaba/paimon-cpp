@@ -44,7 +44,7 @@ class CompactRewriter {
     /// @param file file to be updated
     /// @return compaction result
     virtual Result<CompactResult> Upgrade(int32_t output_level,
-                                          const std::shared_ptr<DataFileMeta>& file) const = 0;
+                                          const std::shared_ptr<DataFileMeta>& file) = 0;
 
     /// Close rewriter.
     virtual Status Close() = 0;

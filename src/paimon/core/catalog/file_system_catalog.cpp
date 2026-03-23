@@ -410,7 +410,8 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
             PAIMON_ASSIGN_OR_RAISE(auto schema, branch_schema_manager.ReadSchema(id));
             branch_schemas.push_back(schema);
         }
-        PAIMON_ASSIGN_OR_RAISE(auto branch_external_paths, GetSchemaExternalPaths(branch_schemas));
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branch_external_paths,
+                               GetSchemaExternalPaths(branch_schemas));
         external_paths_set.insert(branch_external_paths.begin(), branch_external_paths.end());
     }
 

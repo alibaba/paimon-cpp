@@ -59,7 +59,7 @@ TEST(SingleFileWriterTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{Options::MANIFEST_FORMAT, "orc"}, {Options::FILE_FORMAT, "orc"}}));
-    auto file_format = options.GetWriteFileFormat();
+    auto file_format = options.GetWriteFileFormat(/*level=*/0);
     auto file_system = options.GetFileSystem();
     ArrowSchema arrow_schema;
     ASSERT_TRUE(arrow::ExportType(*data_type, &arrow_schema).ok());
@@ -91,7 +91,7 @@ TEST(SingleFileWriterTest, TestInvalidConvert) {
     ASSERT_OK_AND_ASSIGN(
         CoreOptions options,
         CoreOptions::FromMap({{Options::MANIFEST_FORMAT, "orc"}, {Options::FILE_FORMAT, "orc"}}));
-    auto file_format = options.GetWriteFileFormat();
+    auto file_format = options.GetWriteFileFormat(/*level=*/0);
     auto file_system = options.GetFileSystem();
     ArrowSchema arrow_schema;
     ASSERT_TRUE(arrow::ExportType(*data_type, &arrow_schema).ok());

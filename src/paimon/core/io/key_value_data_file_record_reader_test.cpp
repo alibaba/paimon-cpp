@@ -53,7 +53,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestSimple) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
-
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
@@ -88,7 +89,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestSimple) {
         auto file_batch_reader =
             std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/batch_size);
         auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-            std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+            std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
         ASSERT_OK_AND_ASSIGN(
             auto results,
             (ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
@@ -106,7 +107,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestValueSchemaContainsPartialKey) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
-
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
@@ -141,7 +143,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestValueSchemaContainsPartialKey) {
         auto file_batch_reader =
             std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/batch_size);
         auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-            std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+            std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
         ASSERT_OK_AND_ASSIGN(
             auto results,
             (ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
@@ -159,7 +161,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmap) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
-
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
@@ -219,7 +222,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmap) {
             auto file_batch_reader = std::make_unique<MockFileBatchReader>(
                 src_array, src_type, /*bitmap=*/selected_bitmap, /*batch_size=*/batch_size);
             auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-                std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+                std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
             ASSERT_OK_AND_ASSIGN(
                 auto results,
                 (ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
@@ -252,7 +255,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmapWithFilePos) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
-
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
@@ -274,7 +278,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestWithSelectedBitmapWithFilePos) {
         src_array, src_type, /*bitmap=*/selected_bitmap, /*batch_size=*/4);
     file_batch_reader->EnableRandomizeBatchSize(false);
     auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-        std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+        std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
 
     auto check_result = [](const std::vector<int64_t>& expected_pos_vector,
                            KeyValueRecordReader::Iterator* iter) {
@@ -309,6 +313,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestEmptyReader) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -319,7 +325,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestEmptyReader) {
     auto file_batch_reader =
         std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/2);
     auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-        std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+        std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
 
     ASSERT_OK_AND_ASSIGN(
         auto results, (ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
@@ -337,6 +343,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidSequenceNumerColumn) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -348,7 +356,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidSequenceNumerColumn) {
     auto file_batch_reader =
         std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/2);
     auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-        std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+        std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
     ASSERT_NOK_WITH_MSG((ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
                                                                     KeyValueRecordReader::Iterator>(
                             record_reader.get())),
@@ -364,6 +372,8 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidValueKindColumn) {
                                  arrow::field("v0", arrow::int32()),
                                  arrow::field("v1", arrow::int32()),
                                  arrow::field("v2", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
@@ -375,10 +385,69 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidValueKindColumn) {
     auto file_batch_reader =
         std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/2);
     auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
-        std::move(file_batch_reader), /*key_arity=*/2, value_schema, /*level=*/2, pool_);
+        std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
     ASSERT_NOK_WITH_MSG((ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
                                                                     KeyValueRecordReader::Iterator>(
                             record_reader.get())),
                         "Unsupported byte value 100 for row kind.");
 }
+TEST_F(KeyValueDataFileRecordReaderTest, TestKeyFieldAfterValueField) {
+    // Key fields (k0, k1) are placed after value fields (v0, v1, v2) in the struct layout.
+    // This verifies that KeyValueDataFileRecordReader correctly locates fields by name
+    // regardless of their physical position in the struct.
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("v0", arrow::int32()),
+                                 arrow::field("v1", arrow::int32()),
+                                 arrow::field("v2", arrow::int32()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("k1", arrow::int32())};
+    std::shared_ptr<arrow::Schema> key_schema =
+        arrow::schema(arrow::FieldVector({fields[5], fields[6]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[5], fields[6], fields[2], fields[3], fields[4]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    // Data layout: [seq, kind, v0, v1, v2, k0, k1]
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 10, 20, 30, 1, 1],
+        [0, 1, 11, 21, 31, 1, 2],
+        [1, 2, 12, 22, 32, 2, 2],
+        [2, 3, 13, 23, 33, 2, 3]
+    ])")
+            .ValueOrDie());
+
+    std::vector<KeyValue> expected;
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/0, /*level=*/2,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 1}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 1, 10, 20, 30}, pool_.get()));
+    expected.emplace_back(
+        RowKind::UpdateBefore(), /*sequence_number=*/0, /*level=*/2,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 2, 11, 21, 31}, pool_.get()));
+    expected.emplace_back(
+        RowKind::UpdateAfter(), /*sequence_number=*/1, /*level=*/2,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 12, 22, 32}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Delete(), /*sequence_number=*/2, /*level=*/2,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 3}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 3, 13, 23, 33}, pool_.get()));
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto file_batch_reader =
+            std::make_unique<MockFileBatchReader>(src_array, src_type, /*batch_size=*/batch_size);
+        auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+            std::move(file_batch_reader), key_schema, value_schema, /*level=*/2, pool_);
+        ASSERT_OK_AND_ASSIGN(
+            auto results,
+            (ReadResultCollector::CollectKeyValueResult<KeyValueDataFileRecordReader,
+                                                        KeyValueRecordReader::Iterator>(
+                record_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, /*key_arity=*/2, /*value_arity=*/5);
+    }
+}
+
 }  // namespace paimon::test
