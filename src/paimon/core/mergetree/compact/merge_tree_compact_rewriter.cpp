@@ -191,7 +191,7 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
                            merge_file_split_read_->CreateSortMergeReaderForSection(
                                section, partition_, /*dv_factory=*/{},
-                               /*predicate=*/nullptr, data_file_path_factory_, drop_delete));
+                               /*predicate=*/nullptr, data_file_path_factory, drop_delete));
 
     // consumer batch size is WriteBatchSize
     auto async_key_value_producer_consumer =
