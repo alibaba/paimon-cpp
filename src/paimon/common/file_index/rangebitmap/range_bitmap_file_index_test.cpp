@@ -260,6 +260,22 @@ TEST_F(RangeBitmapFileIndexTest, TestWriteAndReadRangeBitmapIndexMultiChunk) {
     CheckResult(is_not_null_result, all_positions);
 }
 
+// Test that chunk size larger than 2GB is rejected during serialization
+TEST_F(RangeBitmapFileIndexTest, TestChunkSizeTooLarge) {
+    std::vector<int32_t> test_data = {10, 20, 30};
+    const auto& arrow_type = arrow::int32();
+    // Configure a chunk size larger than 2GB (INT32_MAX)
+    std::map<std::string, std::string> options;
+    options[RangeBitmapFileIndex::kChunkSize] = "3gb";
+
+    PAIMON_UNIQUE_PTR<Bytes> serialized_bytes;
+    auto reader_result = CreateReaderForTest<arrow::Int32Builder, int32_t>(
+        arrow_type, test_data, options, &serialized_bytes);
+
+    // Expect failure due to chunk size exceeding 2GB limit
+    ASSERT_NOK_WITH_MSG(reader_result.status(), "Chunk size cannot be larger than 2GB");
+}
+
 // test data mixed with NULLs
 TEST_F(RangeBitmapFileIndexTest, TestWriteAndReadRangeBitmapIndexBigInt) {
     // Data: 10, NULL, 10, 30, NULL, 40, 50 (NULLs at positions 1 and 4)

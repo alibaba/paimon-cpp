@@ -254,10 +254,12 @@ void RangeBitmap::Appender::Append(const Literal& key) {
 
 Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     int32_t code = 0;
-    const int32_t max_code =
-        bitmaps_.empty() ? 0 : static_cast<int32_t>(bitmaps_.size() - 1);
-    PAIMON_ASSIGN_OR_RAISE(auto bsi,
-                           BitSliceIndexBitmap::Appender::Create(0, max_code, pool_));
+    const int32_t max_code = bitmaps_.empty() ? 0 : static_cast<int32_t>(bitmaps_.size() - 1);
+    PAIMON_ASSIGN_OR_RAISE(auto bsi, BitSliceIndexBitmap::Appender::Create(0, max_code, pool_));
+    if (chunk_size_bytes_limit_ >= std::numeric_limits<int32_t>::max()) {
+        return Status::Invalid(fmt::format(
+            "Chunk size cannot be larger than 2GB, current bytes: {}", chunk_size_bytes_limit_));
+    }
     PAIMON_ASSIGN_OR_RAISE(auto dictionary,
                            ChunkedDictionary::Appender::Create(
                                factory_, static_cast<int32_t>(chunk_size_bytes_limit_), pool_));
