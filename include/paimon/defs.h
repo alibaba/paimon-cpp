@@ -204,12 +204,12 @@ struct PAIMON_EXPORT Options {
     static const char COMMIT_MAX_RETRIES[];
 
     /// "compaction.max-size-amplification-percent" - The size amplification is defined as the
-    /// amount (in percentage) of additional storage " needed to store a single byte of data in the
+    /// amount (in percentage) of additional storage needed to store a single byte of data in the
     /// merge tree for changelog mode table. Default value is 200.
     static const char COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[];
 
     /// "compaction.size-ratio" - Percentage flexibility while comparing sorted run size for
-    /// changelog mode table. If the candidate sorted run(s) " size is 1% smaller than the next
+    /// changelog mode table. If the candidate sorted run(s) size is 1% smaller than the next
     /// sorted run's size, then include next sorted run into this candidate set. Default value is 1.
     static const char COMPACTION_SIZE_RATIO[];
 
