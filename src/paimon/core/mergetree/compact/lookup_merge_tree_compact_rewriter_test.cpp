@@ -901,6 +901,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     auto array_status =
         arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
 [6,  0,  2, 222],
+[4,  0,  4, 44],
 [7,  0,  5, 555]
 ])"},
                                                          &expected_array);
