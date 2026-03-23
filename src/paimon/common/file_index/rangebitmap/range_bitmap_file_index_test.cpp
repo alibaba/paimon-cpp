@@ -342,7 +342,7 @@ TEST_F(RangeBitmapFileIndexTest, TestWriteAndReadRangeBitmapIndexInt) {
                          reader->VisitGreaterOrEqual(Literal(static_cast<int32_t>(20))));
     CheckResult(gte_20_result, {1, 3, 4, 5, 6});
     ASSERT_OK_AND_ASSIGN(auto lte_40_result,
-                         reader->VisitLessOrEqual(Literal(static_cast<int32_t>(40))))
+                         reader->VisitLessOrEqual(Literal(static_cast<int32_t>(40))));
     CheckResult(lte_40_result, {0, 1, 2, 3, 4, 5});
 
     // Test empty result cases for INT values that don't exist
