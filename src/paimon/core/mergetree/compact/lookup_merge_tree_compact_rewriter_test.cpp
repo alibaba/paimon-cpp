@@ -1134,7 +1134,6 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteLookupChangelogWithOutputL
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file0, file1}));
 
     // When output_level is 0, RewriteLookupChangelog should return false
-    // This tests the condition at line 59 in changelog_merge_tree_rewriter.cpp
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
                                                   /*output_level=*/0, /*drop_delete=*/true, runs));
     ASSERT_EQ(2, compact_result.Before().size());

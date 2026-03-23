@@ -248,6 +248,37 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // parse file.format.per.level
+    Status ParseFileFormatPerLevel(
+        std::map<int32_t, std::shared_ptr<FileFormat>>* file_format_per_level_ptr) const {
+        auto& file_format_per_level = *file_format_per_level_ptr;
+        std::string file_format_per_level_str;
+        PAIMON_RETURN_NOT_OK(
+            ParseString(Options::FILE_FORMAT_PER_LEVEL, &file_format_per_level_str));
+        if (!file_format_per_level_str.empty()) {
+            auto level2format =
+                StringUtils::Split(file_format_per_level_str, std::string(","), std::string(":"));
+            for (const auto& single_level : level2format) {
+                if (single_level.size() != 2) {
+                    return Status::Invalid(fmt::format(
+                        "fail to parse key {}, value {} (usage example: 0:avro,3:parquet)",
+                        Options::FILE_FORMAT_PER_LEVEL, file_format_per_level_str));
+                }
+                auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
+                if (!level || level.value() < 0) {
+                    return Status::Invalid(
+                        fmt::format("fail to parse level {} from string to int in {}",
+                                    single_level[0], Options::FILE_FORMAT_PER_LEVEL));
+                }
+                std::shared_ptr<FileFormat> file_format;
+                PAIMON_RETURN_NOT_OK(ParseObject<FileFormatFactory>(
+                    "_no_use", /*default_identifier=*/single_level[1], &file_format));
+                file_format_per_level[level.value()] = file_format;
+            }
+        }
+        return Status::OK();
+    }
+
     bool ContainsKey(const std::string& key) const {
         return config_map_.find(key) != config_map_.end();
     }
@@ -599,31 +630,7 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::CACHE_PAGE_SIZE, &impl->cache_page_size));
 
     // parse file.format.per.level
-    std::string file_format_per_level_str;
-    PAIMON_RETURN_NOT_OK(
-        parser.ParseString(Options::FILE_FORMAT_PER_LEVEL, &file_format_per_level_str));
-    if (!file_format_per_level_str.empty()) {
-        auto level2format =
-            StringUtils::Split(file_format_per_level_str, std::string(","), std::string(":"));
-        for (const auto& single_level : level2format) {
-            if (single_level.size() != 2) {
-                return Status::Invalid(
-                    fmt::format("fail to parse key {}, value {} (usage example: 0:avro,3:parquet)",
-                                Options::FILE_FORMAT_PER_LEVEL, file_format_per_level_str));
-            }
-            auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
-            if (!level || level.value() < 0) {
-                return Status::Invalid(
-                    fmt::format("fail to parse level {} from string to int in {}", single_level[0],
-                                Options::FILE_FORMAT_PER_LEVEL));
-            }
-            std::shared_ptr<FileFormat> file_format;
-            PAIMON_RETURN_NOT_OK(parser.ParseObject<FileFormatFactory>(
-                "_no_use", /*default_identifier=*/single_level[1], &file_format));
-            impl->file_format_per_level[level.value()] = file_format;
-        }
-    }
-
+    PAIMON_RETURN_NOT_OK(parser.ParseFileFormatPerLevel(&impl->file_format_per_level));
     return options;
 }
 

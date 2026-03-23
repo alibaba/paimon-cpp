@@ -16,12 +16,15 @@
 
 #pragma once
 
+#include <map>
+#include <string>
+#include <vector>
+
 #include "paimon/core/core_options.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
-
 namespace paimon {
 class FileStorePathFactoryCache {
  public:

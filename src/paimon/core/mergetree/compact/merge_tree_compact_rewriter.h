@@ -92,13 +92,13 @@ class MergeTreeCompactRewriter : public CompactRewriter {
                              KeyValueRollingFileWriter* rolling_writer,
                              std::vector<std::shared_ptr<KeyValueMergeReader>>* reader_holders_ptr);
 
- private:
-    Result<std::shared_ptr<DataFilePathFactory>> CreateDataFilePathFactory(
-        const std::string& format);
-
  protected:
     CoreOptions options_;
     std::unique_ptr<MergeFileSplitRead> merge_file_split_read_;
+
+ private:
+    Result<std::shared_ptr<DataFilePathFactory>> CreateDataFilePathFactory(
+        const std::string& format);
 
  private:
     std::shared_ptr<MemoryPool> pool_;

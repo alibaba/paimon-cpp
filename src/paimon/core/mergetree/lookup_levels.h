@@ -57,7 +57,7 @@ class LookupLevels {
                                     const SortedRun& level);
 
     Status Close() {
-        // TODDO(xinyu.lxy): invalid cache
+        // TODO(xinyu.lxy): invalid cache
         lookup_file_cache_.clear();
         return Status::OK();
     }

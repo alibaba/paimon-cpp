@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <cassert>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -49,7 +51,11 @@ class FirstRowMergeFunctionWrapper : public MergeFunctionWrapper<KeyValue> {
             Reset();
             return result;
         }
-        assert(result);
+        if (!result) {
+            Reset();
+            return Status::Invalid(
+                "In FirstRowMergeFunctionWrapper when call GetResult, there must have a result");
+        }
         PAIMON_ASSIGN_OR_RAISE(bool contains, contains_(result.value().key));
         if (contains) {
             // empty

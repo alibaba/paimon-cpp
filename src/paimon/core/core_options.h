@@ -153,7 +153,6 @@ class PAIMON_EXPORT CoreOptions {
 
  private:
     struct Impl;
-
     std::unique_ptr<Impl> impl_;
 };
 

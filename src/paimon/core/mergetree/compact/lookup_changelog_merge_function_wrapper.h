@@ -16,8 +16,11 @@
 
 #pragma once
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
