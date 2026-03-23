@@ -49,6 +49,25 @@ class InlineExecutor final : public Executor {
     void ShutdownNow() override {}
 };
 
+class QueuedExecutor final : public Executor {
+ public:
+    void Add(std::function<void()> func) override {
+        tasks_.push_back(std::move(func));
+    }
+
+    void ShutdownNow() override {}
+
+    void RunAll() {
+        for (auto& task : tasks_) {
+            task();
+        }
+        tasks_.clear();
+    }
+
+ private:
+    std::vector<std::function<void()>> tasks_;
+};
+
 class FunctionalCompactStrategy final : public CompactStrategy {
  public:
     using PickFunc =
@@ -342,6 +361,74 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
 
     EXPECT_TRUE(lookup_manager->CompactNotCompleted());
     EXPECT_FALSE(default_manager->CompactNotCompleted());
+}
+
+TEST_F(MergeTreeCompactManagerTest, TestTriggerFullCompaction) {
+    std::vector<LevelMinMax> inputs = {LevelMinMax(0, 1, 3), LevelMinMax(1, 2, 5),
+                                       LevelMinMax(1, 6, 7)};
+    std::vector<std::shared_ptr<DataFileMeta>> files;
+    files.reserve(inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        files.push_back(ToFile(inputs[i], static_cast<int64_t>(i)));
+    }
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
+
+    auto manager = std::make_shared<MergeTreeCompactManager>(
+        std::make_shared<InlineExecutor>(), levels,
+        std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
+        /*compaction_file_size=*/2,
+        /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
+        std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
+        /*metrics_reporter=*/nullptr,
+        /*dv_maintainer=*/nullptr,
+        /*lazy_gen_deletion_file=*/false,
+        /*need_lookup=*/false,
+        /*force_rewrite_all_files=*/false,
+        /*force_keep_delete=*/false);
+
+    ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
+    ASSERT_TRUE(compact_result.has_value());
+    ASSERT_FALSE(compact_result.value()->Before().empty());
+    ASSERT_FALSE(compact_result.value()->After().empty());
+    for (const auto& after : compact_result.value()->After()) {
+        EXPECT_EQ(after->level, 2);
+    }
+}
+
+TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
+    std::vector<LevelMinMax> inputs = {LevelMinMax(0, 1, 3), LevelMinMax(1, 2, 5),
+                                       LevelMinMax(1, 6, 7)};
+    std::vector<std::shared_ptr<DataFileMeta>> files;
+    files.reserve(inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        files.push_back(ToFile(inputs[i], static_cast<int64_t>(i)));
+    }
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
+
+    auto queued_executor = std::make_shared<QueuedExecutor>();
+    auto manager = std::make_shared<MergeTreeCompactManager>(
+        queued_executor, levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()),
+        comparator_,
+        /*compaction_file_size=*/2,
+        /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
+        std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
+        /*metrics_reporter=*/nullptr,
+        /*dv_maintainer=*/nullptr,
+        /*lazy_gen_deletion_file=*/false,
+        /*need_lookup=*/false,
+        /*force_rewrite_all_files=*/false,
+        /*force_keep_delete=*/false);
+
+    ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
+    Status status = manager->TriggerCompaction(/*full_compaction=*/true);
+    ASSERT_TRUE(status.IsInvalid());
+
+    queued_executor->RunAll();
+    ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
+    ASSERT_TRUE(compact_result.has_value());
 }
 
 }  // namespace paimon::test

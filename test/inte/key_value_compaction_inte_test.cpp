@@ -130,8 +130,8 @@ std::vector<std::string> GetTestValuesForCompactionInteTest() {
     return values;
 }
 
-// INSTANTIATE_TEST_SUITE_P(FileFormat, KeyValueCompactionInteTest,
-//                          ::testing::ValuesIn(GetTestValuesForCompactionInteTest()));
+INSTANTIATE_TEST_SUITE_P(FileFormat, KeyValueCompactionInteTest,
+                         ::testing::ValuesIn(GetTestValuesForCompactionInteTest()));
 
 TEST_F(KeyValueCompactionInteTest, TestKeyValueTableCompactionWithIOException) {
     arrow::FieldVector fields = {
@@ -198,6 +198,89 @@ TEST_F(KeyValueCompactionInteTest, TestKeyValueTableCompactionWithIOException) {
     }
 
     ASSERT_TRUE(compaction_run_complete);
+}
+
+TEST_P(KeyValueCompactionInteTest, TestKeyValueTableStreamWriteFullCompaction) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
+        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
+    auto schema = arrow::schema(fields);
+
+    std::vector<std::string> primary_keys = {"f0", "f1", "f2"};
+    std::vector<std::string> partition_keys = {"f1"};
+    auto file_format = GetParam();
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+                                                  {Options::BUCKET, "2"},
+                                                  {Options::BUCKET_KEY, "f2"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "false"}};
+
+    ASSERT_OK_AND_ASSIGN(
+        auto helper, TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys, options,
+                                        /*is_streaming_mode=*/true));
+    ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<TableSchema>> table_schema,
+                         helper->LatestSchema());
+    ASSERT_TRUE(table_schema);
+    auto gen = std::make_shared<DataGenerator>(table_schema.value(), pool_);
+    int64_t commit_identifier = 0;
+    PrepareSimpleKeyValueData(gen, helper.get(), &commit_identifier);
+    std::vector<BinaryRow> datas_4;
+    datas_4.push_back(
+        BinaryRowGenerator::GenerateRow({std::string("Lily"), 10, 0, 17.1}, pool_.get()));
+    ASSERT_OK_AND_ASSIGN(auto batches_4, gen->SplitArrayByPartitionAndBucket(datas_4));
+    ASSERT_EQ(1, batches_4.size());
+
+    ASSERT_OK(helper->write_->Write(std::move(batches_4[0])));
+    ASSERT_OK(helper->write_->Compact(/*partition=*/{{"f1", "10"}}, /*bucket=*/1,
+                                      /*full_compaction=*/true));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<std::shared_ptr<CommitMessage>> commit_messages,
+        helper->write_->PrepareCommit(/*wait_compaction=*/true, commit_identifier));
+    ASSERT_OK(helper->commit_->Commit(commit_messages, commit_identifier));
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot5, helper->LatestSnapshot());
+    ASSERT_EQ(5, snapshot5.value().Id());
+    ASSERT_EQ(9, snapshot5.value().TotalRecordCount().value());
+    ASSERT_EQ(-2, snapshot5.value().DeltaRecordCount().value());
+    ASSERT_EQ(Snapshot::CommitKind::Compact(), snapshot5.value().GetCommitKind());
+    ASSERT_OK_AND_ASSIGN(std::vector<std::shared_ptr<Split>> data_splits,
+                         helper->NewScan(StartupMode::LatestFull(), /*snapshot_id=*/std::nullopt));
+    ASSERT_EQ(data_splits.size(), 3);
+    std::map<std::pair<std::string, int32_t>, std::string> expected_datas;
+    expected_datas[std::make_pair("f1=10/", 0)] = R"([
+[0, "Alice", 10, 1, 11.1]
+])";
+
+    expected_datas[std::make_pair("f1=10/", 1)] = R"([
+[0, "Alex", 10, 0, 16.1],
+[0, "Bob", 10, 0, 12.1],
+[0, "David", 10, 0, 17.1],
+[0, "Emily", 10, 0, 15.1],
+[0, "Lily", 10, 0, 17.1],
+[0, "Tony", 10, 0, 14.1]
+])";
+
+    expected_datas[std::make_pair("f1=20/", 0)] = R"([
+[0, "Lucy", 20, 1, 14.1],
+[0, "Paul", 20, 1, null]
+])";
+
+    arrow::FieldVector fields_with_row_kind = fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(),
+                                arrow::field("_VALUE_KIND", arrow::int8()));
+    auto data_type = arrow::struct_(fields_with_row_kind);
+
+    for (const auto& split : data_splits) {
+        auto split_impl = dynamic_cast<DataSplitImpl*>(split.get());
+        ASSERT_OK_AND_ASSIGN(std::string partition_str,
+                             helper->PartitionStr(split_impl->Partition()));
+        auto iter = expected_datas.find(std::make_pair(partition_str, split_impl->Bucket()));
+        ASSERT_TRUE(iter != expected_datas.end());
+        ASSERT_OK_AND_ASSIGN(bool success,
+                             helper->ReadAndCheckResult(data_type, {split}, iter->second));
+        ASSERT_TRUE(success);
+    }
 }
 
 }  // namespace paimon::test

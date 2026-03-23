@@ -1700,8 +1700,7 @@ TEST_P(WriteInteTest, TestPkTableForceLookup) {
         {Options::MANIFEST_FORMAT, "orc"},   {Options::FILE_FORMAT, file_format},
         {Options::TARGET_FILE_SIZE, "1024"}, {Options::BUCKET, "1"},
         {Options::BUCKET_KEY, "f0"},         {Options::FILE_SYSTEM, "local"},
-        {Options::FORCE_LOOKUP, "true"},
-    };
+        {Options::FORCE_LOOKUP, "true"},     {Options::WRITE_ONLY, "true"}};
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys, options,
                                         /*is_streaming_mode=*/true));
@@ -1759,15 +1758,14 @@ TEST_P(WriteInteTest, TestPkTableEnableDeletionVector) {
     std::vector<std::string> primary_keys = {"f0", "f1"};
     std::vector<std::string> partition_keys = {};
     auto file_format = GetParam();
-    std::map<std::string, std::string> options = {
-        {Options::MANIFEST_FORMAT, "orc"},
-        {Options::FILE_FORMAT, file_format},
-        {Options::TARGET_FILE_SIZE, "1024"},
-        {Options::BUCKET, "1"},
-        {Options::BUCKET_KEY, "f0"},
-        {Options::FILE_SYSTEM, "local"},
-        {Options::DELETION_VECTORS_ENABLED, "true"},
-    };
+    std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
+                                                  {Options::FILE_FORMAT, file_format},
+                                                  {Options::TARGET_FILE_SIZE, "1024"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::BUCKET_KEY, "f0"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                  {Options::WRITE_ONLY, "true"}};
     ASSERT_OK_AND_ASSIGN(
         auto helper, TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys, options,
                                         /*is_streaming_mode=*/true));

@@ -35,6 +35,21 @@ std::string RunsToString(const std::vector<LevelSortedRun>& runs) {
     return ss.str();
 }
 
+std::string FilesToString(const std::vector<LevelSortedRun>& runs) {
+    std::stringstream ss;
+    bool first = true;
+    for (const auto& level_sorted_run : runs) {
+        for (const auto& file : level_sorted_run.run.Files()) {
+            if (!first) {
+                ss << ", ";
+            }
+            ss << "(" << file->file_name << ", " << file->level << ", " << file->file_size << ")";
+            first = false;
+        }
+    }
+    return ss.str();
+}
+
 MergeTreeCompactManager::MergeTreeCompactManager(
     const std::shared_ptr<Executor>& executor, const std::shared_ptr<Levels>& levels,
     const std::shared_ptr<CompactStrategy>& strategy,
@@ -72,7 +87,7 @@ bool MergeTreeCompactManager::ShouldWaitForPreparingCheckpoint() const {
 Status MergeTreeCompactManager::AddNewFile(const std::shared_ptr<DataFileMeta>& file) {
     // if overwrite an empty partition, the snapshot will be changed to APPEND, then its files
     // might be upgraded to high level, thus we should use #update
-    PAIMON_RETURN_NOT_OK(levels_->Update({}, {file}));
+    PAIMON_RETURN_NOT_OK(levels_->Update(/*before=*/{}, /*after=*/{file}));
     ReportMetrics();
     return Status::OK();
 }
@@ -126,7 +141,8 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
         !force_keep_delete_ && unit.output_level != 0 &&
         (unit.output_level >= levels_->NonEmptyHighestLevel() || dv_maintainer_ != nullptr);
 
-    // TODO(yonghao.fyh): add log
+    PAIMON_LOG_DEBUG(logger_, "Submit compaction with files (name, level, size): %s",
+                     FilesToString(levels_->LevelSortedRuns()).c_str());
     return SubmitCompaction(unit, drop_delete);
 }
 
