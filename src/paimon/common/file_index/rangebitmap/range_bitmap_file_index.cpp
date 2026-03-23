@@ -20,6 +20,7 @@
 #include <arrow/type.h>
 
 #include "paimon/common/file_index/rangebitmap/range_bitmap.h"
+#include "paimon/common/io/offset_input_stream.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/predicate/literal_converter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -124,8 +125,10 @@ Result<std::shared_ptr<RangeBitmapFileIndexReader>> RangeBitmapFileIndexReader::
     const std::shared_ptr<InputStream>& input_stream, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(FieldType field_type,
                            FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OffsetInputStream> bounded_stream,
+                           OffsetInputStream::Create(input_stream, length, start));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RangeBitmap> range_bitmap,
-                           RangeBitmap::Create(input_stream, start, field_type, pool));
+                           RangeBitmap::Create(bounded_stream, 0, field_type, pool));
     return std::shared_ptr<RangeBitmapFileIndexReader>(
         new RangeBitmapFileIndexReader(std::move(range_bitmap)));
 }

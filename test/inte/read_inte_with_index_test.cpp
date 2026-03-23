@@ -398,7 +398,6 @@ class ReadInteWithIndexTest : public testing::Test,
 [0, 10, 600, 6.6, 66.66, 19732, "row7"]
 ])"},
                                                                                  &expected_array);
-            std::cout << array_status.message() << std::endl;
             ASSERT_TRUE(array_status.ok());
             CheckResult(path, {split}, /*predicate=*/nullptr, expected_array);
         }
@@ -545,7 +544,7 @@ class ReadInteWithIndexTest : public testing::Test,
         }
         // Test date type
         {
-            // Test greater than predicate: f0 > 5 -> rows 0,3,4,7 (values 17,7,9,10)
+            // Test less or equal DATE predicate: f4 <= 19725 -> row 1 (date value 19725)
             auto predicate =
                 PredicateBuilder::LessOrEqual(/*field_index=*/4, /*field_name=*/"f4",
                                               FieldType::DATE, Literal(FieldType::DATE, 19725));
