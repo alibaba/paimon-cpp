@@ -183,7 +183,6 @@ Status MergeTreeWriter::UpdateCompactDeletionFile(
 }
 
 Result<CommitIncrement> MergeTreeWriter::PrepareCommit(bool wait_compaction) {
-    // TODO(xinyu.lxy): support wait_compaction
     PAIMON_RETURN_NOT_OK(Flush(wait_compaction, /*forced_full_compaction=*/false));
     if (options_.CommitForceCompact()) {
         wait_compaction = true;
@@ -206,63 +205,63 @@ Result<bool> MergeTreeWriter::CompactNotCompleted() {
 }
 
 Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_compaction) {
-    if (batch_vec_.empty()) {
-        return Status::OK();
-    }
-    // TODO(yonghao.fyh): same as java?
-    wait_for_latest_compaction = compact_manager_->ShouldWaitForLatestCompaction();
-
-    // 1. create key value iter for each record batch
-    std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
-    readers.reserve(batch_vec_.size());
-    for (size_t i = 0; i < batch_vec_.size(); ++i) {
-        int64_t sequence_number = last_sequence_number_;
-        last_sequence_number_ += batch_vec_[i]->length();
-        auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-            sequence_number, std::move(batch_vec_[i]), std::move(row_kinds_vec_[i]),
-            trimmed_primary_keys_, options_.GetSequenceField(), key_comparator_,
-            merge_function_wrapper_, pool_);
-        readers.push_back(std::move(in_memory_reader));
-    }
-    batch_vec_.clear();
-    row_kinds_vec_.clear();
-    current_memory_in_bytes_ = 0;
-    // 2. prepare loser tree sort merge reader
-    auto sort_merge_reader = std::make_unique<SortMergeReaderWithLoserTree>(
-        std::move(readers), key_comparator_, user_defined_seq_comparator_, merge_function_wrapper_);
-    // 3. project key value to arrow array
-    auto create_consumer = [target_schema = write_schema_, pool = pool_]()
-        -> Result<std::unique_ptr<RowToArrowArrayConverter<KeyValue, KeyValueBatch>>> {
-        return KeyValueMetaProjectionConsumer::Create(target_schema, pool);
-    };
-    // consumer batch size is WriteBatchSize
-    auto async_key_value_producer_consumer =
-        std::make_unique<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>(
-            std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
-            /*projection_thread_num=*/1, pool_);
-    auto rolling_writer = CreateRollingRowWriter();
-    ScopeGuard write_guard([&]() -> void {
-        rolling_writer->Abort();
-        async_key_value_producer_consumer->Close();
-    });
-    while (true) {
-        PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
-                               async_key_value_producer_consumer->NextBatch());
-        if (key_value_batch.batch == nullptr) {
-            break;
+    if (!batch_vec_.empty()) {
+        if (compact_manager_->ShouldWaitForLatestCompaction()) {
+            wait_for_latest_compaction = true;
         }
-        PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
-    }
-    PAIMON_RETURN_NOT_OK(rolling_writer->Close());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
-                           rolling_writer->GetResult());
-    write_guard.Release();
+        // 1. create key value iter for each record batch
+        std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
+        readers.reserve(batch_vec_.size());
+        for (size_t i = 0; i < batch_vec_.size(); ++i) {
+            int64_t sequence_number = last_sequence_number_;
+            last_sequence_number_ += batch_vec_[i]->length();
+            auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
+                sequence_number, std::move(batch_vec_[i]), std::move(row_kinds_vec_[i]),
+                trimmed_primary_keys_, options_.GetSequenceField(), key_comparator_,
+                merge_function_wrapper_, pool_);
+            readers.push_back(std::move(in_memory_reader));
+        }
+        batch_vec_.clear();
+        row_kinds_vec_.clear();
+        current_memory_in_bytes_ = 0;
+        // 2. prepare loser tree sort merge reader
+        auto sort_merge_reader = std::make_unique<SortMergeReaderWithLoserTree>(
+            std::move(readers), key_comparator_, user_defined_seq_comparator_,
+            merge_function_wrapper_);
+        // 3. project key value to arrow array
+        auto create_consumer = [target_schema = write_schema_, pool = pool_]()
+            -> Result<std::unique_ptr<RowToArrowArrayConverter<KeyValue, KeyValueBatch>>> {
+            return KeyValueMetaProjectionConsumer::Create(target_schema, pool);
+        };
+        // consumer batch size is WriteBatchSize
+        auto async_key_value_producer_consumer =
+            std::make_unique<AsyncKeyValueProducerAndConsumer<KeyValue, KeyValueBatch>>(
+                std::move(sort_merge_reader), create_consumer, options_.GetWriteBatchSize(),
+                /*projection_thread_num=*/1, pool_);
+        auto rolling_writer = CreateRollingRowWriter();
+        ScopeGuard write_guard([&]() -> void {
+            rolling_writer->Abort();
+            async_key_value_producer_consumer->Close();
+        });
+        while (true) {
+            PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
+                                   async_key_value_producer_consumer->NextBatch());
+            if (key_value_batch.batch == nullptr) {
+                break;
+            }
+            PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
+        }
+        PAIMON_RETURN_NOT_OK(rolling_writer->Close());
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> flushed_files,
+                               rolling_writer->GetResult());
+        write_guard.Release();
 
-    for (const auto& flushed_file : flushed_files) {
-        new_files_.emplace_back(flushed_file);
-        PAIMON_RETURN_NOT_OK(compact_manager_->AddNewFile(flushed_file));
+        for (const auto& flushed_file : flushed_files) {
+            new_files_.emplace_back(flushed_file);
+            PAIMON_RETURN_NOT_OK(compact_manager_->AddNewFile(flushed_file));
+        }
+        metrics_->Merge(rolling_writer->GetMetrics());
     }
-    metrics_->Merge(rolling_writer->GetMetrics());
     PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_for_latest_compaction));
     PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(forced_full_compaction));
     return Status::OK();
