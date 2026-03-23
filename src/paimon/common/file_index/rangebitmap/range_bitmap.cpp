@@ -254,9 +254,10 @@ void RangeBitmap::Appender::Append(const Literal& key) {
 
 Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     int32_t code = 0;
+    const int32_t max_code =
+        bitmaps_.empty() ? 0 : static_cast<int32_t>(bitmaps_.size() - 1);
     PAIMON_ASSIGN_OR_RAISE(auto bsi,
-                           BitSliceIndexBitmap::Appender::Create(
-                               0, std::max(static_cast<int32_t>(bitmaps_.size() - 1), 0), pool_));
+                           BitSliceIndexBitmap::Appender::Create(0, max_code, pool_));
     PAIMON_ASSIGN_OR_RAISE(auto dictionary,
                            ChunkedDictionary::Appender::Create(
                                factory_, static_cast<int32_t>(chunk_size_bytes_limit_), pool_));
