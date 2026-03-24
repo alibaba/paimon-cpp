@@ -223,6 +223,7 @@ struct PAIMON_EXPORT Options {
     static const char NUM_SORTED_RUNS_STOP_TRIGGER[];
 
     /// "num-levels" - Total level number, for example, there are 3 levels, including 0,1,2 levels.
+    /// No default value.
     static const char NUM_LEVELS[];
 
     /// "lookup-compact" - Lookup compact mode used for lookup compaction. Default value is
