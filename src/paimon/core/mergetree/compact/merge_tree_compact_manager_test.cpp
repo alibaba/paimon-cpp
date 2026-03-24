@@ -131,7 +131,7 @@ class TestRewriter final : public CompactRewriter {
     }
 
     Result<CompactResult> Upgrade(int32_t output_level,
-                                  const std::shared_ptr<DataFileMeta>& file) const override {
+                                  const std::shared_ptr<DataFileMeta>& file) override {
         PAIMON_ASSIGN_OR_RAISE(auto upgraded, file->Upgrade(output_level));
         return CompactResult({file}, {upgraded});
     }

@@ -34,12 +34,12 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<std::atomic_bool>& cancel_flag)
     : ChangelogMergeTreeRewriter(max_level, /*force_drop_delete=*/dv_maintainer != nullptr,
                                  partition, bucket, schema_id, trimmed_primary_keys, options,
                                  data_schema, write_schema, std::move(dv_factory),
                                  path_factory_cache, std::move(merge_file_split_read),
-                                 std::move(merge_function_wrapper_factory), pool),
+                                 std::move(merge_function_wrapper_factory), pool, cancel_flag),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer) {}
 
@@ -52,7 +52,8 @@ LookupMergeTreeCompactRewriter<T>::Create(
     const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
+    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
@@ -77,7 +78,7 @@ LookupMergeTreeCompactRewriter<T>::Create(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
         trimmed_primary_keys, options, data_schema, write_schema, std::move(dv_factory),
         path_factory_cache, std::move(merge_file_split_read),
-        std::move(merge_function_wrapper_factory), pool));
+        std::move(merge_function_wrapper_factory), pool, cancel_flag));
 }
 
 template <typename T>

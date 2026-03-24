@@ -190,15 +190,27 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     (void)levels;
     LookupStrategy lookup_strategy = options_.GetLookupStrategy();
     ChangelogProducer changelog_producer = options_.GetChangelogProducer();
+    auto path_factory_cache =
+        std::make_shared<FileStorePathFactoryCache>(root_path_, table_schema_, options_, pool_);
+
+    auto dv_factory =
+        [dv_maintainer](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+        if (dv_maintainer) {
+            return dv_maintainer->DeletionVectorOf(file_name).value_or(
+                std::shared_ptr<DeletionVector>());
+        }
+        return std::shared_ptr<DeletionVector>();
+    };
+
     if (changelog_producer == ChangelogProducer::FULL_COMPACTION) {
         return Status::NotImplemented("not support full changelog merge tree compact rewriter");
     } else if (lookup_strategy.need_lookup) {
         return Status::NotImplemented("not support lookup merge tree compact rewriter");
     } else {
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeTreeCompactRewriter> rewriter,
-                               MergeTreeCompactRewriter::Create(bucket, partition, table_schema_,
-                                                                file_store_path_factory_, options_,
-                                                                pool_, cancel_flag));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<MergeTreeCompactRewriter> rewriter,
+            MergeTreeCompactRewriter::Create(bucket, partition, table_schema_, dv_factory,
+                                             path_factory_cache, options_, pool_, cancel_flag));
         return std::shared_ptr<CompactRewriter>(std::move(rewriter));
     }
 }

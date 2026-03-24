@@ -42,7 +42,8 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
                                const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
                                std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
                                MergeFunctionWrapperFactory merge_function_wrapper_factory,
-                               const std::shared_ptr<MemoryPool>& pool);
+                               const std::shared_ptr<MemoryPool>& pool,
+                               const std::shared_ptr<std::atomic_bool>& cancel_flag);
 
     struct UpgradeStrategy {
         static UpgradeStrategy NoChangelogNoRewrite() {
@@ -77,13 +78,12 @@ class ChangelogMergeTreeRewriter : public MergeTreeCompactRewriter {
     bool RewriteLookupChangelog(int32_t output_level,
                                 const std::vector<std::vector<SortedRun>>& sections) const;
 
+    int32_t max_level_;
+    bool force_drop_delete_;
+
  private:
     Result<CompactResult> RewriteOrProduceChangelog(
         int32_t output_level, const std::vector<std::vector<SortedRun>>& sections, bool drop_delete,
         bool rewrite_compact_file);
-
- protected:
-    int32_t max_level_;
-    bool force_drop_delete_;
 };
 }  // namespace paimon

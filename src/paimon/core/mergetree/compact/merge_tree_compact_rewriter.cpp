@@ -59,7 +59,8 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     int32_t bucket, const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
+    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
