@@ -863,7 +863,7 @@ LookupCompactMode CoreOptions::GetLookupCompactMode() const {
 
 int32_t CoreOptions::GetLookupCompactMaxInterval() const {
     int32_t compact_trigger = GetNumSortedRunsCompactionTrigger();
-    int32_t max_interval = compact_trigger;
+    int32_t max_interval;
     if (impl_->lookup_compact_max_interval.has_value()) {
         max_interval = impl_->lookup_compact_max_interval.value();
     } else {
