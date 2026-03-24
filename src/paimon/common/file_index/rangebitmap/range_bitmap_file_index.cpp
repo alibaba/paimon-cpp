@@ -36,7 +36,7 @@ RangeBitmapFileIndex::RangeBitmapFileIndex(const std::map<std::string, std::stri
     : options_(options) {}
 
 Result<std::shared_ptr<FileIndexReader>> RangeBitmapFileIndex::CreateReader(
-    ::ArrowSchema* const arrow_schema, const int32_t start, const int32_t length,
+    ::ArrowSchema* arrow_schema, const int32_t start, const int32_t length,
     const std::shared_ptr<InputStream>& input_stream,
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> arrow_schema_ptr,

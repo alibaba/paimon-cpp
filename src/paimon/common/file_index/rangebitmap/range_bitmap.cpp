@@ -255,18 +255,19 @@ void RangeBitmap::Appender::Append(const Literal& key) {
 Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     int32_t code = 0;
     const int32_t max_code = bitmaps_.empty() ? 0 : static_cast<int32_t>(bitmaps_.size() - 1);
-    PAIMON_ASSIGN_OR_RAISE(auto bsi, BitSliceIndexBitmap::Appender::Create(0, max_code, pool_));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BitSliceIndexBitmap::Appender> bsi_appender,
+                           BitSliceIndexBitmap::Appender::Create(0, max_code, pool_));
     if (chunk_size_bytes_limit_ >= std::numeric_limits<int32_t>::max()) {
         return Status::Invalid(fmt::format(
             "Chunk size cannot be larger than 2GB, current bytes: {}", chunk_size_bytes_limit_));
     }
-    PAIMON_ASSIGN_OR_RAISE(auto dictionary,
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ChunkedDictionary::Appender> dictionary_apender,
                            ChunkedDictionary::Appender::Create(
                                factory_, static_cast<int32_t>(chunk_size_bytes_limit_), pool_));
     for (const auto& [key, bitmap] : bitmaps_) {
-        PAIMON_RETURN_NOT_OK(dictionary->AppendSorted(key, code));
+        PAIMON_RETURN_NOT_OK(dictionary_apender->AppendSorted(key, code));
         for (auto it = bitmap.Begin(); it != bitmap.End(); ++it) {
-            PAIMON_RETURN_NOT_OK(bsi->Append(*it, code));
+            PAIMON_RETURN_NOT_OK(bsi_appender->Append(*it, code));
         }
         code++;
     }
@@ -287,9 +288,10 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     header_size += min.IsNull() ? 0 : min_size;  // min literal size
     header_size += max.IsNull() ? 0 : max_size;  // max literal size
     header_size += sizeof(int32_t);              // dictionary length
-    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> dictionary_bytes, dictionary->Serialize());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> dictionary_bytes,
+                           dictionary_apender->Serialize());
     auto dictionary_length = static_cast<int32_t>(dictionary_bytes->size());
-    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bsi_bytes, bsi->Serialize());
+    PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bsi_bytes, bsi_appender->Serialize());
     size_t bsi_length = bsi_bytes->size();
     const auto data_output_stream = std::make_shared<MemorySegmentOutputStream>(
         MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool_);
