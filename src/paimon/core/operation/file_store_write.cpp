@@ -146,15 +146,16 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return std::make_unique<AppendOnlyFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
             ctx->GetRootPath(), schema, arrow_schema, write_schema, partition_schema,
-            dv_maintainer_factory, options, ignore_previous_files, ctx->IsStreamingMode(),
-            ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(), ctx->GetMemoryPool());
+            dv_maintainer_factory, ctx->GetIOManager(), options, ignore_previous_files,
+            ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
+            ctx->GetMemoryPool());
     } else {
         // pk table
         if (options.GetBucket() == BucketModeDefine::POSTPONE_BUCKET) {
             return PostponeBucketFileStoreWrite::Create(
                 snapshot_manager, schema_manager, ctx->GetCommitUser(), ctx->GetRootPath(), schema,
-                arrow_schema, partition_schema, options, ctx->IsStreamingMode(),
-                ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
+                arrow_schema, partition_schema, ctx->GetIOManager(), options,
+                ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
                 ctx->GetFileSystemSchemeToIdentifierMap(), ctx->GetExecutor(), ctx->GetMemoryPool(),
                 ctx->GetSpecificFileSystem());
         }
@@ -208,9 +209,10 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return std::make_unique<KeyValueFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
             ctx->GetRootPath(), schema, arrow_schema, partition_schema, dv_maintainer_factory,
-            key_comparator, key_comparator_for_compact, sequence_fields_comparator,
-            merge_function_wrapper, options, ignore_previous_files, ctx->IsStreamingMode(),
-            ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(), ctx->GetMemoryPool());
+            ctx->GetIOManager(), key_comparator, key_comparator_for_compact,
+            sequence_fields_comparator, merge_function_wrapper, options, ignore_previous_files,
+            ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
+            ctx->GetMemoryPool());
     }
 }
 

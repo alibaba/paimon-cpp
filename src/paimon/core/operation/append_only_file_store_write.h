@@ -61,6 +61,7 @@ class Logger;
 class MemoryPool;
 class SchemaManager;
 class TableSchema;
+class IOManager;
 
 class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
  public:
@@ -73,9 +74,9 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<arrow::Schema>& write_schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+        bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool);
     ~AppendOnlyFileStoreWrite() override;
 
  private:

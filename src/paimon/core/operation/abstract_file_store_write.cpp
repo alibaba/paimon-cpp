@@ -58,9 +58,9 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-    const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-    bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+    bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       executor_(executor),
       file_store_path_factory_(file_store_path_factory),
@@ -73,6 +73,7 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       table_schema_(table_schema),
       partition_schema_(partition_schema),
       dv_maintainer_factory_(dv_maintainer_factory),
+      io_manager_(io_manager),
       options_(options),
       compact_executor_(CreateDefaultExecutor(4)),
       compaction_metrics_(std::make_shared<CompactionMetrics>()),

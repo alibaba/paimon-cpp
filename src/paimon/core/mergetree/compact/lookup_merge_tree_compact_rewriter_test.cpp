@@ -140,7 +140,6 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<bool>>> CreateCompactRewriterForFirstRow(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options, std::unique_ptr<LookupLevels<bool>>&& lookup_levels) const {
-        auto dv_factory = DeletionVector::CreateFactory(std::shared_ptr<BucketedDvMaintainer>());
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         auto merge_function_wrapper_factory =
@@ -157,15 +156,14 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             /*max_level=*/5, std::move(lookup_levels), /*dv_maintainer=*/nullptr,
             std::move(merge_function_wrapper_factory),
             /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_, cancellation_controller);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<KeyValue>>>
     CreateCompactRewriterForKeyValue(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options, std::unique_ptr<LookupLevels<KeyValue>>&& lookup_levels) const {
-        auto dv_factory = DeletionVector::CreateFactory(std::shared_ptr<BucketedDvMaintainer>());
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         auto merge_function_wrapper_factory =
@@ -188,18 +186,15 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         return LookupMergeTreeCompactRewriter<KeyValue>::Create(
             /*max_level=*/5, std::move(lookup_levels), /*dv_maintainer=*/nullptr,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_, cancellation_controller);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>>>
     CreateCompactRewriterForFilePosition(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
-        const CoreOptions& options, std::unique_ptr<LookupLevels<FilePosition>>&& lookup_levels,
-        DeletionVector::Factory dv_factory = nullptr) const {
-        if (!dv_factory) {
-            dv_factory = DeletionVector::CreateFactory(std::shared_ptr<BucketedDvMaintainer>());
-        }
+        const CoreOptions& options,
+        std::unique_ptr<LookupLevels<FilePosition>>&& lookup_levels) const {
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
@@ -227,8 +222,8 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         return LookupMergeTreeCompactRewriter<FilePosition>::Create(
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_, cancellation_controller);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<PositionedKeyValue>>>
@@ -236,8 +231,6 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options,
         std::unique_ptr<LookupLevels<PositionedKeyValue>>&& lookup_levels) const {
-        auto dv_factory = DeletionVector::CreateFactory(std::shared_ptr<BucketedDvMaintainer>());
-
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
@@ -269,8 +262,8 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         return LookupMergeTreeCompactRewriter<PositionedKeyValue>::Create(
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_, cancellation_controller);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     void CheckResult(const std::string& compact_file_name,
@@ -329,11 +322,11 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto lookup_store_factory,
                                LookupStoreFactory::Create(lookup_key_comparator, options));
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
-        return LookupLevels<T>::Create(fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options,
-                                       schema_manager, std::move(io_manager), path_factory,
-                                       table_schema, std::move(levels),
-                                       /*deletion_file_map=*/{}, processor_factory,
-                                       serializer_factory, lookup_store_factory, pool_);
+        return LookupLevels<T>::Create(
+            fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
+            std::move(io_manager), path_factory, table_schema, std::move(levels),
+            DeletionVector::CreateFactory(/*dv_maintainer=*/nullptr), processor_factory,
+            serializer_factory, lookup_store_factory, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(
@@ -860,21 +853,22 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     ASSERT_OK_AND_ASSIGN(
         auto lookup_levels,
         CreateLookupLevels<FilePosition>(table_path, table_schema, processor_factory, files));
-    auto dv_factory = [file_name = file1->file_name](
-                          const std::string& name) -> Result<std::shared_ptr<DeletionVector>> {
-        if (name == file_name) {
-            // rm the second row for file1
-            auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
-            PAIMON_RETURN_NOT_OK(dv->Delete(1));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    // auto dv_factory = [file_name = file1->file_name](
+    //                       const std::string& name) -> Result<std::shared_ptr<DeletionVector>> {
+    //     if (name == file_name) {
+    //         // rm the second row for file1
+    //         auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
+    //         PAIMON_RETURN_NOT_OK(dv->Delete(1));
+    //         return dv;
+    //     }
+    //     return std::shared_ptr<DeletionVector>();
+    // };
 
+    // TODO(yonghao.fyh): support this dv_factory
     // compact and rewrite
-    ASSERT_OK_AND_ASSIGN(auto rewriter, CreateCompactRewriterForFilePosition(
-                                            table_path, table_schema, core_options,
-                                            std::move(lookup_levels), std::move(dv_factory)));
+    ASSERT_OK_AND_ASSIGN(
+        auto rewriter, CreateCompactRewriterForFilePosition(table_path, table_schema, core_options,
+                                                            std::move(lookup_levels)));
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file1, file2}));
 
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
@@ -1016,7 +1010,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/1, /*delete_row_count=*/std::nullopt);
@@ -1031,7 +1025,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
@@ -1050,7 +1044,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, dv_maintainer,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/1);
@@ -1065,7 +1059,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
@@ -1080,7 +1074,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
@@ -1096,7 +1090,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
             cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);

@@ -21,8 +21,11 @@
 #include <string>
 #include <utility>
 
+#include "paimon/common/data/serializer/row_compacted_serializer.h"
 #include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
+#include "paimon/core/mergetree/lookup/default_lookup_serializer_factory.h"
+#include "paimon/core/mergetree/lookup_levels.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/logging.h"
@@ -49,6 +52,7 @@ class MemoryPool;
 class SchemaManager;
 class SnapshotManager;
 class TableSchema;
+class IOManager;
 struct KeyValue;
 template <typename T>
 class MergeFunctionWrapper;
@@ -63,6 +67,7 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+        const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<FieldsComparator>& key_comparator,
         const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
@@ -96,6 +101,31 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
         const std::shared_ptr<CancellationController>& cancellation_controller);
+
+    template <typename T>
+    Result<std::unique_ptr<LookupLevels<T>>> CreateLookupLevels(
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
+        if (io_manager_ == nullptr) {
+            return Status::Invalid("Can not use lookup, there is no temp disk directory to use.");
+        }
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key,
+                               table_schema_->TrimmedPrimaryKeys());
+        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
+                               table_schema_->GetFields(trimmed_primary_key));
+        auto key_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
+        PAIMON_ASSIGN_OR_RAISE(MemorySlice::SliceComparator lookup_key_comparator,
+                               RowCompactedSerializer::CreateSliceComparator(key_schema, pool_));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<LookupStoreFactory> lookup_store_factory,
+                               LookupStoreFactory::Create(lookup_key_comparator, options_));
+        auto dv_factory = DeletionVector::CreateFactory(dv_maintainer);
+        auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
+        return LookupLevels<T>::Create(options_.GetFileSystem(), partition, bucket, options_,
+                                       schema_manager_, io_manager_, file_store_path_factory_,
+                                       table_schema_, levels, dv_factory, processor_factory,
+                                       serializer_factory, lookup_store_factory, pool_);
+    }
 
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;

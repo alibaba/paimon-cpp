@@ -39,12 +39,12 @@ struct LookupStrategy {
     const bool deletion_vector;
 
  private:
-    LookupStrategy(bool is_first_row, bool produce_changelog, bool deletion_vector,
-                   bool force_lookup)
-        : need_lookup(produce_changelog || deletion_vector || is_first_row || force_lookup),
-          is_first_row(is_first_row),
-          produce_changelog(produce_changelog),
-          deletion_vector(deletion_vector) {}
+    LookupStrategy(bool _is_first_row, bool _produce_changelog, bool _deletion_vector,
+                   bool _force_lookup)
+        : need_lookup(_produce_changelog || _deletion_vector || _is_first_row || _force_lookup),
+          is_first_row(_is_first_row),
+          produce_changelog(_produce_changelog),
+          deletion_vector(_deletion_vector) {}
 };
 
 }  // namespace paimon

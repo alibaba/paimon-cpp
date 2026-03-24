@@ -265,9 +265,7 @@ TEST(CompactDeletionFileTest, LazyMergeOldFileShouldRejectNonLazyType) {
                          CompactDeletionFile::LazyGeneration(maintainer));
     auto old = std::make_shared<NonGeneratedCompactDeletionFile>();
 
-    auto result = lazy->MergeOldFile(old);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("LazyCompactDeletionFile") != std::string::npos);
+    ASSERT_NOK_WITH_MSG(lazy->MergeOldFile(old), "LazyCompactDeletionFile");
 }
 
 TEST(CompactDeletionFileTest, LazyMergeOldFileShouldRejectGeneratedOldLazy) {
@@ -292,10 +290,7 @@ TEST(CompactDeletionFileTest, LazyMergeOldFileShouldRejectGeneratedOldLazy) {
     ASSERT_OK_AND_ASSIGN(auto old_file, old->GetOrCompute());
     ASSERT_TRUE(old_file.has_value());
 
-    auto result = current->MergeOldFile(old);
-    ASSERT_FALSE(result.ok());
-    ASSERT_TRUE(result.status().ToString().find("old should not be generated") !=
-                std::string::npos);
+    ASSERT_NOK_WITH_MSG(current->MergeOldFile(old), "old should not be generated");
 }
 
 }  // namespace paimon::test

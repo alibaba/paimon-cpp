@@ -63,12 +63,12 @@ AppendOnlyFileStoreWrite::AppendOnlyFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-    const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-    bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+    bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, write_schema, partition_schema,
-                             dv_maintainer_factory, options, ignore_previous_files,
+                             dv_maintainer_factory, io_manager, options, ignore_previous_files,
                              is_streaming_mode, ignore_num_bucket_check, executor, pool),
       logger_(Logger::GetLogger("AppendOnlyFileStoreWrite")) {
     write_cols_ = write_schema->field_names();

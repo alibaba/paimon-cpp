@@ -29,10 +29,12 @@
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
 #include "paimon/core/mergetree/compact/force_up_level0_compaction.h"
+#include "paimon/core/mergetree/compact/lookup_merge_tree_compact_rewriter.h"
 #include "paimon/core/mergetree/compact/merge_tree_compact_manager.h"
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 #include "paimon/core/mergetree/compact/universal_compaction.h"
 #include "paimon/core/mergetree/levels.h"
+#include "paimon/core/mergetree/lookup/persist_empty_processor.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/key_value_file_store_scan.h"
@@ -63,6 +65,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+    const std::shared_ptr<IOManager>& io_manager,
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
@@ -72,7 +75,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, /*write_schema=*/schema,
-                             partition_schema, dv_maintainer_factory, options,
+                             partition_schema, dv_maintainer_factory, io_manager, options,
                              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check,
                              executor, pool),
       key_comparator_(key_comparator),
@@ -184,9 +187,6 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     const std::shared_ptr<Levels>& levels,
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
     const std::shared_ptr<CancellationController>& cancellation_controller) {
-    (void)key_comparator;
-    (void)user_defined_seq_comparator;
-    (void)levels;
     LookupStrategy lookup_strategy = options_.GetLookupStrategy();
     ChangelogProducer changelog_producer = options_.GetChangelogProducer();
     auto path_factory_cache =
@@ -196,7 +196,36 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     if (changelog_producer == ChangelogProducer::FULL_COMPACTION) {
         return Status::NotImplemented("not support full changelog merge tree compact rewriter");
     } else if (lookup_strategy.need_lookup) {
-        return Status::NotImplemented("not support lookup merge tree compact rewriter");
+        if (lookup_strategy.is_first_row) {
+            if (options_.DeletionVectorsEnabled()) {
+                return Status::NotImplemented(
+                    "First row merge engine does not need deletion vectors because there is no "
+                    "deletion of old data in this merge engine.");
+            }
+            auto processor_factory = std::make_shared<PersistEmptyProcessor::Factory>();
+            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupLevels<bool>> lookup_levels,
+                                   CreateLookupLevels<bool>(partition, bucket, levels,
+                                                            processor_factory, dv_maintainer));
+            auto merge_function_wrapper_factory = [lookup_levels_ptr =
+                                                       lookup_levels.get()](int32_t output_level)
+                -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
+                std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper =
+                    LookupMergeTreeCompactRewriter<bool>::CreateFirstRowMergeFunctionWrapper(
+                        std::make_unique<FirstRowMergeFunction>(/*ignore_delete=*/true),
+                        output_level, lookup_levels_ptr);
+                return merge_function_wrapper;
+            };
+            int32_t max_level = options_.GetNumLevels() - 1;
+            PAIMON_ASSIGN_OR_RAISE(
+                std::unique_ptr<LookupMergeTreeCompactRewriter<bool>> rewriter,
+                LookupMergeTreeCompactRewriter<bool>::Create(
+                    max_level, std::move(lookup_levels), dv_maintainer,
+                    std::move(merge_function_wrapper_factory), bucket, partition, table_schema_,
+                    path_factory_cache, options_, pool_, cancellation_controller));
+            return std::shared_ptr<CompactRewriter>(std::move(rewriter));
+        }
+        return Status::NotImplemented("not implementation");
+
     } else {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeTreeCompactRewriter> rewriter,
                                MergeTreeCompactRewriter::Create(

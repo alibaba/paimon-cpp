@@ -60,6 +60,7 @@ class Executor;
 class MemoryPool;
 class RecordBatch;
 class RestoreFiles;
+class IOManager;
 
 class AbstractFileStoreWrite : public FileStoreWrite {
  public:
@@ -74,9 +75,9 @@ class AbstractFileStoreWrite : public FileStoreWrite {
         const std::shared_ptr<arrow::Schema>& write_schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+        bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool);
 
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
     Status Compact(const std::map<std::string, std::string>& partition, int32_t bucket,
@@ -128,6 +129,8 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<TableSchema> table_schema_;
     std::shared_ptr<arrow::Schema> partition_schema_;
     std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory_;
+    std::shared_ptr<IOManager> io_manager_;
+
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;
     std::shared_ptr<CompactionMetrics> compaction_metrics_;
