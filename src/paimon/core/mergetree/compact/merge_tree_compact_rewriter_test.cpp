@@ -16,8 +16,6 @@
 
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
-#include <atomic>
-
 #include "arrow/api.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
@@ -46,11 +44,12 @@ class MergeTreeCompactRewriterTest : public testing::Test {
             return std::shared_ptr<DeletionVector>();
         };
 
-        auto cancel_flag = std::make_shared<std::atomic_bool>(false);
+        auto cancellation_controller = std::make_shared<CancellationController>();
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, dv_factory,
-                                                path_factory_cache, options, pool_, cancel_flag);
+                                                path_factory_cache, options, pool_,
+                                                cancellation_controller);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(

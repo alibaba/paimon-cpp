@@ -17,7 +17,6 @@
 #include "paimon/core/mergetree/compact/merge_tree_compact_manager.h"
 
 #include <algorithm>
-#include <atomic>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -234,7 +233,7 @@ class MergeTreeCompactManagerTest : public testing::Test {
             /*lazy_gen_deletion_file=*/false,
             /*need_lookup=*/false,
             /*force_rewrite_all_files=*/false,
-            /*force_keep_delete=*/false, std::make_shared<std::atomic_bool>(false));
+            /*force_keep_delete=*/false, std::make_shared<CancellationController>());
 
         ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/false));
         ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
@@ -347,7 +346,7 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/true,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<std::atomic_bool>(false));
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
 
     auto default_manager = std::make_shared<MergeTreeCompactManager>(
         std::make_shared<InlineExecutor>(), default_levels, strategy, comparator_,
@@ -359,7 +358,7 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<std::atomic_bool>(false));
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
 
     EXPECT_TRUE(lookup_manager->CompactNotCompleted());
     EXPECT_FALSE(default_manager->CompactNotCompleted());
@@ -387,7 +386,7 @@ TEST_F(MergeTreeCompactManagerTest, TestTriggerFullCompaction) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<std::atomic_bool>(false));
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
 
     ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
     ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
@@ -422,7 +421,7 @@ TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<std::atomic_bool>(false));
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
 
     ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
     Status status = manager->TriggerCompaction(/*full_compaction=*/true);

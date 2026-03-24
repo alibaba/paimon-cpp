@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <deque>
 #include <functional>
 #include <memory>
@@ -25,6 +24,7 @@
 #include <vector>
 
 #include "paimon/common/executor/future.h"
+#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/compact/compact_future_manager.h"
 #include "paimon/core/compact/compact_task.h"
@@ -67,14 +67,13 @@ class BucketedAppendCompactManager : public CompactFutureManager {
         };
     }
 
-    BucketedAppendCompactManager(const std::shared_ptr<Executor>& executor,
-                                 const std::vector<std::shared_ptr<DataFileMeta>>& restored,
-                                 const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-                                 int32_t min_file_num, int64_t target_file_size,
-                                 int64_t compaction_file_size, bool force_rewrite_all_files,
-                                 CompactRewriter rewriter,
-                                 const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
-                                 const std::shared_ptr<std::atomic_bool>& cancel_flag);
+    BucketedAppendCompactManager(
+        const std::shared_ptr<Executor>& executor,
+        const std::vector<std::shared_ptr<DataFileMeta>>& restored,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t min_file_num,
+        int64_t target_file_size, int64_t compaction_file_size, bool force_rewrite_all_files,
+        CompactRewriter rewriter, const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
     ~BucketedAppendCompactManager() override = default;
 
     void CancelCompaction() override;
@@ -200,7 +199,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     std::shared_ptr<CompactionMetrics::Reporter> reporter_;
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> compacting_;
     DataFileMetaPriorityQueue to_compact_;
-    std::shared_ptr<std::atomic_bool> cancel_flag_;
+    std::shared_ptr<CancellationController> cancellation_controller_;
     std::unique_ptr<Logger> logger_;
 };
 

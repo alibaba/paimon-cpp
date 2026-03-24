@@ -16,11 +16,11 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
 
+#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/compact/compact_future_manager.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/mergetree/compact/compact_rewriter.h"
@@ -46,7 +46,7 @@ class MergeTreeCompactManager : public CompactFutureManager {
                             const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                             bool lazy_gen_deletion_file, bool need_lookup,
                             bool force_rewrite_all_files, bool force_keep_delete,
-                            const std::shared_ptr<std::atomic_bool>& cancel_flag);
+                            const std::shared_ptr<CancellationController>& cancellation_controller);
 
     ~MergeTreeCompactManager() override = default;
 
@@ -95,7 +95,7 @@ class MergeTreeCompactManager : public CompactFutureManager {
     bool need_lookup_;
     bool force_rewrite_all_files_;
     bool force_keep_delete_;
-    std::shared_ptr<std::atomic_bool> cancel_flag_;
+    std::shared_ptr<CancellationController> cancellation_controller_;
     std::unique_ptr<Logger> logger_;
 };
 

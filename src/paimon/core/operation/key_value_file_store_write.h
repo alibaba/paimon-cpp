@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <utility>
 
+#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/utils/batch_writer.h"
@@ -95,7 +95,7 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-        const std::shared_ptr<std::atomic_bool>& cancel_flag);
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;

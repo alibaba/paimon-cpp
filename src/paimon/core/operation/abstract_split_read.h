@@ -81,9 +81,6 @@ class AbstractSplitRead : public SplitRead {
         const std::vector<std::shared_ptr<DataFileMeta>>& data_files,
         const std::vector<std::optional<DeletionFile>>& deletion_files);
 
-    DeletionVector::Factory CreateDeletionVectorFactory(
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map) const;
-
     Result<std::unique_ptr<BatchReader>> ApplyPredicateFilterIfNeeded(
         std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const;
 

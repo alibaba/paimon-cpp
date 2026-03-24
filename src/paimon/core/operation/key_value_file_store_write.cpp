@@ -16,7 +16,6 @@
 
 #include "paimon/core/operation/key_value_file_store_write.h"
 
-#include <atomic>
 #include <limits>
 #include <map>
 #include <optional>
@@ -161,11 +160,11 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         return std::make_shared<NoopCompactManager>();
     }
 
-    auto cancel_flag = std::make_shared<std::atomic_bool>(false);
+    auto cancellation_controller = std::make_shared<CancellationController>();
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<CompactRewriter> rewriter,
         CreateRewriter(partition, bucket, key_comparator_, user_defined_seq_comparator_, levels,
-                       dv_maintainer, cancel_flag));
+                       dv_maintainer, cancellation_controller));
     auto reporter =
         compaction_metrics_ ? compaction_metrics_->CreateReporter(partition, bucket) : nullptr;
 
@@ -175,7 +174,7 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
         /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
         options_.CompactionForceRewriteAllFiles(),
-        /*force_keep_delete=*/false, cancel_flag);
+        /*force_keep_delete=*/false, cancellation_controller);
 }
 
 Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
@@ -184,7 +183,7 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<Levels>& levels,
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
+    const std::shared_ptr<CancellationController>& cancellation_controller) {
     (void)key_comparator;
     (void)user_defined_seq_comparator;
     (void)levels;
@@ -192,25 +191,17 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(
     ChangelogProducer changelog_producer = options_.GetChangelogProducer();
     auto path_factory_cache =
         std::make_shared<FileStorePathFactoryCache>(root_path_, table_schema_, options_, pool_);
-
-    auto dv_factory =
-        [dv_maintainer](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        if (dv_maintainer) {
-            return dv_maintainer->DeletionVectorOf(file_name).value_or(
-                std::shared_ptr<DeletionVector>());
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    auto dv_factory = DeletionVector::CreateFactory(dv_maintainer);
 
     if (changelog_producer == ChangelogProducer::FULL_COMPACTION) {
         return Status::NotImplemented("not support full changelog merge tree compact rewriter");
     } else if (lookup_strategy.need_lookup) {
         return Status::NotImplemented("not support lookup merge tree compact rewriter");
     } else {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<MergeTreeCompactRewriter> rewriter,
-            MergeTreeCompactRewriter::Create(bucket, partition, table_schema_, dv_factory,
-                                             path_factory_cache, options_, pool_, cancel_flag));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeTreeCompactRewriter> rewriter,
+                               MergeTreeCompactRewriter::Create(
+                                   bucket, partition, table_schema_, dv_factory, path_factory_cache,
+                                   options_, pool_, cancellation_controller));
         return std::shared_ptr<CompactRewriter>(std::move(rewriter));
     }
 }

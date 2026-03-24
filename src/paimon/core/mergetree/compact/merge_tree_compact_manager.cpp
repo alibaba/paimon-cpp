@@ -59,7 +59,7 @@ MergeTreeCompactManager::MergeTreeCompactManager(
     const std::shared_ptr<CompactionMetrics::Reporter>& metrics_reporter,
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, bool lazy_gen_deletion_file,
     bool need_lookup, bool force_rewrite_all_files, bool force_keep_delete,
-    const std::shared_ptr<std::atomic_bool>& cancel_flag)
+    const std::shared_ptr<CancellationController>& cancellation_controller)
     : executor_(executor),
       levels_(levels),
       strategy_(strategy),
@@ -73,9 +73,9 @@ MergeTreeCompactManager::MergeTreeCompactManager(
       need_lookup_(need_lookup),
       force_rewrite_all_files_(force_rewrite_all_files),
       force_keep_delete_(force_keep_delete),
-      cancel_flag_(cancel_flag),
+      cancellation_controller_(cancellation_controller),
       logger_(Logger::GetLogger("MergeTreeCompactManager")) {
-    assert(cancel_flag_ != nullptr);
+    assert(cancellation_controller_ != nullptr);
     ReportMetrics();
 }
 
@@ -151,12 +151,12 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
 }
 
 void MergeTreeCompactManager::CancelCompaction() {
-    cancel_flag_->store(true, std::memory_order_relaxed);
+    cancellation_controller_->Cancel();
     CompactFutureManager::CancelCompaction();
 }
 
 Status MergeTreeCompactManager::SubmitCompaction(const CompactUnit& unit, bool drop_delete) {
-    cancel_flag_->store(false, std::memory_order_relaxed);
+    cancellation_controller_->Reset();
     if (unit.file_rewrite) {
         auto task = std::make_shared<FileRewriteCompactTask>(rewriter_, unit, drop_delete,
                                                              metrics_reporter_);
