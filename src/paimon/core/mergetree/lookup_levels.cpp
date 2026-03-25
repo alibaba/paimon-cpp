@@ -37,8 +37,8 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_pk, table_schema->TrimmedPrimaryKeys());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields, table_schema->GetFields(trimmed_pk));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
+                           table_schema->TrimmedPrimaryKeyFields());
 
     auto pk_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RowCompactedSerializer> key_serializer,

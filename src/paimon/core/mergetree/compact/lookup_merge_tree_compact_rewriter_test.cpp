@@ -91,7 +91,6 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
 
-        auto cancellation_controller = std::make_shared<CancellationController>();
         auto writer = std::make_shared<MergeTreeWriter>(
             /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
             data_path_factory, key_comparator,

@@ -301,6 +301,16 @@ Result<std::vector<std::string>> TableSchema::TrimmedPrimaryKeys() const {
     return primary_keys_;
 }
 
+Result<std::vector<DataField>> TableSchema::TrimmedPrimaryKeyFields() const {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key, TrimmedPrimaryKeys());
+    return GetFields(trimmed_primary_key);
+}
+
+Result<std::shared_ptr<arrow::Schema>> TableSchema::TrimmedPrimaryKeySchema() const {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields, TrimmedPrimaryKeyFields());
+    return DataField::ConvertDataFieldsToArrowSchema(pk_fields);
+}
+
 /// Original bucket keys, maybe empty.
 Result<std::vector<std::string>> TableSchema::OriginalBucketKeys() const {
     std::vector<std::string> bucket_keys;

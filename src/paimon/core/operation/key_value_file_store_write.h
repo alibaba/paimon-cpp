@@ -47,6 +47,7 @@ class CompactRewriter;
 class CoreOptions;
 class Executor;
 class FileStorePathFactory;
+class FileStorePathFactoryCache;
 class Levels;
 class MemoryPool;
 class SchemaManager;
@@ -95,11 +96,29 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
 
     Result<std::shared_ptr<CompactRewriter>> CreateRewriter(
-        const BinaryRow& partition, int32_t bucket,
-        const std::shared_ptr<FieldsComparator>& key_comparator,
-        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
-        const std::shared_ptr<Levels>& levels,
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
+
+    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriter(
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
+        const LookupStrategy& lookup_strategy,
+        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
+
+    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriterWithDeletionVector(
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
+        const LookupStrategy& lookup_strategy,
+        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
+
+    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriterWithoutDeletionVector(
+        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
+        const LookupStrategy& lookup_strategy,
+        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
         const std::shared_ptr<CancellationController>& cancellation_controller);
 
     template <typename T>
@@ -110,11 +129,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         if (io_manager_ == nullptr) {
             return Status::Invalid("Can not use lookup, there is no temp disk directory to use.");
         }
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key,
-                               table_schema_->TrimmedPrimaryKeys());
-        PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
-                               table_schema_->GetFields(trimmed_primary_key));
-        auto key_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> key_schema,
+                               table_schema_->TrimmedPrimaryKeySchema());
         PAIMON_ASSIGN_OR_RAISE(MemorySlice::SliceComparator lookup_key_comparator,
                                RowCompactedSerializer::CreateSliceComparator(key_schema, pool_));
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<LookupStoreFactory> lookup_store_factory,

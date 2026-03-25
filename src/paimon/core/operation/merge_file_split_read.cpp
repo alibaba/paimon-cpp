@@ -101,11 +101,8 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Predicate> predicate_for_keys,
                            GenerateKeyPredicates(context->GetPredicate(), *table_schema));
 
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key,
-                           table_schema->TrimmedPrimaryKeys());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
-                           table_schema->GetFields(trimmed_primary_key));
-    auto key_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> key_schema,
+                           table_schema->TrimmedPrimaryKeySchema());
 
     // projection is the mapping from value_schema in KeyValue object to raw_read_schema
     PAIMON_ASSIGN_OR_RAISE(
