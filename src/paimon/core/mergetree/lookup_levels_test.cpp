@@ -154,8 +154,7 @@ class LookupLevelsTest : public testing::Test {
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
             std::move(io_manager), path_factory, table_schema, levels,
-            /*deletion_file_map=*/{}, processor_factory, serializer_factory, lookup_store_factory,
-            pool_);
+            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory, pool_);
     }
 
  private:
