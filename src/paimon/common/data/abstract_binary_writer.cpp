@@ -48,11 +48,11 @@ void AbstractBinaryWriter::WriteString(int32_t pos, const BinaryString& input) {
     int32_t len = input.GetSizeInBytes();
     if (len <= BinarySection::MAX_FIX_PART_DATA_SIZE) {
         auto bytes = Bytes::AllocateBytes(len, pool_);
-        MemorySegmentUtils::CopyToBytes(input.GetSegments(), input.GetOffset(), bytes.get(), 0,
+        MemorySegmentUtils::CopyToBytes({input.GetSegment()}, input.GetOffset(), bytes.get(), 0,
                                         len);
         WriteBytesToFixLenPart(&segment_, GetFieldOffset(pos), *bytes, len);
     } else {
-        WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(), len);
+        WriteSegmentsToVarLenPart(pos, {input.GetSegment()}, input.GetOffset(), len);
     }
 }
 
@@ -75,17 +75,17 @@ void AbstractBinaryWriter::WriteStringView(int32_t pos, const std::string_view& 
 }
 
 void AbstractBinaryWriter::WriteRow(int32_t pos, const BinaryRow& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
+    return WriteSegmentsToVarLenPart(pos, {input.GetSegment()}, input.GetOffset(),
                                      input.GetSizeInBytes());
 }
 
 void AbstractBinaryWriter::WriteArray(int32_t pos, const BinaryArray& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
+    return WriteSegmentsToVarLenPart(pos, {input.GetSegment()}, input.GetOffset(),
                                      input.GetSizeInBytes());
 }
 
 void AbstractBinaryWriter::WriteMap(int32_t pos, const BinaryMap& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
+    return WriteSegmentsToVarLenPart(pos, {input.GetSegment()}, input.GetOffset(),
                                      input.GetSizeInBytes());
 }
 

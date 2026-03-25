@@ -55,7 +55,7 @@ class FieldsComparator {
         std::function<int32_t(const VariantType& lhs, const VariantType& rhs)>;
 
     static Result<VariantComparatorFunc> CompareVariant(
-        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view);
+        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type);
 
     /// Java-compatible ordering for floating-point types:
     /// -infinity < -0.0 < +0.0 < +infinity < NaN == NaN

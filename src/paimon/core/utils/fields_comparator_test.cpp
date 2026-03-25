@@ -52,7 +52,7 @@ class FieldsComparatorTest : public ::testing::Test {
         }
         ASSERT_OK_AND_ASSIGN(auto comp1, FieldsComparator::Create(data_fields, sort_fields,
                                                                   /*is_ascending_order=*/true,
-                                                                  /*use_view=*/false));
+                                                                  /*use_view=*/true));
         ASSERT_EQ(-1, comp1->CompareTo(row1, row2));
         ASSERT_EQ(1, comp1->CompareTo(row2, row1));
         ASSERT_EQ(0, comp1->CompareTo(row1, row1));
@@ -61,7 +61,7 @@ class FieldsComparatorTest : public ::testing::Test {
         if (!has_null) {
             ASSERT_OK_AND_ASSIGN(auto comp2, FieldsComparator::Create(data_fields, sort_fields,
                                                                       /*is_ascending_order=*/false,
-                                                                      /*use_view=*/false));
+                                                                      /*use_view=*/true));
             ASSERT_EQ(1, comp2->CompareTo(row1, row2));
             ASSERT_EQ(-1, comp2->CompareTo(row2, row1));
             ASSERT_EQ(0, comp2->CompareTo(row1, row1));
@@ -323,7 +323,7 @@ TEST_F(FieldsComparatorTest, TestInvalidType) {
     ASSERT_NOK_WITH_MSG(FieldsComparator::Create({DataField(0, arrow::field("f0", arrow::int32())),
                                                   DataField(1, arrow::field("f1", map_type))},
                                                  /*is_ascending_order=*/true,
-                                                 /*use_view=*/false),
+                                                 /*use_view=*/true),
                         "Do not support comparing map<int8, int16> type in idx 1");
 }
 

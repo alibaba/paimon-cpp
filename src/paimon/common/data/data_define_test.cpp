@@ -140,4 +140,55 @@ TEST(DataDefineTest, VariantValueToStringReturnsStringForInternalArray) {
     ASSERT_EQ(DataDefine::VariantValueToString(array_variant), "array");
 }
 
+// Test case: GetStringView should handle all variant types and edge cases
+TEST(DataDefineTest, GetStringView) {
+    auto pool = GetDefaultPool();
+
+    {
+        // from string_view
+        std::string original = "hello world";
+        VariantType view_variant = std::string_view(original.data(), original.size());
+        auto result = DataDefine::GetStringView(view_variant);
+        ASSERT_EQ(result, "hello world");
+        ASSERT_EQ(result.data(), original.data());
+    }
+    {
+        // from shared_ptr<Bytes>
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("test bytes", pool.get());
+        VariantType bytes_variant = bytes;
+        auto result = DataDefine::GetStringView(bytes_variant);
+        ASSERT_EQ(std::string(result), "test bytes");
+        ASSERT_EQ(result.size(), 10);
+    }
+    {
+        // from BinaryString
+        auto binary_str = BinaryString::FromString("binary string content", pool.get());
+        VariantType binary_variant = binary_str;
+        auto result = DataDefine::GetStringView(binary_variant);
+        ASSERT_EQ(std::string(result), "binary string content");
+    }
+    {
+        // empty string_view
+        VariantType view_variant = std::string_view();
+        auto result = DataDefine::GetStringView(view_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+    {
+        // empty Bytes
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("", pool.get());
+        VariantType bytes_variant = bytes;
+        auto result = DataDefine::GetStringView(bytes_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+    {
+        // empty BinaryString
+        VariantType binary_variant = BinaryString::EmptyUtf8();
+        auto result = DataDefine::GetStringView(binary_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+}
+
 }  // namespace paimon::test

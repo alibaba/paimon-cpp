@@ -52,8 +52,7 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
     for (int32_t i = 0; i < schema->num_fields(); i++) {
         auto field_type = schema->field(i)->type();
         PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
-        PAIMON_ASSIGN_OR_RAISE(comparators[i],
-                               FieldsComparator::CompareVariant(i, field_type, /*use_view=*/false));
+        PAIMON_ASSIGN_OR_RAISE(comparators[i], FieldsComparator::CompareVariant(i, field_type));
     }
     auto comparator = [row_reader1, row_reader2, readers, comparators](
                           const std::shared_ptr<MemorySlice>& slice1,
@@ -428,16 +427,16 @@ Status RowCompactedSerializer::RowWriter::WriteArray(const std::shared_ptr<Inter
                                                      const std::shared_ptr<arrow::DataType>& type) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BinaryArray> binary_array,
                            BinarySerializerUtils::WriteBinaryArray(value, type, pool_.get()));
-    return WriteSegments(binary_array->GetSegments(), binary_array->GetOffset(),
-                         binary_array->GetSizeInBytes());
+    return WriteSegment(binary_array->GetSegment(), binary_array->GetOffset(),
+                        binary_array->GetSizeInBytes());
 }
 
 Status RowCompactedSerializer::RowWriter::WriteMap(const std::shared_ptr<InternalMap>& value,
                                                    const std::shared_ptr<arrow::DataType>& type) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BinaryMap> binary_map,
                            BinarySerializerUtils::WriteBinaryMap(value, type, pool_.get()));
-    return WriteSegments(binary_map->GetSegments(), binary_map->GetOffset(),
-                         binary_map->GetSizeInBytes());
+    return WriteSegment(binary_map->GetSegment(), binary_map->GetOffset(),
+                        binary_map->GetSizeInBytes());
 }
 
 std::shared_ptr<Bytes> RowCompactedSerializer::RowWriter::CopyBuffer() const {
@@ -452,11 +451,11 @@ Status RowCompactedSerializer::RowWriter::WriteUnsignedInt(int32_t value) {
     return Status::OK();
 }
 
-Status RowCompactedSerializer::RowWriter::WriteSegments(const std::vector<MemorySegment>& segments,
-                                                        int32_t off, int32_t len) {
+Status RowCompactedSerializer::RowWriter::WriteSegment(const MemorySegment& segment, int32_t off,
+                                                       int32_t len) {
     PAIMON_RETURN_NOT_OK(WriteUnsignedInt(len));
     EnsureCapacity(len);
-    MemorySegmentUtils::CopyToBytes(segments, off, buffer_.get(), position_, len);
+    MemorySegmentUtils::CopyToBytes({segment}, off, buffer_.get(), position_, len);
     position_ += len;
     return Status::OK();
 }
@@ -488,7 +487,7 @@ void RowCompactedSerializer::RowReader::PointTo(const std::shared_ptr<Bytes>& by
 
 void RowCompactedSerializer::RowReader::PointTo(const MemorySegment& segment, int32_t offset) {
     segment_ = segment;
-    segments_ = {segment};
+
     offset_ = offset;
     position_ = offset + header_size_in_bytes_;
 }
@@ -500,7 +499,7 @@ Result<const RowKind*> RowCompactedSerializer::RowReader::ReadRowKind() const {
 
 Result<BinaryString> RowCompactedSerializer::RowReader::ReadString() {
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    BinaryString str = BinaryString::FromAddress(segments_, position_, length);
+    BinaryString str = BinaryString::FromAddress(segment_, position_, length);
     position_ += length;
     return str;
 }
@@ -534,7 +533,7 @@ Result<Timestamp> RowCompactedSerializer::RowReader::ReadTimestamp(int32_t preci
 Result<std::shared_ptr<InternalArray>> RowCompactedSerializer::RowReader::ReadArray() {
     auto value = std::make_shared<BinaryArray>();
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    value->PointTo(segments_, position_, length);
+    value->PointTo(segment_, position_, length);
     position_ += length;
     return value;
 }
@@ -542,7 +541,7 @@ Result<std::shared_ptr<InternalArray>> RowCompactedSerializer::RowReader::ReadAr
 Result<std::shared_ptr<InternalMap>> RowCompactedSerializer::RowReader::ReadMap() {
     auto value = std::make_shared<BinaryMap>();
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    value->PointTo(segments_, position_, length);
+    value->PointTo(segment_, position_, length);
     position_ += length;
     return value;
 }

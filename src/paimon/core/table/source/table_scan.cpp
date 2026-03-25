@@ -128,7 +128,7 @@ class TableScanImpl {
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<FieldsComparator> key_comparator,
                 FieldsComparator::Create(trimmed_pk_fields, /*is_ascending_order=*/true,
-                                         /*use_view=*/false));
+                                         /*use_view=*/true));
             return std::make_unique<MergeTreeSplitGenerator>(
                 source_split_target_size, source_split_open_file_cost,
                 core_options.DeletionVectorsEnabled(), core_options.GetMergeEngine(),

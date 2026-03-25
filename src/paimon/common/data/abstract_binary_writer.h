@@ -56,7 +56,7 @@ class AbstractBinaryWriter : public BinaryWriter {
 
     void WriteStringView(int32_t pos, const std::string_view& view) override;
 
-    const MemorySegment& GetSegments() const {
+    const MemorySegment& GetSegment() const {
         return segment_;
     }
 

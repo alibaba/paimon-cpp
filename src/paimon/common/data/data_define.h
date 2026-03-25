@@ -69,6 +69,18 @@ class DataDefine {
         return std::get_if<T>(&value);
     }
 
+    // always make sure value is string_view or std::shared_ptr<Bytes> or BinaryString
+    inline static std::string_view GetStringView(const VariantType& value) {
+        if (auto* view_ptr = GetVariantPtr<std::string_view>(value)) {
+            return *view_ptr;
+        } else if (auto* bytes_ptr = GetVariantPtr<std::shared_ptr<Bytes>>(value)) {
+            const auto& bytes = *bytes_ptr;
+            return std::string_view(bytes->data(), bytes->size());
+        }
+        auto binary_string = GetVariantValue<BinaryString>(value);
+        return binary_string.GetStringView();
+    }
+
     static std::string VariantValueToString(const VariantType& value) {
         return std::visit(
             [](const auto& arg) -> std::string {

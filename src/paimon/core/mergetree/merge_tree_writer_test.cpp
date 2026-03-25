@@ -294,7 +294,7 @@ TEST_F(MergeTreeWriterTest, TestWriteWithDeleteRow) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
                          FieldsComparator::Create({value_fields_[1]},
                                                   /*is_ascending_order=*/true,
-                                                  /*use_view=*/false));
+                                                  /*use_view=*/true));
     assert(user_defined_seq_comparator);
     auto merge_writer = std::make_shared<MergeTreeWriter>(
         /*last_sequence_number=*/9, primary_keys_, path_factory, key_comparator_,

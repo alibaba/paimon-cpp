@@ -151,10 +151,10 @@ TEST(BinaryRowWriterTest, TestFieldSetter) {
     ASSERT_OK_AND_ASSIGN(InternalRow::FieldGetterFunc getter6,
                          InternalRow::CreateFieldGetter(6, arrow::float64(), /*use_view=*/true));
     ASSERT_OK_AND_ASSIGN(InternalRow::FieldGetterFunc getter7,
-                         InternalRow::CreateFieldGetter(7, arrow::utf8(), /*use_view=*/false));
+                         InternalRow::CreateFieldGetter(7, arrow::utf8(), /*use_view=*/true));
     ASSERT_OK_AND_ASSIGN(InternalRow::FieldGetterFunc getter8,
                          InternalRow::CreateFieldGetter(8, arrow::binary(),
-                                                        /*use_view=*/false));
+                                                        /*use_view=*/true));
     ASSERT_OK_AND_ASSIGN(InternalRow::FieldGetterFunc getter9,
                          InternalRow::CreateFieldGetter(9, arrow::date32(), /*use_view=*/true));
     ASSERT_OK_AND_ASSIGN(
@@ -214,9 +214,8 @@ TEST(BinaryRowWriterTest, TestFieldSetter) {
     ASSERT_EQ(DataDefine::GetVariantValue<float>(getter5(row)), static_cast<float>(5.5));
     ASSERT_EQ(DataDefine::GetVariantValue<double>(getter6(row)), static_cast<double>(6.66));
 
-    ASSERT_EQ(DataDefine::GetVariantValue<BinaryString>(getter7(row)).ToString(), data);
-    ASSERT_EQ(*DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(getter8(row)),
-              Bytes(data, pool.get()));
+    ASSERT_EQ(DataDefine::GetVariantValue<std::string_view>(getter7(row)), std::string_view(data));
+    ASSERT_EQ(DataDefine::GetVariantValue<std::string_view>(getter8(row)), std::string_view(data));
     ASSERT_EQ(DataDefine::GetVariantValue<int32_t>(getter9(row)), 9);
     ASSERT_EQ(DataDefine::GetVariantValue<Decimal>(getter10(row)), Decimal(5, 2, 123));
     ASSERT_EQ(DataDefine::GetVariantValue<Timestamp>(getter11(row)), Timestamp(11, 12));

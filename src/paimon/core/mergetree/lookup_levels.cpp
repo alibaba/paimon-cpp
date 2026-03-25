@@ -45,7 +45,7 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
                            RowCompactedSerializer::Create(pk_schema, pool));
     PAIMON_ASSIGN_OR_RAISE(
         std::unique_ptr<FieldsComparator> key_comparator,
-        FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+        FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/true));
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
                            table_schema->GetFields(table_schema->PartitionKeys()));

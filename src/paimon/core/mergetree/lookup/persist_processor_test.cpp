@@ -16,39 +16,17 @@
 
 #include "paimon/core/mergetree/lookup/persist_processor.h"
 
-#include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
-#include "paimon/common/data/columnar/columnar_row.h"
 #include "paimon/core/mergetree/lookup/default_lookup_serializer_factory.h"
 #include "paimon/core/mergetree/lookup/persist_empty_processor.h"
 #include "paimon/core/mergetree/lookup/persist_position_processor.h"
 #include "paimon/core/mergetree/lookup/persist_value_and_pos_processor.h"
 #include "paimon/core/mergetree/lookup/persist_value_processor.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {
 class PersistProcessorTest : public testing::Test {
  public:
-    void SetUp() override {
-        auto key_type = arrow::struct_({arrow::field("f1", arrow::int32())});
-        auto key_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(key_type, R"([[10]])").ValueOrDie());
-
-        auto value_type = arrow::struct_(
-            {arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
-             arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())});
-        auto value_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(value_type, R"([["Alice", 10, null, 10.1]])")
-                .ValueOrDie());
-
-        auto key_row = std::make_shared<ColumnarRow>(
-            /*struct_array=*/key_array, key_array->fields(), pool_, /*row_id=*/0);
-        auto value_row = std::make_unique<ColumnarRow>(
-            /*struct_array=*/value_array, value_array->fields(), pool_, /*row_id=*/0);
-
-        kv_ = KeyValue(RowKind::Insert(), /*sequence_number=*/500, /*level=*/4, std::move(key_row),
-                       std::move(value_row));
-    }
-
     void CheckResult(const KeyValue& kv) {
         ASSERT_EQ(kv_.key, kv.key);
 
@@ -66,7 +44,11 @@ class PersistProcessorTest : public testing::Test {
 
  private:
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
-    KeyValue kv_;
+    KeyValue kv_ = KeyValue(RowKind::Insert(), /*sequence_number=*/500, /*level=*/4, /*key=*/
+                            BinaryRowGenerator::GenerateRowPtr({10}, pool_.get()),
+                            /*value=*/
+                            BinaryRowGenerator::GenerateRowPtr(
+                                {std::string("Alice"), 10, NullType(), 10.1}, pool_.get()));
     std::shared_ptr<arrow::Schema> file_schema_ =
         arrow::schema({arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
                        arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())});

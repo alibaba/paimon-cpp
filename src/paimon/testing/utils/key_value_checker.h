@@ -66,10 +66,10 @@ class KeyValueChecker : public testing::Test {
         ASSERT_EQ(expected_vec.size(), result_vec.size());
         ASSERT_OK_AND_ASSIGN(
             auto key_comparator,
-            FieldsComparator::Create(key_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+            FieldsComparator::Create(key_fields, /*is_ascending_order=*/true, /*use_view=*/true));
         ASSERT_OK_AND_ASSIGN(auto value_comparator,
                              FieldsComparator::Create(value_fields, /*is_ascending_order=*/true,
-                                                      /*use_view=*/false));
+                                                      /*use_view=*/true));
         for (size_t i = 0; i < expected_vec.size(); i++) {
             const auto& expected = expected_vec[i];
             const auto& result = result_vec[i];

@@ -103,7 +103,7 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(key_fields,
                                                         /*is_ascending_order=*/true,
-                                                        /*use_view=*/false));
+                                                        /*use_view=*/true));
         return key_comparator;
     }
 
