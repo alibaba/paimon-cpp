@@ -36,11 +36,10 @@ class BinaryDataReadUtils {
     ~BinaryDataReadUtils() = delete;
 
     /// Gets an instance of `Timestamp` from underlying `MemorySegment`.
-    /// @param segments the underlying `MemorySegment`s
+    /// @param segment the underlying `MemorySegment`s
     /// @param base_offset the base offset of current instance of TimestampData
     /// @param offset_and_nanos the offset of milli-seconds part and nanoseconds
     /// @return an instance of `Timestamp`
-
     static Timestamp ReadTimestampData(const MemorySegment& segment, int32_t base_offset,
                                        int64_t offset_and_nanos) {
         auto nano_of_millisecond = static_cast<int32_t>(offset_and_nanos & LOW_BYTES_MASK);
