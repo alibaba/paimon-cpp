@@ -16,6 +16,8 @@
 
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 
+#include "paimon/common/memory/memory_slice_output.h"
+
 namespace paimon {
 
 std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_ptr<Bytes>& meta,
@@ -35,10 +37,31 @@ std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_pt
     return std::make_shared<BTreeIndexMeta>(first_key, last_key, has_nulls);
 }
 
-std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) {
-    // TODO(zhangchaoming.zcm): Implement serialization
-    // For now, return an empty Bytes object
-    return std::make_shared<Bytes>();
+std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) const {
+    // Calculate total size: first_key_len(4) + first_key + last_key_len(4) + last_key + has_nulls(1)
+    int32_t first_key_size = first_key_ ? first_key_->size() : 0;
+    int32_t last_key_size = last_key_ ? last_key_->size() : 0;
+    int32_t total_size = 4 + first_key_size + 4 + last_key_size + 1;
+
+    auto output = std::make_shared<MemorySliceOutput>(total_size, pool);
+
+    // Write first_key_len and first_key
+    output->WriteValue(first_key_size);
+    if (first_key_) {
+        output->WriteBytes(first_key_);
+    }
+
+    // Write last_key_len and last_key
+    output->WriteValue(last_key_size);
+    if (last_key_) {
+        output->WriteBytes(last_key_);
+    }
+
+    // Write has_nulls
+    output->WriteValue(static_cast<int8_t>(has_nulls_ ? 1 : 0));
+
+    auto slice = output->ToSlice();
+    return slice->CopyBytes(pool);
 }
 
 }  // namespace paimon

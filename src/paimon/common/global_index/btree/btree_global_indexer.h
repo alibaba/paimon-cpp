@@ -37,9 +37,7 @@ class BTreeGlobalIndexer : public GlobalIndexer {
     Result<std::shared_ptr<GlobalIndexWriter>> CreateWriter(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
         const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-        const std::shared_ptr<MemoryPool>& pool) const override {
-        return Status::NotImplemented("Writing btree global index not support yet");
-    }
+        const std::shared_ptr<MemoryPool>& pool) const override;
 
     Result<std::shared_ptr<GlobalIndexReader>> CreateReader(
         ::ArrowSchema* arrow_schema, const std::shared_ptr<GlobalIndexFileReader>& file_reader,
@@ -136,6 +134,7 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     std::shared_ptr<RoaringNavigableMap64> null_bitmap_;
     std::shared_ptr<MemorySlice> min_key_;
     std::shared_ptr<MemorySlice> max_key_;
+    std::vector<GlobalIndexIOMeta> files_;
     std::shared_ptr<MemoryPool> pool_;
     std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
         comparator_;

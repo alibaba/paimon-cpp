@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 
 #include "arrow/c/bridge.h"
 #include "paimon/common/global_index/btree/btree_file_footer.h"
+#include "paimon/common/global_index/btree/btree_global_index_writer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
@@ -33,6 +34,13 @@
 #include "paimon/predicate/literal.h"
 
 namespace paimon {
+
+Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
+    const std::string& field_name, ::ArrowSchema* arrow_schema,
+    const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+    const std::shared_ptr<MemoryPool>& pool) const {
+    return std::make_shared<BTreeGlobalIndexWriter>(field_name, file_writer, pool);
+}
 
 // Forward declarations for helper functions
 static Result<std::shared_ptr<MemorySlice>> LiteralToMemorySlice(const Literal& literal,
@@ -193,19 +201,29 @@ CreateComparator(FieldType field_type) {
                 return 0;
             };
         case FieldType::DECIMAL:
-            // Decimal comparison (stored as 16 bytes for DECIMAL128)
+            // Decimal comparison (stored as 16 bytes big-endian for DECIMAL128)
+            // Big-endian storage ensures correct lexicographic byte comparison for signed values
             return [](const std::shared_ptr<MemorySlice>& a,
                       const std::shared_ptr<MemorySlice>& b) -> int32_t {
                 if (!a || !b) return 0;
                 auto a_bytes = a->GetHeapMemory();
                 auto b_bytes = b->GetHeapMemory();
                 if (!a_bytes || !b_bytes) return 0;
-                // Compare bytes directly for DECIMAL128
-                size_t min_len = std::min(a_bytes->size(), b_bytes->size());
-                int cmp = memcmp(a_bytes->data(), b_bytes->data(), min_len);
-                if (cmp != 0) return cmp < 0 ? -1 : 1;
-                if (a_bytes->size() < b_bytes->size()) return -1;
-                if (a_bytes->size() > b_bytes->size()) return 1;
+                // Both should be 16 bytes for DECIMAL128
+                if (a_bytes->size() < 16 || b_bytes->size() < 16) {
+                    // Fallback to lexicographic comparison for truncated data
+                    size_t min_len = std::min(a_bytes->size(), b_bytes->size());
+                    int cmp = memcmp(a_bytes->data(), b_bytes->data(), min_len);
+                    if (cmp != 0) return cmp < 0 ? -1 : 1;
+                    if (a_bytes->size() < b_bytes->size()) return -1;
+                    if (a_bytes->size() > b_bytes->size()) return 1;
+                    return 0;
+                }
+                // For big-endian signed int128, direct byte comparison works correctly
+                // because the sign bit is in the first byte
+                int cmp = memcmp(a_bytes->data(), b_bytes->data(), 16);
+                if (cmp < 0) return -1;
+                if (cmp > 0) return 1;
                 return 0;
             };
         default:
@@ -253,17 +271,24 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     // prepare file footer
     auto cache_manager = std::make_shared<CacheManager>();
     auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, pool, cache_manager);
-    auto segment = block_cache->GetBlock(meta.file_size - BTreeFileFooter::ENCODED_LENGTH,
-                                         BTreeFileFooter::ENCODED_LENGTH, true);
+    PAIMON_ASSIGN_OR_RAISE(auto segment,
+                           block_cache->GetBlock(meta.file_size - BTreeFileFooter::ENCODED_LENGTH,
+                                                 BTreeFileFooter::ENCODED_LENGTH, true));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BTreeFileFooter> footer,
                            BTreeFileFooter::Read(MemorySlice::Wrap(segment)->ToInput()));
 
     // prepare null_bitmap and sst_file_reader
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RoaringNavigableMap64> null_bitmap,
                            ReadNullBitmap(block_cache, footer->GetNullBitmapHandle()));
-    std::shared_ptr<paimon::FileSystem> fs;
+
+    // Wrap the comparator to return Result<int32_t>
+    MemorySlice::SliceComparator result_comparator =
+        [comparator](const std::shared_ptr<MemorySlice>& a,
+                     const std::shared_ptr<MemorySlice>& b) -> Result<int32_t> {
+        return comparator(a, b);
+    };
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SstFileReader> sst_file_reader,
-                           SstFileReader::Create(pool, fs, meta.file_path, comparator));
+                           SstFileReader::Create(pool, in, result_comparator));
 
     auto index_meta = BTreeIndexMeta::Deserialize(meta.metadata, pool.get());
 
@@ -311,7 +336,8 @@ Result<std::shared_ptr<RoaringNavigableMap64>> BTreeGlobalIndexer::ReadNullBitma
     }
 
     // Read bytes and crc value
-    auto segment = cache->GetBlock(block_handle->Offset(), block_handle->Size() + 4, false);
+    PAIMON_ASSIGN_OR_RAISE(auto segment,
+                           cache->GetBlock(block_handle->Offset(), block_handle->Size() + 4, false));
 
     auto slice = MemorySlice::Wrap(segment);
     auto slice_input = slice->ToInput();
@@ -358,6 +384,7 @@ BTreeGlobalIndexReader::BTreeGlobalIndexReader(
       null_bitmap_(null_bitmap),
       min_key_(min_key),
       max_key_(max_key),
+      files_(files),
       pool_(pool),
       comparator_(std::move(comparator)) {}
 
@@ -455,10 +482,55 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitContains
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
     const Literal& literal) {
-    // BTree index can only efficiently handle LIKE patterns of the form "prefix%".
+    // BTree index can efficiently handle LIKE patterns of the form "prefix%".
     // For other patterns (e.g., "%suffix", "%contains%"), return all non-null rows as fallback.
-    // Note: This is a conservative approach that doesn't prune any rows.
-    // TODO: Parse LIKE pattern and use VisitStartsWith for "prefix%" patterns.
+    if (literal.IsNull()) {
+        return Status::Invalid("LIKE pattern cannot be null");
+    }
+
+    // Get the pattern string
+    std::string pattern = literal.GetValue<std::string>();
+
+    // Check if pattern is of the form "prefix%" (starts with a literal prefix and ends with %)
+    // The prefix must not contain any wildcard characters (_ or %)
+    // Escape sequences with \ are not supported in this simple implementation
+    bool is_prefix_pattern = false;
+    std::string prefix;
+
+    // Find the position of the first wildcard character
+    size_t first_wildcard = pattern.find_first_of("_%");
+
+    if (first_wildcard != std::string::npos) {
+        // Check if the pattern is exactly "prefix%" form
+        // - First wildcard must be '%'
+        // - It must be at the end of the pattern
+        // - No other wildcards before it
+        if (pattern[first_wildcard] == '%' && first_wildcard == pattern.length() - 1) {
+            // Check if there are any wildcards in the prefix part
+            bool has_wildcard_in_prefix = false;
+            for (size_t i = 0; i < first_wildcard; ++i) {
+                if (pattern[i] == '_' || pattern[i] == '%') {
+                    has_wildcard_in_prefix = true;
+                    break;
+                }
+            }
+            if (!has_wildcard_in_prefix) {
+                is_prefix_pattern = true;
+                prefix = pattern.substr(0, first_wildcard);
+            }
+        }
+    } else {
+        // No wildcards at all - this is an exact match, not a prefix pattern
+        // We could optimize this to VisitEqual, but for simplicity, fall through to fallback
+    }
+
+    if (is_prefix_pattern) {
+        // Use VisitStartsWith for prefix% patterns
+        Literal prefix_literal(FieldType::STRING, prefix.c_str(), prefix.length());
+        return VisitStartsWith(prefix_literal);
+    }
+
+    // For other patterns, return all non-null rows as fallback
     return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
         return result.GetBitmap();
@@ -667,30 +739,33 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitFullText
 Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(
     const std::shared_ptr<MemorySlice>& lower_bound,
     const std::shared_ptr<MemorySlice>& upper_bound, bool lower_inclusive, bool upper_inclusive) {
-    // Create an index block iterator to iterate through data blocks
-    auto index_block_reader = sst_file_reader_->GetIndexBlockReader();
-    auto index_iterator = index_block_reader->Iterator();
+    // Create an SST file iterator to iterate through data blocks
+    auto sst_iterator = sst_file_reader_->CreateIterator();
 
-    // Seek index iterator to the lower bound
-    index_iterator->SeekTo(lower_bound);
+    // Seek iterator to the lower bound
+    if (lower_bound) {
+        auto lower_bytes = lower_bound->GetHeapMemory();
+        PAIMON_RETURN_NOT_OK(sst_iterator->SeekTo(lower_bytes));
+    }
 
     RoaringNavigableMap64 result;
 
-    // Iterate through all relevant data blocks
+    // Iterate through all relevant data blocks using GetNextBlock
+    std::unique_ptr<BlockIterator> index_iterator;
     bool first_block = true;
 
-    while (index_iterator->HasNext()) {
+    while (true) {
         // Get the next data block
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockIterator> data_iterator,
                                sst_file_reader_->GetNextBlock(index_iterator));
 
         if (!data_iterator || !data_iterator->HasNext()) {
-            continue;
+            break;
         }
 
         // For the first block, we need to seek within the block to the exact position
-        if (first_block) {
-            data_iterator->SeekTo(lower_bound);
+        if (first_block && lower_bound) {
+            PAIMON_ASSIGN_OR_RAISE(bool found, data_iterator->SeekTo(lower_bound));
             first_block = false;
 
             // After seeking, check if we still have data
@@ -705,7 +780,7 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(
 
             // Compare key with bounds using the comparator
             const auto& comparator = comparator_;
-            int cmp_lower = comparator ? comparator(entry->key_, lower_bound) : 0;
+            int cmp_lower = comparator ? comparator(entry->key, lower_bound) : 0;
 
             // Check lower bound
             if (!lower_inclusive && cmp_lower == 0) {
@@ -714,7 +789,7 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(
             }
 
             // Check upper bound
-            int cmp_upper = comparator ? comparator(entry->key_, upper_bound) : 0;
+            int cmp_upper = comparator ? comparator(entry->key, upper_bound) : 0;
             if (cmp_upper > 0 || (!upper_inclusive && cmp_upper == 0)) {
                 // Key is beyond upper bound, we're done
                 return result;
@@ -722,7 +797,7 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(
 
             // Deserialize row IDs from the value
             // The value should contain an array of int64_t row IDs
-            auto value_bytes = entry->value_->CopyBytes(pool_.get());
+            auto value_bytes = entry->value->CopyBytes(pool_.get());
             auto value_slice = MemorySlice::Wrap(value_bytes);
             auto value_input = value_slice->ToInput();
 
@@ -741,9 +816,40 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(
 }
 
 Result<RoaringNavigableMap64> BTreeGlobalIndexReader::AllNonNullRows() {
-    // Traverse all data to avoid returning null values, which is very advantageous in
-    // situations where there are many null values
-    // TODO do not traverse all data if less null values
+    // Optimization: when null values are few, construct the result by subtracting
+    // null_bitmap from a full range bitmap, instead of traversing all data blocks.
+    //
+    // We use a threshold: if null count is less than 10% of total rows, use the
+    // subtraction approach; otherwise, traverse all data blocks.
+
+    if (files_.empty()) {
+        return RoaringNavigableMap64();
+    }
+
+    // Get total row count from range_end (inclusive last row id)
+    int64_t total_rows = files_[0].range_end + 1;
+    uint64_t null_count = null_bitmap_->GetLongCardinality();
+
+    // Threshold: use subtraction if null count < 10% of total rows
+    // and total rows is not too large (to avoid memory issues with huge bitmaps)
+    const double NULL_RATIO_THRESHOLD = 0.1;
+    const int64_t MAX_ROWS_FOR_SUBTRACTION = 10000000;  // 10 million rows max
+
+    bool use_subtraction =
+        (total_rows <= MAX_ROWS_FOR_SUBTRACTION) &&
+        (null_count < static_cast<uint64_t>(total_rows * NULL_RATIO_THRESHOLD));
+
+    if (use_subtraction) {
+        // Build full range bitmap [0, range_end]
+        RoaringNavigableMap64 result;
+        result.AddRange(Range(0, total_rows - 1));
+        // Subtract null bitmap
+        result.AndNot(*null_bitmap_);
+        return result;
+    }
+
+    // Fallback: traverse all data blocks
+    // This is more efficient when there are many null values
     if (!min_key_) {
         return RoaringNavigableMap64();
     }
@@ -887,13 +993,24 @@ static Result<std::shared_ptr<MemorySlice>> LiteralToMemorySlice(const Literal& 
         }
     }
 
-    // Handle decimal (DECIMAL128 stored as 16 bytes)
+    // Handle decimal (DECIMAL128 stored as 16 bytes big-endian)
     if (type == FieldType::DECIMAL) {
         try {
-            // Decimal values are stored as string representation for simplicity
-            // The actual storage format should match the index writer's format
-            std::string str_value = literal.ToString();
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
+            // Get the Decimal value and serialize as big-endian int128
+            Decimal decimal_value = literal.GetValue<Decimal>();
+            auto bytes = Bytes::AllocateBytes(16, pool);
+            // Store as big-endian for correct lexicographic comparison
+            // High 64 bits first, then low 64 bits
+            uint64_t high_bits = decimal_value.HighBits();
+            uint64_t low_bits = decimal_value.LowBits();
+            // Write high bits (bytes 0-7)
+            for (int i = 0; i < 8; ++i) {
+                bytes->data()[i] = static_cast<char>((high_bits >> (56 - i * 8)) & 0xFF);
+            }
+            // Write low bits (bytes 8-15)
+            for (int i = 0; i < 8; ++i) {
+                bytes->data()[8 + i] = static_cast<char>((low_bits >> (56 - i * 8)) & 0xFF);
+            }
             return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert decimal literal to MemorySlice: " +

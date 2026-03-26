@@ -27,7 +27,7 @@ namespace paimon {
 class BTreeIndexMeta {
 public:
   static std::shared_ptr<BTreeIndexMeta> Deserialize(const std::shared_ptr<Bytes>& meta, paimon::MemoryPool *pool);
-  static std::shared_ptr<Bytes> Serialize(paimon::MemoryPool *pool);
+  std::shared_ptr<Bytes> Serialize(paimon::MemoryPool *pool) const;
 
  public:
     BTreeIndexMeta(const std::shared_ptr<Bytes>& first_key, const std::shared_ptr<Bytes>& last_key,
@@ -51,10 +51,10 @@ public:
     }
 
  private:
-    int32_t Size() {
+    int32_t Size() const {
         // 9 bytes => first_key_len(4 byte) + last_key_len(4 byte) + has_null(1 byte)
-        return (first_key_.get() ? 0 : first_key_->size()) +
-               (last_key_.get() ? 0 : last_key_->size()) + 9;
+        return (first_key_ ? first_key_->size() : 0) +
+               (last_key_ ? last_key_->size() : 0) + 9;
     }
 
  private:
