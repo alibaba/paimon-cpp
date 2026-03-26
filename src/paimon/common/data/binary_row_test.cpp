@@ -79,6 +79,7 @@ TEST_F(BinaryRowTest, TestBasic) {
     ASSERT_EQ(static_cast<double>(5.8), row.GetDouble(1));
 
     row.Clear();
+    ASSERT_EQ(0, row.HashCode());
     std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(100, pool.get());
     MemorySegment segment1 = MemorySegment::Wrap(bytes1);
     row.PointTo(segment1, 0, 20);

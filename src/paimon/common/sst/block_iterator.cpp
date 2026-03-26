@@ -53,7 +53,7 @@ Result<bool> BlockIterator::SeekTo(const std::shared_ptr<MemorySlice>& target_ke
         int32_t mid = left + (right - left) / 2;
 
         PAIMON_RETURN_NOT_OK(input_->SetPosition(reader_->SeekTo(mid)));
-        PAIMON_ASSIGN_OR_RAISE(auto mid_entry, ReadEntry());
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> mid_entry, ReadEntry());
         PAIMON_ASSIGN_OR_RAISE(int32_t compare, reader_->Comparator()(mid_entry->key, target_key));
 
         if (compare == 0) {

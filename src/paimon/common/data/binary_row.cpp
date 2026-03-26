@@ -294,6 +294,9 @@ bool BinaryRow::operator==(const BinaryRow& other) const {
 }
 
 int32_t BinaryRow::HashCode() const {
+    if (size_in_bytes_ == 0) {
+        return 0;
+    }
     return MemorySegmentUtils::HashByWords({segment_}, offset_, size_in_bytes_, nullptr);
 }
 
