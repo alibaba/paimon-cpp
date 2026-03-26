@@ -57,9 +57,6 @@ Result<std::shared_ptr<CompactResult>> MergeTreeCompactTask::DoCompact() {
                     PAIMON_RETURN_NOT_OK(Upgrade(file, result.get()));
                 }
             }
-        } else {
-            assert(false);
-            return Status::Invalid("Unexpected empty section in partitioned runs");
         }
     }
 
