@@ -319,9 +319,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     // 6. complete key fields to all trimmed primary key
     key_fields.clear();
     PAIMON_ASSIGN_OR_RAISE(key_fields, table_schema.GetFields(trimmed_key_fields));
-    PAIMON_ASSIGN_OR_RAISE(
-        *key_comparator, FieldsComparator::Create(key_fields,
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+    PAIMON_ASSIGN_OR_RAISE(*key_comparator, FieldsComparator::Create(key_fields,
+                                                                     /*is_ascending_order=*/true));
     // 7. construct actual read fields: special + key + non-key value
     std::vector<DataField> read_fields;
     std::vector<DataField> special_fields(

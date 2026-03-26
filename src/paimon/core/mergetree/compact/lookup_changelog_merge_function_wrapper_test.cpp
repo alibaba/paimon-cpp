@@ -190,7 +190,7 @@ TEST(LookupChangelogMergeFunctionWrapperTest, TestCreateSequenceComparator) {
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
             FieldsComparator::Create({DataField(1, arrow::field("value", arrow::int32()))},
-                                     /*is_ascending_order=*/true, /*use_view=*/true));
+                                     /*is_ascending_order=*/true));
         auto cmp = LookupChangelogMergeFunctionWrapper<bool>::CreateSequenceComparator(
             user_defined_seq_comparator);
         KeyValue kv1(RowKind::Insert(), /*sequence_number=*/2, /*level=*/0, /*key=*/

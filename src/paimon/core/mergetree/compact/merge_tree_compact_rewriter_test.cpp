@@ -69,9 +69,8 @@ class MergeTreeCompactRewriterTest : public testing::Test {
 
         PAIMON_ASSIGN_OR_RAISE(auto pk_fields,
                                table_schema->GetFields(table_schema->TrimmedPrimaryKeys().value()));
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<FieldsComparator> key_comparator,
-            FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/true));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
+                               FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true));
         IntervalPartition interval_partition(metas, key_comparator);
         return interval_partition.Partition();
     }

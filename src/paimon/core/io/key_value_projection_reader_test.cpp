@@ -71,10 +71,9 @@ class KeyValueProjectionReaderTest : public testing::Test,
             const auto& key_field = key_schema->field(i);
             key_fields.emplace_back(i, key_field);
         }
-        EXPECT_OK_AND_ASSIGN(
-            std::shared_ptr<FieldsComparator> user_key_comparator,
-            FieldsComparator::Create(key_fields, key_sort_fields,
-                                     /*is_ascending_order=*/true, /*use_view=*/true));
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                             FieldsComparator::Create(key_fields, key_sort_fields,
+                                                      /*is_ascending_order=*/true));
 
         auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
         auto merge_function_wrapper =

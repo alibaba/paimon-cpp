@@ -118,8 +118,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         std::vector<DataField> key_fields = {DataField(0, key_schema_->field(0))};
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(key_fields,
-                                                        /*is_ascending_order=*/true,
-                                                        /*use_view=*/true));
+                                                        /*is_ascending_order=*/true));
         return key_comparator;
     }
 

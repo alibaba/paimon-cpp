@@ -32,24 +32,23 @@
 
 namespace paimon {
 Result<std::unique_ptr<FieldsComparator>> FieldsComparator::Create(
-    const std::vector<DataField>& input_data_field, bool is_ascending_order, bool use_view) {
+    const std::vector<DataField>& input_data_field, bool is_ascending_order) {
     std::vector<int32_t> sort_fields;
     sort_fields.reserve(input_data_field.size());
     for (int32_t i = 0; i < static_cast<int32_t>(input_data_field.size()); i++) {
         sort_fields.push_back(i);
     }
-    return Create(input_data_field, sort_fields, is_ascending_order, use_view);
+    return Create(input_data_field, sort_fields, is_ascending_order);
 }
 
 Result<std::unique_ptr<FieldsComparator>> FieldsComparator::Create(
     const std::vector<DataField>& input_data_field, const std::vector<int32_t>& sort_fields,
-    bool is_ascending_order, bool use_view) {
+    bool is_ascending_order) {
     std::vector<FieldComparatorFunc> comparators;
     comparators.reserve(sort_fields.size());
     for (const auto& sort_field_idx : sort_fields) {
         const auto& type = input_data_field[sort_field_idx].Type();
-        PAIMON_ASSIGN_OR_RAISE(FieldComparatorFunc cmp,
-                               CompareField(sort_field_idx, type, use_view));
+        PAIMON_ASSIGN_OR_RAISE(FieldComparatorFunc cmp, CompareField(sort_field_idx, type));
         comparators.emplace_back(cmp);
     }
     return std::unique_ptr<FieldsComparator>(
@@ -79,7 +78,7 @@ int32_t FieldsComparator::CompareTo(const InternalRow& lhs, const InternalRow& r
 }
 
 Result<FieldsComparator::FieldComparatorFunc> FieldsComparator::CompareField(
-    int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view) {
+    int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type) {
     arrow::Type::type type = input_type->id();
     switch (type) {
         case arrow::Type::type::BOOL:
@@ -142,44 +141,15 @@ Result<FieldsComparator::FieldComparatorFunc> FieldsComparator::CompareField(
                     double rvalue = rhs.GetDouble(field_idx);
                     return lvalue == rvalue ? 0 : (lvalue < rvalue ? -1 : 1);
                 });
-        case arrow::Type::type::STRING: {
-            if (use_view) {
-                return FieldsComparator::FieldComparatorFunc(
-                    [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
-                        auto lvalue = lhs.GetStringView(field_idx);
-                        auto rvalue = rhs.GetStringView(field_idx);
-                        int32_t cmp = lvalue.compare(rvalue);
-                        return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
-                    });
-            } else {
-                return FieldsComparator::FieldComparatorFunc(
-                    [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
-                        auto lvalue = lhs.GetString(field_idx);
-                        auto rvalue = rhs.GetString(field_idx);
-                        int32_t cmp = lvalue.CompareTo(rvalue);
-                        return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
-                    });
-            }
-        }
+        case arrow::Type::type::STRING:
         case arrow::Type::type::BINARY: {
-            // TODO(xinyu.lxy): may use 64byte compare
-            if (use_view) {
-                return FieldsComparator::FieldComparatorFunc(
-                    [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
-                        auto lvalue = lhs.GetStringView(field_idx);
-                        auto rvalue = rhs.GetStringView(field_idx);
-                        int32_t cmp = lvalue.compare(rvalue);
-                        return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
-                    });
-            } else {
-                return FieldsComparator::FieldComparatorFunc(
-                    [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
-                        auto lvalue = lhs.GetBinary(field_idx);
-                        auto rvalue = rhs.GetBinary(field_idx);
-                        int32_t cmp = lvalue->compare(*rvalue);
-                        return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
-                    });
-            }
+            return FieldsComparator::FieldComparatorFunc(
+                [field_idx](const InternalRow& lhs, const InternalRow& rhs) -> int32_t {
+                    auto lvalue = lhs.GetStringView(field_idx);
+                    auto rvalue = rhs.GetStringView(field_idx);
+                    int32_t cmp = lvalue.compare(rvalue);
+                    return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
+                });
         }
         case arrow::Type::type::TIMESTAMP: {
             auto timestamp_type =

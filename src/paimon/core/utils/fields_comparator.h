@@ -39,11 +39,11 @@ class DataField;
 class FieldsComparator {
  public:
     static Result<std::unique_ptr<FieldsComparator>> Create(
-        const std::vector<DataField>& input_data_field, bool is_ascending_order, bool use_view);
+        const std::vector<DataField>& input_data_field, bool is_ascending_order);
 
     static Result<std::unique_ptr<FieldsComparator>> Create(
         const std::vector<DataField>& input_data_field, const std::vector<int32_t>& sort_fields,
-        bool is_ascending_order, bool use_view);
+        bool is_ascending_order);
 
     int32_t CompareTo(const InternalRow& lhs, const InternalRow& rhs) const;
 
@@ -97,7 +97,7 @@ class FieldsComparator {
     }
 
     static Result<FieldComparatorFunc> CompareField(
-        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view);
+        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type);
 
  private:
     bool is_ascending_order_;
