@@ -163,6 +163,8 @@ void AbstractBinaryWriter::WriteSegmentsToVarLenPart(int32_t pos,
     if (segments.size() == 1) {
         segments[0].CopyTo(offset, &segment_, cursor_, size);
     } else {
+        assert(false);
+        // Now BinarySecyion only in single segment.
         WriteMultiSegmentsToVarLenPart(segments, offset, size);
     }
     SetOffsetAndSize(pos, cursor_, size);
@@ -172,6 +174,8 @@ void AbstractBinaryWriter::WriteSegmentsToVarLenPart(int32_t pos,
 
 void AbstractBinaryWriter::WriteMultiSegmentsToVarLenPart(
     const std::vector<MemorySegment>& segments, int32_t offset, int32_t size) {
+    // Now BinarySecyion only in single segment.
+    assert(false);
     // Write the bytes to the variable length portion.
     int32_t need_copy = size;
     int32_t from_offset = offset;

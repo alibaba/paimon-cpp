@@ -27,7 +27,8 @@ namespace paimon {
 
 class BlockHandle {
  public:
-    static std::shared_ptr<BlockHandle> ReadBlockHandle(std::shared_ptr<MemorySliceInput>& input);
+    static Result<std::shared_ptr<BlockHandle>> ReadBlockHandle(
+        const std::shared_ptr<MemorySliceInput>& input);
 
  public:
     BlockHandle(int64_t offset, int32_t size);

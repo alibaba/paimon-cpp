@@ -82,39 +82,9 @@ std::shared_ptr<Bytes> MemorySlice::CopyBytes(MemoryPool* pool) {
     return bytes;
 }
 
-bool MemorySlice::operator<(const MemorySlice& other) const {
-    return Compare(other) < 0;
-}
-bool MemorySlice::operator>(const MemorySlice& other) const {
-    return Compare(other) > 0;
-}
-bool MemorySlice::operator==(const MemorySlice& other) const {
-    return Compare(other) == 0;
-}
-bool MemorySlice::operator!=(const MemorySlice& other) const {
-    return !(*this == other);
-}
-bool MemorySlice::operator<=(const MemorySlice& other) const {
-    return Compare(other) <= 0;
-}
-bool MemorySlice::operator>=(const MemorySlice& other) const {
-    return Compare(other) >= 0;
-}
 std::shared_ptr<MemorySliceInput> MemorySlice::ToInput() {
     auto self = shared_from_this();
     return std::make_shared<MemorySliceInput>(self);
-}
-
-int32_t MemorySlice::Compare(const MemorySlice& other) const {
-    int32_t len = std::min(length_, other.length_);
-    for (int32_t i = 0; i < len; ++i) {
-        auto byte1 = static_cast<unsigned char>(segment_.Get(offset_ + i));
-        auto byte2 = static_cast<unsigned char>(other.segment_.Get(other.offset_ + i));
-        if (byte1 != byte2) {
-            return static_cast<int>(byte1) - static_cast<int>(byte2);
-        }
-    }
-    return length_ - other.length_;
 }
 
 }  // namespace paimon

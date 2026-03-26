@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <stdexcept>
-
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/sst/block_entry.h"
 
@@ -32,7 +30,7 @@ class BlockIterator {
 
     Result<std::unique_ptr<BlockEntry>> Next();
 
-    std::unique_ptr<BlockEntry> ReadEntry();
+    Result<std::unique_ptr<BlockEntry>> ReadEntry();
 
     Result<bool> SeekTo(const std::shared_ptr<MemorySlice>& target_key);
 

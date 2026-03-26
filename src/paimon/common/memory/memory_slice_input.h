@@ -20,7 +20,6 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 
 #include "paimon/common/memory/memory_slice.h"
@@ -48,8 +47,8 @@ class PAIMON_EXPORT MemorySliceInput {
     int8_t ReadUnsignedByte();
     int32_t ReadInt();
     int64_t ReadLong();
-    int32_t ReadVarLenInt();
-    int64_t ReadVarLenLong();
+    Result<int32_t> ReadVarLenInt();
+    Result<int64_t> ReadVarLenLong();
     std::shared_ptr<MemorySlice> ReadSlice(int length);
 
     void SetOrder(ByteOrder order);
