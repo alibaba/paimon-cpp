@@ -142,15 +142,15 @@ TEST_F(BinaryRowTest, TestWriter) {
     AssertTestWriterRow(row);
 
     // test copy
-    AssertTestWriterRow(row.Copy(pool.get()));
+    auto copied1 = row.Copy(pool.get());
+    AssertTestWriterRow(copied1);
+    ASSERT_EQ(row, copied1);
 
     // test copy
-    BinaryRow copied(arity);
-    row.Copy(&copied, pool.get());
-    AssertTestWriterRow(copied);
-
-    ASSERT_EQ(copied, row);
-    AssertTestWriterRow(row);
+    BinaryRow copied2(arity);
+    row.Copy(&copied2, pool.get());
+    AssertTestWriterRow(copied2);
+    ASSERT_EQ(row, copied2);
 }
 
 TEST_F(BinaryRowTest, TestWriteString) {

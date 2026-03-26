@@ -263,7 +263,7 @@ TEST(BinaryArrayTest, TestSetAndGet) {
     {
         auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
         auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
-        ASSERT_OK_AND_ASSIGN(auto map, BinaryMap::ValueOf(key, value, pool.get()));
+        auto map = BinaryMap::ValueOf(key, value, pool.get());
         BinaryArray array;
         BinaryArrayWriter writer =
             BinaryArrayWriter(&array, /*num_elements=*/1, /*element_size=*/8, pool.get());

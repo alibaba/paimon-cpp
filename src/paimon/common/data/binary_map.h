@@ -60,8 +60,8 @@ class BinaryMap : public BinarySection, public InternalMap {
         size_in_bytes_ = size_in_bytes;
     }
 
-    static Result<std::shared_ptr<BinaryMap>> ValueOf(const BinaryArray& key,
-                                                      const BinaryArray& value, MemoryPool* pool) {
+    static std::shared_ptr<BinaryMap> ValueOf(const BinaryArray& key, const BinaryArray& value,
+                                              MemoryPool* pool) {
         auto bytes = std::make_shared<Bytes>(
             kHeaderSize + key.GetSizeInBytes() + value.GetSizeInBytes(), pool);
         MemorySegment segment = MemorySegment::Wrap(bytes);

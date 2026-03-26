@@ -279,7 +279,7 @@ TEST(BinaryRowWriterTest, TestWriteNested) {
     BinaryArray inner_array = BinaryArray::FromIntArray({10, 20, 30}, pool.get());
     auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
     auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
-    ASSERT_OK_AND_ASSIGN(auto inner_map, BinaryMap::ValueOf(key, value, pool.get()));
+    auto inner_map = BinaryMap::ValueOf(key, value, pool.get());
 
     BinaryRow row(3);
     BinaryRowWriter writer(&row, /*initial_size=*/1024, pool.get());
