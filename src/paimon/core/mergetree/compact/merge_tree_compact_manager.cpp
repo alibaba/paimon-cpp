@@ -17,8 +17,9 @@
 #include "paimon/core/mergetree/compact/merge_tree_compact_manager.h"
 
 #include <cassert>
-#include <sstream>
+#include <iterator>
 
+#include "fmt/format.h"
 #include "paimon/common/executor/future.h"
 #include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/compact/compact_task.h"
@@ -29,18 +30,19 @@
 namespace paimon {
 
 std::string FilesToString(const std::vector<LevelSortedRun>& runs) {
-    std::stringstream ss;
+    fmt::memory_buffer buffer;
     bool first = true;
     for (const auto& level_sorted_run : runs) {
         for (const auto& file : level_sorted_run.run.Files()) {
             if (!first) {
-                ss << ", ";
+                fmt::format_to(std::back_inserter(buffer), ", ");
             }
-            ss << "(" << file->file_name << ", " << file->level << ", " << file->file_size << ")";
+            fmt::format_to(std::back_inserter(buffer), "({}, {}, {})", file->file_name, file->level,
+                           file->file_size);
             first = false;
         }
     }
-    return ss.str();
+    return fmt::to_string(buffer);
 }
 
 MergeTreeCompactManager::MergeTreeCompactManager(

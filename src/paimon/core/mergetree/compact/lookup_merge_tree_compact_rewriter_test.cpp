@@ -192,15 +192,14 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>>>
     CreateCompactRewriterForFilePosition(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
-        const CoreOptions& options,
-        std::unique_ptr<LookupLevels<FilePosition>>&& lookup_levels) const {
+        const CoreOptions& options, std::unique_ptr<LookupLevels<FilePosition>>&& lookup_levels,
+        std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {}) const {
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
         auto path_factory = std::make_shared<MockIndexPathFactory>(table_path + "/index/");
         auto dv_index_file = std::make_shared<DeletionVectorsIndexFile>(fs_, path_factory,
                                                                         /*bitmap64=*/false, pool_);
-        std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
         auto dv_maintainer =
             std::make_shared<BucketedDvMaintainer>(dv_index_file, deletion_vectors);
 
@@ -852,22 +851,16 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     ASSERT_OK_AND_ASSIGN(
         auto lookup_levels,
         CreateLookupLevels<FilePosition>(table_path, table_schema, processor_factory, files));
-    // auto dv_factory = [file_name = file1->file_name](
-    //                       const std::string& name) -> Result<std::shared_ptr<DeletionVector>> {
-    //     if (name == file_name) {
-    //         // rm the second row for file1
-    //         auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
-    //         PAIMON_RETURN_NOT_OK(dv->Delete(1));
-    //         return dv;
-    //     }
-    //     return std::shared_ptr<DeletionVector>();
-    // };
+    // Seed a deletion vector for file1 to remove its second row before lookup/rewrite.
+    auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
+    ASSERT_OK(dv->Delete(1));
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {
+        {file1->file_name, dv}};
 
-    // TODO(yonghao.fyh): support this dv_factory
     // compact and rewrite
-    ASSERT_OK_AND_ASSIGN(
-        auto rewriter, CreateCompactRewriterForFilePosition(table_path, table_schema, core_options,
-                                                            std::move(lookup_levels)));
+    ASSERT_OK_AND_ASSIGN(auto rewriter, CreateCompactRewriterForFilePosition(
+                                            table_path, table_schema, core_options,
+                                            std::move(lookup_levels), std::move(deletion_vectors)));
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file1, file2}));
 
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
@@ -888,7 +881,6 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     auto array_status =
         arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
 [6,  0,  2, 222],
-[4,  0,  4, 44],
 [7,  0,  5, 555]
 ])"},
                                                          &expected_array);
@@ -898,8 +890,8 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     // test dv
     auto dv_maintainer = rewriter->dv_maintainer_;
     ASSERT_TRUE(dv_maintainer);
-    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
-    ASSERT_FALSE(dv);
+    auto dv_result = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_FALSE(dv_result);
 }
 
 TEST_F(LookupMergeTreeCompactRewriterTest, TestIOException) {

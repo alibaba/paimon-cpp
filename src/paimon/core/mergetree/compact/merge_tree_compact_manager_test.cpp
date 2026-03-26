@@ -425,9 +425,9 @@ TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
         /*force_keep_delete=*/false, std::make_shared<CancellationController>(), queued_executor);
 
     ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
-    Status status = manager->TriggerCompaction(/*full_compaction=*/true);
-    ASSERT_TRUE(status.IsInvalid());
-
+    ASSERT_NOK_WITH_MSG(
+        manager->TriggerCompaction(/*full_compaction=*/true),
+        "A compaction task is still running while the user forces a new compaction.");
     queued_executor->RunAll();
     ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
     ASSERT_TRUE(compact_result.has_value());
