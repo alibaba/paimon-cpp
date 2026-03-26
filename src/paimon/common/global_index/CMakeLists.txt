@@ -13,13 +13,16 @@
 # limitations under the License.
 
 set(PAIMON_GLOBAL_INDEX_SRC bitmap/bitmap_global_index.cpp
-                            bitmap/bitmap_global_index_factory.cpp)
+                            bitmap/bitmap_global_index_factory.cpp
+                            rangebitmap/range_bitmap_global_index.cpp
+                            rangebitmap/range_bitmap_global_index_factory.cpp)
 
 add_paimon_lib(paimon_global_index
                SOURCES
                ${PAIMON_GLOBAL_INDEX_SRC}
                DEPENDENCIES
                paimon_shared
+               paimon_file_index_shared
                STATIC_LINK_LIBS
                arrow
                fmt

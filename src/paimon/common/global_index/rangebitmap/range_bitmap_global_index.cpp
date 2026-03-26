@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,28 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "paimon/common/global_index/bitmap/bitmap_global_index.h"
+#include "paimon/common/global_index/rangebitmap/range_bitmap_global_index.h"
 
 #include "paimon/common/global_index/wrap/file_index_reader_wrapper.h"
 #include "paimon/common/global_index/wrap/file_index_writer_wrapper.h"
 
 namespace paimon {
-Result<std::shared_ptr<GlobalIndexWriter>> BitmapGlobalIndex::CreateWriter(
+Result<std::shared_ptr<GlobalIndexWriter>> RangeBitmapGlobalIndex::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileIndexWriter> writer,
                            index_->CreateWriter(arrow_schema, pool));
     return std::make_shared<FileIndexWriterWrapper>(
-        /*index_type=*/"bitmap", file_writer, writer);
+        /*index_type=*/"range-bitmap", file_writer, writer);
 }
 
-Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
+Result<std::shared_ptr<GlobalIndexReader>> RangeBitmapGlobalIndex::CreateReader(
     ::ArrowSchema* arrow_schema, const std::shared_ptr<GlobalIndexFileReader>& file_reader,
     const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<MemoryPool>& pool) const {
     if (files.size() != 1) {
         return Status::Invalid(
-            "invalid GlobalIndexIOMeta for BitmapGlobalIndex, exist multiple metas");
+            "invalid GlobalIndexIOMeta for RangeBitmapGlobalIndex, exist multiple metas");
     }
     const auto& meta = files[0];
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in,
@@ -46,7 +46,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
         -> Result<std::shared_ptr<GlobalIndexResult>> {
         return FileIndexReaderWrapper::ToGlobalIndexResult(range_end, result);
     };
-    return std::make_shared<BitmapGlobalIndexReader>(reader, transform);
+    return std::make_shared<RangeBitmapGlobalIndexReader>(reader, transform);
 }
 
 }  // namespace paimon

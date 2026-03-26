@@ -396,6 +396,8 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp
                     common/global_index/bitmap/bitmap_global_index_test.cpp
+                    common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
+                    common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp
                     common/io/data_input_output_stream_test.cpp
                     common/io/buffered_input_stream_test.cpp
