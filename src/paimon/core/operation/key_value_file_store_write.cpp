@@ -47,6 +47,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/file_store_path_factory.h"
+#include "paimon/core/utils/primary_key_table_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"
 
 namespace arrow {
@@ -272,9 +273,9 @@ KeyValueFileStoreWrite::CreateLookupRewriterWithDeletionVector(
              dv_maintainer_ptr = dv_maintainer,
              user_defined_seq_comparator = user_defined_seq_comparator_](
                 int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::unique_ptr<AggregateMergeFunction> merge_func,
-                AggregateMergeFunction::Create(data_schema, trimmed_primary_keys, options));
+            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<MergeFunction> merge_func,
+                                   PrimaryKeyTableUtils::CreateMergeFunction(
+                                       data_schema, trimmed_primary_keys, options));
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
                 LookupMergeTreeCompactRewriter<PositionedKeyValue>::
@@ -305,8 +306,8 @@ KeyValueFileStoreWrite::CreateLookupRewriterWithDeletionVector(
          user_defined_seq_comparator = user_defined_seq_comparator_](
             int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
         PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<AggregateMergeFunction> merge_func,
-            AggregateMergeFunction::Create(data_schema, trimmed_primary_keys, options));
+            std::unique_ptr<MergeFunction> merge_func,
+            PrimaryKeyTableUtils::CreateMergeFunction(data_schema, trimmed_primary_keys, options));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
             LookupMergeTreeCompactRewriter<FilePosition>::CreateLookupMergeFunctionWrapper(
@@ -345,8 +346,8 @@ KeyValueFileStoreWrite::CreateLookupRewriterWithoutDeletionVector(
          user_defined_seq_comparator = user_defined_seq_comparator_](
             int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
         PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<AggregateMergeFunction> merge_func,
-            AggregateMergeFunction::Create(data_schema, trimmed_primary_keys, options));
+            std::unique_ptr<MergeFunction> merge_func,
+            PrimaryKeyTableUtils::CreateMergeFunction(data_schema, trimmed_primary_keys, options));
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper,
             LookupMergeTreeCompactRewriter<KeyValue>::CreateLookupMergeFunctionWrapper(
