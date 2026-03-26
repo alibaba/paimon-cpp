@@ -215,7 +215,7 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateLookupRew
     const std::shared_ptr<CancellationController>& cancellation_controller) {
     if (lookup_strategy.is_first_row) {
         if (options_.DeletionVectorsEnabled()) {
-            return Status::NotImplemented(
+            return Status::Invalid(
                 "First row merge engine does not need deletion vectors because there is no "
                 "deletion of old data in this merge engine.");
         }
@@ -224,11 +224,11 @@ Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateLookupRew
             std::unique_ptr<LookupLevels<bool>> lookup_levels,
             CreateLookupLevels<bool>(partition, bucket, levels, processor_factory, dv_maintainer));
         auto merge_function_wrapper_factory =
-            [lookup_levels_ptr = lookup_levels.get()](
+            [lookup_levels_ptr = lookup_levels.get(), ignore_delete = options_.IgnoreDelete()](
                 int32_t output_level) -> Result<std::shared_ptr<MergeFunctionWrapper<KeyValue>>> {
             std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper =
                 LookupMergeTreeCompactRewriter<bool>::CreateFirstRowMergeFunctionWrapper(
-                    std::make_unique<FirstRowMergeFunction>(/*ignore_delete=*/true), output_level,
+                    std::make_unique<FirstRowMergeFunction>(ignore_delete), output_level,
                     lookup_levels_ptr);
             return merge_function_wrapper;
         };
