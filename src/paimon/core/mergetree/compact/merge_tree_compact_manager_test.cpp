@@ -223,8 +223,7 @@ class MergeTreeCompactManagerTest : public testing::Test {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
 
         auto manager = std::make_shared<MergeTreeCompactManager>(
-            std::make_shared<InlineExecutor>(), levels,
-            std::make_shared<FunctionalCompactStrategy>(strategy), comparator_,
+            levels, std::make_shared<FunctionalCompactStrategy>(strategy), comparator_,
             /*compaction_file_size=*/2,
             /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
             std::make_shared<TestRewriter>(expected_drop_delete),
@@ -233,7 +232,8 @@ class MergeTreeCompactManagerTest : public testing::Test {
             /*lazy_gen_deletion_file=*/false,
             /*need_lookup=*/false,
             /*force_rewrite_all_files=*/false,
-            /*force_keep_delete=*/false, std::make_shared<CancellationController>());
+            /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+            std::make_shared<InlineExecutor>());
 
         ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/false));
         ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
@@ -337,7 +337,7 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
     auto strategy = std::make_shared<FunctionalCompactStrategy>(TestStrategy());
 
     auto lookup_manager = std::make_shared<MergeTreeCompactManager>(
-        std::make_shared<InlineExecutor>(), lookup_levels, strategy, comparator_,
+        lookup_levels, strategy, comparator_,
         /*compaction_file_size=*/2,
         /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
         std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
@@ -346,10 +346,11 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/true,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+        std::make_shared<InlineExecutor>());
 
     auto default_manager = std::make_shared<MergeTreeCompactManager>(
-        std::make_shared<InlineExecutor>(), default_levels, strategy, comparator_,
+        default_levels, strategy, comparator_,
         /*compaction_file_size=*/2,
         /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
         std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
@@ -358,7 +359,8 @@ TEST_F(MergeTreeCompactManagerTest, TestIsCompacting) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+        std::make_shared<InlineExecutor>());
 
     EXPECT_TRUE(lookup_manager->CompactNotCompleted());
     EXPECT_FALSE(default_manager->CompactNotCompleted());
@@ -376,8 +378,7 @@ TEST_F(MergeTreeCompactManagerTest, TestTriggerFullCompaction) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels, CreateLevels(files));
 
     auto manager = std::make_shared<MergeTreeCompactManager>(
-        std::make_shared<InlineExecutor>(), levels,
-        std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
+        levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
         /*compaction_file_size=*/2,
         /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
         std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
@@ -386,7 +387,8 @@ TEST_F(MergeTreeCompactManagerTest, TestTriggerFullCompaction) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(),
+        std::make_shared<InlineExecutor>());
 
     ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
     ASSERT_OK_AND_ASSIGN(auto compact_result, manager->GetCompactionResult(/*blocking=*/true));
@@ -411,8 +413,7 @@ TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
 
     auto queued_executor = std::make_shared<QueuedExecutor>();
     auto manager = std::make_shared<MergeTreeCompactManager>(
-        queued_executor, levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()),
-        comparator_,
+        levels, std::make_shared<FunctionalCompactStrategy>(TestStrategy()), comparator_,
         /*compaction_file_size=*/2,
         /*num_sorted_run_stop_trigger=*/std::numeric_limits<int32_t>::max(),
         std::make_shared<TestRewriter>(/*expected_drop_delete=*/true),
@@ -421,7 +422,7 @@ TEST_F(MergeTreeCompactManagerTest, TestRejectReentrantFullCompaction) {
         /*lazy_gen_deletion_file=*/false,
         /*need_lookup=*/false,
         /*force_rewrite_all_files=*/false,
-        /*force_keep_delete=*/false, std::make_shared<CancellationController>());
+        /*force_keep_delete=*/false, std::make_shared<CancellationController>(), queued_executor);
 
     ASSERT_OK(manager->TriggerCompaction(/*full_compaction=*/true));
     Status status = manager->TriggerCompaction(/*full_compaction=*/true);

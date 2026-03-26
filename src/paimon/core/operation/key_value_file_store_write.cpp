@@ -176,12 +176,12 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         compaction_metrics_ ? compaction_metrics_->CreateReporter(partition, bucket) : nullptr;
 
     return std::make_shared<MergeTreeCompactManager>(
-        compact_executor, levels, compact_strategy, key_comparator_for_compact_,
+        levels, compact_strategy, key_comparator_for_compact_,
         options_.GetCompactionFileSize(/*has_primary_key=*/true),
         options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
         /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
         options_.CompactionForceRewriteAllFiles(),
-        /*force_keep_delete=*/false, cancellation_controller);
+        /*force_keep_delete=*/false, cancellation_controller, compact_executor);
 }
 
 Result<std::shared_ptr<CompactRewriter>> KeyValueFileStoreWrite::CreateRewriter(

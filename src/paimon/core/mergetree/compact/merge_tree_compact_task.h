@@ -49,9 +49,9 @@ class MergeTreeCompactTask : public CompactTask {
  private:
     Status Upgrade(const std::shared_ptr<DataFileMeta>& file, CompactResult* to_update);
 
-    Status Rewrite(std::vector<std::vector<SortedRun>>& candidate, CompactResult* to_update);
+    Status Rewrite(std::vector<std::vector<SortedRun>>* candidate, CompactResult* to_update);
 
-    Status RewriteImpl(std::vector<std::vector<SortedRun>>& candidate, CompactResult* to_update);
+    Status RewriteImpl(std::vector<std::vector<SortedRun>>* candidate, CompactResult* to_update);
 
     static bool ContainsDeleteRecords(const std::shared_ptr<DataFileMeta>& file);
 

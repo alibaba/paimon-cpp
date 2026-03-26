@@ -36,8 +36,7 @@ namespace paimon {
 /// Compact manager for key value tables.
 class MergeTreeCompactManager : public CompactFutureManager {
  public:
-    MergeTreeCompactManager(const std::shared_ptr<Executor>& executor,
-                            const std::shared_ptr<Levels>& levels,
+    MergeTreeCompactManager(const std::shared_ptr<Levels>& levels,
                             const std::shared_ptr<CompactStrategy>& strategy,
                             const std::shared_ptr<FieldsComparator>& key_comparator,
                             int64_t compaction_file_size, int32_t num_sorted_run_stop_trigger,
@@ -46,7 +45,8 @@ class MergeTreeCompactManager : public CompactFutureManager {
                             const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
                             bool lazy_gen_deletion_file, bool need_lookup,
                             bool force_rewrite_all_files, bool force_keep_delete,
-                            const std::shared_ptr<CancellationController>& cancellation_controller);
+                            const std::shared_ptr<CancellationController>& cancellation_controller,
+                            const std::shared_ptr<Executor>& executor);
 
     ~MergeTreeCompactManager() override = default;
 

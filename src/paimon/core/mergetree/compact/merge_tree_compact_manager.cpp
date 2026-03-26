@@ -28,14 +28,6 @@
 
 namespace paimon {
 
-std::string RunsToString(const std::vector<LevelSortedRun>& runs) {
-    std::stringstream ss;
-    for (const auto& run : runs) {
-        ss << run.ToString() << "\n";
-    }
-    return ss.str();
-}
-
 std::string FilesToString(const std::vector<LevelSortedRun>& runs) {
     std::stringstream ss;
     bool first = true;
@@ -52,14 +44,14 @@ std::string FilesToString(const std::vector<LevelSortedRun>& runs) {
 }
 
 MergeTreeCompactManager::MergeTreeCompactManager(
-    const std::shared_ptr<Executor>& executor, const std::shared_ptr<Levels>& levels,
-    const std::shared_ptr<CompactStrategy>& strategy,
+    const std::shared_ptr<Levels>& levels, const std::shared_ptr<CompactStrategy>& strategy,
     const std::shared_ptr<FieldsComparator>& key_comparator, int64_t compaction_file_size,
     int32_t num_sorted_run_stop_trigger, const std::shared_ptr<CompactRewriter>& rewriter,
     const std::shared_ptr<CompactionMetrics::Reporter>& metrics_reporter,
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, bool lazy_gen_deletion_file,
     bool need_lookup, bool force_rewrite_all_files, bool force_keep_delete,
-    const std::shared_ptr<CancellationController>& cancellation_controller)
+    const std::shared_ptr<CancellationController>& cancellation_controller,
+    const std::shared_ptr<Executor>& executor)
     : executor_(executor),
       levels_(levels),
       strategy_(strategy),
@@ -112,7 +104,7 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
         }
 
         PAIMON_LOG_DEBUG(logger_, "Trigger forced full compaction. Picking from runs:\n%s",
-                         RunsToString(runs).c_str());
+                         StringUtils::VectorToString(runs).c_str());
         optional_unit = CompactStrategy::PickFullCompaction(levels_->NumberOfLevels(), runs,
                                                             force_rewrite_all_files_);
     } else {
@@ -121,7 +113,7 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
         }
 
         PAIMON_LOG_DEBUG(logger_, "Trigger normal compaction. Picking from the following runs:\n%s",
-                         RunsToString(runs).c_str());
+                         StringUtils::VectorToString(runs).c_str());
 
         PAIMON_ASSIGN_OR_RAISE(std::optional<CompactUnit> picked,
                                strategy_->Pick(levels_->NumberOfLevels(), runs));
@@ -146,7 +138,7 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
         (unit.output_level >= levels_->NonEmptyHighestLevel() || dv_maintainer_ != nullptr);
 
     PAIMON_LOG_DEBUG(logger_, "Submit compaction with files (name, level, size): %s",
-                     FilesToString(levels_->LevelSortedRuns()).c_str());
+                     StringUtils::VectorToString(levels_->LevelSortedRuns()).c_str());
     return SubmitCompaction(unit, drop_delete);
 }
 
@@ -204,7 +196,7 @@ Result<std::optional<std::shared_ptr<CompactResult>>> MergeTreeCompactManager::G
         PAIMON_RETURN_NOT_OK(levels_->Update(compact_result->Before(), compact_result->After()));
         ReportMetrics();
         PAIMON_LOG_DEBUG(logger_, "Levels in compact manager updated. Current runs are\n%s",
-                         RunsToString(levels_->LevelSortedRuns()).c_str());
+                         StringUtils::VectorToString(levels_->LevelSortedRuns()).c_str());
     }
     return result;
 }

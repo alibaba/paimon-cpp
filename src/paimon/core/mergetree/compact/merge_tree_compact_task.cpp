@@ -53,7 +53,7 @@ Result<std::shared_ptr<CompactResult>> MergeTreeCompactTask::DoCompact() {
                     candidate.push_back({SortedRun::FromSingle(file)});
                 } else {
                     // Large file appears, rewrite previous and upgrade it.
-                    PAIMON_RETURN_NOT_OK(Rewrite(candidate, result.get()));
+                    PAIMON_RETURN_NOT_OK(Rewrite(&candidate, result.get()));
                     PAIMON_RETURN_NOT_OK(Upgrade(file, result.get()));
                 }
             }
@@ -63,7 +63,7 @@ Result<std::shared_ptr<CompactResult>> MergeTreeCompactTask::DoCompact() {
         }
     }
 
-    PAIMON_RETURN_NOT_OK(Rewrite(candidate, result.get()));
+    PAIMON_RETURN_NOT_OK(Rewrite(&candidate, result.get()));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactDeletionFile> deletion_file,
                            compact_df_supplier_());
     result->SetDeletionFile(deletion_file);
@@ -75,7 +75,7 @@ Status MergeTreeCompactTask::Upgrade(const std::shared_ptr<DataFileMeta>& file,
     // TODO(yonghao.fyh): check expire
     if ((output_level_ == max_level_ && ContainsDeleteRecords(file)) || force_rewrite_all_files_) {
         std::vector<std::vector<SortedRun>> candidate = {{SortedRun::FromSingle(file)}};
-        return RewriteImpl(candidate, to_update);
+        return RewriteImpl(&candidate, to_update);
     }
 
     if (file->level != output_level_) {
@@ -86,14 +86,14 @@ Status MergeTreeCompactTask::Upgrade(const std::shared_ptr<DataFileMeta>& file,
     return Status::OK();
 }
 
-Status MergeTreeCompactTask::Rewrite(std::vector<std::vector<SortedRun>>& candidate,
+Status MergeTreeCompactTask::Rewrite(std::vector<std::vector<SortedRun>>* candidate,
                                      CompactResult* to_update) {
-    if (candidate.empty()) {
+    if (candidate->empty()) {
         return Status::OK();
     }
 
-    if (candidate.size() == 1) {
-        const auto& section = candidate[0];
+    if (candidate->size() == 1) {
+        const auto& section = (*candidate)[0];
         if (section.empty()) {
             return Status::OK();
         }
@@ -101,7 +101,7 @@ Status MergeTreeCompactTask::Rewrite(std::vector<std::vector<SortedRun>>& candid
             for (const auto& file : section[0].Files()) {
                 PAIMON_RETURN_NOT_OK(Upgrade(file, to_update));
             }
-            candidate.clear();
+            candidate->clear();
             return Status::OK();
         }
     }
@@ -109,12 +109,12 @@ Status MergeTreeCompactTask::Rewrite(std::vector<std::vector<SortedRun>>& candid
     return RewriteImpl(candidate, to_update);
 }
 
-Status MergeTreeCompactTask::RewriteImpl(std::vector<std::vector<SortedRun>>& candidate,
+Status MergeTreeCompactTask::RewriteImpl(std::vector<std::vector<SortedRun>>* candidate,
                                          CompactResult* to_update) {
     PAIMON_ASSIGN_OR_RAISE(CompactResult rewritten,
-                           rewriter_->Rewrite(output_level_, drop_delete_, candidate));
+                           rewriter_->Rewrite(output_level_, drop_delete_, *candidate));
     PAIMON_RETURN_NOT_OK(to_update->Merge(rewritten));
-    candidate.clear();
+    candidate->clear();
     return Status::OK();
 }
 
