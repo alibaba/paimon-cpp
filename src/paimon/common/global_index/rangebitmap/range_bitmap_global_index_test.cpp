@@ -28,6 +28,7 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
 #include "paimon/file_index/bitmap_index_result.h"
@@ -221,6 +222,9 @@ TEST_F(RangeBitmapGlobalIndexTest, TestHighCardinality) {
 
     int64_t seed = DateTimeUtils::GetCurrentUTCTimeUs();
     std::srand(seed);
+
+    ScopeGuard guard([seed]() { std::cout << "case failed with seed=" << seed << std::endl; });
+
     auto type = arrow::int32();
     // use 10 unique integer values
     std::vector<int32_t> unique_values = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -260,6 +264,7 @@ TEST_F(RangeBitmapGlobalIndexTest, TestHighCardinality) {
     std::sort(expected_gte_5.begin(), expected_gte_5.end());
     CheckResult(reader->VisitGreaterOrEqual(Literal(static_cast<int32_t>(5))).value(),
                 expected_gte_5);
+    guard.Release();
 }
 
 TEST_F(RangeBitmapGlobalIndexTest, TestDoubleType) {
