@@ -25,7 +25,7 @@ namespace paimon::test {
 
 class BTreeFileFooterTest : public ::testing::Test {
 protected:
-    void SetUp() override { pool_ = std::make_shared<MemoryPool>(); }
+    void SetUp() override { pool_ = GetDefaultPool(); }
 
     std::shared_ptr<MemoryPool> pool_;
 };

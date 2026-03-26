@@ -88,7 +88,7 @@ class PAIMON_EXPORT SstFileReader {
     MemorySlice::SliceComparator comparator_;
 };
 
-class SstFileIterator {
+class PAIMON_EXPORT SstFileIterator {
  public:
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 

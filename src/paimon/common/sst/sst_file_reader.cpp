@@ -27,7 +27,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache =
-        std::make_shared<BlockCache>(file_path, in, pool, std::make_unique<CacheManager>());
+        std::make_shared<BlockCache>(file_path, in, pool, std::make_shared<CacheManager>());
 
     // read footer
     PAIMON_ASSIGN_OR_RAISE(MemorySegment segment,

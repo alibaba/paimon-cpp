@@ -58,7 +58,7 @@ private:
 class BTreeGlobalIndexWriterTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        pool_ = std::make_shared<MemoryPool>();
+        pool_ = GetDefaultPool();
         test_dir_ = UniqueTestDirectory::Create("local");
         ASSERT_OK(test_dir_.status());
         fs_ = test_dir_->GetFileSystem();

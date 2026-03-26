@@ -111,13 +111,15 @@ TEST_F(ManifestEntryWriterTest, TestSimple) {
 
     auto meta1 = std::make_shared<DataFileMeta>(
         "data-d7725088-6bd4-4e70-9ce6-714ae93b47cc-0.orc", /*file_size=*/863, /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Alice", 1}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Alice"), 1}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 1}, {"Alice", 1}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 1}, {std::string("Alice"), 1},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alice", 10, 1, 11.1}, {"Alice", 10, 1, 11.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alice"), 10, 1, 11.1},
+                                          {std::string("Alice"), 10, 1, 11.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/0, /*schema_id=*/0,
         /*level=*/4, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1743525392885ll, 0),
@@ -127,13 +129,15 @@ TEST_F(ManifestEntryWriterTest, TestSimple) {
 
     auto meta2 = std::make_shared<DataFileMeta>(
         "data-5858a84b-7081-4618-b828-ae3918c5e1f6-0.orc", /*file_size=*/943, /*row_count=*/4,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 20, 0, 12.1}, {"Tony", 20, 0, 16.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 20, 0, 12.1},
+                                          {std::string("Tony"), 20, 0, 16.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/3, /*schema_id=*/0,
         /*level=*/5, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(1743525392921ll, 0),
