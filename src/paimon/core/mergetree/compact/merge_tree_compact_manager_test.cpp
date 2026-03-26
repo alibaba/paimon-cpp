@@ -96,6 +96,7 @@ class TestRewriter final : public CompactRewriter {
 
         int32_t min_key = std::numeric_limits<int32_t>::max();
         int32_t max_key = std::numeric_limits<int32_t>::min();
+        int64_t min_sequence = std::numeric_limits<int64_t>::max();
         int64_t max_sequence = 0;
         std::vector<std::shared_ptr<DataFileMeta>> before;
 
@@ -105,6 +106,7 @@ class TestRewriter final : public CompactRewriter {
                     before.push_back(file);
                     min_key = std::min(min_key, file->min_key.GetInt(0));
                     max_key = std::max(max_key, file->max_key.GetInt(0));
+                    min_sequence = std::min(min_sequence, file->min_sequence_number);
                     max_sequence = std::max(max_sequence, file->max_sequence_number);
                 }
             }
@@ -120,7 +122,7 @@ class TestRewriter final : public CompactRewriter {
             /*row_count=*/0, BinaryRowGenerator::GenerateRow({min_key}, pool_.get()),
             BinaryRowGenerator::GenerateRow({max_key}, pool_.get()), SimpleStats::EmptyStats(),
             SimpleStats::EmptyStats(),
-            /*min_sequence_number=*/min_key,
+            /*min_sequence_number=*/min_sequence,
             /*max_sequence_number=*/max_sequence,
             /*schema_id=*/0, output_level, std::vector<std::optional<std::string>>(),
             Timestamp(1, 0), std::nullopt, nullptr, FileSource::Append(), std::nullopt,
