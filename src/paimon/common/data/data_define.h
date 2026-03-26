@@ -55,7 +55,7 @@ class DataDefine {
         return std::holds_alternative<NullType>(value);
     }
 
-    /// always make sure value is T type
+    // @warning Always make sure value is T type
     template <typename T>
     inline static T GetVariantValue(const VariantType& value) {
         const T* ptr = std::get_if<T>(&value);
@@ -69,16 +69,18 @@ class DataDefine {
         return std::get_if<T>(&value);
     }
 
-    // always make sure value is string_view or std::shared_ptr<Bytes> or BinaryString
+    // @warning Always make sure value is string_view or std::shared_ptr<Bytes> or BinaryString
     inline static std::string_view GetStringView(const VariantType& value) {
         if (auto* view_ptr = GetVariantPtr<std::string_view>(value)) {
             return *view_ptr;
         } else if (auto* bytes_ptr = GetVariantPtr<std::shared_ptr<Bytes>>(value)) {
             const auto& bytes = *bytes_ptr;
             return std::string_view(bytes->data(), bytes->size());
+        } else if (auto* binary_string_ptr = GetVariantPtr<BinaryString>(value)) {
+            return binary_string_ptr->GetStringView();
         }
-        auto binary_string = GetVariantValue<BinaryString>(value);
-        return binary_string.GetStringView();
+        assert(false);
+        return {};
     }
 
     static std::string VariantValueToString(const VariantType& value) {
