@@ -230,6 +230,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/interval_partition.cpp
     core/mergetree/compact/loser_tree.cpp
     core/mergetree/compact/merge_tree_compact_manager.cpp
+    core/mergetree/compact/merge_tree_compact_manager_factory.cpp
     core/mergetree/compact/merge_tree_compact_rewriter.cpp
     core/mergetree/compact/merge_tree_compact_task.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
@@ -583,6 +584,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
                     core/mergetree/compact/merge_tree_compact_manager_test.cpp
+                    core/mergetree/compact/merge_tree_compact_manager_factory_test.cpp
                     core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
                     core/mergetree/lookup/persist_processor_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
