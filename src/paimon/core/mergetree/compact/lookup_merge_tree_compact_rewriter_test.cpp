@@ -118,8 +118,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         std::vector<DataField> key_fields = {DataField(0, key_schema_->field(0))};
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(key_fields,
-                                                        /*is_ascending_order=*/true,
-                                                        /*use_view=*/false));
+                                                        /*is_ascending_order=*/true));
         return key_comparator;
     }
 
@@ -1145,6 +1144,79 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteLookupChangelogWithOutputL
                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
     CheckResult(compact_file_name, table_schema, "orc", expected_array);
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvAndAggForStringFields) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+    arrow::FieldVector fields = {
+        arrow::field("key", arrow::utf8()),
+        arrow::field("value", arrow::utf8()),
+    };
+    arrow_schema_ = arrow::schema(fields);
+    key_schema_ = arrow::schema({fields[0]});
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files
+    ASSERT_OK_AND_ASSIGN(
+        auto file0, NewFiles(/*level=*/5, /*last_sequence_number=*/-1, table_path, core_options,
+                             R"([["1", "11"], ["3", "33"], ["5", "55"]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1,
+                         NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path, core_options,
+                                  R"([["2", "22"], ["4", "44"], ["5", "5"]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([["2", "222"], ["5", "15"]])"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2};
+    auto processor_factory = std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
+    ASSERT_OK_AND_ASSIGN(
+        auto lookup_levels,
+        CreateLookupLevels<PositionedKeyValue>(table_path, table_schema, processor_factory, files));
+
+    // compact and rewrite
+    ASSERT_OK_AND_ASSIGN(auto rewriter,
+                         CreateCompactRewriterForPositionedKeyValue(
+                             table_path, table_schema, core_options, std::move(lookup_levels)));
+    ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file1, file2}));
+    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
+                                                  /*output_level=*/4, /*drop_delete=*/true, runs));
+    ASSERT_EQ(2, compact_result.Before().size());
+    ASSERT_EQ(1, compact_result.After().size());
+
+    const auto& compact_file_meta = compact_result.After()[0];
+    // check compact file exist
+    std::string compact_file_name = table_path + "/bucket-0/" + compact_file_meta->file_name;
+    ASSERT_OK_AND_ASSIGN(bool exist, fs_->Exists(compact_file_name));
+    ASSERT_TRUE(exist);
+
+    // check file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  "2", "222"],
+[4,  0,  "4", "44"],
+[7,  0,  "5", "55"]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // test dv
+    auto dv_maintainer = rewriter->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
 }
 
 }  // namespace paimon::test

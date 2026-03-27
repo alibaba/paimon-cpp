@@ -37,39 +37,7 @@ Status BinaryRowSerializer::Serialize(const BinaryRow& record,
 
 Status BinaryRowSerializer::SerializeWithoutLength(const BinaryRow& record,
                                                    MemorySegmentOutputStream* target) const {
-    if (record.GetSegments().size() == 1) {
-        target->Write(record.GetSegments()[0], record.GetOffset(), record.GetSizeInBytes());
-    } else {
-        return SerializeWithoutLengthSlow(record, target);
-    }
-    return Status::OK();
-}
-
-Status BinaryRowSerializer::SerializeWithoutLengthSlow(const BinaryRow& record,
-                                                       MemorySegmentOutputStream* target) const {
-    int32_t remain_size = record.GetSizeInBytes();
-    int32_t pos_in_seg_of_record = record.GetOffset();
-    int32_t segment_size = record.GetSegments()[0].Size();
-    for (const auto& seg_of_record : record.GetSegments()) {
-        int32_t nwrite = std::min(segment_size - pos_in_seg_of_record, remain_size);
-        if (nwrite <= 0) {
-            assert(false);
-            return Status::Invalid(
-                fmt::format("nwrite '{}' is less than or equal to zero", nwrite));
-        }
-        assert(nwrite > 0);
-        target->Write(seg_of_record, pos_in_seg_of_record, nwrite);
-
-        // next new segment.
-        pos_in_seg_of_record = 0;
-        remain_size -= nwrite;
-        if (remain_size == 0) {
-            break;
-        }
-    }
-    if (remain_size != 0) {
-        return Status::Invalid(fmt::format("remain size '{}' is not equal to zero", remain_size));
-    }
+    target->Write(record.GetSegment(), record.GetOffset(), record.GetSizeInBytes());
     return Status::OK();
 }
 

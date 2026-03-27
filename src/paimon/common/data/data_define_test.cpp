@@ -29,6 +29,7 @@
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
@@ -138,6 +139,180 @@ TEST(DataDefineTest, VariantValueToStringReturnsStringForInternalArray) {
     std::shared_ptr<InternalArray> array_ptr = std::make_shared<BinaryArray>();
     VariantType array_variant = array_ptr;
     ASSERT_EQ(DataDefine::VariantValueToString(array_variant), "array");
+}
+
+// Test case: GetStringView should handle all variant types and edge cases
+TEST(DataDefineTest, GetStringView) {
+    auto pool = GetDefaultPool();
+
+    {
+        // from string_view
+        std::string original = "hello world";
+        VariantType view_variant = std::string_view(original.data(), original.size());
+        auto result = DataDefine::GetStringView(view_variant);
+        ASSERT_EQ(result, "hello world");
+        ASSERT_EQ(result.data(), original.data());
+    }
+    {
+        // from shared_ptr<Bytes>
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("test bytes", pool.get());
+        VariantType bytes_variant = bytes;
+        auto result = DataDefine::GetStringView(bytes_variant);
+        ASSERT_EQ(std::string(result), "test bytes");
+        ASSERT_EQ(result.size(), 10);
+    }
+    {
+        // from BinaryString
+        auto binary_str = BinaryString::FromString("binary string content", pool.get());
+        VariantType binary_variant = binary_str;
+        auto result = DataDefine::GetStringView(binary_variant);
+        ASSERT_EQ(std::string(result), "binary string content");
+    }
+    {
+        // empty string_view
+        VariantType view_variant = std::string_view();
+        auto result = DataDefine::GetStringView(view_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+    {
+        // empty Bytes
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("", pool.get());
+        VariantType bytes_variant = bytes;
+        auto result = DataDefine::GetStringView(bytes_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+    {
+        // empty BinaryString
+        VariantType binary_variant = BinaryString::EmptyUtf8();
+        auto result = DataDefine::GetStringView(binary_variant);
+        ASSERT_TRUE(result.empty());
+        ASSERT_EQ(result.size(), 0);
+    }
+}
+
+TEST(DataDefineTest, VariantValueToLiteral) {
+    auto pool = GetDefaultPool();
+
+    {
+        // BOOL
+        VariantType value = true;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::BOOL));
+        ASSERT_EQ(literal.GetValue<bool>(), true);
+    }
+    {
+        // INT8
+        VariantType value = static_cast<char>(42);
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::INT8));
+        ASSERT_EQ(literal.GetValue<int8_t>(), 42);
+    }
+    {
+        // INT16
+        VariantType value = static_cast<int16_t>(1000);
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::INT16));
+        ASSERT_EQ(literal.GetValue<int16_t>(), 1000);
+    }
+    {
+        // INT32
+        VariantType value = static_cast<int32_t>(100000);
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::INT32));
+        ASSERT_EQ(literal.GetValue<int32_t>(), 100000);
+    }
+    {
+        // INT64
+        VariantType value = static_cast<int64_t>(123456789L);
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::INT64));
+        ASSERT_EQ(literal.GetValue<int64_t>(), 123456789L);
+    }
+    {
+        // FLOAT
+        VariantType value = 3.14f;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::FLOAT));
+        ASSERT_FLOAT_EQ(literal.GetValue<float>(), 3.14f);
+    }
+    {
+        // DOUBLE
+        VariantType value = 2.718;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::DOUBLE));
+        ASSERT_DOUBLE_EQ(literal.GetValue<double>(), 2.718);
+    }
+    {
+        // STRING from BinaryString
+        auto binary_str = BinaryString::FromString("hello", pool.get());
+        VariantType value = binary_str;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::STRING));
+        ASSERT_EQ(literal.GetValue<std::string>(), "hello");
+    }
+    {
+        // STRING from shared_ptr<Bytes>
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("world", pool.get());
+        VariantType value = bytes;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::STRING));
+        ASSERT_EQ(literal.GetValue<std::string>(), "world");
+    }
+    {
+        // STRING from string_view
+        std::string original = "view_str";
+        VariantType value = std::string_view(original.data(), original.size());
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::STRING));
+        ASSERT_EQ(literal.GetValue<std::string>(), "view_str");
+    }
+    {
+        // BINARY from shared_ptr<Bytes>
+        std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("binary_data", pool.get());
+        VariantType value = bytes;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::BINARY));
+        ASSERT_EQ(literal.GetValue<std::string>(), "binary_data");
+    }
+    {
+        // BINARY from BinaryString
+        auto binary_str = BinaryString::FromString("bin_str", pool.get());
+        VariantType value = binary_str;
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::BINARY));
+        ASSERT_EQ(literal.GetValue<std::string>(), "bin_str");
+    }
+    {
+        // TIMESTAMP
+        Timestamp ts(12345, 1);
+        VariantType value = ts;
+        ASSERT_OK_AND_ASSIGN(
+            auto literal, DataDefine::VariantValueToLiteral(value, arrow::Type::type::TIMESTAMP));
+        ASSERT_EQ(literal.GetValue<Timestamp>(), ts);
+    }
+    {
+        // DECIMAL128
+        Decimal decimal(20, 3, 123456);
+        VariantType value = decimal;
+        ASSERT_OK_AND_ASSIGN(
+            auto literal, DataDefine::VariantValueToLiteral(value, arrow::Type::type::DECIMAL128));
+        ASSERT_EQ(literal.GetValue<Decimal>(), decimal);
+    }
+    {
+        // DATE32
+        VariantType value = static_cast<int32_t>(19000);
+        ASSERT_OK_AND_ASSIGN(auto literal,
+                             DataDefine::VariantValueToLiteral(value, arrow::Type::type::DATE32));
+        ASSERT_EQ(literal.GetValue<int32_t>(), 19000);
+    }
+    {
+        // unsupported type
+        VariantType value = static_cast<int32_t>(0);
+        ASSERT_NOK_WITH_MSG(DataDefine::VariantValueToLiteral(value, arrow::Type::type::LIST),
+                            "Not support arrow type");
+    }
 }
 
 }  // namespace paimon::test

@@ -112,8 +112,10 @@ Result<std::unique_ptr<BlockIterator>> SstFileReader::GetNextBlock(
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> ret, index_iterator->Next());
     auto& slice = ret->value;
     auto input = slice->ToInput();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockHandle> block_handle,
+                           BlockHandle::ReadBlockHandle(input));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockReader> reader,
-                           ReadBlock(BlockHandle::ReadBlockHandle(input), false));
+                           ReadBlock(std::move(block_handle), false));
     return reader->Iterator();
 }
 
@@ -163,10 +165,11 @@ Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compre
     } else {
         auto decompressor = factory->GetDecompressor();
         auto input = MemorySlice::Wrap(compressed_data)->ToInput();
-        auto output = MemorySegment::AllocateHeapMemory(input->ReadVarLenInt(), pool.get());
+        PAIMON_ASSIGN_OR_RAISE(int32_t uncompressed_size, input->ReadVarLenInt());
+        auto output = MemorySegment::AllocateHeapMemory(uncompressed_size, pool.get());
         auto output_memory = output.GetHeapMemory();
         PAIMON_ASSIGN_OR_RAISE(
-            int uncompressed_length,
+            int32_t uncompressed_length,
             decompressor->Decompress(input_memory->data() + input->Position(), input->Available(),
                                      output_memory->data(), output_memory->size()));
         if (static_cast<size_t>(uncompressed_length) != output_memory->size()) {

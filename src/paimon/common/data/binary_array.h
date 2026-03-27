@@ -38,9 +38,12 @@
 namespace paimon {
 class MemorySegment;
 
-/// A binary implementation of `InternalArray` which is backed by `MemorySegment`s.
+/// A binary implementation of `InternalArray` which is backed by a single `MemorySegment`.
 /// For fields that hold fixed-length primitive types, such as long, double or int, they are
-/// stored compacted in bytes, just like the original c array.
+/// stored compacted in bytes, just like the original C array.
+///
+/// @note: Unlike the Java implementation where data may span multiple MemorySegments,
+/// in this C++ implementation all data resides within a single MemorySegment.
 ///
 /// The binary layout of BinaryArray:
 /// [size(int)] + [null bits(4-byte word boundaries)] + [values or offset&length] + [variable length
@@ -54,9 +57,7 @@ class BinaryArray final : public BinarySection, public InternalArray {
     int32_t Size() const override {
         return size_;
     }
-    void PointTo(const MemorySegment& segments, int32_t offset, int32_t size_in_bytes) override;
-    void PointTo(const std::vector<MemorySegment>& segments, int32_t offset,
-                 int32_t size_in_bytes) override;
+    void PointTo(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes) override;
     bool IsNullAt(int32_t pos) const override;
 
     bool GetBoolean(int32_t pos) const override;
@@ -68,13 +69,8 @@ class BinaryArray final : public BinarySection, public InternalArray {
     float GetFloat(int32_t pos) const override;
     double GetDouble(int32_t pos) const override;
     BinaryString GetString(int32_t pos) const override;
+    std::string_view GetStringView(int32_t pos) const override;
 
-    /// In binary array, string data may in multiple segments, we cannot construct a
-    /// std::string_view
-    std::string_view GetStringView(int32_t pos) const override {
-        assert(false);
-        return std::string_view();
-    }
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override;
     Timestamp GetTimestamp(int32_t pos, int32_t precision) const override;
     std::shared_ptr<Bytes> GetBinary(int32_t pos) const override;
@@ -96,7 +92,7 @@ class BinaryArray final : public BinarySection, public InternalArray {
     void Copy(BinaryArray* reuse, MemoryPool* pool) const;
 
     int32_t HashCode() const override {
-        return MemorySegmentUtils::HashByWords(segments_, offset_, size_in_bytes_,
+        return MemorySegmentUtils::HashByWords({segment_}, offset_, size_in_bytes_,
                                                GetDefaultPool().get());
     }
 

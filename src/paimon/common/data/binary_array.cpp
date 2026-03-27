@@ -40,18 +40,10 @@ int32_t BinaryArray::GetElementOffset(int32_t ordinal, int32_t element_size) con
 }
 
 void BinaryArray::PointTo(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes) {
-    std::vector<MemorySegment> segments = {segment};
-    PointTo(segments, offset, size_in_bytes);
-}
-
-void BinaryArray::PointTo(const std::vector<MemorySegment>& segments, int32_t offset,
-                          int32_t size_in_bytes) {
-    // Read the number of elements from the first 4 bytes.
-    auto size = MemorySegmentUtils::GetValue<int32_t>(segments, offset);
+    auto size = MemorySegmentUtils::GetValue<int32_t>({segment}, offset);
     assert(size >= 0);
-
     size_ = size;
-    segments_ = segments;
+    segment_ = segment;
     offset_ = offset;
     size_in_bytes_ = size_in_bytes;
     element_offset_ = offset_ + CalculateHeaderInBytes(size_);
@@ -59,17 +51,17 @@ void BinaryArray::PointTo(const std::vector<MemorySegment>& segments, int32_t of
 
 bool BinaryArray::IsNullAt(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::BitGet(segments_, offset_ + 4, pos);
+    return MemorySegmentUtils::BitGet({segment_}, offset_ + 4, pos);
 }
 
 int64_t BinaryArray::GetLong(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<int64_t>(segments_, GetElementOffset(pos, 8));
+    return MemorySegmentUtils::GetValue<int64_t>({segment_}, GetElementOffset(pos, 8));
 }
 
 int32_t BinaryArray::GetInt(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<int32_t>(segments_, GetElementOffset(pos, 4));
+    return MemorySegmentUtils::GetValue<int32_t>({segment_}, GetElementOffset(pos, 4));
 }
 int32_t BinaryArray::GetDate(int32_t pos) const {
     return GetInt(pos);
@@ -78,21 +70,26 @@ int32_t BinaryArray::GetDate(int32_t pos) const {
 BinaryString BinaryArray::GetString(int32_t pos) const {
     AssertIndexIsValid(pos);
     int32_t field_offset = GetElementOffset(pos, 8);
-    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>(segments_, field_offset);
-    return BinaryDataReadUtils::ReadBinaryString(segments_, offset_, field_offset, offset_and_size);
+    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>({segment_}, field_offset);
+    return BinaryDataReadUtils::ReadBinaryString(segment_, offset_, field_offset, offset_and_size);
+}
+
+std::string_view BinaryArray::GetStringView(int32_t pos) const {
+    BinaryString binary_string = GetString(pos);
+    return binary_string.GetStringView();
 }
 
 Decimal BinaryArray::GetDecimal(int32_t pos, int32_t precision, int32_t scale) const {
     AssertIndexIsValid(pos);
     if (Decimal::IsCompact(precision)) {
         return Decimal::FromUnscaledLong(
-            MemorySegmentUtils::GetValue<int64_t>(segments_, GetElementOffset(pos, 8)), precision,
+            MemorySegmentUtils::GetValue<int64_t>({segment_}, GetElementOffset(pos, 8)), precision,
             scale);
     }
 
     int32_t field_offset = GetElementOffset(pos, 8);
-    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>(segments_, field_offset);
-    return BinaryDataReadUtils::ReadDecimal(segments_, offset_, offset_and_size, precision, scale);
+    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>({segment_}, field_offset);
+    return BinaryDataReadUtils::ReadDecimal(segment_, offset_, offset_and_size, precision, scale);
 }
 
 Timestamp BinaryArray::GetTimestamp(int32_t pos, int32_t precision) const {
@@ -100,68 +97,69 @@ Timestamp BinaryArray::GetTimestamp(int32_t pos, int32_t precision) const {
 
     if (Timestamp::IsCompact(precision)) {
         return Timestamp::FromEpochMillis(
-            MemorySegmentUtils::GetValue<int64_t>(segments_, GetElementOffset(pos, 8)));
+            MemorySegmentUtils::GetValue<int64_t>({segment_}, GetElementOffset(pos, 8)));
     }
 
     int32_t field_offset = GetElementOffset(pos, 8);
     const auto offset_and_nano_of_milli =
-        MemorySegmentUtils::GetValue<int64_t>(segments_, field_offset);
-    return BinaryDataReadUtils::ReadTimestampData(segments_, offset_, offset_and_nano_of_milli);
+        MemorySegmentUtils::GetValue<int64_t>({segment_}, field_offset);
+    return BinaryDataReadUtils::ReadTimestampData(segment_, offset_, offset_and_nano_of_milli);
 }
 
 std::shared_ptr<Bytes> BinaryArray::GetBinary(int32_t pos) const {
     AssertIndexIsValid(pos);
     int32_t field_offset = GetElementOffset(pos, 8);
-    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>(segments_, field_offset);
-    return BinarySection::ReadBinary(segments_, offset_, field_offset, offset_and_size,
+    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>({segment_}, field_offset);
+    return BinarySection::ReadBinary(segment_, offset_, field_offset, offset_and_size,
                                      GetDefaultPool().get());
 }
 
 std::shared_ptr<InternalArray> BinaryArray::GetArray(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return BinaryDataReadUtils::ReadArrayData(segments_, offset_, GetLong(pos));
+    return BinaryDataReadUtils::ReadArrayData(segment_, offset_, GetLong(pos));
 }
 
 std::shared_ptr<InternalMap> BinaryArray::GetMap(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return BinaryDataReadUtils::ReadMapData(segments_, offset_, GetLong(pos));
+    return BinaryDataReadUtils::ReadMapData(segment_, offset_, GetLong(pos));
 }
 
 std::shared_ptr<InternalRow> BinaryArray::GetRow(int32_t pos, int32_t num_fields) const {
     AssertIndexIsValid(pos);
     int32_t field_offset = GetElementOffset(pos, 8);
-    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>(segments_, field_offset);
-    return BinaryDataReadUtils::ReadRowData(segments_, num_fields, offset_, offset_and_size);
+    const auto offset_and_size = MemorySegmentUtils::GetValue<int64_t>({segment_}, field_offset);
+    return BinaryDataReadUtils::ReadRowData(segment_, num_fields, offset_, offset_and_size);
 }
 
 bool BinaryArray::GetBoolean(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<bool>(segments_, GetElementOffset(pos, 1));
+    return MemorySegmentUtils::GetValue<bool>({segment_}, GetElementOffset(pos, 1));
 }
 
 char BinaryArray::GetByte(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<char>(segments_, GetElementOffset(pos, 1));
+    return MemorySegmentUtils::GetValue<char>({segment_}, GetElementOffset(pos, 1));
 }
 
 int16_t BinaryArray::GetShort(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<int16_t>(segments_, GetElementOffset(pos, sizeof(int16_t)));
+    return MemorySegmentUtils::GetValue<int16_t>({segment_},
+                                                 GetElementOffset(pos, sizeof(int16_t)));
 }
 
 float BinaryArray::GetFloat(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<float>(segments_, GetElementOffset(pos, sizeof(float)));
+    return MemorySegmentUtils::GetValue<float>({segment_}, GetElementOffset(pos, sizeof(float)));
 }
 
 double BinaryArray::GetDouble(int32_t pos) const {
     AssertIndexIsValid(pos);
-    return MemorySegmentUtils::GetValue<double>(segments_, GetElementOffset(pos, sizeof(double)));
+    return MemorySegmentUtils::GetValue<double>({segment_}, GetElementOffset(pos, sizeof(double)));
 }
 
 bool BinaryArray::AnyNull() const {
     for (int32_t i = offset_ + 4; i < element_offset_; i += 4) {
-        if (MemorySegmentUtils::GetValue<int32_t>(segments_, i) != 0) {
+        if (MemorySegmentUtils::GetValue<int32_t>({segment_}, i) != 0) {
             return true;
         }
     }
@@ -172,7 +170,7 @@ Result<std::vector<char>> BinaryArray::ToBooleanArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<char> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_);
     return values;
@@ -182,7 +180,7 @@ Result<std::vector<char>> BinaryArray::ToByteArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<char> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_);
     return values;
@@ -192,7 +190,7 @@ Result<std::vector<int16_t>> BinaryArray::ToShortArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int16_t> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_ * sizeof(int16_t));
     return values;
@@ -202,7 +200,7 @@ Result<std::vector<int32_t>> BinaryArray::ToIntArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int32_t> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_ * sizeof(int32_t));
     return values;
@@ -212,7 +210,7 @@ Result<std::vector<int64_t>> BinaryArray::ToLongArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int64_t> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_ * sizeof(int64_t));
     return values;
@@ -222,7 +220,7 @@ Result<std::vector<float>> BinaryArray::ToFloatArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<float> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_ * sizeof(float));
     return values;
@@ -232,7 +230,7 @@ Result<std::vector<double>> BinaryArray::ToDoubleArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<double> values;
     values.resize(size_);
-    MemorySegmentUtils::CopyToUnsafe(segments_, element_offset_,
+    MemorySegmentUtils::CopyToUnsafe({segment_}, element_offset_,
                                      const_cast<void*>(static_cast<const void*>(values.data())),
                                      size_ * sizeof(double));
     return values;
@@ -246,7 +244,7 @@ BinaryArray BinaryArray::Copy(MemoryPool* pool) const {
 
 void BinaryArray::Copy(BinaryArray* reuse, MemoryPool* pool) const {
     std::shared_ptr<Bytes> bytes =
-        MemorySegmentUtils::CopyToBytes(segments_, offset_, size_in_bytes_, pool);
+        MemorySegmentUtils::CopyToBytes({segment_}, offset_, size_in_bytes_, pool);
     reuse->PointTo(MemorySegment::Wrap(bytes), 0, size_in_bytes_);
 }
 

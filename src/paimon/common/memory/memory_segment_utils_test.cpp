@@ -160,6 +160,49 @@ TEST(MemorySegmentUtilsTest, TestSetAndUnSet) {
     ASSERT_FALSE(MemorySegmentUtils::BitGet(segs[0], /*base_offset=*/0, index));
 }
 
+TEST(MemorySegmentUtilsTest, TestBitSetAndUnSetSingleSegment) {
+    auto pool = GetDefaultPool();
+    int32_t segment_size = 128;
+    std::vector<MemorySegment> segs = {MemorySegment::AllocateHeapMemory(segment_size, pool.get())};
+
+    // initially all bits should be 0 after allocation
+    for (int32_t i = 0; i < 16; i++) {
+        ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, i));
+    }
+
+    // set bits at various indices and verify
+    MemorySegmentUtils::BitSet(&segs, /*base_offset=*/0, /*index=*/0);
+    ASSERT_TRUE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 0));
+
+    MemorySegmentUtils::BitSet(&segs, /*base_offset=*/0, /*index=*/7);
+    ASSERT_TRUE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 7));
+
+    MemorySegmentUtils::BitSet(&segs, /*base_offset=*/0, /*index=*/15);
+    ASSERT_TRUE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 15));
+
+    // unset and verify
+    MemorySegmentUtils::BitUnSet(&segs, /*base_offset=*/0, /*index=*/0);
+    ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 0));
+
+    MemorySegmentUtils::BitUnSet(&segs, /*base_offset=*/0, /*index=*/7);
+    ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 7));
+
+    // bit 15 should still be set
+    ASSERT_TRUE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 15));
+
+    MemorySegmentUtils::BitUnSet(&segs, /*base_offset=*/0, /*index=*/15);
+    ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, /*base_offset=*/0, 15));
+
+    // test with non-zero base_offset
+    int32_t base_offset = 10;
+    MemorySegmentUtils::BitSet(&segs, base_offset, /*index=*/3);
+    ASSERT_TRUE(MemorySegmentUtils::BitGet(segs, base_offset, 3));
+    ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, base_offset, 2));
+
+    MemorySegmentUtils::BitUnSet(&segs, base_offset, /*index=*/3);
+    ASSERT_FALSE(MemorySegmentUtils::BitGet(segs, base_offset, 3));
+}
+
 TEST(MemorySegmentUtilsTest, TestCopyMultiSegmentsFromBytes) {
     auto pool = GetDefaultPool();
     std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("abcdef", pool.get());

@@ -55,22 +55,25 @@ TEST_F(CompactStrategyTest, TestPickFullCompaction) {
     {
         // no sorted run, no need to compact
         auto runs = CreateRunsWithLevelAndSize({}, {});
-        auto unit = CompactStrategy::PickFullCompaction(/*num_levels=*/3, runs,
-                                                        /*force_rewrite_all_files=*/false);
+        auto unit =
+            CompactStrategy::PickFullCompaction(/*num_levels=*/3, runs, /*dv_maintainer=*/nullptr,
+                                                /*force_rewrite_all_files=*/false);
         ASSERT_FALSE(unit);
     }
     {
         // only max level files, not rewrite
         auto runs = CreateRunsWithLevelAndSize(/*levels=*/{3}, /*sizes*/ {10});
-        auto unit = CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs,
-                                                        /*force_rewrite_all_files=*/false);
+        auto unit =
+            CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs, /*dv_maintainer=*/nullptr,
+                                                /*force_rewrite_all_files=*/false);
         ASSERT_FALSE(unit);
     }
     {
         // only max level files, force rewrite
         auto runs = CreateRunsWithLevelAndSize(/*levels=*/{3}, /*sizes*/ {10});
-        auto unit = CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs,
-                                                        /*force_rewrite_all_files=*/true);
+        auto unit =
+            CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs, /*dv_maintainer=*/nullptr,
+                                                /*force_rewrite_all_files=*/true);
         ASSERT_TRUE(unit);
         ASSERT_EQ(unit.value().output_level, 3);
         ASSERT_EQ(unit.value().files.size(), 1);
@@ -79,12 +82,30 @@ TEST_F(CompactStrategyTest, TestPickFullCompaction) {
     {
         // full compaction
         auto runs = CreateRunsWithLevelAndSize(/*levels=*/{0, 3}, /*sizes*/ {1, 10});
-        auto unit = CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs,
-                                                        /*force_rewrite_all_files=*/false);
+        auto unit =
+            CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs, /*dv_maintainer=*/nullptr,
+                                                /*force_rewrite_all_files=*/false);
         ASSERT_TRUE(unit);
         ASSERT_EQ(unit.value().output_level, 3);
         ASSERT_EQ(unit.value().files.size(), 2);
         ASSERT_FALSE(unit.value().file_rewrite);
+    }
+    {
+        // test with dv maintainer
+        std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {
+            {"fake.data", std::make_shared<BitmapDeletionVector>(RoaringBitmap32())}};
+
+        auto dv_maintainer = std::make_shared<BucketedDvMaintainer>(
+            std::make_shared<DeletionVectorsIndexFile>(nullptr, nullptr, /*bitmap64=*/false,
+                                                       GetDefaultPool()),
+            deletion_vectors);
+        auto runs = CreateRunsWithLevelAndSize(/*levels=*/{3}, /*sizes*/ {10});
+        auto unit = CompactStrategy::PickFullCompaction(/*num_levels=*/4, runs, dv_maintainer,
+                                                        /*force_rewrite_all_files=*/false);
+        ASSERT_TRUE(unit);
+        ASSERT_EQ(unit.value().output_level, 3);
+        ASSERT_EQ(unit.value().files.size(), 1);
+        ASSERT_TRUE(unit.value().file_rewrite);
     }
 }
 }  // namespace paimon::test

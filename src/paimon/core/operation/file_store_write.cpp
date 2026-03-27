@@ -167,16 +167,10 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
                                schema->TrimmedPrimaryKeys());
         PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> trimmed_primary_key_fields,
                                schema->GetFields(trimmed_primary_keys));
-        // use_view=true: for in-memory Arrow row comparisons in MergeTreeWriter
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
-                               FieldsComparator::Create(trimmed_primary_key_fields,
-                                                        options.SequenceFieldSortOrderIsAscending(),
-                                                        /*use_view=*/true));
-        // use_view=false: for BinaryRow min_key/max_key in DataFileMeta (CompactManager/Levels)
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator_for_compact,
-                               FieldsComparator::Create(trimmed_primary_key_fields,
-                                                        options.SequenceFieldSortOrderIsAscending(),
-                                                        /*use_view=*/false));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<FieldsComparator> key_comparator,
+            FieldsComparator::Create(trimmed_primary_key_fields,
+                                     options.SequenceFieldSortOrderIsAscending()));
         auto primary_keys = schema->PrimaryKeys();
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<MergeFunction> merge_function,
@@ -209,10 +203,9 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return std::make_unique<KeyValueFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
             ctx->GetRootPath(), schema, arrow_schema, partition_schema, dv_maintainer_factory,
-            ctx->GetIOManager(), key_comparator, key_comparator_for_compact,
-            sequence_fields_comparator, merge_function_wrapper, options, ignore_previous_files,
-            ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
-            ctx->GetMemoryPool());
+            ctx->GetIOManager(), key_comparator, sequence_fields_comparator, merge_function_wrapper,
+            options, ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
+            ctx->GetExecutor(), ctx->GetMemoryPool());
     }
 }
 

@@ -37,10 +37,10 @@ Result<std::unique_ptr<BlockEntry>> BlockIterator::Next() {
     return ReadEntry();
 }
 
-std::unique_ptr<BlockEntry> BlockIterator::ReadEntry() {
-    int32_t key_length = input_->ReadVarLenInt();
+Result<std::unique_ptr<BlockEntry>> BlockIterator::ReadEntry() {
+    PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_->ReadVarLenInt());
     auto key = input_->ReadSlice(key_length);
-    int32_t value_length = input_->ReadVarLenInt();
+    PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_->ReadVarLenInt());
     auto value = input_->ReadSlice(value_length);
     return std::make_unique<BlockEntry>(key, value);
 }
@@ -53,7 +53,7 @@ Result<bool> BlockIterator::SeekTo(const std::shared_ptr<MemorySlice>& target_ke
         int32_t mid = left + (right - left) / 2;
 
         PAIMON_RETURN_NOT_OK(input_->SetPosition(reader_->SeekTo(mid)));
-        auto mid_entry = ReadEntry();
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> mid_entry, ReadEntry());
         PAIMON_ASSIGN_OR_RAISE(int32_t compare, reader_->Comparator()(mid_entry->key, target_key));
 
         if (compare == 0) {

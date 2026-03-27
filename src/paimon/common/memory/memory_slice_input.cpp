@@ -69,7 +69,7 @@ int64_t MemorySliceInput::ReadLong() {
     return v;
 }
 
-int32_t MemorySliceInput::ReadVarLenInt() {
+Result<int32_t> MemorySliceInput::ReadVarLenInt() {
     for (int offset = 0, result = 0; offset < 32; offset += 7) {
         int b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
@@ -77,10 +77,10 @@ int32_t MemorySliceInput::ReadVarLenInt() {
             return result;
         }
     }
-    throw std::invalid_argument("Malformed integer.");
+    return Status::Invalid("Malformed integer.");
 }
 
-int64_t MemorySliceInput::ReadVarLenLong() {
+Result<int64_t> MemorySliceInput::ReadVarLenLong() {
     int64_t result = 0;
     for (int offset = 0; offset < 64; offset += 7) {
         int64_t b = ReadUnsignedByte();
@@ -89,7 +89,7 @@ int64_t MemorySliceInput::ReadVarLenLong() {
             return result;
         }
     }
-    throw std::invalid_argument("Malformed long.");
+    return Status::Invalid("Malformed long.");
 }
 
 void MemorySliceInput::SetOrder(ByteOrder order) {

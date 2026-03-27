@@ -89,14 +89,12 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
     std::shared_ptr<arrow::Schema> read_schema;
     // comparator of member key in KeyValue object
     std::shared_ptr<FieldsComparator> key_comparator;
-    // comparator of sorted-run in interval partition
-    std::shared_ptr<FieldsComparator> interval_partition_comparator;
     // comparator of user-defined sequence fields in member value of KeyValue object
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator;
 
     PAIMON_RETURN_NOT_OK(GenerateKeyValueReadSchema(
         *table_schema, core_options, context->GetReadSchema(), &value_schema, &read_schema,
-        &key_comparator, &interval_partition_comparator, &user_defined_seq_comparator));
+        &key_comparator, &user_defined_seq_comparator));
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Predicate> predicate_for_keys,
                            GenerateKeyPredicates(context->GetPredicate(), *table_schema));
@@ -114,8 +112,7 @@ Result<std::unique_ptr<MergeFileSplitRead>> MergeFileSplitRead::Create(
         std::make_unique<SchemaManager>(core_options.GetFileSystem(), context->GetPath(),
                                         context->GetCoreOptions().GetBranch()),
         key_schema, value_schema, read_schema, projection, key_comparator,
-        interval_partition_comparator, user_defined_seq_comparator, predicate_for_keys, memory_pool,
-        executor));
+        user_defined_seq_comparator, predicate_for_keys, memory_pool, executor));
 }
 
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateReader(
@@ -223,7 +220,7 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
                                                     CreateDeletionFileMap(*data_split), pool_);
 
     std::vector<std::vector<SortedRun>> sections =
-        IntervalPartition(data_split->DataFiles(), interval_partition_comparator_).Partition();
+        IntervalPartition(data_split->DataFiles(), key_comparator_).Partition();
     std::vector<std::unique_ptr<BatchReader>> batch_readers;
     batch_readers.reserve(sections.size());
     // no overlap through multiple sections
@@ -270,7 +267,6 @@ MergeFileSplitRead::MergeFileSplitRead(
     const std::shared_ptr<arrow::Schema>& value_schema,
     const std::shared_ptr<arrow::Schema>& read_schema, const std::vector<int32_t>& projection,
     const std::shared_ptr<FieldsComparator>& key_comparator,
-    const std::shared_ptr<FieldsComparator>& interval_partition_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<Predicate>& predicate_for_keys,
     const std::shared_ptr<MemoryPool>& memory_pool, const std::shared_ptr<Executor>& executor)
@@ -280,7 +276,6 @@ MergeFileSplitRead::MergeFileSplitRead(
       read_schema_(read_schema),
       projection_(projection),
       key_comparator_(key_comparator),
-      interval_partition_comparator_(interval_partition_comparator),
       user_defined_seq_comparator_(user_defined_seq_comparator),
       predicate_for_keys_(predicate_for_keys) {}
 
@@ -289,7 +284,6 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     const std::shared_ptr<arrow::Schema>& raw_read_schema,
     std::shared_ptr<arrow::Schema>* value_schema, std::shared_ptr<arrow::Schema>* read_schema,
     std::shared_ptr<FieldsComparator>* key_comparator,
-    std::shared_ptr<FieldsComparator>* interval_partition_comparator,
     std::shared_ptr<FieldsComparator>* sequence_fields_comparator) {
     // 1. add user raw read schema to need_fields
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> need_fields,
@@ -325,14 +319,8 @@ Status MergeFileSplitRead::GenerateKeyValueReadSchema(
     // 6. complete key fields to all trimmed primary key
     key_fields.clear();
     PAIMON_ASSIGN_OR_RAISE(key_fields, table_schema.GetFields(trimmed_key_fields));
-    PAIMON_ASSIGN_OR_RAISE(
-        *key_comparator, FieldsComparator::Create(key_fields,
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
-    // comparator only used in interval partition
-    PAIMON_ASSIGN_OR_RAISE(
-        *interval_partition_comparator,
-        FieldsComparator::Create(key_fields,
-                                 /*is_ascending_order=*/true, /*use_view=*/false));
+    PAIMON_ASSIGN_OR_RAISE(*key_comparator, FieldsComparator::Create(key_fields,
+                                                                     /*is_ascending_order=*/true));
     // 7. construct actual read fields: special + key + non-key value
     std::vector<DataField> read_fields;
     std::vector<DataField> special_fields(

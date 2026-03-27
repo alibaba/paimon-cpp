@@ -50,8 +50,7 @@ class LevelsTest : public testing::Test {
         std::vector<DataField> data_fields;
         data_fields.emplace_back(/*id=*/0, arrow::field("f0", arrow::int32()));
         EXPECT_OK_AND_ASSIGN(auto cmp,
-                             FieldsComparator::Create(data_fields, /*is_ascending_order=*/true,
-                                                      /*use_view=*/false));
+                             FieldsComparator::Create(data_fields, /*is_ascending_order=*/true));
         return cmp;
     }
 

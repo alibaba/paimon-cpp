@@ -99,8 +99,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestSimple) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({fields[0], fields[1]},
-                                                  /*is_ascending_order=*/true,
-                                                  /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
         /*last_sequence_num=*/0, std::move(src_array),
@@ -166,8 +165,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestUserDefinedSequenceFields) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({fields[1], fields[0]},
-                                                  /*is_ascending_order=*/true,
-                                                  /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
         /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),
@@ -202,8 +200,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestNonExistPK) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({fields[0], fields[1]},
-                                                  /*is_ascending_order=*/true,
-                                                  /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
         /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),
@@ -253,8 +250,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestStableSortAndMerge) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                          FieldsComparator::Create({fields[0], fields[1]},
-                                                  /*is_ascending_order=*/true,
-                                                  /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
         /*last_sequence_num=*/0, std::move(src_array),
@@ -297,8 +293,7 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestVariantType) {
 
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
                              FieldsComparator::Create({fields[0]},
-                                                      /*is_ascending_order=*/true,
-                                                      /*use_view=*/true));
+                                                      /*is_ascending_order=*/true));
 
         auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
             /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),

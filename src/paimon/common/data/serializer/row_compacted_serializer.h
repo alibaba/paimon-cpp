@@ -67,7 +67,11 @@ class RowCompactedSerializer {
         }
 
         Status WriteString(const BinaryString& value) {
-            return WriteSegments(value.GetSegments(), value.GetOffset(), value.GetSizeInBytes());
+            return WriteSegment(value.GetSegment(), value.GetOffset(), value.GetSizeInBytes());
+        }
+
+        Status WriteStringView(const std::string_view& view) {
+            return WriteBinary(&view);
         }
 
         template <typename T>
@@ -94,7 +98,7 @@ class RowCompactedSerializer {
 
      private:
         Status WriteUnsignedInt(int32_t value);
-        Status WriteSegments(const std::vector<MemorySegment>& segments, int32_t off, int32_t len);
+        Status WriteSegment(const MemorySegment& segment, int32_t off, int32_t len);
         void EnsureCapacity(int32_t size);
         void Grow(int32_t min_capacity_add);
         void SetBuffer(std::shared_ptr<Bytes> new_buffer);
@@ -153,7 +157,6 @@ class RowCompactedSerializer {
         const int32_t header_size_in_bytes_;
         std::shared_ptr<MemoryPool> pool_;
         MemorySegment segment_;
-        std::vector<MemorySegment> segments_;
         int32_t offset_ = 0;
         int32_t position_ = 0;
     };

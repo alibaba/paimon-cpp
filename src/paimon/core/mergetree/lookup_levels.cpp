@@ -43,9 +43,8 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     auto pk_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RowCompactedSerializer> key_serializer,
                            RowCompactedSerializer::Create(pk_schema, pool));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FieldsComparator> key_comparator,
-        FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldsComparator> key_comparator,
+                           FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true));
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
                            table_schema->GetFields(table_schema->PartitionKeys()));

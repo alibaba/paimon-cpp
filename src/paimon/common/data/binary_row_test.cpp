@@ -32,6 +32,8 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/common/utils/serialization_utils.h"
+#include "paimon/io/byte_array_input_stream.h"
+#include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/status.h"
@@ -77,6 +79,7 @@ TEST_F(BinaryRowTest, TestBasic) {
     ASSERT_EQ(static_cast<double>(5.8), row.GetDouble(1));
 
     row.Clear();
+    ASSERT_EQ(0, row.HashCode());
     std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(100, pool.get());
     MemorySegment segment1 = MemorySegment::Wrap(bytes1);
     row.PointTo(segment1, 0, 20);
@@ -138,46 +141,17 @@ TEST_F(BinaryRowTest, TestWriter) {
     writer.Complete();
 
     AssertTestWriterRow(row);
-    AssertTestWriterRow(row.Copy(pool.get()));
 
-    // test copy from var segments.
-    int32_t sub_size = row.GetFixedLengthPartSize() + 10;
+    // test copy
+    auto copied1 = row.Copy(pool.get());
+    AssertTestWriterRow(copied1);
+    ASSERT_EQ(row, copied1);
 
-    auto bytes1 = Bytes::AllocateBytes(sub_size, pool.get());
-    auto bytes2 = Bytes::AllocateBytes(sub_size, pool.get());
-    MemorySegment sub_ms1 = MemorySegment::Wrap(std::move(bytes1));
-    MemorySegment sub_ms2 = MemorySegment::Wrap(std::move(bytes2));
-    row.GetSegments()[0].CopyTo(0, &sub_ms1, 0, sub_size);
-    row.GetSegments()[0].CopyTo(sub_size, &sub_ms2, 0, row.GetSizeInBytes() - sub_size);
-
-    std::vector<MemorySegment> segs = {sub_ms1, sub_ms2};
-    BinaryRow to_copy(arity);
-    to_copy.PointTo(segs, 0, row.GetSizeInBytes());
-    ASSERT_EQ(to_copy.HashCode(), row.HashCode());
-    AssertTestWriterRow(to_copy);
-    BinaryRow new_row(arity);
-    to_copy.Copy(&new_row, pool.get());
-    AssertTestWriterRow(new_row);
-}
-
-TEST_F(BinaryRowTest, TestWriter2) {
-    // test write multi segments to var len parts
-    auto pool = GetDefaultPool();
-    int32_t arity = 1;
-    BinaryRow row(arity);
-    BinaryRowWriter writer(&row, 100, pool.get());
-
-    std::string str1 = "Strive not to be a success, ";
-    std::string str2 = "but rather to be of value.";
-    auto bytes1 = std::make_shared<Bytes>(str1, pool.get());
-    auto bytes2 = std::make_shared<Bytes>(str2, pool.get());
-    std::vector<MemorySegment> mem_segs({MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-    auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/2,
-                                                   /*num_bytes=*/str1.length() + str2.length() - 2);
-    writer.WriteString(0, binary_string);
-    writer.Complete();
-
-    ASSERT_EQ(row.GetString(0).ToString(), "rive not to be a success, but rather to be of value.");
+    // test copy
+    BinaryRow copied2(arity);
+    row.Copy(&copied2, pool.get());
+    AssertTestWriterRow(copied2);
+    ASSERT_EQ(row, copied2);
 }
 
 TEST_F(BinaryRowTest, TestWriteString) {
@@ -554,11 +528,9 @@ TEST_F(BinaryRowTest, TestBinaryRowSerializer) {
     srand(static_cast<unsigned>(time(nullptr)));
     auto pool = GetDefaultPool();
     BinaryRow row(3);
-    int32_t bytes_size = 1024;
-    std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(1024, pool.get());
-    for (int32_t i = 0; i < bytes_size; i++) {
-        (*bytes)[i] = paimon::test::RandomNumber(0, 255);
-    }
+    BinaryRowWriter writer(&row, /*initial_size=*/1024, pool.get());
+    writer.WriteInt(0, paimon::test::RandomNumber(0, 2000000));
+
     int32_t str_size = 1024;
     std::string test_string1, test_string2;
     test_string1.reserve(str_size);
@@ -567,43 +539,22 @@ TEST_F(BinaryRowTest, TestBinaryRowSerializer) {
         test_string1 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
         test_string2 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
     }
-    std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(test_string1, pool.get());
-    std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(test_string2, pool.get());
-    std::vector<MemorySegment> segs = {MemorySegment::Wrap(bytes), MemorySegment::Wrap(bytes1),
-                                       MemorySegment::Wrap(bytes2)};
-    row.PointTo(segs, 0, bytes_size + test_string1.size() + test_string2.size());
+    writer.WriteStringView(1, std::string_view(test_string1));
+    writer.WriteStringView(2, std::string_view(test_string2));
+    writer.Complete();
 
-    BinaryRowSerializer row_serializer_(3, pool);
+    BinaryRowSerializer row_serializer(3, pool);
     MemorySegmentOutputStream out(MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
-    ASSERT_OK(row_serializer_.Serialize(row, &out));
+    ASSERT_OK(row_serializer.Serialize(row, &out));
     PAIMON_UNIQUE_PTR<Bytes> bytes_serialize =
         MemorySegmentUtils::CopyToBytes(out.Segments(), 0, out.CurrentSize(), pool.get());
-    std::string str_serialize = std::string(bytes_serialize->data(), bytes_serialize->size());
-    ASSERT_GE(str_serialize.size(), bytes_size + test_string1.size() + test_string2.size());
-    std::string str_serialize1 = str_serialize.substr(
-        str_serialize.size() - test_string1.size() - test_string2.size(), test_string1.size());
-    std::string str_serialize2 =
-        str_serialize.substr(str_serialize.size() - test_string2.size(), test_string2.size());
-    ASSERT_EQ(test_string1, str_serialize1);
-    ASSERT_EQ(test_string2, str_serialize2);
-}
-
-TEST_F(BinaryRowTest, TestWriteWithMultiSegments) {
-    auto pool = GetDefaultPool();
-    std::string str1 = "Strive not to be a success, ";
-    std::string str2 = "but rather to be of value.";
-    auto bytes1 = std::make_shared<Bytes>(str1, pool.get());
-    auto bytes2 = std::make_shared<Bytes>(str2, pool.get());
-    std::vector<MemorySegment> mem_segs({MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-    auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/0,
-                                                   /*num_bytes=*/str1.length() + str2.length());
-    ASSERT_EQ(str1 + str2, binary_string.ToString());
-
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteString(0, binary_string);
-    writer.Complete();
-    ASSERT_EQ(str1 + str2, row.GetString(0).ToString());
+    ASSERT_GE(bytes_serialize->size(), sizeof(int32_t) + test_string1.size() + test_string2.size());
+    DataInputStream input(
+        std::make_shared<ByteArrayInputStream>(bytes_serialize->data(), bytes_serialize->size()));
+    ASSERT_OK_AND_ASSIGN(auto de_row, row_serializer.Deserialize(&input));
+    ASSERT_EQ(de_row, row);
+    ASSERT_EQ(de_row.GetString(1).ToString(), test_string1);
+    ASSERT_EQ(de_row.GetString(2).ToString(), test_string2);
 }
 
 }  // namespace paimon::test

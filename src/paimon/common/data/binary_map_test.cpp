@@ -25,7 +25,7 @@ TEST(BinaryMapTest, TestSimple) {
     auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
     auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
 
-    ASSERT_OK_AND_ASSIGN(auto binary_map, BinaryMap::ValueOf(key, value, pool.get()));
+    auto binary_map = BinaryMap::ValueOf(key, value, pool.get());
 
     ASSERT_EQ(binary_map->Size(), 4);
     auto key_in_map = std::dynamic_pointer_cast<BinaryArray>(binary_map->KeyArray());

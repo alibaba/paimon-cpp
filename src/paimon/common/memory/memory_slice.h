@@ -58,17 +58,7 @@ class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlic
 
     std::shared_ptr<Bytes> CopyBytes(MemoryPool* pool);
 
-    bool operator<(const MemorySlice& other) const;
-    bool operator>(const MemorySlice& other) const;
-    bool operator==(const MemorySlice& other) const;
-    bool operator!=(const MemorySlice& other) const;
-    bool operator<=(const MemorySlice& other) const;
-    bool operator>=(const MemorySlice& other) const;
-
     std::shared_ptr<MemorySliceInput> ToInput();
-
- private:
-    int32_t Compare(const MemorySlice& other) const;
 
  private:
     MemorySegment segment_;

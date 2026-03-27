@@ -153,7 +153,7 @@ class GenericRow : public InternalRow {
 
     std::string_view GetStringView(int32_t pos) const override {
         assert(static_cast<size_t>(pos) < fields_.size());
-        return DataDefine::GetVariantValue<std::string_view>(fields_[pos]);
+        return DataDefine::GetStringView(fields_[pos]);
     }
 
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override {

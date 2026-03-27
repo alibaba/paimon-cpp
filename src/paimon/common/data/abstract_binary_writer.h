@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <optional>
 #include <string_view>
-#include <vector>
 
 #include "paimon/common/data/binary_writer.h"
 #include "paimon/common/memory/memory_segment.h"
@@ -56,7 +55,7 @@ class AbstractBinaryWriter : public BinaryWriter {
 
     void WriteStringView(int32_t pos, const std::string_view& view) override;
 
-    const MemorySegment& GetSegments() const {
+    const MemorySegment& GetSegment() const {
         return segment_;
     }
 
@@ -90,10 +89,8 @@ class AbstractBinaryWriter : public BinaryWriter {
     static void WriteBytesToFixLenPart(MemorySegment* segment, int32_t field_offset, const T& bytes,
                                        int32_t len);
 
-    void WriteSegmentsToVarLenPart(int32_t pos, const std::vector<MemorySegment>& segments,
-                                   int32_t offset, int32_t size);
-    void WriteMultiSegmentsToVarLenPart(const std::vector<MemorySegment>& segments, int32_t offset,
-                                        int32_t size);
+    void WriteSegmentToVarLenPart(int32_t pos, const MemorySegment& segment, int32_t offset,
+                                  int32_t size);
 
  protected:
     int32_t cursor_ = 0;

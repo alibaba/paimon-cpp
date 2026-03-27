@@ -387,11 +387,10 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
     std::shared_ptr<arrow::Schema> value_schema;
     std::shared_ptr<arrow::Schema> read_schema;
     std::shared_ptr<FieldsComparator> key_comparator;
-    std::shared_ptr<FieldsComparator> interval_partition_comparator;
     std::shared_ptr<FieldsComparator> sequence_fields_comparator;
     ASSERT_OK(MergeFileSplitRead::GenerateKeyValueReadSchema(
         *table_schema, options, raw_read_schema, &value_schema, &read_schema, &key_comparator,
-        &interval_partition_comparator, &sequence_fields_comparator));
+        &sequence_fields_comparator));
 
     // check result
     std::vector<DataField> expected_value_fields = {
@@ -431,8 +430,6 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
     std::vector<int32_t> expected_sort_key_fields = {0, 1};
     ASSERT_EQ(key_comparator->sort_fields_, expected_sort_key_fields);
     ASSERT_EQ(key_comparator->is_ascending_order_, true);
-    ASSERT_EQ(interval_partition_comparator->sort_fields_, expected_sort_key_fields);
-    ASSERT_EQ(interval_partition_comparator->is_ascending_order_, true);
 
     std::vector<int32_t> expected_sort_seq_fields = {5, 2};
     ASSERT_EQ(sequence_fields_comparator->sort_fields_, expected_sort_seq_fields);
@@ -461,11 +458,10 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema1) {
     std::shared_ptr<arrow::Schema> value_schema;
     std::shared_ptr<arrow::Schema> read_schema;
     std::shared_ptr<FieldsComparator> key_comparator;
-    std::shared_ptr<FieldsComparator> interval_partition_comparator;
     std::shared_ptr<FieldsComparator> sequence_fields_comparator;
     ASSERT_OK(MergeFileSplitRead::GenerateKeyValueReadSchema(
         *table_schema, options, raw_read_schema, &value_schema, &read_schema, &key_comparator,
-        &interval_partition_comparator, &sequence_fields_comparator));
+        &sequence_fields_comparator));
 
     // check result
     std::vector<DataField> expected_value_fields = {
@@ -493,8 +489,6 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema1) {
     std::vector<int32_t> expected_sort_key_fields = {0, 1};
     ASSERT_EQ(key_comparator->sort_fields_, expected_sort_key_fields);
     ASSERT_EQ(key_comparator->is_ascending_order_, true);
-    ASSERT_EQ(interval_partition_comparator->sort_fields_, expected_sort_key_fields);
-    ASSERT_EQ(interval_partition_comparator->is_ascending_order_, true);
 
     ASSERT_FALSE(sequence_fields_comparator);
 }

@@ -322,7 +322,8 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
             const auto& list_type =
                 arrow::internal::checked_pointer_cast<const arrow::ListType>(arrow_type);
             const auto& value_field = list_type->value_field();
-            PAIMON_ASSIGN_OR_RAISE(auto value_schema, ArrowTypeToAvroSchema(value_field, row_name));
+            PAIMON_ASSIGN_OR_RAISE(::avro::Schema value_schema,
+                                   ArrowTypeToAvroSchema(value_field, row_name));
             ::avro::ArraySchema array_schema(value_schema);
             return nullable ? NullableSchema(array_schema) : array_schema;
         }
@@ -333,7 +334,7 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
 
             ::avro::RecordSchema record_schema(row_name);
             for (const auto& f : fields) {
-                PAIMON_ASSIGN_OR_RAISE(auto field_schema,
+                PAIMON_ASSIGN_OR_RAISE(::avro::Schema field_schema,
                                        ArrowTypeToAvroSchema(f, row_name + "_" + f->name()));
                 AddRecordField(&record_schema, f->name(), field_schema);
             }
@@ -348,7 +349,7 @@ Result<::avro::Schema> AvroSchemaConverter::ArrowTypeToAvroSchema(
                 return Status::Invalid("Avro Map key cannot be nullable");
             }
             if (key_field->type()->id() == arrow::Type::STRING) {
-                PAIMON_ASSIGN_OR_RAISE(auto item_schema,
+                PAIMON_ASSIGN_OR_RAISE(::avro::Schema item_schema,
                                        ArrowTypeToAvroSchema(item_field, row_name));
                 ::avro::MapSchema map_schema(item_schema);
                 return nullable ? NullableSchema(map_schema) : map_schema;

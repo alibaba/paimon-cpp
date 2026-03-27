@@ -70,7 +70,6 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
         const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<FieldsComparator>& key_comparator,
-        const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
         const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
@@ -145,9 +144,6 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
 
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;
-    // key_comparator_for_compact_ uses use_view=false, safe to compare BinaryRow
-    // min_key/max_key stored in DataFileMeta (not backed by a live Arrow buffer).
-    std::shared_ptr<FieldsComparator> key_comparator_for_compact_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
     std::unique_ptr<Logger> logger_;

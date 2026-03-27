@@ -107,8 +107,8 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
 
         PAIMON_LOG_DEBUG(logger_, "Trigger forced full compaction. Picking from runs:\n%s",
                          StringUtils::VectorToString(runs).c_str());
-        optional_unit = CompactStrategy::PickFullCompaction(levels_->NumberOfLevels(), runs,
-                                                            force_rewrite_all_files_);
+        optional_unit = CompactStrategy::PickFullCompaction(
+            levels_->NumberOfLevels(), runs, dv_maintainer_, force_rewrite_all_files_);
     } else {
         if (task_future_.valid()) {
             return Status::OK();

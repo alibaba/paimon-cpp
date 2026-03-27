@@ -167,7 +167,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithTwoSameKeys) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {1, 1, 1}, {{2}, {3}, {5}}, {{2, 30}, {3, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
@@ -213,7 +213,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected =
         KeyValueChecker::GenerateKeyValues({2, 1}, {{2}, {5}}, {{2, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
@@ -258,7 +258,7 @@ TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys2) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected =
         KeyValueChecker::GenerateKeyValues({2, 1}, {{2}, {5}}, {{2, 30}, {5, 50}}, pool_);
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
@@ -303,7 +303,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn2Ways) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<FieldsComparator> user_key_comparator,
         FieldsComparator::Create({data_fields[2], data_fields[3]}, std::vector<int32_t>({0, 1}),
-                                 /*is_ascending_order=*/true, /*use_view=*/true));
+                                 /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {1, 0, 0, 2, 2, 2}, {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {2, 3}, {2, 5}},
         {{1, 1, 14, 24, 34},
@@ -355,7 +355,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn3Ways) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected =
         KeyValueChecker::GenerateKeyValues({1, 2, 2, 4, 4}, {{1}, {2}, {3}, {4}, {5}},
                                            {{1, 17}, {2, 18}, {3, 15}, {4, 19}, {5, 20}}, pool_);
@@ -391,7 +391,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn2WaysWithEmptyArray) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {0, 0, 1, 2}, {{1}, {2}, {3}, {4}}, {{1, 10}, {2, 11}, {3, 12}, {4, 13}}, pool_);
 
@@ -430,7 +430,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn2WaysWithNoOverlap) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {0, 0, 1, 2, 1, 2, 3, 2}, {{1}, {2}, {3}, {4}, {102}, {103}, {104}, {105}},
         {{1, 10}, {2, 11}, {3, 12}, {4, 13}, {102, 14}, {103, 15}, {104, 16}, {105, 17}}, pool_);
@@ -469,7 +469,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn2WaysWithFullOverlap) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {1, 2, 3, 3}, {{1}, {2}, {3}, {4}}, {{1, 14}, {2, 15}, {3, 16}, {4, 17}}, pool_);
 
@@ -510,7 +510,7 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn2WaysWithPartialOverlap) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
                          FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {1, 2, 3, 3, 0, 0}, {{1}, {2}, {3}, {4}, {5}, {6}},
         {{1, 14}, {2, 15}, {3, 16}, {4, 17}, {5, 18}, {6, 19}}, pool_);
@@ -566,12 +566,12 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn3WaysWithUserDefinedSeq) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<FieldsComparator> user_key_comparator,
         FieldsComparator::Create({data_fields[2], data_fields[3]}, std::vector<int32_t>({0, 1}),
-                                 /*is_ascending_order=*/true, /*use_view=*/true));
+                                 /*is_ascending_order=*/true));
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
                          FieldsComparator::Create({data_fields[2], data_fields[3], data_fields[4],
                                                    data_fields[5], data_fields[6]},
                                                   std::vector<int32_t>({2, 3}),
-                                                  /*is_ascending_order=*/true, /*use_view=*/true));
+                                                  /*is_ascending_order=*/true));
     std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
         {2, 1, 0, 2, 2, 3}, {{1, 1}, {1, 2}, {1, 3}, {2, 2}, {2, 3}, {2, 5}},
         {{1, 1, 14, 24, 34},

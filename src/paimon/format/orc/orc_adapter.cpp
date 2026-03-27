@@ -1510,23 +1510,25 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
             if (subtype_count != 1) {
                 return Status::TypeError("Invalid Orc List type");
             }
-            PAIMON_ASSIGN_OR_RAISE(auto elem_field, GetArrowField("item", type->getSubtype(0)));
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> elem_field,
+                                   GetArrowField("item", type->getSubtype(0)));
             return list(std::move(elem_field));
         }
         case ::orc::MAP: {
             if (subtype_count != 2) {
                 return Status::TypeError("Invalid Orc Map type");
             }
-            PAIMON_ASSIGN_OR_RAISE(auto key_field,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> key_field,
                                    GetArrowField("key", type->getSubtype(0), /*nullable=*/false));
-            PAIMON_ASSIGN_OR_RAISE(auto value_field, GetArrowField("value", type->getSubtype(1)));
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> value_field,
+                                   GetArrowField("value", type->getSubtype(1)));
             return std::make_shared<arrow::MapType>(std::move(key_field), std::move(value_field));
         }
         case ::orc::STRUCT: {
             arrow::FieldVector fields(subtype_count);
             for (int child = 0; child < subtype_count; ++child) {
                 const auto& name = type->getFieldName(child);
-                PAIMON_ASSIGN_OR_RAISE(auto elem_field,
+                PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> elem_field,
                                        GetArrowField(name, type->getSubtype(child)));
                 fields[child] = std::move(elem_field);
             }

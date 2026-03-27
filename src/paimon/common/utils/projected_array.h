@@ -103,7 +103,6 @@ class ProjectedArray : public InternalArray {
     }
 
     std::string_view GetStringView(int32_t pos) const override {
-        assert(false);
         assert(static_cast<size_t>(pos) < mapping_.size());
         return array_->GetStringView(mapping_[pos]);
     }

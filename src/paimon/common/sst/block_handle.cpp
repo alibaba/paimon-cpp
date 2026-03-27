@@ -20,10 +20,10 @@
 
 namespace paimon {
 
-std::shared_ptr<BlockHandle> BlockHandle::ReadBlockHandle(
-    std::shared_ptr<MemorySliceInput>& input) {
-    int64_t offset = input->ReadVarLenLong();
-    int size = input->ReadVarLenInt();
+Result<std::shared_ptr<BlockHandle>> BlockHandle::ReadBlockHandle(
+    const std::shared_ptr<MemorySliceInput>& input) {
+    PAIMON_ASSIGN_OR_RAISE(int64_t offset, input->ReadVarLenLong());
+    PAIMON_ASSIGN_OR_RAISE(int32_t size, input->ReadVarLenInt());
     return std::make_shared<BlockHandle>(offset, size);
 }
 

@@ -36,29 +36,28 @@ class BinaryDataReadUtils {
     ~BinaryDataReadUtils() = delete;
 
     /// Gets an instance of `Timestamp` from underlying `MemorySegment`.
-    /// @param segments the underlying `MemorySegment`s
+    /// @param segment the underlying `MemorySegment`s
     /// @param base_offset the base offset of current instance of TimestampData
     /// @param offset_and_nanos the offset of milli-seconds part and nanoseconds
     /// @return an instance of `Timestamp`
-
-    static Timestamp ReadTimestampData(const std::vector<MemorySegment>& segments,
-                                       int32_t base_offset, int64_t offset_and_nanos) {
+    static Timestamp ReadTimestampData(const MemorySegment& segment, int32_t base_offset,
+                                       int64_t offset_and_nanos) {
         auto nano_of_millisecond = static_cast<int32_t>(offset_and_nanos & LOW_BYTES_MASK);
         auto sub_offset = static_cast<int32_t>(offset_and_nanos >> 32);
         auto millisecond =
-            MemorySegmentUtils::GetValue<int64_t>(segments, base_offset + sub_offset);
+            MemorySegmentUtils::GetValue<int64_t>({segment}, base_offset + sub_offset);
         return Timestamp::FromEpochMillis(millisecond, nano_of_millisecond);
     }
 
     /// Gets an instance of `Decimal` from underlying `MemorySegment`.
-    static Decimal ReadDecimal(const std::vector<MemorySegment>& segments, int32_t base_offset,
+    static Decimal ReadDecimal(const MemorySegment& segment, int32_t base_offset,
                                int64_t offset_and_size, int32_t precision, int32_t scale) {
         auto size = static_cast<int32_t>(offset_and_size & LOW_BYTES_MASK);
         auto sub_offset = static_cast<int32_t>(offset_and_size >> 32);
         auto bytes = Bytes::AllocateBytes(size, GetDefaultPool().get());
         std::memset(bytes->data(), 0, bytes->size());
 
-        MemorySegmentUtils::CopyToBytes<Bytes>(segments, base_offset + sub_offset, bytes.get(), 0,
+        MemorySegmentUtils::CopyToBytes<Bytes>({segment}, base_offset + sub_offset, bytes.get(), 0,
                                                size);
         return Decimal::FromUnscaledBytes(precision, scale, bytes.get());
     }
@@ -69,55 +68,55 @@ class BinaryDataReadUtils {
     /// @param field_offset absolute start offset of variable_part_offset_and_len.
     /// @param variable_part_offset_and_len a long value, real data or offset and len.
 
-    static BinaryString ReadBinaryString(const std::vector<MemorySegment>& segments,
-                                         int32_t base_offset, int64_t field_offset,
+    static BinaryString ReadBinaryString(const MemorySegment& segment, int32_t base_offset,
+                                         int64_t field_offset,
                                          int64_t variable_part_offset_and_len) {
         int64_t mark = variable_part_offset_and_len & BinaryString::HIGHEST_FIRST_BIT;
         if (mark == 0) {
             const auto sub_offset = static_cast<int32_t>(variable_part_offset_and_len >> 32);
             const auto len = static_cast<int32_t>(variable_part_offset_and_len & LOW_BYTES_MASK);
-            return BinaryString::FromAddress(segments, base_offset + sub_offset, len);
+            return BinaryString::FromAddress(segment, base_offset + sub_offset, len);
         } else {
             auto len = static_cast<int32_t>(
                 (static_cast<uint64_t>(variable_part_offset_and_len &
                                        BinaryString::HIGHEST_SECOND_TO_EIGHTH_BIT)) >>
                 56);
             if (SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN) {
-                return BinaryString::FromAddress(segments, field_offset, len);
+                return BinaryString::FromAddress(segment, field_offset, len);
             } else {
                 // field_offset + 1 to skip header.
-                return BinaryString::FromAddress(segments, field_offset + 1, len);
+                return BinaryString::FromAddress(segment, field_offset + 1, len);
             }
         }
     }
 
-    static std::shared_ptr<InternalArray> ReadArrayData(const std::vector<MemorySegment>& segments,
+    static std::shared_ptr<InternalArray> ReadArrayData(const MemorySegment& segment,
                                                         int32_t base_offset,
                                                         int64_t offset_and_size) {
         auto size = static_cast<int32_t>(offset_and_size & LOW_BYTES_MASK);
         auto offset = static_cast<int32_t>(offset_and_size >> 32);
         auto binary_array = std::make_shared<BinaryArray>();
-        binary_array->PointTo(segments, offset + base_offset, size);
+        binary_array->PointTo(segment, offset + base_offset, size);
         return binary_array;
     }
 
     /// Gets an instance of `InternalRow` from underlying `MemorySegment`.
-    static std::shared_ptr<InternalRow> ReadRowData(const std::vector<MemorySegment>& segments,
+    static std::shared_ptr<InternalRow> ReadRowData(const MemorySegment& segment,
                                                     int32_t num_fields, int32_t base_offset,
                                                     int64_t offset_and_size) {
         auto size = static_cast<int32_t>(offset_and_size & LOW_BYTES_MASK);
         auto offset = static_cast<int32_t>(offset_and_size >> 32);
         auto row = std::make_shared<BinaryRow>(num_fields);
-        row->PointTo(segments, offset + base_offset, size);
+        row->PointTo(segment, offset + base_offset, size);
         return row;
     }
 
-    static std::shared_ptr<InternalMap> ReadMapData(const std::vector<MemorySegment>& segments,
+    static std::shared_ptr<InternalMap> ReadMapData(const MemorySegment& segment,
                                                     int32_t base_offset, int64_t offset_and_size) {
         auto size = static_cast<int32_t>(offset_and_size & LOW_BYTES_MASK);
         auto offset = static_cast<int32_t>(offset_and_size >> 32);
         auto binary_map = std::make_shared<BinaryMap>();
-        binary_map->PointTo(segments, offset + base_offset, size);
+        binary_map->PointTo(segment, offset + base_offset, size);
         return binary_map;
     }
 

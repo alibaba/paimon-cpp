@@ -103,9 +103,7 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
             field_setter = [field_idx](const VariantType& field, BinaryRowWriter* writer) -> void {
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
-                    return writer->WriteString(
-                        field_idx,
-                        BinaryString::FromString(std::string(*view), GetDefaultPool().get()));
+                    return writer->WriteStringView(field_idx, *view);
                 }
                 return writer->WriteString(field_idx,
                                            DataDefine::GetVariantValue<BinaryString>(field));
@@ -116,8 +114,7 @@ Result<BinaryRowWriter::FieldSetterFunc> BinaryRowWriter::CreateFieldSetter(
             field_setter = [field_idx](const VariantType& field, BinaryRowWriter* writer) -> void {
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
-                    return writer->WriteBinary(field_idx,
-                                               Bytes(std::string(*view), GetDefaultPool().get()));
+                    return writer->WriteStringView(field_idx, *view);
                 }
                 return writer->WriteBinary(
                     field_idx, *DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(field));

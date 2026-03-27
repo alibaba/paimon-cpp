@@ -25,19 +25,19 @@ bool BinarySection::operator==(const BinarySection& that) const {
         return true;
     }
     return size_in_bytes_ == that.size_in_bytes_ &&
-           MemorySegmentUtils::Equals(segments_, offset_, that.segments_, that.offset_,
+           MemorySegmentUtils::Equals({segment_}, offset_, {that.segment_}, that.offset_,
                                       size_in_bytes_);
 }
 
 std::shared_ptr<Bytes> BinarySection::ToBytes(MemoryPool* pool) const {
-    return MemorySegmentUtils::GetBytes(segments_, offset_, size_in_bytes_, pool);
+    return MemorySegmentUtils::GetBytes({segment_}, offset_, size_in_bytes_, pool);
 }
 
 int32_t BinarySection::HashCode() const {
-    return MemorySegmentUtils::Hash(segments_, offset_, size_in_bytes_, GetDefaultPool().get());
+    return MemorySegmentUtils::Hash({segment_}, offset_, size_in_bytes_, GetDefaultPool().get());
 }
 
-PAIMON_UNIQUE_PTR<Bytes> BinarySection::ReadBinary(const std::vector<MemorySegment>& segments,
+PAIMON_UNIQUE_PTR<Bytes> BinarySection::ReadBinary(const MemorySegment& segment,
                                                    int32_t base_offset, int32_t field_offset,
                                                    int64_t variable_part_offset_and_len,
                                                    MemoryPool* pool) {
@@ -45,15 +45,15 @@ PAIMON_UNIQUE_PTR<Bytes> BinarySection::ReadBinary(const std::vector<MemorySegme
     if (mark == 0) {
         const auto sub_offset = static_cast<int32_t>(variable_part_offset_and_len >> 32);
         const auto len = static_cast<int32_t>(variable_part_offset_and_len);
-        return MemorySegmentUtils::CopyToBytes(segments, base_offset + sub_offset, len, pool);
+        return MemorySegmentUtils::CopyToBytes({segment}, base_offset + sub_offset, len, pool);
     } else {
         auto len = static_cast<int32_t>(
             (variable_part_offset_and_len & BinarySection::HIGHEST_SECOND_TO_EIGHTH_BIT) >> 56);
         if ((SystemByteOrder() == ByteOrder::PAIMON_LITTLE_ENDIAN)) {
-            return MemorySegmentUtils::CopyToBytes(segments, field_offset, len, pool);
+            return MemorySegmentUtils::CopyToBytes({segment}, field_offset, len, pool);
         } else {
             // field_offset + 1 to skip header.
-            return MemorySegmentUtils::CopyToBytes(segments, field_offset + 1, len, pool);
+            return MemorySegmentUtils::CopyToBytes({segment}, field_offset + 1, len, pool);
         }
     }
 }

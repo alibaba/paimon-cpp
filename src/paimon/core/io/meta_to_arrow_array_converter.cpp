@@ -38,7 +38,7 @@ Result<std::unique_ptr<MetaToArrowArrayConverter>> MetaToArrowArrayConverter::Cr
     for (int32_t i = 0; i < struct_type->num_fields(); i++) {
         PAIMON_ASSIGN_OR_RAISE(
             RowToArrowArrayConverter::AppendValueFunc func,
-            AppendField(/*use_view=*/false, struct_builder->field_builder(i), &reserve_count));
+            AppendField(/*use_view=*/true, struct_builder->field_builder(i), &reserve_count));
         appenders.emplace_back(func);
     }
     return std::unique_ptr<MetaToArrowArrayConverter>(new MetaToArrowArrayConverter(

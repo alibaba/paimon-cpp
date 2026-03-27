@@ -73,7 +73,6 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
     const std::shared_ptr<IOManager>& io_manager,
     const std::shared_ptr<FieldsComparator>& key_comparator,
-    const std::shared_ptr<FieldsComparator>& key_comparator_for_compact,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
@@ -85,7 +84,6 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
                              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check,
                              executor, pool),
       key_comparator_(key_comparator),
-      key_comparator_for_compact_(key_comparator_for_compact),
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
       logger_(Logger::GetLogger("KeyValueFileStoreWrite")) {}
@@ -121,7 +119,7 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
                            table_schema_->TrimmedPrimaryKeys());
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<Levels> levels,
-        Levels::Create(key_comparator_for_compact_, restore_data_files, options_.GetNumLevels()));
+        Levels::Create(key_comparator_, restore_data_files, options_.GetNumLevels()));
     auto compact_strategy = CreateCompactStrategy(options_);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactManager> compact_manager,
                            CreateCompactManager(partition, bucket, compact_strategy,
@@ -177,7 +175,7 @@ Result<std::shared_ptr<CompactManager>> KeyValueFileStoreWrite::CreateCompactMan
         compaction_metrics_ ? compaction_metrics_->CreateReporter(partition, bucket) : nullptr;
 
     return std::make_shared<MergeTreeCompactManager>(
-        levels, compact_strategy, key_comparator_for_compact_,
+        levels, compact_strategy, key_comparator_,
         options_.GetCompactionFileSize(/*has_primary_key=*/true),
         options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
         /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
