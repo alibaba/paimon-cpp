@@ -235,18 +235,15 @@ TEST_F(PkCompactionInteTest, DeduplicateWithDeletionVectors) {
 
     // Step 1: Write initial data with large padding field (creates a big level-0 file).
     {
+        // clang-format off
         std::string json_data = R"([
-            ["Alice", 10, 0, 1.0, ")" +
-                                padding + R"("],
-            ["Bob",   10, 0, 2.0, ")" +
-                                padding + R"("],
-            ["Carol", 10, 0, 3.0, ")" +
-                                padding + R"("],
-            ["Dave",  10, 0, 4.0, ")" +
-                                padding + R"("],
-            ["Eve",   10, 0, 5.0, ")" +
-                                padding + R"("]
-        ])";
+["Alice", 10, 0, 1.0, ")" + padding + R"("],
+["Bob",   10, 0, 2.0, ")" + padding + R"("],
+["Carol", 10, 0, 3.0, ")" + padding + R"("],
+["Dave",  10, 0, 4.0, ")" + padding + R"("],
+["Eve",   10, 0, 5.0, ")" + padding + R"("]
+])";
+        // clang-format on
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
         ASSERT_OK(WriteAndCommit(table_path, {{"f1", "10"}}, 0, array, commit_id++));
     }
@@ -295,13 +292,15 @@ TEST_F(PkCompactionInteTest, DeduplicateWithDeletionVectors) {
     // then intermediate-level file (Alice, Bob, Carol with updated values).
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("f1=10/", 0)] = R"([
-            [0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
-            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
-            [0, "Alice", 10, 0, 101.0, "u1"],
-            [0, "Bob",   10, 0, 202.0, "u3"],
-            [0, "Carol", 10, 0, 203.0, "u4"]
-        ])";
+[0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
+[0, "Eve",   10, 0, 5.0, ")" + padding + R"("],
+[0, "Alice", 10, 0, 101.0, "u1"],
+[0, "Bob",   10, 0, 202.0, "u3"],
+[0, "Carol", 10, 0, 203.0, "u4"]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 
@@ -313,13 +312,15 @@ TEST_F(PkCompactionInteTest, DeduplicateWithDeletionVectors) {
     // Step 8: ScanAndVerify after full compact (globally sorted after merge).
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("f1=10/", 0)] = R"([
-            [0, "Alice", 10, 0, 101.0, "u1"],
-            [0, "Bob",   10, 0, 202.0, "u3"],
-            [0, "Carol", 10, 0, 203.0, "u4"],
-            [0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
-            [0, "Eve",   10, 0, 5.0, ")" + padding + R"("]
-        ])";
+[0, "Alice", 10, 0, 101.0, "u1"],
+[0, "Bob",   10, 0, 202.0, "u3"],
+[0, "Carol", 10, 0, 203.0, "u4"],
+[0, "Dave",  10, 0, 4.0, ")" + padding + R"("],
+[0, "Eve",   10, 0, 5.0, ")" + padding + R"("]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 }
@@ -473,18 +474,15 @@ TEST_F(PkCompactionInteTest, AggMinWithAllNonNestedTypes) {
     // key=("Alice",1), key=("Bob",2), key=("Carol",3), key=("Dave",4), key=("Eve",5)
     // Dave and Eve are NOT overwritten by later batches, so DV will only mark Alice/Bob/Carol.
     {
+        // clang-format off
         std::string json_data = R"([
-            ["Alice", 1, 10, 100, 1000, 10000, 1.5, true,  2.5, "YWJj", 1000000000, 1000, 100, "12345678.99", "12345678901234567890.99", ")" +
-                                padding + R"("],
-            ["Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" +
-                                padding + R"("],
-            ["Carol", 3, 30, 300, 3000, 30000, 3.5, false, 4.5, "enp6", 3000000000, 3000, 300, "55555555.55", "55555555555555555555.55", ")" +
-                                padding + R"("],
-            ["Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" +
-                                padding + R"("],
-            ["Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" +
-                                padding + R"("]
-        ])";
+["Alice", 1, 10, 100, 1000, 10000, 1.5, true,  2.5, "YWJj", 1000000000, 1000, 100, "12345678.99", "12345678901234567890.99", ")" + padding + R"("],
+["Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" + padding + R"("],
+["Carol", 3, 30, 300, 3000, 30000, 3.5, false, 4.5, "enp6", 3000000000, 3000, 300, "55555555.55", "55555555555555555555.55", ")" + padding + R"("],
+["Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" + padding + R"("],
+["Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" + padding + R"("]
+])";
+        // clang-format on
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
         ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
     }
@@ -530,18 +528,15 @@ TEST_F(PkCompactionInteTest, AggMinWithAllNonNestedTypes) {
     // Dave and Eve are untouched in max-level file (no DV).
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("", 0)] = R"([
-            [0, "Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" +
-                                               padding + R"("],
-            [0, "Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" +
-                                               padding + R"("],
-            [0, "Alice", 1, 5,  50,  500,  5000,  0.5, false, 1.5, "YQ==", 500000000,  500,  50,  "00000001.00", "00000000000000000001.00", ")" +
-                                               padding + R"("],
-            [0, "Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" +
-                                               padding + R"("],
-            [0, "Carol", 3, 10, 100, 1000, 10000, 1.5, false, 2.5, "YQ==", 1000000000, 1000, 100, "11111111.11", "11111111111111111111.11", ")" +
-                                               padding + R"("]
-        ])";
+[0, "Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" + padding + R"("],
+[0, "Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" + padding + R"("],
+[0, "Alice", 1, 5,  50,  500,  5000,  0.5, false, 1.5, "YQ==", 500000000,  500,  50,  "00000001.00", "00000000000000000001.00", ")" + padding + R"("],
+[0, "Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" + padding + R"("],
+[0, "Carol", 3, 10, 100, 1000, 10000, 1.5, false, 2.5, "YQ==", 1000000000, 1000, 100, "11111111.11", "11111111111111111111.11", ")" + padding + R"("]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 
@@ -554,18 +549,15 @@ TEST_F(PkCompactionInteTest, AggMinWithAllNonNestedTypes) {
     // All batches merged with min aggregation. Dave and Eve only have batch1 values.
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("", 0)] = R"([
-            [0, "Alice", 1, 5,  50,  500,  5000,  0.5, false, 1.5, "YQ==", 500000000,  500,  50,  "00000001.00", "00000000000000000001.00", ")" +
-                                               padding + R"("],
-            [0, "Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" +
-                                               padding + R"("],
-            [0, "Carol", 3, 10, 100, 1000, 10000, 1.5, false, 2.5, "YQ==", 1000000000, 1000, 100, "11111111.11", "11111111111111111111.11", ")" +
-                                               padding + R"("],
-            [0, "Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" +
-                                               padding + R"("],
-            [0, "Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" +
-                                               padding + R"("]
-        ])";
+[0, "Alice", 1, 5,  50,  500,  5000,  0.5, false, 1.5, "YQ==", 500000000,  500,  50,  "00000001.00", "00000000000000000001.00", ")" + padding + R"("],
+[0, "Bob",   2, 20, 200, 2000, 20000, 2.5, true,  3.5, "ZGVm", 2000000000, 2000, 200, "99999999.99", "99999999999999999999.99", ")" + padding + R"("],
+[0, "Carol", 3, 10, 100, 1000, 10000, 1.5, false, 2.5, "YQ==", 1000000000, 1000, 100, "11111111.11", "11111111111111111111.11", ")" + padding + R"("],
+[0, "Dave",  4, 40, 400, 4000, 40000, 4.5, true,  5.5, "RGWF", 4000000000, 4000, 400, "44444444.44", "44444444444444444444.44", ")" + padding + R"("],
+[0, "Eve",   5, 50, 500, 5000, 50000, 5.5, false, 6.5, "RXZF", 5000000000, 5000, 500, "66666666.66", "66666666666666666666.66", ")" + padding + R"("]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 }
@@ -611,18 +603,15 @@ TEST_F(PkCompactionInteTest, AggMinWithPkInMiddle) {
     // Step 1: Write initial data with large padding (creates a big level-0 file).
     // Dave and Eve are NOT overwritten by later batches.
     {
+        // clang-format off
         std::string json_data = R"([
-            [100, "Alice", 3, 1.5, ")" +
-                                padding + R"("],
-            [200, "Bob",   5, 2.5, ")" +
-                                padding + R"("],
-            [300, "Carol", 1, 3.5, ")" +
-                                padding + R"("],
-            [400, "Dave",  4, 4.5, ")" +
-                                padding + R"("],
-            [500, "Eve",   2, 5.5, ")" +
-                                padding + R"("]
-        ])";
+[100, "Alice", 3, 1.5, ")" + padding + R"("],
+[200, "Bob",   5, 2.5, ")" + padding + R"("],
+[300, "Carol", 1, 3.5, ")" + padding + R"("],
+[400, "Dave",  4, 4.5, ")" + padding + R"("],
+[500, "Eve",   2, 5.5, ")" + padding + R"("]
+])";
+        // clang-format on
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
         ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
     }
@@ -664,18 +653,15 @@ TEST_F(PkCompactionInteTest, AggMinWithPkInMiddle) {
     // Step 7: ScanAndVerify after DV compact.
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("", 0)] = R"([
-            [0, 500, "Eve",   2, 5.5, ")" + padding +
-                                               R"("],
-            [0, 400, "Dave",  4, 4.5, ")" + padding +
-                                               R"("],
-            [0, 150, "Carol", 1, 1.5, ")" + padding +
-                                               R"("],
-            [0, 50,  "Alice", 3, 0.5, ")" + padding +
-                                               R"("],
-            [0, 200, "Bob",   5, 2.5, ")" + padding +
-                                               R"("]
-        ])";
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 
@@ -687,18 +673,15 @@ TEST_F(PkCompactionInteTest, AggMinWithPkInMiddle) {
     // Step 9: ScanAndVerify after full compact.
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
         expected_data[std::make_pair("", 0)] = R"([
-            [0, 150, "Carol", 1, 1.5, ")" + padding +
-                                               R"("],
-            [0, 500, "Eve",   2, 5.5, ")" + padding +
-                                               R"("],
-            [0, 50,  "Alice", 3, 0.5, ")" + padding +
-                                               R"("],
-            [0, 400, "Dave",  4, 4.5, ")" + padding +
-                                               R"("],
-            [0, 200, "Bob",   5, 2.5, ")" + padding +
-                                               R"("]
-        ])";
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
         ScanAndVerify(table_path, fields, expected_data);
     }
 }
