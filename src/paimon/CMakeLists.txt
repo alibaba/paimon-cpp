@@ -511,6 +511,7 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
+                    core/compact/noop_compact_manager_test.cpp
                     core/core_options_test.cpp
                     core/options/lookup_strategy_test.cpp
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
@@ -520,6 +521,7 @@ if(PAIMON_BUILD_TESTS)
                     core/deletionvectors/deletion_vector_test.cpp
                     core/deletionvectors/deletion_vector_index_file_writer_test.cpp
                     core/deletionvectors/deletion_vectors_index_file_test.cpp
+                    core/disk/io_manager_test.cpp
                     core/index/index_in_data_file_dir_path_factory_test.cpp
                     core/index/deletion_vector_meta_test.cpp
                     core/index/index_file_meta_serializer_test.cpp
