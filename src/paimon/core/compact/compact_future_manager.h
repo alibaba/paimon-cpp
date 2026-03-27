@@ -28,20 +28,17 @@ class CompactFutureManager : public CompactManager {
         if (task_future_.valid()) {
             task_future_.wait();
         }
-        for (auto& f : cancelled_futures_) {
-            if (f.valid()) {
-                f.wait();
-            }
-        }
     }
 
     /// Cancel the current compaction task if it is running.
     /// @note: This method may leave behind orphan files.
     void CancelCompaction() override {
         // std::future does not support cancellation natively.
+        // Move away the active future first, then wait for completion so caller
+        // can safely start a new task without reusing cancel state.
         if (task_future_.valid()) {
-            // Detach the future so we don't block on destruction
-            cancelled_futures_.push_back(std::move(task_future_));
+            auto cancelled = std::move(task_future_);
+            cancelled.wait();
         }
     }
 
@@ -76,7 +73,6 @@ class CompactFutureManager : public CompactManager {
     }
 
     std::future<Result<std::shared_ptr<CompactResult>>> task_future_;
-    std::vector<std::future<Result<std::shared_ptr<CompactResult>>>> cancelled_futures_;
 };
 
 }  // namespace paimon

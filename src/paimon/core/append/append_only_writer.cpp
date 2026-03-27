@@ -248,7 +248,8 @@ Status AppendOnlyWriter::Sync() {
 }
 
 Status AppendOnlyWriter::Close() {
-    // cancel compaction so that it does not block job cancelling
+    // Request cancellation and wait for running compaction to exit.
+    // This avoids reusing cancellation state while an old task is still running.
     compact_manager_->CancelCompaction();
     PAIMON_RETURN_NOT_OK(Sync());
 
