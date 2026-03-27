@@ -67,7 +67,7 @@ Result<bool> LocalFile::IsFile() const {
 
 Result<bool> LocalFile::IsDir() const {
     CHECK_HOOK();
-    PAIMON_ASSIGN_OR_RAISE(auto file_status, GetFileStatus());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFileStatus> file_status, GetFileStatus());
     return file_status->IsDir();
 }
 
@@ -142,7 +142,7 @@ Result<std::unique_ptr<LocalFileStatus>> LocalFile::GetFileStatus() const {
 
 Result<uint64_t> LocalFile::Length() const {
     CHECK_HOOK();
-    PAIMON_ASSIGN_OR_RAISE(auto file_status, GetFileStatus());
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LocalFileStatus> file_status, GetFileStatus());
     return file_status->GetLen();
 }
 

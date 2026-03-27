@@ -72,7 +72,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
     const std::shared_ptr<IOManager>& io_manager,
-    const std::shared_ptr<FieldsComparator>& key_comparator,   
+    const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,

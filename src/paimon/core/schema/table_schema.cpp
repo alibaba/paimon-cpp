@@ -55,7 +55,7 @@ Result<std::unique_ptr<TableSchema>> TableSchema::Create(
         primary_key_set.insert(primary_key);
     }
     for (const auto& field : schema->fields()) {
-        PAIMON_ASSIGN_OR_RAISE(auto field_with_id,
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> field_with_id,
                                AssignFieldIdsRecursively(field, /*set_field_id=*/true, &field_id));
         if (primary_key_set.count(field_with_id->name())) {
             field_with_id = field_with_id->WithNullable(false);
