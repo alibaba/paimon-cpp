@@ -60,7 +60,7 @@ class MergeTreeCompactManager : public CompactFutureManager {
 
     Status TriggerCompaction(bool full_compaction) override;
 
-    void CancelCompaction() override;
+    void RequestCancelCompaction() override;
 
     Result<std::optional<std::shared_ptr<CompactResult>>> GetCompactionResult(
         bool blocking) override;

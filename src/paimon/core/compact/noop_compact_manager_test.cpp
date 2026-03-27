@@ -58,7 +58,7 @@ TEST(NoopCompactManagerTest, ShouldAllowNoopLifecycleOperations) {
     NoopCompactManager manager;
 
     ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/false));
-    manager.CancelCompaction();
+    manager.CancelAndWaitCompaction();
     ASSERT_OK(manager.Close());
 }
 

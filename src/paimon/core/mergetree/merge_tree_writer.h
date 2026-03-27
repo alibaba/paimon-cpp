@@ -86,7 +86,7 @@ class MergeTreeWriter : public BatchWriter {
     Status DoClose() {
         // Request cancellation and wait for running compaction to exit.
         // This avoids reusing cancellation state while an old task is still running.
-        compact_manager_->CancelCompaction();
+        compact_manager_->CancelAndWaitCompaction();
         PAIMON_RETURN_NOT_OK(Sync());
         PAIMON_RETURN_NOT_OK(compact_manager_->Close());
 

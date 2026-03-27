@@ -290,7 +290,7 @@ TEST_F(BucketedAppendCompactManagerTest, TestCancelCompactionPropagatesToRewrite
         /*reporter=*/nullptr, cancellation_controller);
 
     ASSERT_OK(manager.TriggerCompaction(/*full_compaction=*/true));
-    manager.CancelCompaction();
+    manager.CancelAndWaitCompaction();
 
     EXPECT_EQ(exit_future.wait_for(std::chrono::seconds(1)), std::future_status::ready);
 }

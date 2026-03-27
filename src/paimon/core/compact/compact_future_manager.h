@@ -30,12 +30,18 @@ class CompactFutureManager : public CompactManager {
         }
     }
 
-    /// Cancel the current compaction task if it is running.
-    /// @note: This method may leave behind orphan files.
-    void CancelCompaction() override {
+    /// Default cancellation request for future-based compaction.
+    ///
+    /// `std::future` itself cannot be cancelled. Subclasses should override this
+    /// method to signal their concrete cancellation controller.
+    void RequestCancelCompaction() override {}
+
+    /// Wait for the current compaction task to exit if it is running.
+    /// @note This is a blocking join operation and may leave behind orphan files.
+    void WaitForCompactionToExit() override {
         // std::future does not support cancellation natively.
-        // Move away the active future first, then wait for completion so caller
-        // can safely start a new task without reusing cancel state.
+        // Move away the active future first, then wait for completion so callers
+        // can safely start a new task without reusing cancellation state.
         if (task_future_.valid()) {
             auto cancelled = std::move(task_future_);
             cancelled.wait();

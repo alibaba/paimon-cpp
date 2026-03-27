@@ -59,8 +59,11 @@ class NoopCompactManager : public CompactManager {
         return std::optional<std::shared_ptr<CompactResult>>();
     }
 
-    /// Cancel currently running compaction task.
-    void CancelCompaction() override {}
+    /// Request cancellation for currently running compaction task.
+    void RequestCancelCompaction() override {}
+
+    /// Wait until the current compaction task exits.
+    void WaitForCompactionToExit() override {}
 
     /// Check if a compaction is in progress, or if a compaction result remains to be fetched, or if
     /// a compaction should be triggered later.

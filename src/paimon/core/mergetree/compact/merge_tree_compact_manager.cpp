@@ -144,9 +144,8 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
     return SubmitCompaction(unit, drop_delete);
 }
 
-void MergeTreeCompactManager::CancelCompaction() {
+void MergeTreeCompactManager::RequestCancelCompaction() {
     cancellation_controller_->Cancel();
-    CompactFutureManager::CancelCompaction();
 }
 
 Status MergeTreeCompactManager::SubmitCompaction(const CompactUnit& unit, bool drop_delete) {
