@@ -508,7 +508,7 @@ TEST_F(PkCompactionInteTest, AggMinWithAllNonNestedTypes) {
 
     // Step 2: Full compact → upgrades level-0 file to max level.
     ASSERT_OK_AND_ASSIGN(
-        auto upgrade_msgs,
+        [[maybe_unused]] auto upgrade_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 3: Write second batch with overlapping keys (first new level-0 file).
@@ -561,7 +561,7 @@ TEST_F(PkCompactionInteTest, AggMinWithAllNonNestedTypes) {
 
     // Step 8: Full compact to merge everything (DV + max-level + intermediate).
     ASSERT_OK_AND_ASSIGN(
-        auto full_compact_msgs,
+        [[maybe_unused]] auto full_compact_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 9: ScanAndVerify after full compact.
@@ -637,7 +637,7 @@ TEST_F(PkCompactionInteTest, AggMinWithPkInMiddle) {
 
     // Step 2: Full compact → upgrades level-0 file to max level.
     ASSERT_OK_AND_ASSIGN(
-        auto upgrade_msgs,
+        [[maybe_unused]] auto upgrade_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 3: Write batch2 with overlapping keys (first new level-0 file).
@@ -759,7 +759,7 @@ TEST_F(PkCompactionInteTest, DeduplicateWithSequenceFieldAndPkInMiddle) {
 
     // Step 2: Full compact → upgrades level-0 file to max level.
     ASSERT_OK_AND_ASSIGN(
-        auto upgrade_msgs,
+        [[maybe_unused]] auto upgrade_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 3: Write batch2 with overlapping keys (first new level-0 file).
@@ -810,7 +810,7 @@ TEST_F(PkCompactionInteTest, DeduplicateWithSequenceFieldAndPkInMiddle) {
 
     // Step 8: Full compact to merge everything.
     ASSERT_OK_AND_ASSIGN(
-        auto full_compact_msgs,
+        [[maybe_unused]] auto full_compact_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 9: ScanAndVerify after full compact (globally sorted by PK: f1 asc, f2 asc).
@@ -886,7 +886,7 @@ TEST_F(PkCompactionInteTest, DeduplicateNestedTypesWithSequenceField) {
 
     // Step 2: Full compact → upgrades level-0 file to max level.
     ASSERT_OK_AND_ASSIGN(
-        auto upgrade_msgs,
+        [[maybe_unused]] auto upgrade_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 3: Write batch2 with overlapping keys (first new level-0 file).
@@ -936,7 +936,7 @@ TEST_F(PkCompactionInteTest, DeduplicateNestedTypesWithSequenceField) {
 
     // Step 8: Full compact to merge everything.
     ASSERT_OK_AND_ASSIGN(
-        auto full_compact_msgs,
+        [[maybe_unused]] auto full_compact_msgs,
         CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
 
     // Step 9: ScanAndVerify after full compact (globally sorted by PK: pk0 asc, pk1 asc).
@@ -1468,7 +1468,7 @@ TEST_F(PkCompactionInteTest, DeduplicateWithRowKindAndDV) {
 
     // Step 6: Full compact → merges everything into one sorted file.
     ASSERT_OK_AND_ASSIGN(
-        auto full_compact_msgs,
+        [[maybe_unused]] auto full_compact_msgs,
         CompactAndCommit(table_path, partition, bucket, /*full_compaction=*/true, commit_id++));
 
     // Step 7: ScanAndVerify after full compact — all data in one sorted file.

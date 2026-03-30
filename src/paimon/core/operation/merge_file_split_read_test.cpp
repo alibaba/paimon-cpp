@@ -410,6 +410,7 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
         EXPECT_EQ(result_fields[i], expected_fields[i]);
         EXPECT_OK_AND_ASSIGN(std::string result_str, result_fields[i].ToJsonString());
         EXPECT_OK_AND_ASSIGN(std::string expected_str, expected_fields[i].ToJsonString());
+        EXPECT_EQ(result_str, expected_str);
     }
     ASSERT_TRUE(value_schema->Equals(*expected_value_schema));
 
@@ -525,6 +526,7 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema2) {
         EXPECT_EQ(result_fields[i], expected_fields[i]);
         EXPECT_OK_AND_ASSIGN(std::string result_str, result_fields[i].ToJsonString());
         EXPECT_OK_AND_ASSIGN(std::string expected_str, expected_fields[i].ToJsonString());
+        EXPECT_EQ(result_str, expected_str);
     }
     ASSERT_TRUE(value_schema->Equals(*expected_value_schema));
 
