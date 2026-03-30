@@ -394,6 +394,10 @@ struct PAIMON_EXPORT Options {
     /// conf like this:  'file.format.per.level' = '0:avro,3:parquet', if the file format for level
     /// is not provided, the default format which set by FILE_FORMAT will be used.
     static const char FILE_FORMAT_PER_LEVEL[];
+    /// "file.compression.per.level" - Define different compression policies for different level,
+    /// you can add the conf like this: 'file.compression.per.level' = '0:lz4,1:zstd'.
+    /// If a level is not configured, the default compression set by FILE_COMPRESSION will be used.
+    static const char FILE_COMPRESSION_PER_LEVEL[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

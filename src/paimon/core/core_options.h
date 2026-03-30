@@ -59,6 +59,7 @@ class PAIMON_EXPORT CoreOptions {
     std::shared_ptr<FileFormat> GetWriteFileFormat(int32_t level) const;
     std::shared_ptr<FileSystem> GetFileSystem() const;
     const std::string& GetFileCompression() const;
+    const std::string& GetWriteFileCompression(int32_t level) const;
     int32_t GetFileCompressionZstdLevel() const;
     int64_t GetPageSize() const;
     int64_t GetTargetFileSize(bool has_primary_key) const;

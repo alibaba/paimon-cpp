@@ -141,8 +141,8 @@ MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
                                CreateDataFilePathFactory(format->Identifier()));
 
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, level, FileSource::Compact(),
-            trimmed_primary_keys_, stats_extractor, write_schema_,
+            options_.GetWriteFileCompression(level), converter, schema_id_, level,
+            FileSource::Compact(), trimmed_primary_keys_, stats_extractor, write_schema_,
             data_file_path_factory->IsExternalPath(), pool_);
         PAIMON_RETURN_NOT_OK(writer->Init(options_.GetFileSystem(),
                                           data_file_path_factory->NewPath(), writer_builder));

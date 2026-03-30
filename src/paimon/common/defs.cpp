@@ -102,6 +102,7 @@ const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compr
 const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
 const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
 const char Options::FILE_FORMAT_PER_LEVEL[] = "file.format.per.level";
+const char Options::FILE_COMPRESSION_PER_LEVEL[] = "file.compression.per.level";
 const char Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[] =
     "compaction.max-size-amplification-percent";
 const char Options::COMPACTION_SIZE_RATIO[] = "compaction.size-ratio";

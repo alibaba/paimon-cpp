@@ -48,6 +48,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ("__DEFAULT_PARTITION__", core_options.GetPartitionDefaultName());
     ASSERT_EQ(std::nullopt, core_options.GetScanSnapshotId());
     ASSERT_EQ("zstd", core_options.GetFileCompression());
+    ASSERT_EQ("zstd", core_options.GetWriteFileCompression(0));
+    ASSERT_EQ("zstd", core_options.GetWriteFileCompression(3));
     ASSERT_EQ("zstd", core_options.GetManifestCompression());
     ASSERT_EQ(1, core_options.GetFileCompressionZstdLevel());
     ASSERT_EQ(StartupMode::LatestFull(), core_options.GetStartupMode());
@@ -206,7 +208,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_SPILL_COMPRESSION, "lz4"},
         {Options::SPILL_COMPRESSION_ZSTD_LEVEL, "2"},
         {Options::CACHE_PAGE_SIZE, "6MB"},
-        {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"}};
+        {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"},
+        {Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4,3:none"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -276,6 +279,10 @@ TEST(CoreOptionsTest, TestFromMap) {
               std::optional<std::string>("FILE:///tmp/index"));
     ASSERT_EQ(core_options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
     ASSERT_EQ("snappy", core_options.GetFileCompression());
+    ASSERT_EQ("lz4", core_options.GetWriteFileCompression(0));
+    ASSERT_EQ("snappy", core_options.GetWriteFileCompression(1));
+    ASSERT_EQ("none", core_options.GetWriteFileCompression(3));
+    ASSERT_EQ("snappy", core_options.GetWriteFileCompression(5));
     ASSERT_EQ("zlib", core_options.GetManifestCompression());
     ASSERT_EQ(2, core_options.GetFileCompressionZstdLevel());
     ASSERT_FALSE(core_options.EnableAdaptivePrefetchStrategy());
@@ -391,6 +398,13 @@ TEST(CoreOptionsTest, TestInvalidFileFormatPerLevel) {
                         "fail to parse key file.format.per.level, value 0:AVRO:parquet");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_FORMAT_PER_LEVEL, "aaa:avro"}}),
                         "fail to parse level aaa from string to int in file.format.per.level");
+}
+
+TEST(CoreOptionsTest, TestInvalidFileCompressionPerLevel) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4:zstd"}}),
+                        "fail to parse key file.compression.per.level, value 0:lz4:zstd");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_COMPRESSION_PER_LEVEL, "abc:lz4"}}),
+                        "fail to parse level abc from string to int in file.compression.per.level");
 }
 
 TEST(CoreOptionsTest, TestCreateExternalPath) {

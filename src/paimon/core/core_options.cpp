@@ -296,6 +296,34 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // parse file.compression.per.level
+    Status ParseFileCompressionPerLevel(
+        std::map<int32_t, std::string>* file_compression_per_level_ptr) const {
+        auto& file_compression_per_level = *file_compression_per_level_ptr;
+        std::string file_compression_per_level_str;
+        PAIMON_RETURN_NOT_OK(
+            ParseString(Options::FILE_COMPRESSION_PER_LEVEL, &file_compression_per_level_str));
+        if (!file_compression_per_level_str.empty()) {
+            auto level2compression = StringUtils::Split(file_compression_per_level_str,
+                                                        std::string(","), std::string(":"));
+            for (const auto& single_level : level2compression) {
+                if (single_level.size() != 2) {
+                    return Status::Invalid(fmt::format(
+                        "fail to parse key {}, value {} (usage example: 0:lz4,1:zstd)",
+                        Options::FILE_COMPRESSION_PER_LEVEL, file_compression_per_level_str));
+                }
+                auto level = StringUtils::StringToValue<int32_t>(single_level[0]);
+                if (!level || level.value() < 0) {
+                    return Status::Invalid(
+                        fmt::format("fail to parse level {} from string to int in {}",
+                                    single_level[0], Options::FILE_COMPRESSION_PER_LEVEL));
+                }
+                file_compression_per_level[level.value()] = single_level[1];
+            }
+        }
+        return Status::OK();
+    }
+
     bool ContainsKey(const std::string& key) const {
         return config_map_.find(key) != config_map_.end();
     }
@@ -394,6 +422,7 @@ struct CoreOptions::Impl {
     CompressOptions lookup_compress_options{"zstd", 1};
     int64_t cache_page_size = 64 * 1024;  // 64KB
     std::map<int32_t, std::shared_ptr<FileFormat>> file_format_per_level;
+    std::map<int32_t, std::string> file_compression_per_level;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -661,6 +690,9 @@ Result<CoreOptions> CoreOptions::FromMap(
     // parse file.format.per.level
     PAIMON_RETURN_NOT_OK(parser.ParseFileFormatPerLevel(&impl->file_format_per_level));
 
+    // parse file.compression.per.level
+    PAIMON_RETURN_NOT_OK(parser.ParseFileCompressionPerLevel(&impl->file_compression_per_level));
+
     PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT,
                                                &impl->compaction_max_size_amplification_percent));
     PAIMON_RETURN_NOT_OK(
@@ -713,6 +745,14 @@ std::shared_ptr<FileSystem> CoreOptions::GetFileSystem() const {
 }
 
 const std::string& CoreOptions::GetFileCompression() const {
+    return impl_->file_compression;
+}
+
+const std::string& CoreOptions::GetWriteFileCompression(int32_t level) const {
+    auto iter = impl_->file_compression_per_level.find(level);
+    if (iter != impl_->file_compression_per_level.end()) {
+        return iter->second;
+    }
     return impl_->file_compression;
 }
 
