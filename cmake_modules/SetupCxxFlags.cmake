@@ -166,6 +166,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CXX_ONLY_FLAGS "${CXX_ONLY_FLAGS} -Wno-subobject-linkage")
     endif()
 
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "8.0"
+       AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "9.0")
+        # When using the C++17 filesystem library (<filesystem>) with GCC 8, you do need to explicitly link stdc++fs.
+        link_libraries(stdc++fs)
+    endif()
+
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR CMAKE_CXX_COMPILER_ID STREQUAL
                                                       "Clang")
     # Clang options for all builds

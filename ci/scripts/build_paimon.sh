@@ -25,13 +25,24 @@ build_dir=${1}/build
 mkdir ${build_dir}
 pushd ${build_dir}
 
+ENABLE_LUMINA="ON"
+ENABLE_LANCE="ON"
+if [[ "${CC:-}" == *"gcc-8"* ]] || [[ "${CXX:-}" == *"g++-8"* ]]; then
+    ENABLE_LUMINA="OFF" # Lumina is only supported on GCC 9 or higher.
+    ENABLE_LANCE="OFF"
+    # Lance's prebuilt binaries can only be compiled on Ubuntu 22.04 and above
+    # which requires a higher version of glibc,
+    # but Ubuntu 22.04 and above no longer ships with gcc-8 by default.
+    # Consider supporting Lance from source compilation in the future
+fi
+
 CMAKE_ARGS=(
     "-G Ninja"
     "-DCMAKE_BUILD_TYPE=${build_type}"
     "-DPAIMON_BUILD_TESTS=ON"
-    "-DPAIMON_ENABLE_LANCE=ON"
+    "-DPAIMON_ENABLE_LANCE=${ENABLE_LANCE}"
     "-DPAIMON_ENABLE_JINDO=ON"
-    "-DPAIMON_ENABLE_LUMINA=ON"
+    "-DPAIMON_ENABLE_LUMINA=${ENABLE_LUMINA}"
     "-DPAIMON_ENABLE_LUCENE=ON"
 )
 
