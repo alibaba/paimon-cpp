@@ -21,6 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -41,15 +42,15 @@ TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
     ASSERT_OK_AND_ASSIGN(std::string temp_path, manager->GenerateTempFilePath(prefix));
 
     std::string expected_prefix = PathUtil::JoinPath(tmp_dir->Str(), "");
-    ASSERT_EQ(temp_path.rfind(expected_prefix, 0), 0);
+    ASSERT_TRUE(StringUtils::StartsWith(temp_path, expected_prefix));
 
     std::string file_name = PathUtil::GetName(temp_path);
     std::string file_prefix = prefix + "-";
-    ASSERT_EQ(file_name.rfind(file_prefix, 0), 0);
+    ASSERT_TRUE(StringUtils::StartsWith(file_name, file_prefix));
 
     const std::string suffix = ".channel";
     ASSERT_GE(file_name.size(), file_prefix.size() + suffix.size() + 1);
-    ASSERT_EQ(file_name.substr(file_name.size() - suffix.size()), suffix);
+    ASSERT_TRUE(StringUtils::EndsWith(file_name, suffix));
 }
 
 TEST(IOManagerTest, GenerateTempFilePathShouldBeDifferentAcrossCalls) {

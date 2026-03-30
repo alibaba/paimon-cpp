@@ -46,123 +46,181 @@ namespace paimon::test {
 
 namespace {
 
-LevelSortedRun CreateLevelSortedRunForFactoryDirect(int32_t level, int64_t size) {
-    auto file_meta = std::make_shared<DataFileMeta>(
-        "factory-direct.data", /*file_size=*/size, /*row_count=*/1,
-        /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
-        /*key_stats=*/SimpleStats::EmptyStats(), /*value_stats=*/SimpleStats::EmptyStats(),
-        /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
-        /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
-        /*creation_time=*/Timestamp(0ll, 0), /*delete_row_count=*/0,
-        /*embedded_index=*/nullptr, FileSource::Append(),
-        /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
-        /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
-    return {level, SortedRun::FromSingle(file_meta)};
-}
-
-std::vector<LevelSortedRun> CreateRunsForFactoryDirect(const std::vector<int32_t>& levels,
-                                                       const std::vector<int64_t>& sizes) {
-    std::vector<LevelSortedRun> runs;
-    for (size_t i = 0; i < levels.size(); ++i) {
-        runs.push_back(CreateLevelSortedRunForFactoryDirect(levels[i], sizes[i]));
+class MergeTreeCompactManagerFactoryStrategyTest : public ::testing::Test {
+ protected:
+    LevelSortedRun CreateLevelSortedRun(int32_t level, int64_t size) const {
+        auto file_meta = std::make_shared<DataFileMeta>(
+            "factory-direct.data", /*file_size=*/size, /*row_count=*/1,
+            /*min_key=*/BinaryRow::EmptyRow(), /*max_key=*/BinaryRow::EmptyRow(),
+            /*key_stats=*/SimpleStats::EmptyStats(), /*value_stats=*/SimpleStats::EmptyStats(),
+            /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0,
+            /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
+            /*creation_time=*/Timestamp(0ll, 0), /*delete_row_count=*/0,
+            /*embedded_index=*/nullptr, FileSource::Append(),
+            /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
+        return {level, SortedRun::FromSingle(file_meta)};
     }
-    return runs;
-}
 
-Status WriteSingleStringRowForFactory(FileStoreWrite* file_store_write, int32_t bucket,
-                                      const std::string& value) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    auto struct_type = arrow::struct_(fields);
-    arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
-                                        {std::make_shared<arrow::StringBuilder>()});
-    auto string_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Append(value));
-
-    std::shared_ptr<arrow::Array> array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
-    ::ArrowArray arrow_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &arrow_array));
-
-    RecordBatchBuilder batch_builder(&arrow_array);
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch,
-                           batch_builder.SetBucket(bucket).Finish());
-    Status write_status = file_store_write->Write(std::move(batch));
-    if (!ArrowArrayIsReleased(&arrow_array)) {
-        ArrowArrayRelease(&arrow_array);
+    std::vector<LevelSortedRun> CreateRuns(const std::vector<int32_t>& levels,
+                                           const std::vector<int64_t>& sizes) const {
+        std::vector<LevelSortedRun> runs;
+        for (size_t i = 0; i < levels.size(); ++i) {
+            runs.push_back(CreateLevelSortedRun(levels[i], sizes[i]));
+        }
+        return runs;
     }
-    return write_status;
-}
 
-Status WriteStringAndInt64RowForFactory(FileStoreWrite* file_store_write, int32_t bucket,
-                                        const std::string& key, int64_t sequence) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false),
-                   arrow::field("f1", arrow::int64())};
-    auto struct_type = arrow::struct_(fields);
-    arrow::StructBuilder struct_builder(
-        struct_type, arrow::default_memory_pool(),
-        {std::make_shared<arrow::StringBuilder>(), std::make_shared<arrow::Int64Builder>()});
-    auto string_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
-    auto int64_builder = static_cast<arrow::Int64Builder*>(struct_builder.field_builder(1));
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Append(key));
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(int64_builder->Append(sequence));
-
-    std::shared_ptr<arrow::Array> array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
-    ::ArrowArray arrow_array;
-    PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &arrow_array));
-
-    RecordBatchBuilder batch_builder(&arrow_array);
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch,
-                           batch_builder.SetBucket(bucket).Finish());
-    Status write_status = file_store_write->Write(std::move(batch));
-    if (!ArrowArrayIsReleased(&arrow_array)) {
-        ArrowArrayRelease(&arrow_array);
+    Result<MergeTreeCompactManagerFactory> CreateFactory(
+        const std::map<std::string, std::string>& options_map) const {
+        PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(options_map));
+        return MergeTreeCompactManagerFactory(options,
+                                              /*key_comparator=*/nullptr,
+                                              /*user_defined_seq_comparator=*/nullptr,
+                                              /*compaction_metrics=*/nullptr,
+                                              /*table_schema=*/nullptr,
+                                              /*schema=*/nullptr,
+                                              /*schema_manager=*/nullptr,
+                                              /*io_manager=*/nullptr,
+                                              /*file_store_path_factory=*/nullptr,
+                                              /*root_path=*/"",
+                                              /*pool=*/nullptr);
     }
-    return write_status;
-}
+};
 
-Result<MergeTreeCompactManagerFactory> CreateFactoryForOptions(
-    const std::map<std::string, std::string>& options_map) {
-    PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(options_map));
-    return MergeTreeCompactManagerFactory(options,
-                                          /*key_comparator=*/nullptr,
-                                          /*user_defined_seq_comparator=*/nullptr,
-                                          /*compaction_metrics=*/nullptr,
-                                          /*table_schema=*/nullptr,
-                                          /*schema=*/nullptr,
-                                          /*schema_manager=*/nullptr,
-                                          /*io_manager=*/nullptr,
-                                          /*file_store_path_factory=*/nullptr,
-                                          /*root_path=*/"",
-                                          /*pool=*/nullptr);
-}
+class MergeTreeCompactManagerFactoryWriteTest : public ::testing::Test {
+ protected:
+    Result<std::unique_ptr<FileStoreWrite>> CreateFileStoreWrite(
+        const std::vector<std::shared_ptr<arrow::Field>>& fields,
+        const std::vector<std::string>& primary_keys,
+        const std::map<std::string, std::string>& table_options, bool with_io_manager,
+        const std::map<std::string, std::string>& context_options = {}) {
+        arrow::Schema typed_schema(fields);
+        ::ArrowSchema schema;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(typed_schema, &schema));
+
+        auto dir = UniqueTestDirectory::Create();
+        if (!dir) {
+            return Status::Invalid("failed to create test directory");
+        }
+        PAIMON_ASSIGN_OR_RAISE(auto catalog, Catalog::Create(dir->Str(), {}));
+        PAIMON_RETURN_NOT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+        PAIMON_RETURN_NOT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema,
+                                                  /*partition_keys=*/{}, primary_keys,
+                                                  table_options,
+                                                  /*ignore_if_exists=*/false));
+
+        WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
+        if (!context_options.empty()) {
+            context_builder.SetOptions(context_options);
+        }
+        if (with_io_manager) {
+            auto io_manager = IOManager::Create(dir->Str());
+            context_builder.WithIOManager(std::shared_ptr<IOManager>(std::move(io_manager)));
+        }
+
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,
+                               context_builder.Finish());
+        return FileStoreWrite::Create(std::move(write_context));
+    }
+
+    Result<std::unique_ptr<FileStoreWrite>> CreateSingleStringFileStoreWrite(
+        const std::map<std::string, std::string>& table_options, bool with_io_manager,
+        const std::map<std::string, std::string>& context_options = {}) {
+        return CreateFileStoreWrite({arrow::field("f0", arrow::utf8(), /*nullable=*/false)},
+                                    /*primary_keys=*/{"f0"}, table_options, with_io_manager,
+                                    context_options);
+    }
+
+    Result<std::unique_ptr<FileStoreWrite>> CreateStringAndInt64FileStoreWrite(
+        const std::map<std::string, std::string>& table_options, bool with_io_manager,
+        const std::map<std::string, std::string>& context_options = {}) {
+        return CreateFileStoreWrite({arrow::field("f0", arrow::utf8(), /*nullable=*/false),
+                                     arrow::field("f1", arrow::int64())},
+                                    /*primary_keys=*/{"f0"}, table_options, with_io_manager,
+                                    context_options);
+    }
+
+    Status WriteSingleStringRow(FileStoreWrite* file_store_write, int32_t bucket,
+                                const std::string& value) const {
+        auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+        auto struct_type = arrow::struct_(fields);
+        arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
+                                            {std::make_shared<arrow::StringBuilder>()});
+        auto string_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Append(value));
+
+        std::shared_ptr<arrow::Array> array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
+        ::ArrowArray arrow_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &arrow_array));
+
+        RecordBatchBuilder batch_builder(&arrow_array);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch,
+                               batch_builder.SetBucket(bucket).Finish());
+        Status write_status = file_store_write->Write(std::move(batch));
+        if (!ArrowArrayIsReleased(&arrow_array)) {
+            ArrowArrayRelease(&arrow_array);
+        }
+        return write_status;
+    }
+
+    Status WriteStringAndInt64Row(FileStoreWrite* file_store_write, int32_t bucket,
+                                  const std::string& key, int64_t sequence) const {
+        auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false),
+                       arrow::field("f1", arrow::int64())};
+        auto struct_type = arrow::struct_(fields);
+        arrow::StructBuilder struct_builder(
+            struct_type, arrow::default_memory_pool(),
+            {std::make_shared<arrow::StringBuilder>(), std::make_shared<arrow::Int64Builder>()});
+        auto string_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
+        auto int64_builder = static_cast<arrow::Int64Builder*>(struct_builder.field_builder(1));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Append(key));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(int64_builder->Append(sequence));
+
+        std::shared_ptr<arrow::Array> array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
+        ::ArrowArray arrow_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &arrow_array));
+
+        RecordBatchBuilder batch_builder(&arrow_array);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch,
+                               batch_builder.SetBucket(bucket).Finish());
+        Status write_status = file_store_write->Write(std::move(batch));
+        if (!ArrowArrayIsReleased(&arrow_array)) {
+            ArrowArrayRelease(&arrow_array);
+        }
+        return write_status;
+    }
+};
 
 }  // namespace
 
-TEST(MergeTreeCompactManagerFactoryDirectTest, TestCreateCompactStrategyDefaultUniversal) {
-    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactoryForOptions({}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest, TestCreateCompactStrategyDefaultUniversal) {
+    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactory({}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
     ASSERT_NE(std::dynamic_pointer_cast<UniversalCompaction>(strategy), nullptr);
     ASSERT_EQ(std::dynamic_pointer_cast<ForceUpLevel0Compaction>(strategy), nullptr);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest, TestCreateCompactStrategyLookupShouldForceUpLevel0) {
-    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactoryForOptions({{Options::FORCE_LOOKUP, "true"},
-                                                                {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyLookupShouldForceUpLevel0) {
+    ASSERT_OK_AND_ASSIGN(auto factory,
+                         CreateFactory({{Options::FORCE_LOOKUP, "true"}, {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
     ASSERT_NE(std::dynamic_pointer_cast<ForceUpLevel0Compaction>(strategy), nullptr);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactStrategyLookupRadicalShouldNotSetMaxInterval) {
-    ASSERT_OK_AND_ASSIGN(auto factory,
-                         CreateFactoryForOptions({{Options::FORCE_LOOKUP, "true"},
-                                                  {Options::LOOKUP_COMPACT, "radical"},
-                                                  {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyLookupRadicalShouldNotSetMaxInterval) {
+    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactory({{Options::FORCE_LOOKUP, "true"},
+                                                      {Options::LOOKUP_COMPACT, "radical"},
+                                                      {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
+                                                      {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
     auto force_strategy = std::dynamic_pointer_cast<ForceUpLevel0Compaction>(strategy);
@@ -170,13 +228,12 @@ TEST(MergeTreeCompactManagerFactoryDirectTest,
     ASSERT_EQ(force_strategy->MaxCompactInterval(), std::nullopt);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactStrategyLookupGentleShouldSetMaxInterval) {
-    ASSERT_OK_AND_ASSIGN(auto factory,
-                         CreateFactoryForOptions({{Options::FORCE_LOOKUP, "true"},
-                                                  {Options::LOOKUP_COMPACT, "gentle"},
-                                                  {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
-                                                  {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyLookupGentleShouldSetMaxInterval) {
+    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactory({{Options::FORCE_LOOKUP, "true"},
+                                                      {Options::LOOKUP_COMPACT, "gentle"},
+                                                      {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
+                                                      {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
     auto force_strategy = std::dynamic_pointer_cast<ForceUpLevel0Compaction>(strategy);
@@ -184,17 +241,16 @@ TEST(MergeTreeCompactManagerFactoryDirectTest,
     ASSERT_EQ(force_strategy->MaxCompactInterval(), 7);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactStrategyLookupGentleBehaviorShouldForceAfterThreshold) {
-    ASSERT_OK_AND_ASSIGN(auto factory,
-                         CreateFactoryForOptions({{Options::FORCE_LOOKUP, "true"},
-                                                  {Options::LOOKUP_COMPACT, "gentle"},
-                                                  {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
-                                                  {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyLookupGentleBehaviorShouldForceAfterThreshold) {
+    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactory({{Options::FORCE_LOOKUP, "true"},
+                                                      {Options::LOOKUP_COMPACT, "gentle"},
+                                                      {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
+                                                      {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
 
-    auto runs = CreateRunsForFactoryDirect({0, 0}, {1, 1});
+    auto runs = CreateRuns({0, 0}, {1, 1});
     std::optional<CompactUnit> unit;
     for (int i = 0; i < 6; ++i) {
         ASSERT_OK_AND_ASSIGN(unit, strategy->Pick(/*num_levels=*/3, runs));
@@ -206,35 +262,34 @@ TEST(MergeTreeCompactManagerFactoryDirectTest,
     ASSERT_EQ(unit->output_level, 2);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactStrategyLookupRadicalBehaviorShouldForceImmediately) {
-    ASSERT_OK_AND_ASSIGN(auto factory,
-                         CreateFactoryForOptions({{Options::FORCE_LOOKUP, "true"},
-                                                  {Options::LOOKUP_COMPACT, "radical"},
-                                                  {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyLookupRadicalBehaviorShouldForceImmediately) {
+    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactory({{Options::FORCE_LOOKUP, "true"},
+                                                      {Options::LOOKUP_COMPACT, "radical"},
+                                                      {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
 
-    auto runs = CreateRunsForFactoryDirect({0, 0}, {1, 1});
+    auto runs = CreateRuns({0, 0}, {1, 1});
     ASSERT_OK_AND_ASSIGN(auto unit, strategy->Pick(/*num_levels=*/3, runs));
     ASSERT_TRUE(unit);
     ASSERT_EQ(unit->output_level, 2);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactStrategyForceUpLevel0OptionShouldTakeEffect) {
-    ASSERT_OK_AND_ASSIGN(auto factory,
-                         CreateFactoryForOptions({{Options::COMPACTION_FORCE_UP_LEVEL_0, "true"},
-                                                  {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactStrategyForceUpLevel0OptionShouldTakeEffect) {
+    ASSERT_OK_AND_ASSIGN(
+        auto factory,
+        CreateFactory({{Options::COMPACTION_FORCE_UP_LEVEL_0, "true"}, {Options::BUCKET, "1"}}));
     auto strategy = factory.CreateCompactStrategy();
     ASSERT_NE(strategy, nullptr);
     ASSERT_NE(std::dynamic_pointer_cast<ForceUpLevel0Compaction>(strategy), nullptr);
 }
 
-TEST(MergeTreeCompactManagerFactoryDirectTest,
-     TestCreateCompactManagerWriteOnlyShouldReturnNoopCompactManager) {
-    ASSERT_OK_AND_ASSIGN(auto factory, CreateFactoryForOptions({{Options::WRITE_ONLY, "true"},
-                                                                {Options::BUCKET, "1"}}));
+TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
+       TestCreateCompactManagerWriteOnlyShouldReturnNoopCompactManager) {
+    ASSERT_OK_AND_ASSIGN(auto factory,
+                         CreateFactory({{Options::WRITE_ONLY, "true"}, {Options::BUCKET, "1"}}));
 
     BinaryRow partition;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactManager> manager,
@@ -247,196 +302,91 @@ TEST(MergeTreeCompactManagerFactoryDirectTest,
     ASSERT_NE(std::dynamic_pointer_cast<NoopCompactManager>(manager), nullptr);
 }
 
-TEST(MergeTreeCompactManagerFactoryTest, TestWriteShouldFailWhenLookupEnabledButIOManagerMissing) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestWriteShouldFailWhenLookupEnabledButIOManagerMissing) {
+    ASSERT_OK_AND_ASSIGN(
+        auto file_store_write,
+        CreateSingleStringFileStoreWrite({{"bucket", "1"}, {Options::FORCE_LOOKUP, "true"}},
+                                         /*with_io_manager=*/false));
 
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                                   /*primary_keys=*/{"f0"},
-                                   /*options=*/{{"bucket", "1"}, {Options::FORCE_LOOKUP, "true"}},
-                                   /*ignore_if_exists=*/false));
-
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
-
-    ASSERT_NOK_WITH_MSG(WriteSingleStringRowForFactory(file_store_write.get(), /*bucket=*/0, "k1"),
+    ASSERT_NOK_WITH_MSG(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"),
                         "Can not use lookup, there is no temp disk directory to use");
 }
 
-TEST(MergeTreeCompactManagerFactoryTest, TestCompactShouldUseNoopCompactManagerWhenWriteOnly) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
-
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                                   /*primary_keys=*/{"f0"},
-                                   /*options=*/{{"bucket", "1"}, {Options::WRITE_ONLY, "true"}},
-                                   /*ignore_if_exists=*/false));
-
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestCompactShouldUseNoopCompactManagerWhenWriteOnly) {
+    ASSERT_OK_AND_ASSIGN(
+        auto file_store_write,
+        CreateSingleStringFileStoreWrite({{"bucket", "1"}, {Options::WRITE_ONLY, "true"}},
+                                         /*with_io_manager=*/false));
 
     ASSERT_NOK_WITH_MSG(file_store_write->Compact(/*partition=*/{}, /*bucket=*/0,
                                                   /*full_compaction=*/true),
                         "NoopCompactManager does not support user triggered compaction");
 }
 
-TEST(MergeTreeCompactManagerFactoryTest,
-     TestWriteShouldFailForUnsupportedFullCompactionChangelogRewriter) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestWriteShouldFailWhenFullCompactionChangelogUsesUnsupportedCompactRewriter) {
+    ASSERT_OK_AND_ASSIGN(auto file_store_write,
+                         CreateSingleStringFileStoreWrite(
+                             {{"bucket", "1"}, {Options::CHANGELOG_PRODUCER, "full-compaction"}},
+                             /*with_io_manager=*/false));
 
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(
-        Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-        /*primary_keys=*/{"f0"},
-        /*options=*/{{"bucket", "1"}, {Options::CHANGELOG_PRODUCER, "full-compaction"}},
-        /*ignore_if_exists=*/false));
-
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
-
-    ASSERT_NOK_WITH_MSG(WriteSingleStringRowForFactory(file_store_write.get(), /*bucket=*/0, "k1"),
+    ASSERT_NOK_WITH_MSG(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"),
                         "not support full changelog merge tree compact rewriter");
 }
 
-TEST(MergeTreeCompactManagerFactoryTest,
-     TestWriteShouldSucceedWhenLookupDeletionVectorEnabledWithIOManager) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestPrepareCommitShouldSucceedWhenLookupDeletionVectorsTakeNoEffectInWriteProcess) {
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, CreateSingleStringFileStoreWrite(
+                                                    {{"bucket", "1"},
+                                                     {Options::FORCE_LOOKUP, "true"},
+                                                     {Options::DELETION_VECTORS_ENABLED, "true"}},
+                                                    /*with_io_manager=*/true));
 
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                                   /*primary_keys=*/{"f0"},
-                                   /*options=*/
-                                   {{"bucket", "1"},
-                                    {Options::FORCE_LOOKUP, "true"},
-                                    {Options::DELETION_VECTORS_ENABLED, "true"}},
-                                   /*ignore_if_exists=*/false));
-
-    auto io_manager = IOManager::Create(dir->Str());
-    auto io_manager_shared = std::shared_ptr<IOManager>(std::move(io_manager));
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
-                         context_builder.WithIOManager(io_manager_shared).Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
-
-    ASSERT_OK(WriteSingleStringRowForFactory(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK(file_store_write->PrepareCommit(/*wait_compaction=*/true).status());
 }
 
-TEST(MergeTreeCompactManagerFactoryTest, TestWriteShouldFailWhenFirstRowWithDeletionVectors) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
-
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(
-        catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                             /*primary_keys=*/{"f0"},
-                             /*options=*/{{"bucket", "1"}, {Options::MERGE_ENGINE, "first-row"}},
-                             /*ignore_if_exists=*/false));
-
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
-                         context_builder
-                             .SetOptions({{Options::BUCKET, "1"},
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestWriteShouldFailWhenFirstRowWithDeletionVectors) {
+    ASSERT_OK_AND_ASSIGN(
+        auto file_store_write,
+        CreateSingleStringFileStoreWrite({{"bucket", "1"}, {Options::MERGE_ENGINE, "first-row"}},
+                                         /*with_io_manager=*/false,
+                                         {{Options::BUCKET, "1"},
                                           {Options::MERGE_ENGINE, "first-row"},
-                                          {Options::DELETION_VECTORS_ENABLED, "true"}})
-                             .Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+                                          {Options::DELETION_VECTORS_ENABLED, "true"}}));
 
-    ASSERT_NOK_WITH_MSG(WriteSingleStringRowForFactory(file_store_write.get(), /*bucket=*/0, "k1"),
+    ASSERT_NOK_WITH_MSG(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"),
                         "First row merge engine does not need deletion vectors because there "
                         "is no deletion of old "
                         "data in this merge engine");
 }
 
-TEST(MergeTreeCompactManagerFactoryTest,
-     TestWriteShouldSucceedWhenLookupDeletionVectorEnabledWithSequenceField) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false),
-                   arrow::field("f1", arrow::int64())};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestPrepareCommitShouldSucceedWhenLookupDeletionVectorEnabledWithSequenceField) {
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, CreateStringAndInt64FileStoreWrite(
+                                                    {{"bucket", "1"},
+                                                     {Options::FORCE_LOOKUP, "true"},
+                                                     {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                     {Options::SEQUENCE_FIELD, "f1"}},
+                                                    /*with_io_manager=*/true));
 
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                                   /*primary_keys=*/{"f0"},
-                                   /*options=*/
-                                   {{"bucket", "1"},
-                                    {Options::FORCE_LOOKUP, "true"},
-                                    {Options::DELETION_VECTORS_ENABLED, "true"},
-                                    {Options::SEQUENCE_FIELD, "f1"}},
-                                   /*ignore_if_exists=*/false));
-
-    auto io_manager = IOManager::Create(dir->Str());
-    auto io_manager_shared = std::shared_ptr<IOManager>(std::move(io_manager));
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
-                         context_builder.WithIOManager(io_manager_shared).Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
-
-    ASSERT_OK(WriteStringAndInt64RowForFactory(file_store_write.get(), /*bucket=*/0, "k1", 1));
+    ASSERT_OK(WriteStringAndInt64Row(file_store_write.get(), /*bucket=*/0, "k1", 1));
+    ASSERT_OK(file_store_write->PrepareCommit(/*wait_compaction=*/true).status());
 }
 
-TEST(MergeTreeCompactManagerFactoryTest,
-     TestWriteShouldSucceedWhenLookupDeletionVectorEnabledWithLookupChangelog) {
-    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
-    arrow::Schema typed_schema(fields);
-    ::ArrowSchema schema;
-    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+TEST_F(MergeTreeCompactManagerFactoryWriteTest,
+       TestPrepareCommitShouldSucceedWhenLookupDeletionVectorEnabledWithLookupChangelog) {
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, CreateSingleStringFileStoreWrite(
+                                                    {{"bucket", "1"},
+                                                     {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                     {Options::CHANGELOG_PRODUCER, "lookup"}},
+                                                    /*with_io_manager=*/true));
 
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
-    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
-    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
-    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema, /*partition_keys=*/{},
-                                   /*primary_keys=*/{"f0"},
-                                   /*options=*/
-                                   {{"bucket", "1"},
-                                    {Options::DELETION_VECTORS_ENABLED, "true"},
-                                    {Options::CHANGELOG_PRODUCER, "lookup"}},
-                                   /*ignore_if_exists=*/false));
-
-    auto io_manager = IOManager::Create(dir->Str());
-    auto io_manager_shared = std::shared_ptr<IOManager>(std::move(io_manager));
-    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context,
-                         context_builder.WithIOManager(io_manager_shared).Finish());
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
-
-    ASSERT_OK(WriteSingleStringRowForFactory(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK(file_store_write->PrepareCommit(/*wait_compaction=*/true).status());
 }
 
 }  // namespace paimon::test

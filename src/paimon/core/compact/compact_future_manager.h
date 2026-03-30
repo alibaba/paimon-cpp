@@ -30,11 +30,11 @@ class CompactFutureManager : public CompactManager {
         }
     }
 
-    /// Default cancellation request for future-based compaction.
+    /// Request cancellation for future-based compaction.
     ///
-    /// `std::future` itself cannot be cancelled. Subclasses should override this
+    /// `std::future` itself cannot be cancelled. Subclasses must override this
     /// method to signal their concrete cancellation controller.
-    void RequestCancelCompaction() override {}
+    void RequestCancelCompaction() override = 0;
 
     /// Wait for the current compaction task to exit if it is running.
     /// @note This is a blocking join operation and may leave behind orphan files.

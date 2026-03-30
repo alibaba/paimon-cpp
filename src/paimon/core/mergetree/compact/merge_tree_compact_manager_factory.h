@@ -68,6 +68,7 @@ class MergeTreeCompactManagerFactory {
         const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
         const std::string& root_path, const std::shared_ptr<MemoryPool>& pool)
         : options_(options),
+          pool_(pool),
           key_comparator_(key_comparator),
           user_defined_seq_comparator_(user_defined_seq_comparator),
           compaction_metrics_(compaction_metrics),
@@ -76,8 +77,7 @@ class MergeTreeCompactManagerFactory {
           schema_manager_(schema_manager),
           io_manager_(io_manager),
           file_store_path_factory_(file_store_path_factory),
-          root_path_(root_path),
-          pool_(pool) {}
+          root_path_(root_path) {}
 
     std::shared_ptr<CompactStrategy> CreateCompactStrategy() const;
 
@@ -120,6 +120,7 @@ class MergeTreeCompactManagerFactory {
         const std::shared_ptr<CancellationController>& cancellation_controller) const;
 
     CoreOptions options_;
+    std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<CompactionMetrics> compaction_metrics_;
@@ -129,7 +130,6 @@ class MergeTreeCompactManagerFactory {
     std::shared_ptr<IOManager> io_manager_;
     std::shared_ptr<FileStorePathFactory> file_store_path_factory_;
     std::string root_path_;
-    std::shared_ptr<MemoryPool> pool_;
 };
 
 }  // namespace paimon
