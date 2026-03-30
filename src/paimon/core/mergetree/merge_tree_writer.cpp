@@ -86,6 +86,48 @@ MergeTreeWriter::MergeTreeWriter(
     write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
 }
 
+Status MergeTreeWriter::DoClose() {
+    // Request cancellation and wait for running compaction to exit.
+    // This avoids reusing cancellation state while an old task is still running.
+    compact_manager_->CancelAndWaitCompaction();
+    PAIMON_RETURN_NOT_OK(Sync());
+    PAIMON_RETURN_NOT_OK(compact_manager_->Close());
+
+    // delete temporary files
+    std::vector<std::shared_ptr<DataFileMeta>> delete_files;
+    delete_files.reserve(new_files_.size() + compact_after_.size());
+    delete_files.insert(delete_files.end(), new_files_.begin(), new_files_.end());
+    for (const auto& file : compact_after_) {
+        // Upgrade file is required by previous snapshot, so we should ensure that this file is
+        // not the output of upgraded.
+        auto in_compact_before =
+            std::any_of(compact_before_.begin(), compact_before_.end(),
+                        [&file](const std::shared_ptr<DataFileMeta>& candidate) {
+                            return candidate->file_name == file->file_name;
+                        });
+        if (!in_compact_before) {
+            delete_files.push_back(file);
+        }
+    }
+    for (const auto& file : delete_files) {
+        // Keep Java parity: temporary file cleanup is quiet.
+        [[maybe_unused]] auto s = options_.GetFileSystem()->Delete(path_factory_->ToPath(file));
+    }
+
+    batch_vec_.clear();
+    row_kinds_vec_.clear();
+    new_files_.clear();
+    deleted_files_.clear();
+    compact_before_.clear();
+    compact_after_.clear();
+
+    if (compact_deletion_file_) {
+        compact_deletion_file_->Clean();
+        compact_deletion_file_.reset();
+    }
+    return Status::OK();
+}
+
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     if (ArrowArrayIsReleased(moved_batch->GetData())) {
         return Status::Invalid("invalid batch: data is released");

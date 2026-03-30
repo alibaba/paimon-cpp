@@ -583,6 +583,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/universal_compaction_test.cpp
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
+                    core/mergetree/compact/file_rewrite_compact_task_test.cpp
                     core/mergetree/compact/merge_tree_compact_manager_test.cpp
                     core/mergetree/compact/merge_tree_compact_manager_factory_test.cpp
                     core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
