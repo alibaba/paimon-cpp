@@ -88,6 +88,7 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
             fmt::format("Can not set {} on table without primary keys, please define primary keys.",
                         Options::CHANGELOG_PRODUCER));
     }
+    PAIMON_RETURN_NOT_OK(ValidateChangelogProducer(options));
     PAIMON_RETURN_NOT_OK(Preconditions::CheckState(
         options.GetExpireConfig().GetSnapshotRetainMin() > 0,
         std::string(Options::SNAPSHOT_NUM_RETAINED_MIN) + " should be at least 1"));
@@ -111,13 +112,6 @@ Status SchemaValidation::ValidateTableSchema(const TableSchema& schema) {
     }
     // TODO(yonghao.fyh): check streaming read overwrite
     // TODO(yonghao.fyh): check 'partition.expiration-time'
-    if (options.GetMergeEngine() == MergeEngine::FIRST_ROW) {
-        if (options.GetChangelogProducer() != ChangelogProducer::LOOKUP &&
-            options.GetChangelogProducer() != ChangelogProducer::NONE) {
-            return Status::Invalid(
-                "Only support 'none' and 'lookup' changelog-producer on FIRST_ROW merge engine");
-        }
-    }
     // TODO(yonghao.fyh): check 'rowkind.field'
     if (options.DeletionVectorsEnabled()) {
         PAIMON_RETURN_NOT_OK(ValidateForDeletionVectors(options));
@@ -242,6 +236,12 @@ Status SchemaValidation::ValidateBucket(const TableSchema& schema, const CoreOpt
         }
     }
     return Status::OK();
+}
+
+Status SchemaValidation::ValidateChangelogProducer(const CoreOptions& options) {
+    return Preconditions::CheckState(options.GetChangelogProducer() == ChangelogProducer::NONE,
+                                     "C++ Paimon does not support changelog-producer yet. Please "
+                                     "keep changelog-producer as 'none'.");
 }
 
 Status SchemaValidation::ValidateForDeletionVectors(const CoreOptions& options) {
