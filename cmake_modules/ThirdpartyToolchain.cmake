@@ -1145,7 +1145,8 @@ macro(build_arrow)
         -DZSTD_ROOT=${ARROW_ZSTD_ROOT}
         -DZLIB_ROOT=${ARROW_ZLIB_ROOT}
         -DSnappy_ROOT=${ARROW_SNAPPY_ROOT}
-        -DLZ4_ROOT=${ARROW_LZ4_ROOT})
+        -DLZ4_ROOT=${ARROW_LZ4_ROOT}
+        -DBUILD_WARNING_LEVEL=PRODUCTION) # ignore warnings under gcc8
 
     set(ARROW_CONFIGURE SOURCE_SUBDIR "cpp" CMAKE_ARGS ${ARROW_CMAKE_ARGS})
     set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/arrow.diff")
