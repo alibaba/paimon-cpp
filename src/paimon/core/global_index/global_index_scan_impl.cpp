@@ -51,7 +51,6 @@ Result<std::shared_ptr<RowRangeGlobalIndexScanner>> GlobalIndexScanImpl::CreateR
             if (!partition) {
                 partition = entry.partition;
             } else if (!(partition.value() == entry.partition)) {
-                // TODO(xinyu.lxy): add inte case
                 return Status::Invalid(
                     "input range contain multiple partitions, fail to create range scan");
             }

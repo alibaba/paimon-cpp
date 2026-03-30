@@ -295,11 +295,3 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
 }
 
 }  // namespace paimon::test
-// TODO(xinyu.lxy): e2e test
-// test multiple MergeFunction
-// test multiple RowKind
-// test external path
-// test branch
-// test with parititon
-// test key appears before value
-// test compact multiple times, reuse rewriter

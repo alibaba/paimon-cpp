@@ -33,7 +33,7 @@ class CompactStrategy {
     virtual Result<std::optional<CompactUnit>> Pick(int32_t num_levels,
                                                     const std::vector<LevelSortedRun>& runs) = 0;
     /// Pick a compaction unit consisting of all existing files.
-    // TODO(xinyu.lxy): support RecordLevelExpire and BucketedDvMaintainer
+    // TODO(xinyu.lxy): support RecordLevelExpire
     static std::optional<CompactUnit> PickFullCompaction(
         int32_t num_levels, const std::vector<LevelSortedRun>& runs,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, bool force_rewrite_all_files) {

@@ -71,7 +71,10 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
 
     // TODO(xinyu.lxy): set executor
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
-    read_context_builder.SetOptions(options.ToMap()).EnablePrefetch(true).WithMemoryPool(pool);
+    read_context_builder.SetOptions(options.ToMap())
+        .EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .WithMemoryPool(pool);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
