@@ -85,6 +85,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::NONE, core_options.GetChangelogProducer());
     ASSERT_FALSE(core_options.NeedLookup());
+    ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
     LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
                                                /*produce_changelog=*/false,
                                                /*deletion_vector=*/false, /*force_lookup=*/false};
@@ -258,6 +259,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::FULL_COMPACTION, core_options.GetChangelogProducer());
     ASSERT_TRUE(core_options.NeedLookup());
+    ASSERT_TRUE(core_options.PrepareCommitWaitCompaction());
     LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
                                                /*produce_changelog=*/false,
                                                /*deletion_vector=*/true, /*force_lookup=*/true};
@@ -383,6 +385,37 @@ TEST(CoreOptionsTest, TestLookupStrategy) {
         ASSERT_TRUE(strategy.produce_changelog);
         ASSERT_TRUE(strategy.deletion_vector);
         ASSERT_TRUE(strategy.need_lookup);
+    }
+}
+
+TEST(CoreOptionsTest, TestPrepareCommitWaitCompaction) {
+    {
+        std::map<std::string, std::string> options = {
+            {Options::FORCE_LOOKUP, "true"},
+            {Options::LOOKUP_WAIT, "false"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_TRUE(core_options.NeedLookup());
+        ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
+    }
+
+    {
+        std::map<std::string, std::string> options = {
+            {Options::FORCE_LOOKUP, "true"},
+            {Options::LOOKUP_WAIT, "true"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_TRUE(core_options.NeedLookup());
+        ASSERT_TRUE(core_options.PrepareCommitWaitCompaction());
+    }
+
+    {
+        std::map<std::string, std::string> options = {
+            {Options::LOOKUP_WAIT, "true"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_FALSE(core_options.NeedLookup());
+        ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
     }
 }
 

@@ -109,6 +109,7 @@ const char Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER[] = "num-sorted-run.compa
 const char Options::NUM_SORTED_RUNS_STOP_TRIGGER[] = "num-sorted-run.stop-trigger";
 const char Options::NUM_LEVELS[] = "num-levels";
 const char Options::COMPACTION_FORCE_UP_LEVEL_0[] = "compaction.force-up-level-0";
+const char Options::LOOKUP_WAIT[] = "lookup-wait";
 const char Options::LOOKUP_COMPACT[] = "lookup-compact";
 const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
 

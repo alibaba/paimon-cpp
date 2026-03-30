@@ -20,6 +20,8 @@
 #include <vector>
 
 #include "arrow/array/array_base.h"
+#include "arrow/array/builder_binary.h"
+#include "arrow/array/builder_nested.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"

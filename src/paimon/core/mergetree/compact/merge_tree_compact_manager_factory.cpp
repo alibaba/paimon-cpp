@@ -37,6 +37,7 @@
 #include "paimon/core/mergetree/lookup_levels.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/utils/file_store_path_factory.h"
+#include "paimon/core/utils/file_store_path_factory_cache.h"
 #include "paimon/core/utils/primary_key_table_utils.h"
 
 namespace arrow {
@@ -114,13 +115,13 @@ Result<std::shared_ptr<CompactManager>> MergeTreeCompactManagerFactory::CreateCo
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<CompactRewriter> rewriter,
         CreateRewriter(partition, bucket, levels, dv_maintainer, cancellation_controller));
-    auto reporter = CreateCompactionMetricsReporter(partition, bucket);
+    auto metrics_reporter = CreateCompactionMetricsReporter(partition, bucket);
 
     return std::make_shared<MergeTreeCompactManager>(
         levels, compact_strategy, key_comparator_,
         options_.GetCompactionFileSize(/*has_primary_key=*/true),
-        options_.GetNumSortedRunsStopTrigger(), rewriter, reporter, dv_maintainer,
-        /*lazy_gen_deletion_file=*/false, options_.GetLookupStrategy().need_lookup,
+        options_.GetNumSortedRunsStopTrigger(), rewriter, metrics_reporter, dv_maintainer,
+        options_.PrepareCommitWaitCompaction(), options_.NeedLookup(),
         options_.CompactionForceRewriteAllFiles(),
         /*force_keep_delete=*/false, cancellation_controller, compact_executor);
 }
@@ -140,7 +141,7 @@ Result<std::shared_ptr<CompactRewriter>> MergeTreeCompactManagerFactory::CreateR
     if (options_.GetChangelogProducer() == ChangelogProducer::FULL_COMPACTION) {
         return Status::NotImplemented("not support full changelog merge tree compact rewriter");
     }
-    if (options_.GetLookupStrategy().need_lookup) {
+    if (options_.NeedLookup()) {
         int32_t max_level = options_.GetNumLevels() - 1;
         return CreateLookupRewriter(partition, bucket, levels, dv_maintainer, max_level,
                                     options_.GetLookupStrategy(), path_factory_cache,

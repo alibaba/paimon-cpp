@@ -114,6 +114,7 @@ class PAIMON_EXPORT CoreOptions {
     LookupStrategy GetLookupStrategy() const;
 
     bool NeedLookup() const;
+    bool PrepareCommitWaitCompaction() const;
     bool FileIndexReadEnabled() const;
 
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;

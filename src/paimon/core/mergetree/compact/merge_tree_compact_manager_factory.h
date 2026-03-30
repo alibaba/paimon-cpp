@@ -87,6 +87,8 @@ class MergeTreeCompactManagerFactory {
         const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) const;
 
+    void Close() {}
+
  private:
     std::shared_ptr<CompactionMetrics::Reporter> CreateCompactionMetricsReporter(
         const BinaryRow& partition, int32_t bucket) const;

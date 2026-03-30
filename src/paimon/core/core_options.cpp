@@ -369,6 +369,7 @@ struct CoreOptions::Impl {
     bool deletion_vectors_enabled = false;
     bool deletion_vectors_bitmap64 = false;
     bool force_lookup = false;
+    bool lookup_wait = true;
     bool partial_update_remove_record_on_delete = false;
     bool file_index_read_enabled = true;
     bool enable_adaptive_prefetch_strategy = true;
@@ -508,6 +509,7 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(
         parser.Parse<bool>(Options::DELETION_VECTORS_ENABLED, &impl->deletion_vectors_enabled));
     PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::FORCE_LOOKUP, &impl->force_lookup));
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::LOOKUP_WAIT, &impl->lookup_wait));
 
     PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE,
                                                 &impl->deletion_vector_target_file_size));
@@ -967,6 +969,13 @@ const std::map<std::string, std::string>& CoreOptions::ToMap() const {
 
 bool CoreOptions::NeedLookup() const {
     return GetLookupStrategy().need_lookup;
+}
+
+bool CoreOptions::PrepareCommitWaitCompaction() const {
+    if (!NeedLookup()) {
+        return false;
+    }
+    return impl_->lookup_wait;
 }
 
 bool CoreOptions::CompactionForceRewriteAllFiles() const {

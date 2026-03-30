@@ -16,7 +16,11 @@
 
 #include "paimon/core/mergetree/compact/merge_tree_compact_manager_factory.h"
 
+#include <map>
+
 #include "arrow/array/array_base.h"
+#include "arrow/array/builder_binary.h"
+#include "arrow/array/builder_nested.h"
 #include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"

@@ -123,4 +123,10 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
     return std::shared_ptr<BatchWriter>(writer);
 }
 
+Status KeyValueFileStoreWrite::Close() {
+    PAIMON_RETURN_NOT_OK(AbstractFileStoreWrite::Close());
+    compact_manager_factory_->Close();
+    return Status::OK();
+}
+
 }  // namespace paimon

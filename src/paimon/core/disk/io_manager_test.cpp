@@ -26,21 +26,21 @@
 namespace paimon::test {
 
 TEST(IOManagerTest, CreateShouldReturnManagerWithGivenTempDir) {
-    const std::string tmp_dir = "/tmp/paimon-io-manager";
+    auto tmp_dir = UniqueTestDirectory::Create();
 
-    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir);
+    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
     ASSERT_NE(manager, nullptr);
-    ASSERT_EQ(manager->GetTempDir(), tmp_dir);
+    ASSERT_EQ(manager->GetTempDir(), tmp_dir->Str());
 }
 
 TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
-    const std::string tmp_dir = "/tmp/paimon-io-manager";
+    auto tmp_dir = UniqueTestDirectory::Create();
     const std::string prefix = "spill";
 
-    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir);
+    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
     ASSERT_OK_AND_ASSIGN(std::string temp_path, manager->GenerateTempFilePath(prefix));
 
-    std::string expected_prefix = PathUtil::JoinPath(tmp_dir, "");
+    std::string expected_prefix = PathUtil::JoinPath(tmp_dir->Str(), "");
     ASSERT_EQ(temp_path.rfind(expected_prefix, 0), 0);
 
     std::string file_name = PathUtil::GetName(temp_path);
@@ -53,7 +53,8 @@ TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
 }
 
 TEST(IOManagerTest, GenerateTempFilePathShouldBeDifferentAcrossCalls) {
-    std::unique_ptr<IOManager> manager = IOManager::Create("/tmp/paimon-io-manager");
+    auto tmp_dir = UniqueTestDirectory::Create();
+    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
 
     ASSERT_OK_AND_ASSIGN(std::string path1, manager->GenerateTempFilePath("spill"));
     ASSERT_OK_AND_ASSIGN(std::string path2, manager->GenerateTempFilePath("spill"));

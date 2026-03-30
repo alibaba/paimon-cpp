@@ -226,6 +226,10 @@ struct PAIMON_EXPORT Options {
     /// No default value.
     static const char NUM_LEVELS[];
 
+    /// "lookup-wait" - When need to lookup, commit will wait for compaction by lookup. Default
+    /// value is "true".
+    static const char LOOKUP_WAIT[];
+
     /// "lookup-compact" - Lookup compact mode used for lookup compaction. Default value is
     /// LookupCompactMode::RADICAL.
     static const char LOOKUP_COMPACT[];

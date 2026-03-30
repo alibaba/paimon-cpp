@@ -65,6 +65,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
         const std::shared_ptr<MemoryPool>& pool);
 
+    Status Close() override;
+
  private:
     Result<std::shared_ptr<BatchWriter>> CreateWriter(
         const BinaryRow& partition, int32_t bucket,
