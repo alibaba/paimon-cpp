@@ -98,7 +98,7 @@ class RangeBitmapGlobalIndexTest : public ::testing::Test {
 
     std::shared_ptr<GlobalIndexReader> CreateGlobalIndexReader(
         const std::string& index_root, const std::shared_ptr<arrow::DataType>& type,
-        const GlobalIndexIOMeta& meta) {
+        const GlobalIndexIOMeta& meta) const {
         auto file_index =
             std::make_shared<RangeBitmapFileIndex>(std::map<std::string, std::string>());
         auto global_index = std::make_shared<RangeBitmapGlobalIndex>(file_index);
