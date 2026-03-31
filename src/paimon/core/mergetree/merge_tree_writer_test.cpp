@@ -564,6 +564,40 @@ TEST_F(MergeTreeWriterTest, TestCloseBeforePrepareCommit) {
     ASSERT_OK(merge_writer->Close());
 }
 
+TEST_F(MergeTreeWriterTest, TestCloseDeletesUncommittedFiles) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+    std::string uuid = path_factory->uuid_;
+
+    auto merge_writer = std::make_shared<MergeTreeWriter>(
+        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
+        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+        value_schema_, options, noop_compact_manager_, pool_);
+
+    std::shared_ptr<arrow::Array> array1 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+      ["Lucy", 20, 1, 14.1],
+      ["Paul", 20, 1, null],
+      ["Alice", 10, 0, 13.1]
+    ])")
+            .ValueOrDie();
+    WriteBatch(array1, /*row_kinds=*/{}, merge_writer.get());
+
+    // Force a flush to materialize file on disk, but do not call PrepareCommit.
+    ASSERT_OK(merge_writer->Compact(/*full_compaction=*/false));
+
+    std::string expected_data_file_path = dir->Str() + "/data-" + uuid + "-0.orc";
+    ASSERT_TRUE(options.GetFileSystem()->Exists(expected_data_file_path).value());
+
+    ASSERT_OK(merge_writer->Close());
+    ASSERT_FALSE(options.GetFileSystem()->Exists(expected_data_file_path).value());
+}
+
 TEST_F(MergeTreeWriterTest, TestAutoFlush) {
     // each batch is a file due to WRITE_BUFFER_SIZE
     ASSERT_OK_AND_ASSIGN(

@@ -29,18 +29,33 @@
 
 namespace paimon {
 
+std::string FilesToString(const std::vector<std::shared_ptr<DataFileMeta>>& files) {
+    fmt::memory_buffer buffer;
+    bool first = true;
+    for (const auto& file : files) {
+        if (!first) {
+            fmt::format_to(std::back_inserter(buffer), ", ");
+        }
+        fmt::format_to(std::back_inserter(buffer), "({}, {}, {})", file->file_name, file->level,
+                       file->file_size);
+        first = false;
+    }
+    return fmt::to_string(buffer);
+}
+
 std::string FilesToString(const std::vector<LevelSortedRun>& runs) {
     fmt::memory_buffer buffer;
     bool first = true;
     for (const auto& level_sorted_run : runs) {
-        for (const auto& file : level_sorted_run.run.Files()) {
-            if (!first) {
-                fmt::format_to(std::back_inserter(buffer), ", ");
-            }
-            fmt::format_to(std::back_inserter(buffer), "({}, {}, {})", file->file_name, file->level,
-                           file->file_size);
-            first = false;
+        auto files = FilesToString(level_sorted_run.run.Files());
+        if (files.empty()) {
+            continue;
         }
+        if (!first) {
+            fmt::format_to(std::back_inserter(buffer), ", ");
+        }
+        fmt::format_to(std::back_inserter(buffer), "{}", files);
+        first = false;
     }
     return fmt::to_string(buffer);
 }
@@ -144,13 +159,13 @@ Status MergeTreeCompactManager::TriggerCompaction(bool full_compaction) {
     return SubmitCompaction(unit, drop_delete);
 }
 
-void MergeTreeCompactManager::CancelCompaction() {
+void MergeTreeCompactManager::RequestCancelCompaction() {
     cancellation_controller_->Cancel();
-    CompactFutureManager::CancelCompaction();
 }
 
 Status MergeTreeCompactManager::SubmitCompaction(const CompactUnit& unit, bool drop_delete) {
     cancellation_controller_->Reset();
+    const char* task_name = unit.file_rewrite ? "FileRewriteCompactTask" : "MergeTreeCompactTask";
     if (unit.file_rewrite) {
         auto task = std::make_shared<FileRewriteCompactTask>(rewriter_, unit, drop_delete,
                                                              metrics_reporter_);
@@ -181,6 +196,9 @@ Status MergeTreeCompactManager::SubmitCompaction(const CompactUnit& unit, bool d
             return task->Execute();
         });
     }
+
+    PAIMON_LOG_DEBUG(logger_, "Pick these files (name, level, size) for %s compaction: %s",
+                     task_name, FilesToString(unit.files).c_str());
 
     if (metrics_reporter_) {
         metrics_reporter_->IncreaseCompactionsQueuedCount();

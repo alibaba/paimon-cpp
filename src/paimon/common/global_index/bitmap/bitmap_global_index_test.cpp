@@ -30,40 +30,19 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/global_index/global_index_file_manager.h"
-#include "paimon/core/index/index_path_factory.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/file_index/bitmap_index_result.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/global_index_result.h"
+#include "paimon/testing/mock/mock_index_path_factory.h"
 #include "paimon/testing/utils/testharness.h"
+
 namespace paimon::test {
 class BitmapGlobalIndexTest : public ::testing::Test {
  public:
     void SetUp() override {}
     void TearDown() override {}
-
-    class FakeIndexPathFactory : public IndexPathFactory {
-     public:
-        explicit FakeIndexPathFactory(const std::string& index_path) : index_path_(index_path) {}
-        std::string NewPath() const override {
-            assert(false);
-            return "";
-        }
-        std::string ToPath(const std::shared_ptr<IndexFileMeta>& file) const override {
-            assert(false);
-            return "";
-        }
-        std::string ToPath(const std::string& file_name) const override {
-            return PathUtil::JoinPath(index_path_, file_name);
-        }
-        bool IsExternalPath() const override {
-            return false;
-        }
-
-     private:
-        std::string index_path_;
-    };
 
     std::unique_ptr<::ArrowSchema> CreateArrowSchema(
         const std::shared_ptr<arrow::DataType>& data_type) const {
@@ -83,7 +62,7 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         auto file_index = std::make_shared<BitmapFileIndex>(options);
         auto global_index = std::make_shared<BitmapGlobalIndex>(file_index);
 
-        auto path_factory = std::make_shared<FakeIndexPathFactory>(index_root);
+        auto path_factory = std::make_shared<MockIndexPathFactory>(index_root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
 
         PAIMON_ASSIGN_OR_RAISE(
@@ -125,7 +104,7 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         auto file_index = std::make_shared<BitmapFileIndex>(std::map<std::string, std::string>());
         auto global_index = std::make_shared<BitmapGlobalIndex>(file_index);
 
-        auto path_factory = std::make_shared<FakeIndexPathFactory>(index_root);
+        auto path_factory = std::make_shared<MockIndexPathFactory>(index_root);
         auto file_reader = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
         EXPECT_OK_AND_ASSIGN(
             auto global_index_reader,
@@ -138,42 +117,6 @@ class BitmapGlobalIndexTest : public ::testing::Test {
     std::shared_ptr<MemoryPool> pool_ = GetDefaultPool();
     std::shared_ptr<FileSystem> fs_ = std::make_shared<LocalFileSystem>();
 };
-
-TEST_F(BitmapGlobalIndexTest, TestToGlobalIndexResult) {
-    {
-        ASSERT_OK_AND_ASSIGN(auto global_result, BitmapGlobalIndex::ToGlobalIndexResult(
-                                                     /*range_end=*/5l, FileIndexResult::Remain()));
-        CheckResult(global_result, {0l, 1l, 2l, 3l, 4l, 5l});
-    }
-    {
-        ASSERT_OK_AND_ASSIGN(auto global_result, BitmapGlobalIndex::ToGlobalIndexResult(
-                                                     /*range_end=*/5l, FileIndexResult::Skip()));
-        CheckResult(global_result, {});
-    }
-    {
-        auto bitmap_supplier = []() -> Result<RoaringBitmap32> {
-            return RoaringBitmap32::From({1, 4, 2147483647});
-        };
-        auto file_result = std::make_shared<BitmapIndexResult>(bitmap_supplier);
-        ASSERT_OK_AND_ASSIGN(auto global_result, BitmapGlobalIndex::ToGlobalIndexResult(
-                                                     /*range_end=*/2147483647l, file_result));
-        CheckResult(global_result, {1l, 4l, 2147483647l});
-    }
-    {
-        class FakeFileIndexResult : public FileIndexResult {
-            Result<bool> IsRemain() const override {
-                return true;
-            }
-            std::string ToString() const override {
-                return "fake file index result";
-            }
-        };
-        auto file_result = std::make_shared<FakeFileIndexResult>();
-        ASSERT_NOK_WITH_MSG(
-            BitmapGlobalIndex::ToGlobalIndexResult(/*range_end=*/10l, file_result),
-            "invalid FileIndexResult, supposed to be Remain or Skip or BitmapIndexResult");
-    }
-}
 
 TEST_F(BitmapGlobalIndexTest, TestStringType) {
     auto test_root_dir = UniqueTestDirectory::Create();

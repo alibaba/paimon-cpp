@@ -83,21 +83,7 @@ class MergeTreeWriter : public BatchWriter {
     }
 
  private:
-    Status DoClose() {
-        // cancel compaction so that it does not block job cancelling
-        compact_manager_->CancelCompaction();
-        PAIMON_RETURN_NOT_OK(Sync());
-        PAIMON_RETURN_NOT_OK(compact_manager_->Close());
-
-        batch_vec_.clear();
-        row_kinds_vec_.clear();
-
-        if (compact_deletion_file_) {
-            compact_deletion_file_->Clean();
-            compact_deletion_file_.reset();
-        }
-        return Status::OK();
-    }
+    Status DoClose();
 
     Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
     Result<CommitIncrement> DrainIncrement();

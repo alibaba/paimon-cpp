@@ -28,13 +28,14 @@
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/visibility.h"
 
 namespace paimon {
 
 class RangeBitmapFileIndexWriter;
 class RangeBitmapFileIndexReader;
 
-class RangeBitmapFileIndex final : public FileIndexer {
+class PAIMON_EXPORT RangeBitmapFileIndex final : public FileIndexer {
  public:
     explicit RangeBitmapFileIndex(const std::map<std::string, std::string>& options);
 

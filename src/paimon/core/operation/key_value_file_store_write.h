@@ -21,11 +21,8 @@
 #include <string>
 #include <utility>
 
-#include "paimon/common/data/serializer/row_compacted_serializer.h"
-#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
-#include "paimon/core/mergetree/lookup/default_lookup_serializer_factory.h"
-#include "paimon/core/mergetree/lookup_levels.h"
+#include "paimon/core/mergetree/compact/merge_tree_compact_manager_factory.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/logging.h"
@@ -41,17 +38,9 @@ class FieldsComparator;
 class FileStoreScan;
 class ScanFilter;
 class BinaryRow;
-class CompactStrategy;
-class CompactManager;
-class CompactRewriter;
-class CoreOptions;
-class Executor;
 class FileStorePathFactory;
-class FileStorePathFactoryCache;
-class Levels;
-class MemoryPool;
-class SchemaManager;
 class SnapshotManager;
+class SchemaManager;
 class TableSchema;
 class IOManager;
 struct KeyValue;
@@ -76,6 +65,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
         const std::shared_ptr<MemoryPool>& pool);
 
+    Status Close() override;
+
  private:
     Result<std::shared_ptr<BatchWriter>> CreateWriter(
         const BinaryRow& partition, int32_t bucket,
@@ -86,66 +77,11 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
 
-    std::shared_ptr<CompactStrategy> CreateCompactStrategy(const CoreOptions& options) const;
-
-    Result<std::shared_ptr<CompactManager>> CreateCompactManager(
-        const BinaryRow& partition, int32_t bucket,
-        const std::shared_ptr<CompactStrategy>& compact_strategy,
-        const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
-
-    Result<std::shared_ptr<CompactRewriter>> CreateRewriter(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
-
-    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriter(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
-        const LookupStrategy& lookup_strategy,
-        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
-
-    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriterWithDeletionVector(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
-        const LookupStrategy& lookup_strategy,
-        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
-
-    Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriterWithoutDeletionVector(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
-        const LookupStrategy& lookup_strategy,
-        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
-
-    template <typename T>
-    Result<std::unique_ptr<LookupLevels<T>>> CreateLookupLevels(
-        const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
-        if (io_manager_ == nullptr) {
-            return Status::Invalid("Can not use lookup, there is no temp disk directory to use.");
-        }
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Schema> key_schema,
-                               table_schema_->TrimmedPrimaryKeySchema());
-        PAIMON_ASSIGN_OR_RAISE(MemorySlice::SliceComparator lookup_key_comparator,
-                               RowCompactedSerializer::CreateSliceComparator(key_schema, pool_));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<LookupStoreFactory> lookup_store_factory,
-                               LookupStoreFactory::Create(lookup_key_comparator, options_));
-        auto dv_factory = DeletionVector::CreateFactory(dv_maintainer);
-        auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
-        return LookupLevels<T>::Create(options_.GetFileSystem(), partition, bucket, options_,
-                                       schema_manager_, io_manager_, file_store_path_factory_,
-                                       table_schema_, levels, dv_factory, processor_factory,
-                                       serializer_factory, lookup_store_factory, pool_);
-    }
-
  private:
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
+    std::unique_ptr<MergeTreeCompactManagerFactory> compact_manager_factory_;
     std::unique_ptr<Logger> logger_;
 };
 

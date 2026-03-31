@@ -49,9 +49,8 @@ BucketedAppendCompactManager::BucketedAppendCompactManager(
     }
 }
 
-void BucketedAppendCompactManager::CancelCompaction() {
+void BucketedAppendCompactManager::RequestCancelCompaction() {
     cancellation_controller_->Cancel();
-    CompactFutureManager::CancelCompaction();
 }
 
 Status BucketedAppendCompactManager::TriggerCompaction(bool full_compaction) {

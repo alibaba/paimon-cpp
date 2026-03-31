@@ -18,19 +18,24 @@
 
 #include <cstddef>
 #include <map>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "arrow/array/array_base.h"
 #include "arrow/array/builder_binary.h"
+#include "arrow/array/builder_nested.h"
+#include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
-#include "arrow/status.h"
 #include "arrow/type.h"
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/core_options.h"
+#include "paimon/disk/io_manager.h"
 #include "paimon/file_store_write.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
@@ -38,7 +43,65 @@
 #include "paimon/write_context.h"
 
 namespace paimon::test {
-TEST(KeyValueFileStoreWriteTest, TestWriteWithInvalidBatch) {
+
+class KeyValueFileStoreWriteTest : public ::testing::Test {
+ protected:
+    Result<std::unique_ptr<FileStoreWrite>> CreateSingleStringFileStoreWrite(
+        const std::map<std::string, std::string>& table_options, bool with_io_manager) {
+        auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+        arrow::Schema typed_schema(fields);
+        ::ArrowSchema schema;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(typed_schema, &schema));
+
+        auto dir = UniqueTestDirectory::Create();
+        if (!dir) {
+            return Status::Invalid("failed to create test directory");
+        }
+        PAIMON_ASSIGN_OR_RAISE(auto catalog, Catalog::Create(dir->Str(), {}));
+        PAIMON_RETURN_NOT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+        PAIMON_RETURN_NOT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema,
+                                                  /*partition_keys=*/{},
+                                                  /*primary_keys=*/{"f0"}, table_options,
+                                                  /*ignore_if_exists=*/false));
+
+        WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
+        if (with_io_manager) {
+            auto io_manager = IOManager::Create(dir->Str());
+            context_builder.WithIOManager(std::shared_ptr<IOManager>(std::move(io_manager)));
+        }
+
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,
+                               context_builder.Finish());
+        return FileStoreWrite::Create(std::move(write_context));
+    }
+
+    Status WriteSingleStringRow(FileStoreWrite* file_store_write, int32_t bucket,
+                                const std::string& value) {
+        auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+        auto struct_type = arrow::struct_(fields);
+        arrow::StructBuilder struct_builder(struct_type, arrow::default_memory_pool(),
+                                            {std::make_shared<arrow::StringBuilder>()});
+        auto string_builder = static_cast<arrow::StringBuilder*>(struct_builder.field_builder(0));
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Append());
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(string_builder->Append(value));
+
+        std::shared_ptr<arrow::Array> array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(struct_builder.Finish(&array));
+        ::ArrowArray arrow_array;
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &arrow_array));
+
+        RecordBatchBuilder batch_builder(&arrow_array);
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RecordBatch> batch,
+                               batch_builder.SetBucket(bucket).Finish());
+        Status write_status = file_store_write->Write(std::move(batch));
+        if (!ArrowArrayIsReleased(&arrow_array)) {
+            ArrowArrayRelease(&arrow_array);
+        }
+        return write_status;
+    }
+};
+
+TEST_F(KeyValueFileStoreWriteTest, TestWriteWithInvalidBatch) {
     auto fields = {
         arrow::field("f0", arrow::boolean()),  arrow::field("f1", arrow::int8()),
         arrow::field("f2", arrow::int8()),     arrow::field("f3", arrow::int16()),
@@ -133,4 +196,28 @@ TEST(KeyValueFileStoreWriteTest, TestWriteWithInvalidBatch) {
         ArrowArrayRelease(&arrow_array);
     }
 }
+
+TEST_F(KeyValueFileStoreWriteTest, TestPrepareCommitShouldSucceedWhenLookupEnabledWithIOManager) {
+    ASSERT_OK_AND_ASSIGN(
+        auto file_store_write,
+        CreateSingleStringFileStoreWrite({{"bucket", "1"}, {Options::FORCE_LOOKUP, "true"}},
+                                         /*with_io_manager=*/true));
+
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(commit_messages.size(), 1);
+}
+
+TEST_F(KeyValueFileStoreWriteTest,
+       TestPrepareCommitShouldSucceedWhenDefaultCompactRewriterPathEnabled) {
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, CreateSingleStringFileStoreWrite(
+                                                    {{"bucket", "1"}}, /*with_io_manager=*/false));
+
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(commit_messages.size(), 1);
+}
+
 }  // namespace paimon::test

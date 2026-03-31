@@ -76,7 +76,7 @@ class BucketedAppendCompactManager : public CompactFutureManager {
         const std::shared_ptr<CancellationController>& cancellation_controller);
     ~BucketedAppendCompactManager() override = default;
 
-    void CancelCompaction() override;
+    void RequestCancelCompaction() override;
 
     Status TriggerCompaction(bool full_compaction) override;
 
