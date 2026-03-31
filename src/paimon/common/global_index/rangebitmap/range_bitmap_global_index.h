@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@
 #include <string>
 #include <vector>
 
-#include "paimon/common/file_index/bitmap/bitmap_file_index.h"
+#include "paimon/common/file_index/rangebitmap/range_bitmap_file_index.h"
 #include "paimon/common/global_index/wrap/file_index_reader_wrapper.h"
 #include "paimon/global_index/global_indexer.h"
 
 namespace paimon {
-class BitmapGlobalIndex : public GlobalIndexer {
+class RangeBitmapGlobalIndex : public GlobalIndexer {
  public:
-    explicit BitmapGlobalIndex(const std::shared_ptr<BitmapFileIndex>& index) : index_(index) {}
+    explicit RangeBitmapGlobalIndex(const std::shared_ptr<RangeBitmapFileIndex>& index)
+        : index_(index) {}
 
     Result<std::shared_ptr<GlobalIndexWriter>> CreateWriter(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
@@ -40,17 +41,17 @@ class BitmapGlobalIndex : public GlobalIndexer {
         const std::shared_ptr<MemoryPool>& pool) const override;
 
  private:
-    std::shared_ptr<BitmapFileIndex> index_;
+    std::shared_ptr<RangeBitmapFileIndex> index_;
 };
 
-class BitmapGlobalIndexReader : public FileIndexReaderWrapper {
+class RangeBitmapGlobalIndexReader : public FileIndexReaderWrapper {
  public:
-    BitmapGlobalIndexReader(const std::shared_ptr<FileIndexReader>& reader,
-                            const std::function<Result<std::shared_ptr<GlobalIndexResult>>(
-                                const std::shared_ptr<FileIndexResult>&)>& transform)
+    RangeBitmapGlobalIndexReader(const std::shared_ptr<FileIndexReader>& reader,
+                                 const std::function<Result<std::shared_ptr<GlobalIndexResult>>(
+                                     const std::shared_ptr<FileIndexResult>&)>& transform)
         : FileIndexReaderWrapper(reader, transform) {}
 
-    static inline const char kIdentifier[] = "bitmap";
+    static inline const char kIdentifier[] = "range-bitmap";
 
     bool IsThreadSafe() const override {
         return false;
