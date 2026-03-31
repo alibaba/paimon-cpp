@@ -1033,7 +1033,7 @@ TEST_F(PkCompactionInteTest, TestDuplicateWithDvAndOrphanDelete) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64()),
-    arrow::field("f4", arrow::utf8())};
+        arrow::field("f4", arrow::utf8())};
     std::vector<std::string> primary_keys = {"f0", "f1"};
     std::vector<std::string> partition_keys = {"f1"};
     std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
@@ -1099,7 +1099,8 @@ TEST_F(PkCompactionInteTest, TestDuplicateWithDvAndOrphanDelete) {
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
         expected_data[std::make_pair("f1=10/", 0)] = R"([
-            [0, "Bob",   10, 200, 2.0, ")" + padding + R"("],
+            [0, "Bob",   10, 200, 2.0, ")" + padding +
+                                                     R"("],
             [0, "Dave",  10, 50,  5.0, "u3"]
         ])";
         ScanAndVerify(table_path, fields, expected_data);
@@ -1116,7 +1117,8 @@ TEST_F(PkCompactionInteTest, TestDuplicateWithDvAndOrphanDelete) {
     {
         std::map<std::pair<std::string, int32_t>, std::string> expected_data;
         expected_data[std::make_pair("f1=10/", 0)] = R"([
-            [0, "Bob",   10, 200, 2.0, ")" + padding + R"("],
+            [0, "Bob",   10, 200, 2.0, ")" + padding +
+                                                     R"("],
             [0, "Dave",  10, 50,  5.0, "u3"]
         ])";
         ScanAndVerify(table_path, fields, expected_data);
