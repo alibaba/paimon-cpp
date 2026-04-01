@@ -96,7 +96,7 @@ class PkCompactionInteTest : public ::testing::Test {
                                                      row_kinds, commit_identifier, streaming_mode));
         return Commit(table_path, commit_msgs);
     }
-    
+
     Result<std::vector<std::shared_ptr<CommitMessage>>> WriteArrayWithRowKinds(
         const std::string& table_path, const std::map<std::string, std::string>& partition,
         int32_t bucket, const std::shared_ptr<arrow::Array>& write_array,
@@ -117,7 +117,7 @@ class PkCompactionInteTest : public ::testing::Test {
                                                      /*wait_compaction=*/false, commit_identifier));
         PAIMON_RETURN_NOT_OK(file_store_write->Close());
         return commit_msgs;
-    }    
+    }
 
     Status Commit(const std::string& table_path,
                   const std::vector<std::shared_ptr<CommitMessage>>& commit_msgs) const {
