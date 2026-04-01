@@ -21,17 +21,14 @@
 #include <map>
 #include <optional>
 #include <utility>
-#include <variant>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
-#include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
-#include "paimon/common/fs/external_path_provider.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -50,7 +47,6 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/metrics.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -88,14 +84,21 @@ class MergeTreeWriterTest : public ::testing::Test {
     }
     void TearDown() override {}
 
+    std::unique_ptr<RecordBatch> CreateBatch(
+        const std::shared_ptr<arrow::Array>& array,
+        const std::vector<RecordBatch::RowKind>& row_kinds) const {
+        ::ArrowArray c_array;
+        EXPECT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+        RecordBatchBuilder batch_builder(&c_array);
+        batch_builder.SetRowKinds(row_kinds);
+        EXPECT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
+        return batch;
+    }
+
     void WriteBatch(const std::shared_ptr<arrow::Array>& array,
                     const std::vector<RecordBatch::RowKind>& row_kinds,
                     MergeTreeWriter* writer) const {
-        ::ArrowArray c_array;
-        ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-        RecordBatchBuilder batch_builder(&c_array);
-        batch_builder.SetRowKinds(row_kinds);
-        ASSERT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
+        auto batch = CreateBatch(array, row_kinds);
         ASSERT_OK(writer->Write(std::move(batch)));
     }
 
@@ -759,76 +762,6 @@ TEST_F(MergeTreeWriterTest, TestIOException) {
         break;
     }
     ASSERT_TRUE(run_complete);
-}
-
-TEST_F(MergeTreeWriterTest, TestEstimateMemoryUse) {
-    {
-        // test simple
-        std::shared_ptr<arrow::Array> array =
-            arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
-          ["Lucy", 20, 1, 14.1],
-          ["Paul", 20, 1, null],
-          ["Alice", 10, 0, 13.1]
-        ])")
-                .ValueOrDie();
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, MergeTreeWriter::EstimateMemoryUse(array));
-        int64_t expected_memory_use =
-            1 + (13 + 3 * 4 + 1) + (3 * 4 + 1) + (3 * 4 + 1) + (3 * 8 + 1);
-        ASSERT_EQ(memory_use, expected_memory_use);
-    }
-    {
-        // test primitive type
-        arrow::FieldVector fields = {arrow::field("v0", arrow::boolean()),
-                                     arrow::field("v1", arrow::int8()),
-                                     arrow::field("v2", arrow::int16()),
-                                     arrow::field("v3", arrow::int32()),
-                                     arrow::field("v4", arrow::int64()),
-                                     arrow::field("v5", arrow::float32()),
-                                     arrow::field("v6", arrow::float64()),
-                                     arrow::field("v7", arrow::date32()),
-                                     arrow::field("v8", arrow::timestamp(arrow::TimeUnit::NANO)),
-                                     arrow::field("v9", arrow::decimal128(30, 20)),
-                                     arrow::field("v10", arrow::utf8()),
-                                     arrow::field("v11", arrow::binary())};
-
-        auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
-        [true, 10, 200, 65536, 123456789, 0.0, 0.0, 2000, -86399999999500, "2134.48690000000000000009", "difference", "Alice"],
-        [false, -128, -32768, -2147483648, -9223372036854775808, -3.4028235E38, -1.7976931348623157E308, -719528, -9223372036854775808, "-999999999999999999.99999999999999999999", "Alice", "Two"],
-        [true, 127, 32767, 2147483647, 9223372036854775807, 3.4028235E38, 1.7976931348623157E308, 2932896, 9223372036854775807, "999999999999999999.99999999999999999999", "Alice", "made"],
-        [true, 0, 0, 0, 0, 1.4E-45, 4.9E-324, 0, 0, "0.00000000000000000000", "Alice", "wood"]
-])")
-                .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, MergeTreeWriter::EstimateMemoryUse(array));
-        int64_t expected_memory_use = 1 + (4 + 1) + (4 + 1) + (2 * 4 + 1) + (4 * 4 + 1) +
-                                      (8 * 4 + 1) + (4 * 4 + 1) + (8 * 4 + 1) + (4 * 4 + 1) +
-                                      (8 * 4 + 1) + (4 * 16 + 1) + (25 + 4 * 4 + 1) +
-                                      (16 + 4 * 4 + 1);
-        ASSERT_EQ(memory_use, expected_memory_use);
-    }
-    {
-        // test nested type
-        arrow::FieldVector fields = {
-            arrow::field("f0", arrow::list(arrow::int32())),
-            arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
-            arrow::field("f2", arrow::struct_({arrow::field("sub1", arrow::int64()),
-                                               arrow::field("sub2", arrow::float64()),
-                                               arrow::field("sub3", arrow::boolean())})),
-        };
-        auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
-        [[1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
-        [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], [20, 20.1, true]],
-        [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]]
-    ])")
-                .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, MergeTreeWriter::EstimateMemoryUse(array));
-        int64_t list_mem = 1 + (4 * 6 + 1);
-        int64_t map_mem = 1 + (33 + 4 * 7 + 1) + (8 * 7 + 1);
-        int64_t struct_mem = 1 + (8 * 3 + 1) + (8 * 3 + 1) + (1 * 3 + 1);
-        int64_t expected_memory_use = 1 + list_mem + map_mem + struct_mem;
-        ASSERT_EQ(memory_use, expected_memory_use);
-    }
 }
 
 TEST_F(MergeTreeWriterTest, TestBulkData) {

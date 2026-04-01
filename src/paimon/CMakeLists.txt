@@ -239,6 +239,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_levels.cpp
     core/migrate/file_meta_utils.cpp
@@ -592,6 +593,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/lookup/persist_processor_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
+                    core/mergetree/write_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp

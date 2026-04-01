@@ -23,17 +23,10 @@
 #include <utility>
 
 #include "arrow/api.h"
-#include "arrow/array/array_base.h"
-#include "arrow/array/array_binary.h"
-#include "arrow/array/array_nested.h"
 #include "arrow/c/abi.h"
-#include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
-#include "arrow/util/checked_cast.h"
-#include "fmt/format.h"
 #include "paimon/common/metrics/metrics_impl.h"
 #include "paimon/common/table/special_fields.h"
-#include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/async_key_value_producer_and_consumer.h"
@@ -41,24 +34,19 @@
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/data_increment.h"
 #include "paimon/core/io/key_value_data_file_writer.h"
-#include "paimon/core/io/key_value_in_memory_record_reader.h"
 #include "paimon/core/io/key_value_meta_projection_consumer.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/io/row_to_arrow_array_converter.h"
 #include "paimon/core/io/single_file_writer.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_loser_tree.h"
+#include "paimon/core/mergetree/write_buffer.h"
 #include "paimon/core/utils/commit_increment.h"
-#include "paimon/data/decimal.h"
 #include "paimon/format/file_format.h"
 #include "paimon/format/writer_builder.h"
 #include "paimon/metrics.h"
 
 namespace paimon {
-class FieldsComparator;
-class MemoryPool;
-template <typename T>
-class MergeFunctionWrapper;
 class FormatStatsExtractor;
 
 MergeTreeWriter::MergeTreeWriter(
@@ -71,7 +59,6 @@ MergeTreeWriter::MergeTreeWriter(
     const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
     const std::shared_ptr<MemoryPool>& pool)
     : last_sequence_number_(last_sequence_number + 1),
-      current_memory_in_bytes_(0),
       pool_(pool),
       trimmed_primary_keys_(trimmed_primary_keys),
       options_(options),
@@ -80,10 +67,12 @@ MergeTreeWriter::MergeTreeWriter(
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
       schema_id_(schema_id),
-      value_type_(arrow::struct_(value_schema->fields())),
       compact_manager_(compact_manager),
       metrics_(std::make_shared<MetricsImpl>()) {
     write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
+    write_buffer_ = std::make_unique<WriteBuffer>(
+        arrow::struct_(value_schema->fields()), trimmed_primary_keys_,
+        options_.GetSequenceField(), key_comparator_, merge_function_wrapper_, pool_);
 }
 
 Status MergeTreeWriter::DoClose() {
@@ -114,8 +103,7 @@ Status MergeTreeWriter::DoClose() {
         [[maybe_unused]] auto s = options_.GetFileSystem()->Delete(path_factory_->ToPath(file));
     }
 
-    batch_vec_.clear();
-    row_kinds_vec_.clear();
+    write_buffer_->Clear();
     new_files_.clear();
     deleted_files_.clear();
     compact_before_.clear();
@@ -129,23 +117,8 @@ Status MergeTreeWriter::DoClose() {
 }
 
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
-    if (ArrowArrayIsReleased(moved_batch->GetData())) {
-        return Status::Invalid("invalid batch: data is released");
-    }
-    std::unique_ptr<RecordBatch> batch = std::move(moved_batch);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
-                                      arrow::ImportArray(batch->GetData(), value_type_));
-    auto value_struct_array =
-        arrow::internal::checked_pointer_cast<arrow::StructArray>(arrow_array);
-    if (value_struct_array == nullptr) {
-        return Status::Invalid("invalid RecordBatch: cannot cast to StructArray");
-    }
-    PAIMON_ASSIGN_OR_RAISE(int64_t memory_in_bytes, EstimateMemoryUse(value_struct_array));
-    current_memory_in_bytes_ += memory_in_bytes;
-
-    batch_vec_.push_back(std::move(value_struct_array));
-    row_kinds_vec_.push_back(batch->GetRowKind());
-    if (current_memory_in_bytes_ >= options_.GetWriteBufferSize()) {
+    PAIMON_RETURN_NOT_OK(write_buffer_->Write(std::move(moved_batch)));
+    if (write_buffer_->GetMemoryUsage() >= options_.GetWriteBufferSize()) {
         return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
     }
     return Status::OK();
@@ -247,25 +220,13 @@ Result<bool> MergeTreeWriter::CompactNotCompleted() {
 }
 
 Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_compaction) {
-    if (!batch_vec_.empty()) {
+    if (!write_buffer_->IsEmpty()) {
         if (compact_manager_->ShouldWaitForLatestCompaction()) {
             wait_for_latest_compaction = true;
         }
-        // 1. create key value iter for each record batch
-        std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
-        readers.reserve(batch_vec_.size());
-        for (size_t i = 0; i < batch_vec_.size(); ++i) {
-            int64_t sequence_number = last_sequence_number_;
-            last_sequence_number_ += batch_vec_[i]->length();
-            auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-                sequence_number, std::move(batch_vec_[i]), std::move(row_kinds_vec_[i]),
-                trimmed_primary_keys_, options_.GetSequenceField(), key_comparator_,
-                merge_function_wrapper_, pool_);
-            readers.push_back(std::move(in_memory_reader));
-        }
-        batch_vec_.clear();
-        row_kinds_vec_.clear();
-        current_memory_in_bytes_ = 0;
+        // 1. flush write buffer to get in-memory readers
+        PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
+                               write_buffer_->Flush(last_sequence_number_));
         // 2. prepare loser tree sort merge reader
         auto sort_merge_reader = std::make_unique<SortMergeReaderWithLoserTree>(
             std::move(readers), key_comparator_, user_defined_seq_comparator_,
@@ -352,70 +313,6 @@ MergeTreeWriter::CreateRollingRowWriter() const {
     };
     return std::make_unique<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>(
         options_.GetTargetFileSize(/*has_primary_key=*/true), create_file_writer);
-}
-
-Result<int64_t> MergeTreeWriter::EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array) {
-    arrow::Type::type type = array->type()->id();
-    int64_t null_bits_size_in_bytes = (array->length() + 7) / 8;
-    switch (type) {
-        case arrow::Type::type::BOOL:
-            return null_bits_size_in_bytes + array->length() * sizeof(bool);
-        case arrow::Type::type::INT8:
-            return null_bits_size_in_bytes + array->length() * sizeof(int8_t);
-        case arrow::Type::type::INT16:
-            return null_bits_size_in_bytes + array->length() * sizeof(int16_t);
-        case arrow::Type::type::INT32:
-            return null_bits_size_in_bytes + array->length() * sizeof(int32_t);
-        case arrow::Type::type::DATE32:
-            return null_bits_size_in_bytes + array->length() * sizeof(int32_t);
-        case arrow::Type::type::INT64:
-            return null_bits_size_in_bytes + array->length() * sizeof(int64_t);
-        case arrow::Type::type::FLOAT:
-            return null_bits_size_in_bytes + array->length() * sizeof(float);
-        case arrow::Type::type::DOUBLE:
-            return null_bits_size_in_bytes + array->length() * sizeof(double);
-        case arrow::Type::type::TIMESTAMP:
-            return null_bits_size_in_bytes + array->length() * sizeof(int64_t);
-        case arrow::Type::type::DECIMAL:
-            return null_bits_size_in_bytes + array->length() * sizeof(Decimal::int128_t);
-        case arrow::Type::type::STRING:
-        case arrow::Type::type::BINARY: {
-            auto binary_array =
-                arrow::internal::checked_cast<const arrow::BinaryArray*>(array.get());
-            assert(binary_array);
-            int64_t value_length = binary_array->total_values_length();
-            int64_t offset_length = array->length() * sizeof(int32_t);
-            return null_bits_size_in_bytes + value_length + offset_length;
-        }
-        case arrow::Type::type::LIST: {
-            auto list_array = arrow::internal::checked_cast<const arrow::ListArray*>(array.get());
-            assert(list_array);
-            PAIMON_ASSIGN_OR_RAISE(int64_t value_mem, EstimateMemoryUse(list_array->values()));
-            return null_bits_size_in_bytes + value_mem;
-        }
-        case arrow::Type::type::MAP: {
-            auto map_array = arrow::internal::checked_cast<const arrow::MapArray*>(array.get());
-            assert(map_array);
-            PAIMON_ASSIGN_OR_RAISE(int64_t key_mem, EstimateMemoryUse(map_array->keys()));
-            PAIMON_ASSIGN_OR_RAISE(int64_t item_mem, EstimateMemoryUse(map_array->items()));
-            return null_bits_size_in_bytes + key_mem + item_mem;
-        }
-        case arrow::Type::type::STRUCT: {
-            auto struct_array =
-                arrow::internal::checked_cast<const arrow::StructArray*>(array.get());
-            assert(struct_array);
-            int64_t struct_mem = 0;
-            for (const auto& field : struct_array->fields()) {
-                PAIMON_ASSIGN_OR_RAISE(int64_t field_mem, EstimateMemoryUse(field));
-                struct_mem += field_mem;
-            }
-            return null_bits_size_in_bytes + struct_mem;
-        }
-        default:
-            assert(false);
-            return Status::Invalid(fmt::format("Do not support type {} in EstimateMemoryUse",
-                                               array->type()->ToString()));
-    }
 }
 
 }  // namespace paimon
