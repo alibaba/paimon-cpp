@@ -61,17 +61,17 @@ class WriteBuffer {
     /// Flush all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
     /// @param[in,out] last_sequence_number current sequence number, updated after flush
     /// @return list of KeyValueRecordReaders built from buffered data
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> Flush(
-        int64_t& last_sequence_number);
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> Flush(int64_t& last_sequence_number);
 
     /// Return current memory usage in bytes.
-    int64_t GetMemoryUsage() const { return current_memory_in_bytes_; }
+    int64_t GetMemoryUsage() const {
+        return current_memory_in_bytes_;
+    }
 
     /// Return whether the buffer is empty.
-    bool IsEmpty() const { return batch_vec_.empty(); }
-
-    /// Return the number of batches in the buffer.
-    size_t GetBatchCount() const { return batch_vec_.size(); }
+    bool IsEmpty() const {
+        return batch_vec_.empty();
+    }
 
     /// Clear the buffer without building readers (for error paths or Close).
     void Clear();

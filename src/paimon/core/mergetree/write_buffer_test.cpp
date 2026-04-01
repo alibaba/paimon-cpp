@@ -97,7 +97,6 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ASSERT_OK(write_buffer.Write(CreateBatch(array1, /*row_kinds=*/{})));
     ASSERT_OK(write_buffer.Write(CreateBatch(array2, /*row_kinds=*/{})));
     ASSERT_FALSE(write_buffer.IsEmpty());
-    ASSERT_EQ(write_buffer.GetBatchCount(), 2);
     ASSERT_GT(write_buffer.GetMemoryUsage(), 0);
 
     int64_t last_sequence_number = 10;
@@ -105,7 +104,6 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
 
     ASSERT_EQ(readers.size(), 2);
     ASSERT_TRUE(write_buffer.IsEmpty());
-    ASSERT_EQ(write_buffer.GetBatchCount(), 0);
     ASSERT_EQ(write_buffer.GetMemoryUsage(), 0);
     ASSERT_EQ(last_sequence_number, 13);
 
@@ -168,10 +166,9 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
     }
 
     ASSERT_EQ(actual_row_kind_values,
-              (std::vector<int8_t>{RowKind::Insert()->ToByteValue(),
-                                   RowKind::UpdateBefore()->ToByteValue(),
-                                   RowKind::UpdateAfter()->ToByteValue(),
-                                   RowKind::Delete()->ToByteValue()}));
+              (std::vector<int8_t>{
+                  RowKind::Insert()->ToByteValue(), RowKind::UpdateBefore()->ToByteValue(),
+                  RowKind::UpdateAfter()->ToByteValue(), RowKind::Delete()->ToByteValue()}));
     ASSERT_EQ(actual_sequence_numbers, (std::vector<int64_t>{0, 1, 2, 3}));
 }
 
@@ -223,8 +220,8 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
             arrow::field("f0", arrow::list(arrow::int32())),
             arrow::field("f1", arrow::map(arrow::utf8(), arrow::int64())),
             arrow::field("f2", arrow::struct_({arrow::field("sub1", arrow::int64()),
-                                                arrow::field("sub2", arrow::float64()),
-                                                arrow::field("sub3", arrow::boolean())})),
+                                               arrow::field("sub2", arrow::float64()),
+                                               arrow::field("sub3", arrow::boolean())})),
         };
         auto array = std::dynamic_pointer_cast<arrow::StructArray>(
             arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
