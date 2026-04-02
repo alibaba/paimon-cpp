@@ -539,8 +539,8 @@ TEST_F(BinaryRowTest, TestBinaryRowSerializer) {
         test_string1 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
         test_string2 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
     }
-    writer.WriteStringView(1, std::string_view(test_string1));
-    writer.WriteStringView(2, std::string_view(test_string2));
+    writer.WriteStringView(1, std::string_view{test_string1});
+    writer.WriteStringView(2, std::string_view{test_string2});
     writer.Complete();
 
     BinaryRowSerializer row_serializer(3, pool);
