@@ -54,7 +54,6 @@ class WriteBuffer {
                 const std::shared_ptr<MemoryPool>& pool);
 
     /// Import a RecordBatch into the buffer.
-    /// Performs: ImportArray → StructArray → EstimateMemoryUse → append to buffer.
     /// Does NOT check memory thresholds or trigger flush.
     Status Write(std::unique_ptr<RecordBatch>&& batch);
 
@@ -76,17 +75,17 @@ class WriteBuffer {
     /// Clear the buffer without building readers (for error paths or Close).
     void Clear();
 
+ private:
     /// Estimate memory usage of an Arrow Array.
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
 
- private:
     // Immutable configuration
-    std::shared_ptr<arrow::DataType> value_type_;
-    std::vector<std::string> trimmed_primary_keys_;
-    std::vector<std::string> user_defined_sequence_fields_;
-    std::shared_ptr<FieldsComparator> key_comparator_;
-    std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
-    std::shared_ptr<MemoryPool> pool_;
+    const std::shared_ptr<arrow::DataType> value_type_;
+    const std::vector<std::string> trimmed_primary_keys_;
+    const std::vector<std::string> user_defined_sequence_fields_;
+    const std::shared_ptr<FieldsComparator> key_comparator_;
+    const std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
+    const std::shared_ptr<MemoryPool> pool_;
 
     // Mutable buffer state
     std::vector<std::shared_ptr<arrow::StructArray>> batch_vec_;
