@@ -224,7 +224,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
                                                arrow::field("sub3", arrow::boolean())})),
         };
         auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
         [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], [20, 20.1, true]],
         [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]]

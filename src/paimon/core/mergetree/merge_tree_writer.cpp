@@ -71,8 +71,8 @@ MergeTreeWriter::MergeTreeWriter(
       metrics_(std::make_shared<MetricsImpl>()) {
     write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     write_buffer_ = std::make_unique<WriteBuffer>(
-        arrow::struct_(value_schema->fields()), trimmed_primary_keys_,
-        options_.GetSequenceField(), key_comparator_, merge_function_wrapper_, pool_);
+        arrow::struct_(value_schema->fields()), trimmed_primary_keys_, options_.GetSequenceField(),
+        key_comparator_, merge_function_wrapper_, pool_);
 }
 
 Status MergeTreeWriter::DoClose() {

@@ -224,7 +224,7 @@ TEST_P(PostponeBucketWriterTest, TestNestedType) {
         options, pool_);
 
     // write batch
-    auto array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto array1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Lucy", [null, [1, true], null], [[[1, true], true]]],
         ["Bob", [[2, false], null], null],
         ["David", [[2, false], [3, true], [4, null]], [[[1, true], true], [[5, false], null]]],

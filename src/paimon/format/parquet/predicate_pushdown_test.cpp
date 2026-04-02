@@ -68,7 +68,7 @@ class PredicatePushdownTest : public ::testing::Test {
             arrow::field("f4", arrow::int64()), arrow::field("f5", arrow::binary())};
 
         struct_array_ = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["apple", 4.0, 4, true, null, "add"],  ["banana", 4.0, 6, true, null, "bad"],
         ["camera", 4.0, 8, true, null, "cat"], ["data", null, 10, true, null, "dad"]
     ])")
@@ -587,7 +587,7 @@ TEST_F(PredicatePushdownTest, TestComplexType) {
     };
     auto read_schema = arrow::schema(fields);
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
         [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
         [10, 1, 0,     "2008-12-28 00:00:00.000123456", "12.30000"],
@@ -725,7 +725,7 @@ TEST_F(PredicatePushdownTest, TestAllNullOrAllSameValue) {
                                  arrow::field("f2", arrow::int32())};
     auto read_schema = arrow::schema(fields);
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null, 10],
         [null, 10],
         [null, 10]

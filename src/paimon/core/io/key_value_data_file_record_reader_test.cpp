@@ -317,7 +317,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestEmptyReader) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
     ])")
@@ -347,7 +347,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidSequenceNumerColumn) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         ["0", 0, 1, 1, 10, 20, 30]
@@ -376,7 +376,7 @@ TEST_F(KeyValueDataFileRecordReaderTest, TestInvalidValueKindColumn) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 100, 1, 1, 10, 20, 30]

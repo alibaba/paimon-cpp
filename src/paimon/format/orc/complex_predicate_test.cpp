@@ -124,7 +124,7 @@ TEST_F(ComplexPredicateTest, TestSimple) {
     };
     auto read_schema = arrow::schema(fields);
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678"],
         [10, 1, 19909, "2033-05-18 03:33:20.000001001", "12.30000"],
         [10, 1, 0,     "2008-12-28 00:00:00.000123456", null],

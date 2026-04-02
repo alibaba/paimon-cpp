@@ -2192,7 +2192,7 @@ TEST_F(WriteInteTest, TestPKTableWriteWithAlterTable) {
                          TestHelper::Create(table_path, options, /*is_streaming_mode=*/true));
 
     int64_t commit_identifier = 0;
-    auto data_type = arrow::struct_({fields});
+    auto data_type = arrow::struct_(fields);
     std::string data = R"([
         [0, 0, 0, 0, "apple", "see", 210, "new", 210]
     ])";
@@ -2483,7 +2483,7 @@ TEST_P(WriteInteTest, TestAppendTableWriteAndReadWithExternalPath) {
                          FileStoreWrite::Create(std::move(write_context)));
 
     std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, 0, 11.1],
         ["Bob", 10, 1, 12.1],
         ["Cathy", 10, 0, 13.1],
@@ -2585,7 +2585,7 @@ TEST_P(WriteInteTest, TestPKTableWriteAndReadWithExternalPath) {
                          FileStoreWrite::Create(std::move(write_context)));
 
     std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, 0, 11.1],
         ["Bob", 10, 1, 12.1],
         ["Cathy", 10, 0, 13.1],
@@ -2805,7 +2805,7 @@ TEST_P(WriteInteTest, TestWriteAndReadWithSpecialPartitionValue) {
     auto write = [&](const std::string& json_array,
                      const std::map<std::string, std::string>& partition) -> void {
         std::shared_ptr<arrow::Array> array =
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), json_array)
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), json_array)
                 .ValueOrDie();
         ::ArrowArray arrow_array;
         ASSERT_TRUE(arrow::ExportArray(*array, &arrow_array).ok());
@@ -2999,7 +2999,7 @@ TEST_P(WriteInteTest, TestWriteWithNestedSchema) {
                          FileStoreWrite::Create(std::move(write_context)));
 
     std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
             [[true, 2]],
             [null],
             [[false, 22]],
