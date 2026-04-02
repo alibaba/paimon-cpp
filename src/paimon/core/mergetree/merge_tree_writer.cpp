@@ -226,7 +226,7 @@ Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_
         }
         // 1. flush write buffer to get in-memory readers
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
-                               write_buffer_->Flush(last_sequence_number_));
+                               write_buffer_->Flush(&last_sequence_number_));
         // 2. prepare loser tree sort merge reader
         auto sort_merge_reader = std::make_unique<SortMergeReaderWithLoserTree>(
             std::move(readers), key_comparator_, user_defined_seq_comparator_,

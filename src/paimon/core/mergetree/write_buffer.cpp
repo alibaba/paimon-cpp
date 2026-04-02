@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ Status WriteBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
 }
 
 Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::Flush(
-    int64_t& last_sequence_number) {
+    int64_t* last_sequence_number) {
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
     if (batch_vec_.empty()) {
         return readers;
@@ -75,8 +75,8 @@ Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::Flush(
 
     readers.reserve(batch_vec_.size());
     for (size_t i = 0; i < batch_vec_.size(); ++i) {
-        int64_t sequence_number = last_sequence_number;
-        last_sequence_number += batch_vec_[i]->length();
+        int64_t sequence_number = *last_sequence_number;
+        *last_sequence_number += batch_vec_[i]->length();
         auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
             sequence_number, std::move(batch_vec_[i]), std::move(row_kinds_vec_[i]),
             trimmed_primary_keys_, user_defined_sequence_fields_, key_comparator_,

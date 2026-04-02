@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,7 +100,7 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ASSERT_GT(write_buffer.GetMemoryUsage(), 0);
 
     int64_t last_sequence_number = 10;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(&last_sequence_number));
 
     ASSERT_EQ(readers.size(), 2);
     ASSERT_TRUE(write_buffer.IsEmpty());
@@ -150,7 +150,7 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
     ASSERT_OK(write_buffer.Write(CreateBatch(array, row_kinds)));
 
     int64_t last_sequence_number = 0;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(&last_sequence_number));
     ASSERT_EQ(readers.size(), 1);
     ASSERT_EQ(last_sequence_number, 4);
 

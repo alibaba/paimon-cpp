@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ class WriteBuffer {
     /// Flush all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
     /// @param[in,out] last_sequence_number current sequence number, updated after flush
     /// @return list of KeyValueRecordReaders built from buffered data
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> Flush(int64_t& last_sequence_number);
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> Flush(int64_t* last_sequence_number);
 
     /// Return current memory usage in bytes.
     int64_t GetMemoryUsage() const {
