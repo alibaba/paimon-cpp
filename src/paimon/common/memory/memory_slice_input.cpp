@@ -51,7 +51,7 @@ int8_t MemorySliceInput::ReadUnsignedByte() {
 }
 
 int32_t MemorySliceInput::ReadInt() {
-    int v = slice_.ReadInt(position_);
+    int32_t v = slice_.ReadInt(position_);
     position_ += 4;
     if (NeedSwap()) {
         return EndianSwapValue(v);

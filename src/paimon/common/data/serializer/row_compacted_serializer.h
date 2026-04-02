@@ -170,8 +170,8 @@ class RowCompactedSerializer {
     };
 
     /// Read and compare a single field from two RowReaders.
-    static Result<int32_t> CompareField(RowReader* reader1, RowReader* reader2,
-                                        const FieldInfo& field_info);
+    static Result<int32_t> CompareField(const FieldInfo& field_info, RowReader* reader1,
+                                        RowReader* reader2);
 
     using FieldWriter = std::function<Status(int32_t, const VariantType&, RowWriter*)>;
     using FieldReader = std::function<Result<VariantType>(int32_t, RowReader*)>;

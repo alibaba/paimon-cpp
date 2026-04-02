@@ -42,8 +42,8 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
         schema, std::move(getters), std::move(writers), std::move(readers), pool));
 }
 
-Result<int32_t> RowCompactedSerializer::CompareField(RowReader* reader1, RowReader* reader2,
-                                                     const FieldInfo& field_info) {
+Result<int32_t> RowCompactedSerializer::CompareField(const FieldInfo& field_info,
+                                                     RowReader* reader1, RowReader* reader2) {
     auto type = field_info.type_id;
     switch (type) {
         case arrow::Type::type::BOOL: {
@@ -122,10 +122,11 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
         if (field_type->id() == arrow::Type::type::TIMESTAMP) {
             auto timestamp_type =
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(field_type);
+            assert(timestamp_type);
             field_infos[i].precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
         } else if (field_type->id() == arrow::Type::type::DECIMAL) {
-            auto* decimal_type =
-                arrow::internal::checked_cast<arrow::Decimal128Type*>(field_type.get());
+            auto decimal_type =
+                arrow::internal::checked_pointer_cast<arrow::Decimal128Type>(field_type);
             assert(decimal_type);
             field_infos[i].precision = decimal_type->precision();
             field_infos[i].scale = decimal_type->scale();
@@ -147,7 +148,7 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
                 } else {
                     PAIMON_ASSIGN_OR_RAISE(
                         int32_t comp,
-                        CompareField(row_reader1.get(), row_reader2.get(), field_infos[i]));
+                        CompareField(field_infos[i], row_reader1.get(), row_reader2.get()));
                     if (comp != 0) {
                         return comp;
                     }
