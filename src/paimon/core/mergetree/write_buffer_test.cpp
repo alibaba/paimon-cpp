@@ -39,6 +39,11 @@ class MergeFunctionWrapper;
 }  // namespace paimon
 
 namespace paimon::test {
+struct ReaderResult {
+    std::vector<int64_t> sequence_numbers;
+    std::vector<int8_t> row_kind_values;
+};
+
 class WriteBufferTest : public ::testing::Test {
  public:
     void SetUp() override {
@@ -67,6 +72,18 @@ class WriteBufferTest : public ::testing::Test {
         batch_builder.SetRowKinds(row_kinds);
         EXPECT_OK_AND_ASSIGN(std::unique_ptr<RecordBatch> batch, batch_builder.Finish());
         return batch;
+    }
+
+    Result<ReaderResult> ReadReaderResult(KeyValueRecordReader* reader) const {
+        PAIMON_ASSIGN_OR_RAISE(auto iterator, reader->NextBatch());
+
+        ReaderResult result;
+        while (iterator->HasNext()) {
+            PAIMON_ASSIGN_OR_RAISE(KeyValue key_value, iterator->Next());
+            result.sequence_numbers.push_back(key_value.sequence_number);
+            result.row_kind_values.push_back(key_value.value_kind->ToByteValue());
+        }
+        return result;
     }
 
  protected:
@@ -100,32 +117,23 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ASSERT_GT(write_buffer.GetMemoryUsage(), 0);
 
     int64_t last_sequence_number = 10;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
 
     ASSERT_EQ(readers.size(), 2);
     ASSERT_TRUE(write_buffer.IsEmpty());
     ASSERT_EQ(write_buffer.GetMemoryUsage(), 0);
     ASSERT_EQ(last_sequence_number, 13);
 
-    ASSERT_OK_AND_ASSIGN(auto first_iterator, readers[0]->NextBatch());
-    ASSERT_TRUE(first_iterator);
-    ASSERT_TRUE(first_iterator->HasNext());
-    ASSERT_OK_AND_ASSIGN(KeyValue first, first_iterator->Next());
-    ASSERT_EQ(first.sequence_number, 10);
-    ASSERT_EQ(first.value_kind->ToByteValue(), RowKind::Insert()->ToByteValue());
-    ASSERT_TRUE(first_iterator->HasNext());
-    ASSERT_OK_AND_ASSIGN(KeyValue second, first_iterator->Next());
-    ASSERT_EQ(second.sequence_number, 11);
-    ASSERT_EQ(second.value_kind->ToByteValue(), RowKind::Insert()->ToByteValue());
-    ASSERT_FALSE(first_iterator->HasNext());
+    ASSERT_OK_AND_ASSIGN(auto first_result, ReadReaderResult(readers[0].get()));
+    ASSERT_EQ(first_result.sequence_numbers, (std::vector<int64_t>{10, 11}));
+    ASSERT_EQ(
+        first_result.row_kind_values,
+        (std::vector<int8_t>{RowKind::Insert()->ToByteValue(), RowKind::Insert()->ToByteValue()}));
 
-    ASSERT_OK_AND_ASSIGN(auto second_iterator, readers[1]->NextBatch());
-    ASSERT_TRUE(second_iterator);
-    ASSERT_TRUE(second_iterator->HasNext());
-    ASSERT_OK_AND_ASSIGN(KeyValue third, second_iterator->Next());
-    ASSERT_EQ(third.sequence_number, 12);
-    ASSERT_EQ(third.value_kind->ToByteValue(), RowKind::Insert()->ToByteValue());
-    ASSERT_FALSE(second_iterator->HasNext());
+    ASSERT_OK_AND_ASSIGN(auto second_result, ReadReaderResult(readers[1].get()));
+    ASSERT_EQ(second_result.sequence_numbers, (std::vector<int64_t>{12}));
+    ASSERT_EQ(second_result.row_kind_values,
+              (std::vector<int8_t>{RowKind::Insert()->ToByteValue()}));
 }
 
 TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
@@ -150,26 +158,17 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
     ASSERT_OK(write_buffer.Write(CreateBatch(array, row_kinds)));
 
     int64_t last_sequence_number = 0;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.Flush(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
     ASSERT_EQ(readers.size(), 1);
     ASSERT_EQ(last_sequence_number, 4);
 
-    ASSERT_OK_AND_ASSIGN(auto iterator, readers[0]->NextBatch());
-    ASSERT_TRUE(iterator);
+    ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
 
-    std::vector<int8_t> actual_row_kind_values;
-    std::vector<int64_t> actual_sequence_numbers;
-    while (iterator->HasNext()) {
-        ASSERT_OK_AND_ASSIGN(KeyValue key_value, iterator->Next());
-        actual_row_kind_values.push_back(key_value.value_kind->ToByteValue());
-        actual_sequence_numbers.push_back(key_value.sequence_number);
-    }
-
-    ASSERT_EQ(actual_row_kind_values,
+    ASSERT_EQ(reader_result.row_kind_values,
               (std::vector<int8_t>{
                   RowKind::Insert()->ToByteValue(), RowKind::UpdateBefore()->ToByteValue(),
                   RowKind::UpdateAfter()->ToByteValue(), RowKind::Delete()->ToByteValue()}));
-    ASSERT_EQ(actual_sequence_numbers, (std::vector<int64_t>{0, 1, 2, 3}));
+    ASSERT_EQ(reader_result.sequence_numbers, (std::vector<int64_t>{0, 1, 2, 3}));
 }
 
 TEST_F(WriteBufferTest, TestEstimateMemoryUse) {

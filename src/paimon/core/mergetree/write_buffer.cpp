@@ -39,12 +39,12 @@ WriteBuffer::WriteBuffer(
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const std::shared_ptr<MemoryPool>& pool)
-    : value_type_(value_type),
+    : pool_(pool),
+      value_type_(value_type),
       trimmed_primary_keys_(trimmed_primary_keys),
       user_defined_sequence_fields_(user_defined_sequence_fields),
       key_comparator_(key_comparator),
-      merge_function_wrapper_(merge_function_wrapper),
-      pool_(pool) {}
+      merge_function_wrapper_(merge_function_wrapper) {}
 
 Status WriteBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     if (ArrowArrayIsReleased(moved_batch->GetData())) {
@@ -66,7 +66,7 @@ Status WriteBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     return Status::OK();
 }
 
-Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::Flush(
+Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::DrainToReaders(
     int64_t* last_sequence_number) {
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
     if (batch_vec_.empty()) {
@@ -84,10 +84,7 @@ Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::Flush(
         readers.push_back(std::move(in_memory_reader));
     }
 
-    batch_vec_.clear();
-    row_kinds_vec_.clear();
-    current_memory_in_bytes_ = 0;
-
+    Clear();
     return readers;
 }
 
@@ -97,6 +94,8 @@ void WriteBuffer::Clear() {
     current_memory_in_bytes_ = 0;
 }
 
+// TODO(jinli.zjw): Consider making the memory estimation more accurate.
+// https://github.com/alibaba/paimon-cpp/pull/206#discussion_r3021325389
 Result<int64_t> WriteBuffer::EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array) {
     arrow::Type::type type = array->type()->id();
     int64_t null_bits_size_in_bytes = (array->length() + 7) / 8;

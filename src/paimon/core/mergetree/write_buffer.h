@@ -57,10 +57,11 @@ class WriteBuffer {
     /// Does NOT check memory thresholds or trigger flush.
     Status Write(std::unique_ptr<RecordBatch>&& batch);
 
-    /// Flush all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
-    /// @param[in,out] last_sequence_number current sequence number, updated after flush
+    /// Drain all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
+    /// @param[in,out] last_sequence_number current sequence number, updated after draining
     /// @return list of KeyValueRecordReaders built from buffered data
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> Flush(int64_t* last_sequence_number);
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> DrainToReaders(
+        int64_t* last_sequence_number);
 
     /// Return current memory usage in bytes.
     int64_t GetMemoryUsage() const {
@@ -80,12 +81,12 @@ class WriteBuffer {
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
 
     // Immutable configuration
+    const std::shared_ptr<MemoryPool> pool_;
     const std::shared_ptr<arrow::DataType> value_type_;
     const std::vector<std::string> trimmed_primary_keys_;
     const std::vector<std::string> user_defined_sequence_fields_;
     const std::shared_ptr<FieldsComparator> key_comparator_;
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
-    const std::shared_ptr<MemoryPool> pool_;
 
     // Mutable buffer state
     std::vector<std::shared_ptr<arrow::StructArray>> batch_vec_;
