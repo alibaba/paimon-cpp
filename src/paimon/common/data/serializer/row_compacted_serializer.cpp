@@ -47,39 +47,39 @@ Result<int32_t> RowCompactedSerializer::CompareField(RowReader* reader1, RowRead
     auto type = field_info.type_id;
     switch (type) {
         case arrow::Type::type::BOOL: {
-            bool val1 = reader1->ReadValue<bool>();
-            bool val2 = reader2->ReadValue<bool>();
+            auto val1 = reader1->ReadValue<bool>();
+            auto val2 = reader2->ReadValue<bool>();
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
         case arrow::Type::type::INT8: {
-            char val1 = reader1->ReadValue<char>();
-            char val2 = reader2->ReadValue<char>();
+            auto val1 = reader1->ReadValue<char>();
+            auto val2 = reader2->ReadValue<char>();
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
         case arrow::Type::type::INT16: {
-            int16_t val1 = reader1->ReadValue<int16_t>();
-            int16_t val2 = reader2->ReadValue<int16_t>();
+            auto val1 = reader1->ReadValue<int16_t>();
+            auto val2 = reader2->ReadValue<int16_t>();
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
         case arrow::Type::type::INT32:
         case arrow::Type::type::DATE32: {
-            int32_t val1 = reader1->ReadValue<int32_t>();
-            int32_t val2 = reader2->ReadValue<int32_t>();
+            auto val1 = reader1->ReadValue<int32_t>();
+            auto val2 = reader2->ReadValue<int32_t>();
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
         case arrow::Type::type::INT64: {
-            int64_t val1 = reader1->ReadValue<int64_t>();
-            int64_t val2 = reader2->ReadValue<int64_t>();
+            auto val1 = reader1->ReadValue<int64_t>();
+            auto val2 = reader2->ReadValue<int64_t>();
             return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
         }
         case arrow::Type::type::FLOAT: {
-            float val1 = reader1->ReadValue<float>();
-            float val2 = reader2->ReadValue<float>();
+            auto val1 = reader1->ReadValue<float>();
+            auto val2 = reader2->ReadValue<float>();
             return FieldsComparator::CompareFloatingPoint(val1, val2);
         }
         case arrow::Type::type::DOUBLE: {
-            double val1 = reader1->ReadValue<double>();
-            double val2 = reader2->ReadValue<double>();
+            auto val1 = reader1->ReadValue<double>();
+            auto val2 = reader2->ReadValue<double>();
             return FieldsComparator::CompareFloatingPoint(val1, val2);
         }
         case arrow::Type::type::STRING:
