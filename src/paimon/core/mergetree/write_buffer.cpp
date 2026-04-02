@@ -21,7 +21,6 @@
 
 #include "arrow/array/array_binary.h"
 #include "arrow/array/array_nested.h"
-#include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "arrow/util/checked_cast.h"
@@ -156,7 +155,6 @@ Result<int64_t> WriteBuffer::EstimateMemoryUse(const std::shared_ptr<arrow::Arra
             return null_bits_size_in_bytes + struct_mem;
         }
         default:
-            assert(false);
             return Status::Invalid(fmt::format("Do not support type {} in EstimateMemoryUse",
                                                array->type()->ToString()));
     }
