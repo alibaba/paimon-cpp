@@ -19,51 +19,62 @@
 #include "paimon/common/sst/block_reader.h"
 
 namespace paimon {
-BlockIterator::BlockIterator(const std::shared_ptr<BlockReader>& reader) : reader_(reader) {
-    input_ = reader->BlockInput();
-}
+BlockIterator::BlockIterator(const std::shared_ptr<BlockReader>& reader)
+    : input_(reader->BlockInput()), reader_(reader) {}
 
 bool BlockIterator::HasNext() const {
-    return polled_.get() || input_->IsReadable();
+    return polled_position_ >= 0 || input_.IsReadable();
 }
 
 Result<std::unique_ptr<BlockEntry>> BlockIterator::Next() {
     if (!HasNext()) {
         return Status::Invalid("no such element");
     }
-    if (polled_.get()) {
-        return std::move(polled_);
+    if (polled_position_ >= 0) {
+        PAIMON_RETURN_NOT_OK(input_.SetPosition(polled_position_));
+        polled_position_ = -1;
+        return ReadEntry();
     }
     return ReadEntry();
 }
 
 Result<std::unique_ptr<BlockEntry>> BlockIterator::ReadEntry() {
-    PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_->ReadVarLenInt());
-    auto key = input_->ReadSlice(key_length);
-    PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_->ReadVarLenInt());
-    auto value = input_->ReadSlice(value_length);
+    PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
+    auto key = input_.ReadSlice(key_length);
+    PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
+    auto value = input_.ReadSlice(value_length);
     return std::make_unique<BlockEntry>(key, value);
 }
 
-Result<bool> BlockIterator::SeekTo(const std::shared_ptr<MemorySlice>& target_key) {
+Result<MemorySlice> BlockIterator::ReadKeyAndSkipValue() {
+    PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
+    auto key = input_.ReadSlice(key_length);
+    PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
+    PAIMON_RETURN_NOT_OK(input_.SetPosition(input_.Position() + value_length));
+    return key;
+}
+
+Result<bool> BlockIterator::SeekTo(const MemorySlice& target_key) {
     int32_t left = 0;
     int32_t right = reader_->RecordCount() - 1;
+    polled_position_ = -1;
 
     while (left <= right) {
         int32_t mid = left + (right - left) / 2;
 
-        PAIMON_RETURN_NOT_OK(input_->SetPosition(reader_->SeekTo(mid)));
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> mid_entry, ReadEntry());
-        PAIMON_ASSIGN_OR_RAISE(int32_t compare, reader_->Comparator()(mid_entry->key, target_key));
+        int32_t entry_position = reader_->SeekTo(mid);
+        PAIMON_RETURN_NOT_OK(input_.SetPosition(entry_position));
+        PAIMON_ASSIGN_OR_RAISE(MemorySlice mid_key, ReadKeyAndSkipValue());
+        PAIMON_ASSIGN_OR_RAISE(int32_t compare, reader_->Comparator()(mid_key, target_key));
 
         if (compare == 0) {
-            polled_ = std::move(mid_entry);
+            polled_position_ = entry_position;
             return true;
         } else if (compare > 0) {
-            polled_ = std::move(mid_entry);
+            polled_position_ = entry_position;
             right = mid - 1;
         } else {
-            polled_.reset();
+            polled_position_ = -1;
             left = mid + 1;
         }
     }

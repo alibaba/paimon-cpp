@@ -49,20 +49,20 @@ class SstFileWriter {
 
     Status Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value);
 
-    Status Write(std::shared_ptr<MemorySlice>& slice);
+    Status Write(const MemorySlice& slice);
 
     Status Flush();
 
-    Result<std::shared_ptr<BlockHandle>> WriteIndexBlock();
+    Result<BlockHandle> WriteIndexBlock();
 
     // When bloom-filter is disabled, return nullptr.
     Result<std::shared_ptr<BloomFilterHandle>> WriteBloomFilter();
 
-    Status WriteFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
+    Status WriteFooter(const BlockHandle& index_block_handle,
                        const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle);
 
  private:
-    Result<std::shared_ptr<BlockHandle>> FlushBlockWriter(std::unique_ptr<BlockWriter>& writer);
+    Result<BlockHandle> FlushBlockWriter(BlockWriter* writer);
 
     Status WriteBytes(const char* data, size_t size);
 

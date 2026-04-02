@@ -33,6 +33,7 @@ class CacheKey {
     virtual ~CacheKey() = default;
 
     virtual bool IsIndex() const = 0;
+    virtual size_t HashCode() const = 0;
 };
 
 class PositionCacheKey : public CacheKey {
@@ -41,12 +42,11 @@ class PositionCacheKey : public CacheKey {
         : file_path_(file_path), position_(position), length_(length), is_index_(is_index) {}
 
     bool IsIndex() const override;
-
+    size_t HashCode() const override;
     int64_t Position() const;
     int32_t Length() const;
 
     bool operator==(const PositionCacheKey& other) const;
-    size_t HashCode() const;
 
  private:
     static constexpr uint64_t HASH_CONSTANT = 0x9e3779b97f4a7c15ULL;
@@ -60,9 +60,23 @@ class PositionCacheKey : public CacheKey {
 
 namespace std {
 template <>
-struct hash<paimon::PositionCacheKey> {
-    size_t operator()(const paimon::PositionCacheKey& key) const {
-        return key.HashCode();
+struct hash<std::shared_ptr<paimon::CacheKey>> {
+    size_t operator()(const std::shared_ptr<paimon::CacheKey>& key) const {
+        return key ? key->HashCode() : 0;
+    }
+};
+
+template <>
+struct equal_to<std::shared_ptr<paimon::CacheKey>> {
+    bool operator()(const std::shared_ptr<paimon::CacheKey>& lhs,
+                    const std::shared_ptr<paimon::CacheKey>& rhs) const {
+        if (lhs == rhs) {
+            return true;
+        }
+        if (!lhs || !rhs) {
+            return false;
+        }
+        return lhs->HashCode() == rhs->HashCode();
     }
 };
 }  // namespace std

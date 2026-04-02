@@ -31,34 +31,31 @@ class MemoryPool;
 class MemorySliceInput;
 
 ///  Slice of a MemorySegment.
-class PAIMON_EXPORT MemorySlice : public std::enable_shared_from_this<MemorySlice> {
+class PAIMON_EXPORT MemorySlice {
  public:
-    static std::shared_ptr<MemorySlice> Wrap(const std::shared_ptr<Bytes>& bytes);
-    static std::shared_ptr<MemorySlice> Wrap(const MemorySegment& segment);
+    static MemorySlice Wrap(const std::shared_ptr<Bytes>& bytes);
+    static MemorySlice Wrap(const MemorySegment& segment);
 
-    using SliceComparator = std::function<Result<int32_t>(const std::shared_ptr<MemorySlice>&,
-                                                          const std::shared_ptr<MemorySlice>&)>;
+    using SliceComparator = std::function<Result<int32_t>(const MemorySlice&, const MemorySlice&)>;
 
  public:
-    MemorySlice() = default;
-
     MemorySlice(const MemorySegment& segment, int32_t offset, int32_t length);
-    std::shared_ptr<MemorySlice> Slice(int32_t index, int32_t length);
+    MemorySlice Slice(int32_t index, int32_t length) const;
 
     int32_t Length() const;
     int32_t Offset() const;
     std::shared_ptr<Bytes> GetHeapMemory() const;
     const MemorySegment& GetSegment() const;
 
-    int8_t ReadByte(int32_t position);
-    int32_t ReadInt(int32_t position);
-    int16_t ReadShort(int32_t position);
-    int64_t ReadLong(int32_t position);
-    std::string_view ReadStringView();
+    int8_t ReadByte(int32_t position) const;
+    int32_t ReadInt(int32_t position) const;
+    int16_t ReadShort(int32_t position) const;
+    int64_t ReadLong(int32_t position) const;
+    std::string_view ReadStringView() const;
 
-    std::shared_ptr<Bytes> CopyBytes(MemoryPool* pool);
+    std::shared_ptr<Bytes> CopyBytes(MemoryPool* pool) const;
 
-    std::shared_ptr<MemorySliceInput> ToInput();
+    MemorySliceInput ToInput() const;
 
  private:
     MemorySegment segment_;

@@ -34,33 +34,33 @@ class BlockReader : public std::enable_shared_from_this<BlockReader> {
  public:
     virtual ~BlockReader() = default;
 
-    static Result<std::shared_ptr<BlockReader>> Create(const std::shared_ptr<MemorySlice>& block,
+    static Result<std::shared_ptr<BlockReader>> Create(const MemorySlice& block,
                                                        MemorySlice::SliceComparator comparator);
 
     virtual int32_t SeekTo(int32_t record_position) = 0;
 
     int32_t RecordCount() const;
-    MemorySlice::SliceComparator Comparator() const;
+    const MemorySlice::SliceComparator& Comparator() const;
 
     std::unique_ptr<BlockIterator> Iterator();
-    std::shared_ptr<MemorySliceInput> BlockInput();
+    MemorySliceInput BlockInput();
 
  protected:
-    BlockReader(const std::shared_ptr<MemorySlice>& block, int32_t record_count,
+    BlockReader(const MemorySlice& block, int32_t record_count,
                 MemorySlice::SliceComparator comparator)
         : block_(block), comparator_(std::move(comparator)), record_count_(record_count) {}
 
  private:
-    std::shared_ptr<MemorySlice> block_;
+    MemorySlice block_;
     MemorySlice::SliceComparator comparator_;
     int32_t record_count_;
 };
 
 class AlignedBlockReader : public BlockReader {
  public:
-    AlignedBlockReader(const std::shared_ptr<MemorySlice>& block, int32_t record_size,
+    AlignedBlockReader(const MemorySlice& block, int32_t record_size,
                        MemorySlice::SliceComparator comparator)
-        : BlockReader(block, block->Length() / record_size, std::move(comparator)),
+        : BlockReader(block, block.Length() / record_size, std::move(comparator)),
           record_size_(record_size) {}
 
     int32_t SeekTo(int32_t record_position) override {
@@ -73,17 +73,16 @@ class AlignedBlockReader : public BlockReader {
 
 class UnAlignedBlockReader : public BlockReader {
  public:
-    UnAlignedBlockReader(const std::shared_ptr<MemorySlice>& data,
-                         const std::shared_ptr<MemorySlice>& index,
+    UnAlignedBlockReader(const MemorySlice& data, const MemorySlice& index,
                          MemorySlice::SliceComparator comparator)
-        : BlockReader(data, index->Length() / 4, std::move(comparator)), index_(index) {}
+        : BlockReader(data, index.Length() / 4, std::move(comparator)), index_(index) {}
 
     int32_t SeekTo(int32_t record_position) override {
-        return index_->ReadInt(record_position * 4);
+        return index_.ReadInt(record_position * 4);
     }
 
  private:
-    std::shared_ptr<MemorySlice> index_;
+    MemorySlice index_;
 };
 
 }  // namespace paimon

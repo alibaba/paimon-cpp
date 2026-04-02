@@ -45,7 +45,7 @@ void BlockWriter::Reset() {
     aligned_ = true;
 }
 
-Result<std::unique_ptr<paimon::MemorySlice>> BlockWriter::Finish() {
+Result<MemorySlice> BlockWriter::Finish() {
     if (positions_.size() == 0) {
         // Do not use alignment mode, as it is impossible to calculate how many records are
         // inside when reading

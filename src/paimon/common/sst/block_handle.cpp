@@ -20,11 +20,10 @@
 
 namespace paimon {
 
-Result<std::shared_ptr<BlockHandle>> BlockHandle::ReadBlockHandle(
-    const std::shared_ptr<MemorySliceInput>& input) {
+Result<BlockHandle> BlockHandle::ReadBlockHandle(MemorySliceInput* input) {
     PAIMON_ASSIGN_OR_RAISE(int64_t offset, input->ReadVarLenLong());
     PAIMON_ASSIGN_OR_RAISE(int32_t size, input->ReadVarLenInt());
-    return std::make_shared<BlockHandle>(offset, size);
+    return BlockHandle(offset, size);
 }
 
 BlockHandle::BlockHandle(int64_t offset, int32_t size) : offset_(offset), size_(size) {}
@@ -46,10 +45,10 @@ std::string BlockHandle::ToString() const {
            "}";
 }
 
-std::shared_ptr<MemorySlice> BlockHandle::WriteBlockHandle(MemoryPool* pool) {
-    auto output = std::make_shared<MemorySliceOutput>(MAX_ENCODED_LENGTH, pool);
-    output->WriteVarLenLong(offset_);
-    output->WriteVarLenInt(size_);
-    return output->ToSlice();
+MemorySlice BlockHandle::WriteBlockHandle(MemoryPool* pool) {
+    MemorySliceOutput output(MAX_ENCODED_LENGTH, pool);
+    output.WriteVarLenLong(offset_);
+    output.WriteVarLenInt(size_);
+    return output.ToSlice();
 }
 }  // namespace paimon

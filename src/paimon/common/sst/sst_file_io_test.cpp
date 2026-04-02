@@ -55,10 +55,9 @@ class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
         dir_ = paimon::test::UniqueTestDirectory::Create();
         fs_ = dir_->GetFileSystem();
         pool_ = GetDefaultPool();
-        comparator_ = [](const std::shared_ptr<MemorySlice>& a,
-                         const std::shared_ptr<MemorySlice>& b) -> Result<int32_t> {
-            std::string_view va = a->ReadStringView();
-            std::string_view vb = b->ReadStringView();
+        comparator_ = [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+            std::string_view va = a.ReadStringView();
+            std::string_view vb = b.ReadStringView();
             if (va == vb) {
                 return 0;
             }

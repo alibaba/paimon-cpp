@@ -44,7 +44,6 @@
 #include "paimon/logging.h"
 #include "paimon/read_context.h"
 #include "paimon/result.h"
-
 namespace arrow {
 class Schema;
 }  // namespace arrow
@@ -251,7 +250,12 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyFileStoreWrite::CreateFilesReader
     const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
     const std::vector<std::shared_ptr<DataFileMeta>>& files) const {
     ReadContextBuilder context_builder(root_path_);
-    context_builder.EnablePrefetch(true).SetPrefetchMaxParallelNum(1);
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
+    context_builder.EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
     std::map<std::string, std::string> map = options_.ToMap();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_read_context,

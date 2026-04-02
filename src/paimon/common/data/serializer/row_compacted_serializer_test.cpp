@@ -75,7 +75,7 @@ TEST(RowCompactedSerializerTest, TestSimple) {
         ASSERT_EQ(de_row->GetLong(4), 4294967295l);
         ASSERT_EQ(de_row->GetFloat(5), 0.5);
         ASSERT_EQ(de_row->GetDouble(6), 1.141);
-        ASSERT_EQ(de_row->GetString(7), BinaryString::FromString("20250327", pool.get()));
+        ASSERT_EQ(de_row->GetStringView(7), "20250327");
         auto f9_bytes = std::make_shared<Bytes>("banana", pool.get());
         ASSERT_EQ(*de_row->GetBinary(8), *f9_bytes);
         ASSERT_EQ(de_row->GetDate(9), 2026);
@@ -450,7 +450,7 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal2) {
         ASSERT_EQ(row->GetFieldCount(), 2);
         auto inner_row = row->GetRow(0, 3);
         ASSERT_EQ(inner_row->GetFieldCount(), 3);
-        ASSERT_EQ(row->GetString(1).ToString(), "Alice");
+        ASSERT_EQ(row->GetStringView(1), "Alice");
 
         // test compatibility
         std::vector<uint8_t> java_bytes = {
@@ -485,7 +485,7 @@ TEST(RowCompactedSerializerTest, TestNestedNullWithTimestampAndDecimal2) {
         ASSERT_EQ(row->GetFieldCount(), 2);
         auto inner_row = row->GetRow(0, 3);
         ASSERT_EQ(inner_row->GetFieldCount(), 3);
-        ASSERT_EQ(row->GetString(1).ToString(), "Bob");
+        ASSERT_EQ(row->GetStringView(1), "Bob");
 
         // test compatibility
         std::vector<uint8_t> java_bytes = {
