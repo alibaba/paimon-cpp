@@ -35,7 +35,7 @@ void NoCache::InvalidateAll() {
     // do nothing
 }
 
-std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> NoCache::AsMap() {
+CacheKeyMap NoCache::AsMap() {
     return {};
 }
 

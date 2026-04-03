@@ -17,6 +17,7 @@
 #pragma once
 #include <functional>
 
+#include "arrow/api.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_writer.h"
 #include "paimon/common/memory/memory_segment.h"
@@ -24,6 +25,7 @@
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/utils/var_length_int_utils.h"
 namespace paimon {
+
 class RowCompactedSerializer {
  public:
     static Result<std::unique_ptr<RowCompactedSerializer>> Create(
@@ -41,6 +43,12 @@ class RowCompactedSerializer {
         const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool);
 
  private:
+    struct FieldInfo {
+        arrow::Type::type type_id;
+        int32_t precision = -1;
+        int32_t scale = -1;
+    };
+
     class RowWriter {
      public:
         RowWriter(int32_t header_size_in_bytes, const std::shared_ptr<MemoryPool>& pool);
@@ -134,7 +142,7 @@ class RowCompactedSerializer {
             return value;
         }
 
-        Result<BinaryString> ReadString();
+        Result<std::string_view> ReadStringView();
 
         Result<std::shared_ptr<Bytes>> ReadBinary();
 
@@ -161,6 +169,10 @@ class RowCompactedSerializer {
         int32_t position_ = 0;
     };
 
+    /// Read and compare a single field from two RowReaders.
+    static Result<int32_t> CompareField(const FieldInfo& field_info, RowReader* reader1,
+                                        RowReader* reader2);
+
     using FieldWriter = std::function<Status(int32_t, const VariantType&, RowWriter*)>;
     using FieldReader = std::function<Result<VariantType>(int32_t, RowReader*)>;
 
@@ -184,4 +196,5 @@ class RowCompactedSerializer {
     std::unique_ptr<RowWriter> row_writer_;
     std::unique_ptr<RowReader> row_reader_;
 };
+
 }  // namespace paimon

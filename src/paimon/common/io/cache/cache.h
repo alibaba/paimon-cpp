@@ -42,7 +42,7 @@ class Cache {
 
     virtual void InvalidateAll() = 0;
 
-    virtual std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() = 0;
+    virtual CacheKeyMap AsMap() = 0;
 };
 
 class NoCache : public Cache {
@@ -55,7 +55,7 @@ class NoCache : public Cache {
              const std::shared_ptr<CacheValue>& value) override;
     void Invalidate(const std::shared_ptr<CacheKey>& key) override;
     void InvalidateAll() override;
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() override;
+    CacheKeyMap AsMap() override;
 };
 
 class CacheValue {

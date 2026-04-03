@@ -257,7 +257,14 @@ Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperti
     const std::map<std::string, std::string>& options) {
     ::parquet::ReaderProperties reader_properties;
     // TODO(jinli.zjw): set more ReaderProperties (compare with java)
-    reader_properties.enable_buffered_stream();
+    PAIMON_ASSIGN_OR_RAISE(
+        bool enable_pre_buffer,
+        OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_ENABLE_PRE_BUFFER, true));
+    if (enable_pre_buffer) {
+        reader_properties.enable_buffered_stream();
+    } else {
+        reader_properties.disable_buffered_stream();
+    }
     return reader_properties;
 }
 
@@ -270,7 +277,10 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
 
     ::parquet::ArrowReaderProperties arrow_reader_props;
     // TODO(jinli.zjw): set more ArrowReaderProperties (compare with java)
-    arrow_reader_props.set_pre_buffer(true);
+    PAIMON_ASSIGN_OR_RAISE(
+        bool enable_pre_buffer,
+        OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_ENABLE_PRE_BUFFER, true));
+    arrow_reader_props.set_pre_buffer(enable_pre_buffer);
     arrow_reader_props.set_batch_size(static_cast<int64_t>(batch_size));
     arrow_reader_props.set_use_threads(use_threads);
     PAIMON_ASSIGN_OR_RAISE(bool cache_lazy, OptionsUtils::GetValueFromMap<bool>(

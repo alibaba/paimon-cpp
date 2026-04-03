@@ -35,10 +35,13 @@ int32_t PositionCacheKey::Length() const {
     return length_;
 }
 
-bool PositionCacheKey::operator==(const PositionCacheKey& other) const {
-    return file_path_ == other.file_path_ && position_ == other.position_ &&
-
-           length_ == other.length_ && is_index_ == other.is_index_;
+bool PositionCacheKey::Equals(const CacheKey& other) const {
+    const auto* rhs = dynamic_cast<const PositionCacheKey*>(&other);
+    if (!rhs) {
+        return false;
+    }
+    return file_path_ == rhs->file_path_ && position_ == rhs->position_ &&
+           length_ == rhs->length_ && is_index_ == rhs->is_index_;
 }
 
 size_t PositionCacheKey::HashCode() const {

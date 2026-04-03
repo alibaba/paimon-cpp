@@ -104,7 +104,11 @@ class GenericRow : public InternalRow {
     }
 
     void AddDataHolder(std::unique_ptr<InternalRow>&& holder) {
-        holders_.push_back(std::move(holder));
+        row_holder_.push_back(std::move(holder));
+    }
+
+    void AddDataHolder(const std::shared_ptr<Bytes>& bytes) {
+        bytes_holder_ = bytes;
     }
 
     bool GetBoolean(int32_t pos) const override {
@@ -218,8 +222,9 @@ class GenericRow : public InternalRow {
     /// The array to store the actual internal format values.
     std::vector<VariantType> fields_;
     /// As GenericRow only holds string view for string data to avoid deep copy, original data must
-    /// be held in holders_
-    std::vector<std::unique_ptr<InternalRow>> holders_;
+    /// be held in row holders_ or bytes holder
+    std::vector<std::unique_ptr<InternalRow>> row_holder_;
+    std::shared_ptr<Bytes> bytes_holder_;
     /// The kind of change that a row describes in a changelog.
     const RowKind* kind_;
 };

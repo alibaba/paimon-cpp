@@ -24,10 +24,9 @@
 namespace paimon {
 
 struct BlockEntry {
-    BlockEntry(const std::shared_ptr<MemorySlice>& _key, const std::shared_ptr<MemorySlice>& _value)
-        : key(_key), value(_value) {}
+    BlockEntry(const MemorySlice& _key, const MemorySlice& _value) : key(_key), value(_value) {}
 
-    std::shared_ptr<MemorySlice> key;
-    std::shared_ptr<MemorySlice> value;
+    MemorySlice key;
+    MemorySlice value;
 };
 }  // namespace paimon

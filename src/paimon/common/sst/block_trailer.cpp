@@ -20,8 +20,7 @@
 
 namespace paimon {
 
-std::unique_ptr<BlockTrailer> BlockTrailer::ReadBlockTrailer(
-    std::shared_ptr<MemorySliceInput>& input) {
+std::unique_ptr<BlockTrailer> BlockTrailer::ReadBlockTrailer(MemorySliceInput* input) {
     auto compress = input->ReadUnsignedByte();
     auto crc32c = input->ReadInt();
     return std::make_unique<BlockTrailer>(compress, crc32c);
@@ -42,10 +41,10 @@ std::string BlockTrailer::ToString() const {
            sstream.str() + "}";
 }
 
-std::shared_ptr<MemorySlice> BlockTrailer::WriteBlockTrailer(MemoryPool* pool) {
-    auto output = std::make_shared<MemorySliceOutput>(ENCODED_LENGTH, pool);
-    output->WriteValue(compression_type_);
-    output->WriteValue(crc32c_);
-    return output->ToSlice();
+MemorySlice BlockTrailer::WriteBlockTrailer(MemoryPool* pool) {
+    MemorySliceOutput output(ENCODED_LENGTH, pool);
+    output.WriteValue(compression_type_);
+    output.WriteValue(crc32c_);
+    return output.ToSlice();
 }
 }  // namespace paimon

@@ -58,26 +58,19 @@ class SstFileReader {
     /// @param handle The block handle.
     /// @param index Whether read the block as an index.
     /// @return The reader of the target block.
-    Result<std::shared_ptr<BlockReader>> ReadBlock(std::shared_ptr<BlockHandle>&& handle,
-                                                   bool index);
-
-    /// @param handle The block handle.
-    /// @param index Whether read the block as an index.
-    /// @return The reader of the target block.
-    Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
-                                                   bool index);
+    Result<std::shared_ptr<BlockReader>> ReadBlock(const BlockHandle& handle, bool index);
 
     Status Close();
 
  private:
     static Result<MemorySegment> DecompressBlock(const MemorySegment& compressed_data,
-                                                 const std::unique_ptr<BlockTrailer>& trailer,
+                                                 const std::shared_ptr<BlockTrailer>& trailer,
                                                  const std::shared_ptr<MemoryPool>& pool);
 
     SstFileReader(const std::shared_ptr<MemoryPool>& pool,
                   const std::shared_ptr<BlockCache>& block_cache,
                   const std::shared_ptr<BloomFilter>& bloom_filter,
-                  const std::shared_ptr<paimon::BlockReader>& index_block_reader,
+                  const std::shared_ptr<BlockReader>& index_block_reader,
                   MemorySlice::SliceComparator comparator);
 
  private:

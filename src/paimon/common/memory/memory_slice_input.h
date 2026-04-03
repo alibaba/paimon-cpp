@@ -33,15 +33,13 @@ class MemoryPool;
 ///  Slice of a MemorySegment.
 class PAIMON_EXPORT MemorySliceInput {
  public:
-    MemorySliceInput() = default;
-
-    explicit MemorySliceInput(const std::shared_ptr<MemorySlice>& slice);
+    explicit MemorySliceInput(const MemorySlice& slice);
 
     int32_t Position() const;
     Status SetPosition(int32_t position);
 
-    bool IsReadable();
-    int32_t Available();
+    bool IsReadable() const;
+    int32_t Available() const;
 
     int8_t ReadByte();
     int8_t ReadUnsignedByte();
@@ -49,7 +47,7 @@ class PAIMON_EXPORT MemorySliceInput {
     int64_t ReadLong();
     Result<int32_t> ReadVarLenInt();
     Result<int64_t> ReadVarLenLong();
-    std::shared_ptr<MemorySlice> ReadSlice(int length);
+    MemorySlice ReadSlice(int32_t length);
 
     void SetOrder(ByteOrder order);
 
@@ -57,7 +55,7 @@ class PAIMON_EXPORT MemorySliceInput {
     bool NeedSwap() const;
 
  private:
-    std::shared_ptr<MemorySlice> slice_;
+    MemorySlice slice_;
     int32_t position_;
 
     ByteOrder byte_order_ = SystemByteOrder();

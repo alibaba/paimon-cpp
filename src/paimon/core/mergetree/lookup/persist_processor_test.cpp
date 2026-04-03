@@ -32,7 +32,7 @@ class PersistProcessorTest : public testing::Test {
 
         ASSERT_EQ(kv.value->GetFieldCount(), 4);
         ASSERT_FALSE(kv.value->IsNullAt(0));
-        ASSERT_EQ(kv.value->GetString(0).ToString(), std::string("Alice"));
+        ASSERT_EQ(std::string(kv.value->GetStringView(0)), std::string("Alice"));
         ASSERT_EQ(kv.value->GetInt(1), 10);
         ASSERT_TRUE(kv.value->IsNullAt(2));
         ASSERT_EQ(kv.value->GetDouble(3), 10.1);

@@ -70,11 +70,15 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
     // TODO(xinyu.lxy): set executor
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
     read_context_builder.SetOptions(options.ToMap())
         .EnablePrefetch(true)
         .SetPrefetchMaxParallelNum(1)
-        .WithMemoryPool(pool);
+        .SetPrefetchBatchCount(3)
+        .WithMemoryPool(pool)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
@@ -202,6 +206,28 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
                            merge_file_split_read_->CreateSortMergeReaderForSection(
                                section, partition_, dv_factory_,
                                /*predicate=*/nullptr, data_file_path_factory, drop_delete));
+    if (!rolling_writer) {
+        // Short-circuit logic: for no rolling writers, simply iterating through the KeyValue
+        // iterator is sufficient to ensure lookup merge function take effect.
+        while (true) {
+            if (cancellation_controller_->IsCancelled()) {
+                return Status::Cancelled("Compaction is cancelled");
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader::Iterator> key_value_iter,
+                                   sort_merge_reader->NextBatch());
+            if (key_value_iter == nullptr) {
+                break;
+            }
+            while (true) {
+                PAIMON_ASSIGN_OR_RAISE(bool has_next, key_value_iter->HasNext());
+                if (!has_next) {
+                    break;
+                }
+                [[maybe_unused]] KeyValue kv = key_value_iter->Next();
+            }
+        }
+        return Status::OK();
+    }
 
     // consumer batch size is WriteBatchSize
     auto async_key_value_producer_consumer =
@@ -219,9 +245,7 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
         if (key_value_batch.batch == nullptr) {
             break;
         }
-        if (rolling_writer) {
-            PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
-        }
+        PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
     }
     return Status::OK();
 }

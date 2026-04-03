@@ -20,8 +20,7 @@
 
 namespace paimon {
 
-Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(
-    std::shared_ptr<MemorySliceInput>& input) {
+Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(MemorySliceInput* input) {
     auto offset = input->ReadLong();
     auto size = input->ReadInt();
     auto expected_entries = input->ReadLong();
@@ -31,7 +30,7 @@ Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(
     }
     auto index_offset = input->ReadLong();
     auto index_size = input->ReadInt();
-    auto index_block_handle = std::make_shared<BlockHandle>(index_offset, index_size);
+    BlockHandle index_block_handle(index_offset, index_size);
 
     auto magic = input->ReadInt();
     if (magic != MAGIC_NUMBER) {
@@ -41,23 +40,23 @@ Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(
     return std::make_unique<BlockFooter>(index_block_handle, bloom_filter_handle);
 }
 
-std::shared_ptr<MemorySlice> BlockFooter::WriteBlockFooter(MemoryPool* pool) {
-    auto output = std::make_shared<MemorySliceOutput>(ENCODED_LENGTH, pool);
+MemorySlice BlockFooter::WriteBlockFooter(MemoryPool* pool) {
+    MemorySliceOutput output(ENCODED_LENGTH, pool);
     // 20 bytes
     if (!bloom_filter_handle_.get()) {
-        output->WriteValue(static_cast<int64_t>(0));
-        output->WriteValue(static_cast<int32_t>(0));
-        output->WriteValue(static_cast<int64_t>(0));
+        output.WriteValue(static_cast<int64_t>(0));
+        output.WriteValue(static_cast<int32_t>(0));
+        output.WriteValue(static_cast<int64_t>(0));
     } else {
-        output->WriteValue(bloom_filter_handle_->Offset());
-        output->WriteValue(bloom_filter_handle_->Size());
-        output->WriteValue(bloom_filter_handle_->ExpectedEntries());
+        output.WriteValue(bloom_filter_handle_->Offset());
+        output.WriteValue(bloom_filter_handle_->Size());
+        output.WriteValue(bloom_filter_handle_->ExpectedEntries());
     }
     // 12 bytes
-    output->WriteValue(index_block_handle_->Offset());
-    output->WriteValue(index_block_handle_->Size());
+    output.WriteValue(index_block_handle_.Offset());
+    output.WriteValue(index_block_handle_.Size());
     // 4 bytes
-    output->WriteValue(MAGIC_NUMBER);
-    return output->ToSlice();
+    output.WriteValue(MAGIC_NUMBER);
+    return output.ToSlice();
 }
 }  // namespace paimon

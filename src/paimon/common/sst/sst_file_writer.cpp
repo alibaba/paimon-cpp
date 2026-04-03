@@ -46,8 +46,8 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
     return Status::OK();
 }
 
-Status SstFileWriter::Write(std::shared_ptr<MemorySlice>& slice) {
-    auto data = slice->ReadStringView();
+Status SstFileWriter::Write(const MemorySlice& slice) {
+    auto data = slice.ReadStringView();
     return WriteBytes(data.data(), data.size());
 }
 
@@ -56,24 +56,24 @@ Status SstFileWriter::Flush() {
         return Status::OK();
     }
 
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockHandle> handle,
-                           FlushBlockWriter(data_block_writer_));
+    PAIMON_ASSIGN_OR_RAISE(BlockHandle handle, FlushBlockWriter(data_block_writer_.get()));
 
-    auto slice = handle->WriteBlockHandle(pool_.get());
-    auto value = slice->CopyBytes(pool_.get());
+    auto slice = handle.WriteBlockHandle(pool_.get());
+    auto value = slice.CopyBytes(pool_.get());
     index_block_writer_->Write(last_key_, value);
     return Status::OK();
 }
 
-Result<std::shared_ptr<BlockHandle>> SstFileWriter::WriteIndexBlock() {
-    return FlushBlockWriter(index_block_writer_);
+Result<BlockHandle> SstFileWriter::WriteIndexBlock() {
+    return FlushBlockWriter(index_block_writer_.get());
 }
 
 Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     if (!bloom_filter_) {
         return std::shared_ptr<BloomFilterHandle>();
     }
-    auto data = bloom_filter_->GetBitSet()->ToSlice()->ReadStringView();
+    auto bf_slice = bloom_filter_->GetBitSet()->ToSlice();
+    auto data = bf_slice.ReadStringView();
     PAIMON_ASSIGN_OR_RAISE(int64_t bloom_filter_pos, out_->GetPos());
     auto handle = std::make_shared<BloomFilterHandle>(bloom_filter_pos, data.size(),
                                                       bloom_filter_->ExpectedEntries());
@@ -83,20 +83,19 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     return handle;
 }
 
-Status SstFileWriter::WriteFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
+Status SstFileWriter::WriteFooter(const BlockHandle& index_block_handle,
                                   const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle) {
-    auto footer = std::make_shared<BlockFooter>(index_block_handle, bloom_filter_handle);
-    auto slice = footer->WriteBlockFooter(pool_.get());
-    auto data = slice->ReadStringView();
+    BlockFooter footer(index_block_handle, bloom_filter_handle);
+    auto slice = footer.WriteBlockFooter(pool_.get());
+    auto data = slice.ReadStringView();
     PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
     return Status::OK();
 }
 
-Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
-    std::unique_ptr<BlockWriter>& writer) {
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<paimon::MemorySlice> memory_slice, writer->Finish());
+Result<BlockHandle> SstFileWriter::FlushBlockWriter(BlockWriter* writer) {
+    PAIMON_ASSIGN_OR_RAISE(MemorySlice memory_slice, writer->Finish());
 
-    auto view = memory_slice->ReadStringView();
+    auto view = memory_slice.ReadStringView();
 
     std::shared_ptr<Bytes> buffer;
     BlockCompressionType compression_type = BlockCompressionType::NONE;
@@ -119,17 +118,16 @@ Result<std::shared_ptr<BlockHandle>> SstFileWriter::FlushBlockWriter(
     auto crc32c = CRC32C::calculate(view.data(), view.size());
     auto compression_val = static_cast<char>(static_cast<int32_t>(compression_type) & 0xFF);
     crc32c = CRC32C::calculate(&compression_val, 1, crc32c);
-    auto trailer_memory_slice =
-        std::make_shared<BlockTrailer>(static_cast<int8_t>(compression_type), crc32c)
-            ->WriteBlockTrailer(pool_.get());
+    auto trailer = BlockTrailer(static_cast<int8_t>(compression_type), crc32c);
+    auto trailer_memory_slice = trailer.WriteBlockTrailer(pool_.get());
     PAIMON_ASSIGN_OR_RAISE(int64_t block_pos, out_->GetPos());
-    auto block_handle = std::make_shared<BlockHandle>(block_pos, view.size());
+    BlockHandle block_handle(block_pos, view.size());
 
     // 1. write data
     PAIMON_RETURN_NOT_OK(WriteBytes(view.data(), view.size()));
 
     // 2. write trailer
-    auto trailer_data = trailer_memory_slice->ReadStringView();
+    auto trailer_data = trailer_memory_slice.ReadStringView();
     PAIMON_RETURN_NOT_OK(WriteBytes(trailer_data.data(), trailer_data.size()));
 
     writer->Reset();

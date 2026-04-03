@@ -24,7 +24,6 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
-
 namespace paimon {
 
 class BlockCache {
@@ -36,17 +35,24 @@ class BlockCache {
 
     ~BlockCache() = default;
 
-    Result<MemorySegment> GetBlock(int64_t position, int32_t length, bool is_index) {
+    Result<MemorySegment> GetBlock(
+        int64_t position, int32_t length, bool is_index,
+        std::function<Result<MemorySegment>(const MemorySegment&)> decompress_func) {
         auto key = CacheKey::ForPosition(file_path_, position, length, is_index);
-
         auto it = blocks_.find(key);
         if (it == blocks_.end()) {
             PAIMON_ASSIGN_OR_RAISE(
                 MemorySegment segment,
                 cache_manager_->GetPage(
                     key, [&](const std::shared_ptr<paimon::CacheKey>&) -> Result<MemorySegment> {
-                        return ReadFrom(position, length);
+                        PAIMON_ASSIGN_OR_RAISE(MemorySegment compress_data,
+                                               ReadFrom(position, length));
+                        if (!decompress_func) {
+                            return compress_data;
+                        }
+                        return decompress_func(compress_data);
                     }));
+
             blocks_.insert({key, std::make_shared<CacheValue>(segment)});
             return segment;
         }
@@ -74,6 +80,6 @@ class BlockCache {
     std::shared_ptr<MemoryPool> pool_;
 
     std::unique_ptr<CacheManager> cache_manager_;
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> blocks_;
+    CacheKeyMap blocks_;
 };
 }  // namespace paimon
