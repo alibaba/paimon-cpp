@@ -124,6 +124,8 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
+    common/utils/arrow/arrow_input_stream_adapter.cpp
+    common/utils/arrow/arrow_output_stream_adapter.cpp
     common/utils/arrow/arrow_utils.cpp
     common/utils/arrow/mem_utils.cpp
     common/utils/binary_row_partition_computer.cpp
@@ -432,6 +434,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
+                    common/utils/arrow/arrow_stream_adapter_test.cpp
                     common/utils/arrow/mem_utils_test.cpp
                     common/utils/arrow/status_utils_test.cpp
                     common/utils/concurrent_hash_map_test.cpp
