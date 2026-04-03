@@ -72,7 +72,8 @@ TEST_F(BlockCacheTest, TestBasicCacheHit) {
     ASSERT_EQ(block_cache.BlocksSize(), 0);
 
     // First access: populates both blocks_ and LRU
-    ASSERT_OK_AND_ASSIGN(auto seg1, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg1,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg1.Size(), block_size);
     ASSERT_EQ(seg1.Get(0), static_cast<char>(0));
     ASSERT_EQ(block_cache.BlocksSize(), 1);
@@ -80,14 +81,16 @@ TEST_F(BlockCacheTest, TestBasicCacheHit) {
     ASSERT_EQ(cache_manager->DataCache()->Size(), 1);
 
     // Second access: returns from blocks_, no new LRU entry
-    ASSERT_OK_AND_ASSIGN(auto seg2, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg2,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg2.Size(), block_size);
     ASSERT_EQ(block_cache.BlocksSize(), 1);
     ASSERT_TRUE(block_cache.ContainsBlock(0, block_size, false));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 1);
 
     // Load a different block
-    ASSERT_OK_AND_ASSIGN(auto seg3, block_cache.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg3, block_cache.GetBlock(block_size, block_size, false,
+                                                         /*decompress_func=*/nullptr));
     ASSERT_EQ(seg3.Get(0), static_cast<char>(1));
     ASSERT_EQ(block_cache.BlocksSize(), 2);
     ASSERT_TRUE(block_cache.ContainsBlock(0, block_size, false));
@@ -108,20 +111,23 @@ TEST_F(BlockCacheTest, TestLruEvictionSyncsWithBlocks) {
     BlockCache block_cache(file_path, in, cache_manager, pool_);
 
     // Load block 0 at position 0
-    ASSERT_OK_AND_ASSIGN(auto seg0, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg0,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg0.Get(0), static_cast<char>(0));
     ASSERT_EQ(block_cache.BlocksSize(), 1);
     ASSERT_TRUE(block_cache.ContainsBlock(0, block_size, false));
 
     // Load block 1 at position block_size
-    ASSERT_OK_AND_ASSIGN(auto seg1, block_cache.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg1, block_cache.GetBlock(block_size, block_size, false,
+                                                         /*decompress_func=*/nullptr));
     ASSERT_EQ(seg1.Get(0), static_cast<char>(1));
     ASSERT_EQ(block_cache.BlocksSize(), 2);
     ASSERT_TRUE(block_cache.ContainsBlock(0, block_size, false));
     ASSERT_TRUE(block_cache.ContainsBlock(block_size, block_size, false));
 
     // Load block 2: evicts block 0 (LRU) from both LRU and blocks_
-    ASSERT_OK_AND_ASSIGN(auto seg2, block_cache.GetBlock(block_size * 2, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg2, block_cache.GetBlock(block_size * 2, block_size, false,
+                                                         /*decompress_func=*/nullptr));
     ASSERT_EQ(seg2.Get(0), static_cast<char>(2));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 2);
     ASSERT_EQ(block_cache.BlocksSize(), 2);
@@ -132,7 +138,8 @@ TEST_F(BlockCacheTest, TestLruEvictionSyncsWithBlocks) {
     ASSERT_TRUE(block_cache.ContainsBlock(block_size * 2, block_size, false));
 
     // Re-access block 0: triggers fresh IO read, evicts block 1 (now LRU)
-    ASSERT_OK_AND_ASSIGN(auto seg0_reloaded, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg0_reloaded,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg0_reloaded.Get(0), static_cast<char>(0));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 2);
     ASSERT_EQ(block_cache.BlocksSize(), 2);
@@ -155,7 +162,8 @@ TEST_F(BlockCacheTest, TestClose) {
 
     // Load 3 blocks and verify blocks_ keys
     for (int i = 0; i < 3; i++) {
-        ASSERT_OK_AND_ASSIGN(auto seg, block_cache.GetBlock(i * block_size, block_size, false));
+        ASSERT_OK_AND_ASSIGN(auto seg, block_cache.GetBlock(i * block_size, block_size, false,
+                                                            /*decompress_func=*/nullptr));
         ASSERT_EQ(seg.Get(0), static_cast<char>(i));
     }
     ASSERT_EQ(block_cache.BlocksSize(), 3);
@@ -192,21 +200,25 @@ TEST_F(BlockCacheTest, TestSharedCacheManagerEvictionIsolation) {
     BlockCache cache_b(file_path_b, in_b, cache_manager, pool_);
 
     // Load 2 blocks from file_a
-    ASSERT_OK_AND_ASSIGN(auto seg_a0, cache_a.GetBlock(0, block_size, false));
-    ASSERT_OK_AND_ASSIGN(auto seg_a1, cache_a.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg_a0,
+                         cache_a.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(
+        auto seg_a1, cache_a.GetBlock(block_size, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(cache_a.BlocksSize(), 2);
     ASSERT_TRUE(cache_a.ContainsBlock(0, block_size, false));
     ASSERT_TRUE(cache_a.ContainsBlock(block_size, block_size, false));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 2);
 
     // Load 1 block from file_b (total 3, at capacity)
-    ASSERT_OK_AND_ASSIGN(auto seg_b0, cache_b.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg_b0,
+                         cache_b.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(cache_b.BlocksSize(), 1);
     ASSERT_TRUE(cache_b.ContainsBlock(0, block_size, false));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 3);
 
     // Load another block from file_b: should evict file_a's block 0 (the LRU entry)
-    ASSERT_OK_AND_ASSIGN(auto seg_b1, cache_b.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(
+        auto seg_b1, cache_b.GetBlock(block_size, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 3);
 
     // cache_b should have 2 entries
@@ -220,7 +232,8 @@ TEST_F(BlockCacheTest, TestSharedCacheManagerEvictionIsolation) {
     ASSERT_TRUE(cache_a.ContainsBlock(block_size, block_size, false));
 
     // Re-access file_a's block 0: triggers fresh IO read, evicts file_a's block 1 (now LRU)
-    ASSERT_OK_AND_ASSIGN(auto seg_a0_reloaded, cache_a.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg_a0_reloaded,
+                         cache_a.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg_a0_reloaded.Get(0), static_cast<char>(0));
     ASSERT_EQ(cache_a.BlocksSize(), 1);
     ASSERT_TRUE(cache_a.ContainsBlock(0, block_size, false));
@@ -249,8 +262,10 @@ TEST_F(BlockCacheTest, TestRefreshPreventsEviction) {
     BlockCache block_cache(file_path, in, cache_manager, pool_);
 
     // Load block 0 and block 1
-    ASSERT_OK_AND_ASSIGN(auto seg0, block_cache.GetBlock(0, block_size, false));
-    ASSERT_OK_AND_ASSIGN(auto seg1, block_cache.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg0,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
+    ASSERT_OK_AND_ASSIGN(auto seg1, block_cache.GetBlock(block_size, block_size, false,
+                                                         /*decompress_func=*/nullptr));
     ASSERT_EQ(block_cache.BlocksSize(), 2);
     ASSERT_TRUE(block_cache.ContainsBlock(0, block_size, false));
     ASSERT_TRUE(block_cache.ContainsBlock(block_size, block_size, false));
@@ -258,10 +273,12 @@ TEST_F(BlockCacheTest, TestRefreshPreventsEviction) {
 
     // Access block 0 REFRESH_COUNT times to trigger a refresh (moves it to LRU front)
     for (int i = 1; i < CacheManager::REFRESH_COUNT; i++) {
-        ASSERT_OK_AND_ASSIGN(seg0, block_cache.GetBlock(0, block_size, false));
+        ASSERT_OK_AND_ASSIGN(
+            seg0, block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     }
     // This 11th access triggers refresh, moving block 0 to LRU front
-    ASSERT_OK_AND_ASSIGN(seg0, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(seg0,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
 
     // blocks_ should still have both entries after refresh
     ASSERT_EQ(block_cache.BlocksSize(), 2);
@@ -269,7 +286,8 @@ TEST_F(BlockCacheTest, TestRefreshPreventsEviction) {
     ASSERT_TRUE(block_cache.ContainsBlock(block_size, block_size, false));
 
     // Load block 2: should evict block 1 (not block 0, since block 0 was just refreshed)
-    ASSERT_OK_AND_ASSIGN(auto seg2, block_cache.GetBlock(block_size * 2, block_size, false));
+    ASSERT_OK_AND_ASSIGN(auto seg2, block_cache.GetBlock(block_size * 2, block_size, false,
+                                                         /*decompress_func=*/nullptr));
     ASSERT_EQ(cache_manager->DataCache()->Size(), 2);
     ASSERT_EQ(block_cache.BlocksSize(), 2);
     // block 0 should still be in blocks_ (was refreshed to LRU front)
@@ -280,11 +298,13 @@ TEST_F(BlockCacheTest, TestRefreshPreventsEviction) {
     ASSERT_TRUE(block_cache.ContainsBlock(block_size * 2, block_size, false));
 
     // Block 0 should still be accessible from blocks_ cache
-    ASSERT_OK_AND_ASSIGN(seg0, block_cache.GetBlock(0, block_size, false));
+    ASSERT_OK_AND_ASSIGN(seg0,
+                         block_cache.GetBlock(0, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg0.Get(0), static_cast<char>(0));
 
     // Block 1 was evicted, re-accessing triggers IO read
-    ASSERT_OK_AND_ASSIGN(seg1, block_cache.GetBlock(block_size, block_size, false));
+    ASSERT_OK_AND_ASSIGN(
+        seg1, block_cache.GetBlock(block_size, block_size, false, /*decompress_func=*/nullptr));
     ASSERT_EQ(seg1.Get(0), static_cast<char>(1));
 }
 
