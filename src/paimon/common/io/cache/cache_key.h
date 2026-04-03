@@ -16,13 +16,13 @@
 
 #pragma once
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
-
-#include "paimon/status.h"
+#include <unordered_map>
 
 namespace paimon {
+
+class CacheValue;
 
 class CacheKey {
  public:
@@ -33,6 +33,8 @@ class CacheKey {
     virtual ~CacheKey() = default;
 
     virtual bool IsIndex() const = 0;
+    virtual size_t HashCode() const = 0;
+    virtual bool Equals(const CacheKey& other) const = 0;
 };
 
 class PositionCacheKey : public CacheKey {
@@ -41,12 +43,10 @@ class PositionCacheKey : public CacheKey {
         : file_path_(file_path), position_(position), length_(length), is_index_(is_index) {}
 
     bool IsIndex() const override;
-
+    size_t HashCode() const override;
+    bool Equals(const CacheKey& other) const override;
     int64_t Position() const;
     int32_t Length() const;
-
-    bool operator==(const PositionCacheKey& other) const;
-    size_t HashCode() const;
 
  private:
     static constexpr uint64_t HASH_CONSTANT = 0x9e3779b97f4a7c15ULL;
@@ -56,13 +56,27 @@ class PositionCacheKey : public CacheKey {
     const int32_t length_;
     const bool is_index_;
 };
-}  // namespace paimon
 
-namespace std {
-template <>
-struct hash<paimon::PositionCacheKey> {
-    size_t operator()(const paimon::PositionCacheKey& key) const {
-        return key.HashCode();
+struct CacheKeyHash {
+    size_t operator()(const std::shared_ptr<CacheKey>& key) const {
+        return key ? key->HashCode() : 0;
     }
 };
-}  // namespace std
+
+struct CacheKeyEqual {
+    bool operator()(const std::shared_ptr<CacheKey>& lhs,
+                    const std::shared_ptr<CacheKey>& rhs) const {
+        if (lhs == rhs) {
+            return true;
+        }
+        if (!lhs || !rhs) {
+            return false;
+        }
+        return lhs->Equals(*rhs);
+    }
+};
+
+using CacheKeyMap = std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>,
+                                       CacheKeyHash, CacheKeyEqual>;
+
+}  // namespace paimon

@@ -20,31 +20,30 @@
 
 namespace paimon {
 
-MemorySliceInput::MemorySliceInput(const std::shared_ptr<MemorySlice>& slice)
-    : slice_(slice), position_(0) {}
+MemorySliceInput::MemorySliceInput(const MemorySlice& slice) : slice_(slice), position_(0) {}
 
 int32_t MemorySliceInput::Position() const {
     return position_;
 }
 
 Status MemorySliceInput::SetPosition(int32_t position) {
-    if (position < 0 || position > slice_->Length()) {
+    if (position < 0 || position > slice_.Length()) {
         return Status::IndexError("position " + std::to_string(position) + " index out of bounds");
     }
     position_ = position;
     return Status::OK();
 }
 
-bool MemorySliceInput::IsReadable() {
+bool MemorySliceInput::IsReadable() const {
     return Available() > 0;
 }
 
-int32_t MemorySliceInput::Available() {
-    return slice_->Length() - position_;
+int32_t MemorySliceInput::Available() const {
+    return slice_.Length() - position_;
 }
 
 int8_t MemorySliceInput::ReadByte() {
-    return slice_->ReadByte(position_++);
+    return slice_.ReadByte(position_++);
 }
 
 int8_t MemorySliceInput::ReadUnsignedByte() {
@@ -52,7 +51,7 @@ int8_t MemorySliceInput::ReadUnsignedByte() {
 }
 
 int32_t MemorySliceInput::ReadInt() {
-    int v = slice_->ReadInt(position_);
+    int32_t v = slice_.ReadInt(position_);
     position_ += 4;
     if (NeedSwap()) {
         return EndianSwapValue(v);
@@ -61,7 +60,7 @@ int32_t MemorySliceInput::ReadInt() {
 }
 
 int64_t MemorySliceInput::ReadLong() {
-    int64_t v = slice_->ReadLong(position_);
+    int64_t v = slice_.ReadLong(position_);
     position_ += 8;
     if (NeedSwap()) {
         return EndianSwapValue(v);
@@ -100,8 +99,8 @@ bool MemorySliceInput::NeedSwap() const {
     return SystemByteOrder() != byte_order_;
 }
 
-std::shared_ptr<MemorySlice> MemorySliceInput::ReadSlice(int length) {
-    auto slice = slice_->Slice(position_, length);
+MemorySlice MemorySliceInput::ReadSlice(int32_t length) {
+    auto slice = slice_.Slice(position_, length);
     position_ += length;
     return slice;
 }

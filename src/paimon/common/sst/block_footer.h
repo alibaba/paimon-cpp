@@ -30,24 +30,23 @@ namespace paimon {
 /// Footer of a block.
 class BlockFooter {
  public:
-    static Result<std::unique_ptr<BlockFooter>> ReadBlockFooter(
-        std::shared_ptr<MemorySliceInput>& input);
+    static Result<std::unique_ptr<BlockFooter>> ReadBlockFooter(MemorySliceInput* input);
 
  public:
-    BlockFooter(const std::shared_ptr<BlockHandle>& index_block_handle,
+    BlockFooter(const BlockHandle& index_block_handle,
                 const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle)
         : index_block_handle_(index_block_handle), bloom_filter_handle_(bloom_filter_handle) {}
 
     ~BlockFooter() = default;
 
-    std::shared_ptr<BlockHandle> GetIndexBlockHandle() const {
+    const BlockHandle& GetIndexBlockHandle() const {
         return index_block_handle_;
     }
     std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
         return bloom_filter_handle_;
     }
 
-    std::shared_ptr<MemorySlice> WriteBlockFooter(MemoryPool* pool);
+    MemorySlice WriteBlockFooter(MemoryPool* pool);
 
  public:
     // 20 bytes for bloom filter handle, 12 bytes for index block handle, 4 bytes for magic number
@@ -55,7 +54,7 @@ class BlockFooter {
     static constexpr int32_t MAGIC_NUMBER = 1481571681;
 
  private:
-    std::shared_ptr<BlockHandle> index_block_handle_;
+    BlockHandle index_block_handle_;
     std::shared_ptr<BloomFilterHandle> bloom_filter_handle_;
 };
 }  // namespace paimon

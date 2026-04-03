@@ -27,8 +27,7 @@ namespace paimon {
 
 class BlockHandle {
  public:
-    static Result<std::shared_ptr<BlockHandle>> ReadBlockHandle(
-        const std::shared_ptr<MemorySliceInput>& input);
+    static Result<BlockHandle> ReadBlockHandle(MemorySliceInput* input);
 
  public:
     BlockHandle(int64_t offset, int32_t size);
@@ -39,7 +38,7 @@ class BlockHandle {
     int32_t GetFullBlockSize() const;
 
     std::string ToString() const;
-    std::shared_ptr<MemorySlice> WriteBlockHandle(MemoryPool* pool);
+    MemorySlice WriteBlockHandle(MemoryPool* pool);
 
  public:
     // max len for varlong is 9 bytes, max len for varint is 5 bytes

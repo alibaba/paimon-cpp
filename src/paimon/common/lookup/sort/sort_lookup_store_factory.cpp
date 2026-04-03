@@ -45,8 +45,7 @@ Status SortLookupStoreWriter::Close() {
     PAIMON_RETURN_NOT_OK(writer_->Flush());
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BloomFilterHandle> bloom_filter_handle,
                            writer_->WriteBloomFilter());
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockHandle> index_block_handle,
-                           writer_->WriteIndexBlock());
+    PAIMON_ASSIGN_OR_RAISE(BlockHandle index_block_handle, writer_->WriteIndexBlock());
     PAIMON_RETURN_NOT_OK(writer_->WriteFooter(index_block_handle, bloom_filter_handle));
     PAIMON_RETURN_NOT_OK(out_->Close());
     return Status::OK();

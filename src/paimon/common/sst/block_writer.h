@@ -76,7 +76,7 @@ class BlockWriter {
         return memory;
     }
 
-    Result<std::unique_ptr<paimon::MemorySlice>> Finish();
+    Result<MemorySlice> Finish();
 
  private:
     const int32_t size_;

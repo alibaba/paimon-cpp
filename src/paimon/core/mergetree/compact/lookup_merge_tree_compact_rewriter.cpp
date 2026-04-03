@@ -61,11 +61,15 @@ LookupMergeTreeCompactRewriter<T>::Create(
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
     // TODO(xinyu.lxy): set executor
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
     read_context_builder.SetOptions(options.ToMap())
         .EnablePrefetch(true)
         .SetPrefetchMaxParallelNum(1)
-        .WithMemoryPool(pool);
+        .SetPrefetchBatchCount(3)
+        .WithMemoryPool(pool)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
