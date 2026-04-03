@@ -80,6 +80,6 @@ class BlockCache {
     std::shared_ptr<MemoryPool> pool_;
 
     std::unique_ptr<CacheManager> cache_manager_;
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> blocks_;
+    CacheKeyMap blocks_;
 };
 }  // namespace paimon

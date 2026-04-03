@@ -2502,8 +2502,6 @@ TEST_F(PkCompactionInteTest, TestKeyValueTableCompactionWithIOException) {
 }
 
 TEST_P(PkCompactionInteTest, TestKeyValueTableStreamWriteFullCompaction) {
-    auto dir = UniqueTestDirectory::Create();
-    ASSERT_TRUE(dir);
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
@@ -2512,14 +2510,14 @@ TEST_P(PkCompactionInteTest, TestKeyValueTableStreamWriteFullCompaction) {
     std::vector<std::string> primary_keys = {"f0", "f1", "f2"};
     std::vector<std::string> partition_keys = {"f1"};
     auto file_format = GetParam();
-    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, file_format},
                                                   {Options::BUCKET, "2"},
                                                   {Options::BUCKET_KEY, "f2"},
                                                   {Options::FILE_SYSTEM, "local"},
                                                   {Options::DELETION_VECTORS_ENABLED, "false"}};
 
     ASSERT_OK_AND_ASSIGN(
-        auto helper, TestHelper::Create(dir->Str(), schema, partition_keys, primary_keys, options,
+        auto helper, TestHelper::Create(dir_->Str(), schema, partition_keys, primary_keys, options,
                                         /*is_streaming_mode=*/true));
     ASSERT_OK_AND_ASSIGN(std::optional<std::shared_ptr<TableSchema>> table_schema,
                          helper->LatestSchema());
