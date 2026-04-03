@@ -53,8 +53,7 @@ Status WriteBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     std::unique_ptr<RecordBatch> batch = std::move(moved_batch);
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
                                       arrow::ImportArray(batch->GetData(), value_type_));
-    auto value_struct_array =
-        arrow::internal::checked_pointer_cast<arrow::StructArray>(arrow_array);
+    auto value_struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
     if (value_struct_array == nullptr) {
         return Status::Invalid("invalid RecordBatch: cannot cast to StructArray");
     }
