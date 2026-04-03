@@ -39,7 +39,7 @@ namespace paimon {
 /// @note Thread-safe: all public methods are protected by a mutex.
 class LruCache : public Cache {
  public:
-    LruCache(int64_t max_weight);
+    explicit LruCache(int64_t max_weight);
 
     Result<std::shared_ptr<CacheValue>> Get(
         const std::shared_ptr<CacheKey>& key,
