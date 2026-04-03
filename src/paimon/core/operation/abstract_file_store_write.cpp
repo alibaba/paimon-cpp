@@ -81,7 +81,10 @@ AbstractFileStoreWrite::AbstractFileStoreWrite(
       is_streaming_mode_(is_streaming_mode),
       ignore_num_bucket_check_(ignore_num_bucket_check),
       metrics_(std::make_shared<MetricsImpl>()),
-      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {}
+      logger_(Logger::GetLogger("AbstractFileStoreWrite")) {
+    cache_manager_ = std::make_shared<CacheManager>(options.GetLookupCacheMaxMemory(),
+                                                    options.GetLookupCacheHighPrioPoolRatio());
+}
 
 Status AbstractFileStoreWrite::Write(std::unique_ptr<RecordBatch>&& batch) {
     if (PAIMON_UNLIKELY(batch == nullptr)) {

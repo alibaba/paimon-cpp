@@ -64,9 +64,9 @@ set(PAIMON_COMMON_SRCS
     common/io/data_output_stream.cpp
     common/io/memory_segment_output_stream.cpp
     common/io/offset_input_stream.cpp
-    common/io/cache/cache.cpp
     common/io/cache/cache_key.cpp
     common/io/cache/cache_manager.cpp
+    common/io/cache/lru_cache.cpp
     common/logging/logging.cpp
     common/lookup/sort/sort_lookup_store_factory.cpp
     common/lookup/lookup_store_factory.cpp
@@ -463,6 +463,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/roaring_bitmap64_test.cpp
                     common/utils/range_helper_test.cpp
                     common/utils/read_ahead_cache_test.cpp
+                    common/io/cache/lru_cache_test.cpp
                     common/utils/byte_range_combiner_test.cpp
                     common/utils/scope_guard_test.cpp
                     common/utils/serialization_utils_test.cpp
@@ -492,6 +493,7 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
+                    common/sst/block_cache_test.cpp
                     common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared

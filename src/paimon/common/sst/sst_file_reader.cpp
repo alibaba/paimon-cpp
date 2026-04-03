@@ -23,11 +23,10 @@ namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& in,
-    MemorySlice::SliceComparator comparator) {
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager) {
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
-    auto block_cache =
-        std::make_shared<BlockCache>(file_path, in, pool, std::make_unique<CacheManager>());
+    auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
 
     // read footer
     PAIMON_ASSIGN_OR_RAISE(

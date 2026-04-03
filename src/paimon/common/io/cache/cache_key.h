@@ -33,8 +33,10 @@ class CacheKey {
     virtual ~CacheKey() = default;
 
     virtual bool IsIndex() const = 0;
-    virtual size_t HashCode() const = 0;
+
     virtual bool Equals(const CacheKey& other) const = 0;
+
+    virtual size_t HashCode() const = 0;
 };
 
 class PositionCacheKey : public CacheKey {
@@ -75,8 +77,5 @@ struct CacheKeyEqual {
         return lhs->Equals(*rhs);
     }
 };
-
-using CacheKeyMap = std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>,
-                                       CacheKeyHash, CacheKeyEqual>;
 
 }  // namespace paimon

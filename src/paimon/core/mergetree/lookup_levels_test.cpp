@@ -148,7 +148,7 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto key_comparator,
                                RowCompactedSerializer::CreateSliceComparator(key_schema_, pool_));
         PAIMON_ASSIGN_OR_RAISE(auto lookup_store_factory,
-                               LookupStoreFactory::Create(key_comparator, options));
+                               LookupStoreFactory::Create(key_comparator, std::make_shared<CacheManager>(1024 * 1024, 0.0), options));
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,

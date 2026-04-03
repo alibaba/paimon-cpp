@@ -20,11 +20,13 @@ namespace paimon {
 
 Result<MemorySegment> CacheManager::GetPage(
     std::shared_ptr<CacheKey>& key,
-    std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader) {
+    std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader,
+    CacheCallback eviction_callback) {
     auto& cache = key->IsIndex() ? index_cache_ : data_cache_;
-    auto supplier = [&](const std::shared_ptr<CacheKey>& k) -> Result<std::shared_ptr<CacheValue>> {
-        PAIMON_ASSIGN_OR_RAISE(MemorySegment segment, reader(k));
-        return std::make_shared<CacheValue>(segment);
+    auto supplier =
+        [&](const std::shared_ptr<CacheKey>& key) -> Result<std::shared_ptr<CacheValue>> {
+        PAIMON_ASSIGN_OR_RAISE(MemorySegment segment, reader(key));
+        return std::make_shared<CacheValue>(segment, std::move(eviction_callback));
     };
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> cache_value, cache->Get(key, supplier));
     return cache_value->GetSegment();

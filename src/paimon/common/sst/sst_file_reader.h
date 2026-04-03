@@ -40,9 +40,10 @@ class SstFileIterator;
 /// queries. Note that this class is NOT thread-safe.
 class SstFileReader {
  public:
-    static Result<std::shared_ptr<SstFileReader>> Create(const std::shared_ptr<MemoryPool>& pool,
-                                                         const std::shared_ptr<InputStream>& input,
-                                                         MemorySlice::SliceComparator comparator);
+    static Result<std::shared_ptr<SstFileReader>> Create(
+        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input,
+        MemorySlice::SliceComparator comparator,
+        const std::shared_ptr<CacheManager>& cache_manager);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 

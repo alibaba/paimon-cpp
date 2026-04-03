@@ -27,6 +27,7 @@
 #include "arrow/type.h"
 #include "paimon/commit_message.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/file_store_write.h"
@@ -130,6 +131,7 @@ class AbstractFileStoreWrite : public FileStoreWrite {
     std::shared_ptr<arrow::Schema> partition_schema_;
     std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory_;
     std::shared_ptr<IOManager> io_manager_;
+    std::shared_ptr<CacheManager> cache_manager_;
 
     CoreOptions options_;
     std::shared_ptr<Executor> compact_executor_;

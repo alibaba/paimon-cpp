@@ -75,6 +75,8 @@ class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
     std::shared_ptr<paimon::MemoryPool> pool_;
 
     MemorySlice::SliceComparator comparator_;
+    std::shared_ptr<CacheManager> cache_manager_ =
+        std::make_shared<CacheManager>(1024 * 1024, 0.0);
 };
 
 TEST_P(SstFileIOTest, TestSimple) {
@@ -140,7 +142,7 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     // test read
     ASSERT_OK_AND_ASSIGN(in, fs_->Open(index_path));
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
+    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_, cache_manager_));
 
     // not exist key
     std::string k0 = "k0";
@@ -171,11 +173,9 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     // key range [1_000_000, 2_000_000], value is equal to the key
     std::string file = GetDataDir() + "/sst/" + param.file_path;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
-    auto block_cache =
-        std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
 
     // test read
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
+    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_, cache_manager_));
     // not exist key
     std::string k0 = "10000";
     ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
@@ -265,7 +265,7 @@ TEST_F(SstFileIOTest, TestIOException) {
         CHECK_HOOK_STATUS(in_result.status(), i);
         std::shared_ptr<InputStream> in = std::move(in_result).value();
 
-        auto reader_result = SstFileReader::Create(pool_, in, comparator_);
+        auto reader_result = SstFileReader::Create(pool_, in, comparator_, cache_manager_);
         CHECK_HOOK_STATUS(reader_result.status(), i);
         std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
 

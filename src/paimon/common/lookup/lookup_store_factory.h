@@ -15,6 +15,7 @@
  */
 
 #pragma once
+#include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/utils/bloom_filter.h"
 #include "paimon/core/core_options.h"
@@ -59,7 +60,8 @@ class LookupStoreFactory {
         const std::shared_ptr<MemoryPool>& pool) const = 0;
 
     static Result<std::shared_ptr<LookupStoreFactory>> Create(
-        MemorySlice::SliceComparator comparator, const CoreOptions& options);
+        MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+        const CoreOptions& options);
 
     static Result<std::shared_ptr<BloomFilter>> BfGenerator(int64_t row_count,
                                                             const CoreOptions& options,

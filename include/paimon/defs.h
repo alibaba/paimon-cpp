@@ -402,6 +402,11 @@ struct PAIMON_EXPORT Options {
     /// you can add the conf like this: 'file.compression.per.level' = '0:lz4,1:zstd'.
     /// If a level is not configured, the default compression set by FILE_COMPRESSION will be used.
     static const char FILE_COMPRESSION_PER_LEVEL[];
+    /// "lookup.cache-max-memory-size" - Max memory size for lookup cache. Default value is 256 mb.
+    static const char LOOKUP_CACHE_MAX_MEMORY_SIZE[];
+    /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
+    /// high-priority data like index, filter. Default value is 0.25.
+    static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

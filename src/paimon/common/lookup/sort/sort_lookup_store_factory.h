@@ -65,10 +65,12 @@ class SortLookupStoreWriter : public LookupStoreWriter {
 /// A `LookupStoreFactory` which uses hash to lookup records on disk.
 class SortLookupStoreFactory : public LookupStoreFactory {
  public:
-    SortLookupStoreFactory(MemorySlice::SliceComparator comparator, int32_t block_size,
+    SortLookupStoreFactory(MemorySlice::SliceComparator comparator,
+                           const std::shared_ptr<CacheManager>& cache_manager, int32_t block_size,
                            const std::shared_ptr<BlockCompressionFactory>& compression_factory)
         : block_size_(block_size),
           comparator_(std::move(comparator)),
+          cache_manager_(cache_manager),
           compression_factory_(compression_factory) {}
 
     Result<std::unique_ptr<LookupStoreWriter>> CreateWriter(
@@ -82,8 +84,8 @@ class SortLookupStoreFactory : public LookupStoreFactory {
 
  private:
     int32_t block_size_;
-    // TODO(xinyu.lxy): support CacheManager
     MemorySlice::SliceComparator comparator_;
+    std::shared_ptr<CacheManager> cache_manager_;
     std::shared_ptr<BlockCompressionFactory> compression_factory_;
 };
 }  // namespace paimon
