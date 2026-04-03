@@ -40,9 +40,28 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y ccache
+      - name: Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-sanitizer-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: |
+            ccache-sanitizer-${{ runner.os }}-${{ github.ref_name }}-
+            ccache-sanitizer-${{ runner.os }}-
+      - name: Configure ccache
+        run: |
+          ccache --set-config=max_size=2G
+          ccache --set-config=compress=true
+          ccache --set-config=compression_level=6
+          ccache -z
       - name: Build Paimon
         shell: bash
         env:
           CC: clang
           CXX: clang++
         run: ci/scripts/build_paimon.sh $(pwd) true
+      - name: Show ccache statistics
+        if: always()
+        run: ccache -s

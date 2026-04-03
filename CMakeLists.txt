@@ -35,6 +35,16 @@ project(paimon
         VERSION 0.1.0
         DESCRIPTION "Paimon C++ Project")
 
+# Setup ccache to accelerate compilation if available
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+    message(STATUS "ccache not found, compiling without cache acceleration")
+endif()
+
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPERCASE_BUILD_TYPE)
 
 set(CMAKE_CXX_STANDARD 17)
