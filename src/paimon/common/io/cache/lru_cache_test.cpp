@@ -367,7 +367,7 @@ TEST_F(LruCacheTest, TestMultipleEvictions) {
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 250);
 
-    ASSERT_EQ(evicted, std::vector<int64_t>({0,1,2}));
+    ASSERT_EQ(evicted, std::vector<int64_t>({0, 1, 2}));
 }
 
 }  // namespace paimon::test
