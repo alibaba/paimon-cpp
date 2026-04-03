@@ -27,7 +27,7 @@ if command -v ccache &> /dev/null; then
     echo "=== ccache found: $(ccache --version | head -1) ==="
     export CCACHE_DIR="${CCACHE_DIR:-${HOME}/.ccache}"
     export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-2G}"
-    export CCACHE_COMPRESS=1
+    export CCACHE_COMPRESS=true
     export CCACHE_COMPRESSLEVEL=6
     mkdir -p "${CCACHE_DIR}"
     echo "ccache directory: ${CCACHE_DIR}"

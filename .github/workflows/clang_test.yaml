@@ -54,7 +54,7 @@ jobs:
       - name: Configure ccache
         run: |
           ccache --set-config=max_size=2G
-          ccache --set-config=compress=true
+          ccache --set-config=compression=true
           ccache --set-config=compression_level=6
           ccache -z
       - name: Build Paimon
