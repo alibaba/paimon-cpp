@@ -22,12 +22,42 @@
 #include "fmt/format.h"
 #include "paimon/core/deletionvectors/bitmap64_deletion_vector.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
+#include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/table/source/deletion_file.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/io/data_input_stream.h"
 #include "paimon/memory/memory_pool.h"
 
 namespace paimon {
+
+DeletionVector::Factory DeletionVector::CreateFactory(
+    const std::shared_ptr<FileSystem>& file_system,
+    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::shared_ptr<MemoryPool>& pool) {
+    return [file_system, deletion_file_map,
+            pool](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+        auto iter = deletion_file_map.find(file_name);
+        if (iter != deletion_file_map.end()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::shared_ptr<DeletionVector> dv,
+                DeletionVector::Read(file_system.get(), iter->second, pool.get()));
+            return dv;
+        }
+        return std::shared_ptr<DeletionVector>();
+    };
+}
+
+DeletionVector::Factory DeletionVector::CreateFactory(
+    const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
+    return
+        [dv_maintainer](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+            if (dv_maintainer) {
+                return dv_maintainer->DeletionVectorOf(file_name).value_or(
+                    std::shared_ptr<DeletionVector>());
+            }
+            return std::shared_ptr<DeletionVector>();
+        };
+}
 
 Result<PAIMON_UNIQUE_PTR<DeletionVector>> DeletionVector::DeserializeFromBytes(const Bytes* bytes,
                                                                                MemoryPool* pool) {

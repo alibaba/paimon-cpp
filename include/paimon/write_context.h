@@ -29,6 +29,7 @@
 
 namespace paimon {
 class Executor;
+class IOManager;
 class MemoryPool;
 
 /// `WriteContext` is some configuration for write operations.
@@ -44,6 +45,7 @@ class PAIMON_EXPORT WriteContext {
                  const std::vector<std::string>& write_schema,
                  const std::shared_ptr<MemoryPool>& memory_pool,
                  const std::shared_ptr<Executor>& executor,
+                 const std::shared_ptr<IOManager>& io_manager,
                  const std::shared_ptr<FileSystem>& specific_file_system,
                  const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                  const std::map<std::string, std::string>& options);
@@ -98,6 +100,10 @@ class PAIMON_EXPORT WriteContext {
         return executor_;
     }
 
+    std::shared_ptr<IOManager> GetIOManager() const {
+        return io_manager_;
+    }
+
     std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
         return specific_file_system_;
     }
@@ -113,6 +119,7 @@ class PAIMON_EXPORT WriteContext {
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
+    std::shared_ptr<IOManager> io_manager_;
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
@@ -162,6 +169,11 @@ class PAIMON_EXPORT WriteContextBuilder {
     /// @param executor The executor to use.
     /// @return Reference to this builder for method chaining.
     WriteContextBuilder& WithExecutor(const std::shared_ptr<Executor>& executor);
+
+    /// Set custom IO manager for lookup and external disk spill operations.
+    /// @param io_manager The IO manager to use.
+    /// @return Reference to this builder for method chaining.
+    WriteContextBuilder& WithIOManager(const std::shared_ptr<IOManager>& io_manager);
 
     /// For postpone bucket mode in pk table, `WithWriteId()` supposed to be used.
     ///

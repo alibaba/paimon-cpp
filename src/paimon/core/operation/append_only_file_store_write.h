@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -27,6 +26,7 @@
 
 #include "arrow/type.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/deletion_vector.h"
 #include "paimon/core/io/single_file_writer.h"
@@ -61,6 +61,7 @@ class Logger;
 class MemoryPool;
 class SchemaManager;
 class TableSchema;
+class IOManager;
 
 class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
  public:
@@ -73,9 +74,9 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<arrow::Schema>& write_schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+        bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool);
     ~AppendOnlyFileStoreWrite() override;
 
  private:
@@ -94,7 +95,7 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
     Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
         const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
         const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
-        const std::shared_ptr<std::atomic_bool>& cancel_flag);
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     SingleFileWriterCreator GetDataFileWriterCreator(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,

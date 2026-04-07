@@ -15,6 +15,8 @@
  */
 #include "paimon/core/mergetree/compact/merge_tree_compact_rewriter.h"
 
+#include <cassert>
+
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
 #include "paimon/common/table/special_fields.h"
@@ -38,7 +40,8 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<CancellationController>& cancellation_controller)
     : options_(options),
       merge_file_split_read_(std::move(merge_file_split_read)),
       pool_(pool),
@@ -50,21 +53,32 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
       write_schema_(write_schema),
       dv_factory_(std::move(dv_factory)),
       path_factory_cache_(path_factory_cache),
-      merge_function_wrapper_factory_(std::move(merge_function_wrapper_factory)) {}
+      merge_function_wrapper_factory_(std::move(merge_function_wrapper_factory)),
+      cancellation_controller_(cancellation_controller) {
+    assert(cancellation_controller_ != nullptr);
+}
 
 Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Create(
     int32_t bucket, const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
+    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<CancellationController>& cancellation_controller) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
     // TODO(xinyu.lxy): set executor
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
-    read_context_builder.SetOptions(options.ToMap()).EnablePrefetch(true).WithMemoryPool(pool);
+    read_context_builder.SetOptions(options.ToMap())
+        .EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .WithMemoryPool(pool)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
@@ -84,7 +98,7 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
         partition, bucket, table_schema->Id(), trimmed_primary_keys, options, data_schema,
         write_schema, std::move(dv_factory), path_factory_cache, std::move(merge_file_split_read),
-        merge_function_wrapper_factory, pool));
+        merge_function_wrapper_factory, pool, cancellation_controller));
 }
 
 Result<CompactResult> MergeTreeCompactRewriter::Upgrade(int32_t output_level,
@@ -134,8 +148,8 @@ MergeTreeCompactRewriter::CreateRollingRowWriter(int32_t level) {
                                CreateDataFilePathFactory(format->Identifier()));
 
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, level, FileSource::Compact(),
-            trimmed_primary_keys_, stats_extractor, write_schema_,
+            options_.GetWriteFileCompression(level), converter, schema_id_, level,
+            FileSource::Compact(), trimmed_primary_keys_, stats_extractor, write_schema_,
             data_file_path_factory->IsExternalPath(), pool_);
         PAIMON_RETURN_NOT_OK(writer->Init(options_.GetFileSystem(),
                                           data_file_path_factory->NewPath(), writer_builder));
@@ -190,8 +204,30 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
     merge_file_split_read_->SetMergeFunctionWrapper(wrapper);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,
                            merge_file_split_read_->CreateSortMergeReaderForSection(
-                               section, partition_, /*dv_factory=*/{},
+                               section, partition_, dv_factory_,
                                /*predicate=*/nullptr, data_file_path_factory, drop_delete));
+    if (!rolling_writer) {
+        // Short-circuit logic: for no rolling writers, simply iterating through the KeyValue
+        // iterator is sufficient to ensure lookup merge function take effect.
+        while (true) {
+            if (cancellation_controller_->IsCancelled()) {
+                return Status::Cancelled("Compaction is cancelled");
+            }
+            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader::Iterator> key_value_iter,
+                                   sort_merge_reader->NextBatch());
+            if (key_value_iter == nullptr) {
+                break;
+            }
+            while (true) {
+                PAIMON_ASSIGN_OR_RAISE(bool has_next, key_value_iter->HasNext());
+                if (!has_next) {
+                    break;
+                }
+                [[maybe_unused]] KeyValue kv = key_value_iter->Next();
+            }
+        }
+        return Status::OK();
+    }
 
     // consumer batch size is WriteBatchSize
     auto async_key_value_producer_consumer =
@@ -201,14 +237,15 @@ Status MergeTreeCompactRewriter::MergeReadAndWrite(
     reader_holders.push_back(async_key_value_producer_consumer);
     // read KeyValueBatch from SortMergeReader and write to RollingWriter
     while (true) {
+        if (cancellation_controller_->IsCancelled()) {
+            return Status::Cancelled("Compaction is cancelled");
+        }
         PAIMON_ASSIGN_OR_RAISE(KeyValueBatch key_value_batch,
                                async_key_value_producer_consumer->NextBatch());
         if (key_value_batch.batch == nullptr) {
             break;
         }
-        if (rolling_writer) {
-            PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
-        }
+        PAIMON_RETURN_NOT_OK(rolling_writer->Write(std::move(key_value_batch)));
     }
     return Status::OK();
 }

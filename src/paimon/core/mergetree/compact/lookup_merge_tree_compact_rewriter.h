@@ -34,9 +34,9 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
         MergeFunctionWrapperFactory merge_function_wrapper_factory, int32_t bucket,
         const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
-        DeletionVector::Factory dv_factory,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
+        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     Status Close() override {
         return lookup_levels_->Close();
@@ -60,11 +60,12 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         const BinaryRow& partition, int32_t bucket, int64_t schema_id,
         const std::vector<std::string>& trimmed_primary_keys, const CoreOptions& options,
         const std::shared_ptr<arrow::Schema>& data_schema,
-        const std::shared_ptr<arrow::Schema>& write_schema, DeletionVector::Factory dv_factory,
+        const std::shared_ptr<arrow::Schema>& write_schema,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
         std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
         MergeFunctionWrapperFactory merge_function_wrapper_factory,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     bool RewriteChangelog(int32_t output_level, bool drop_delete,
                           const std::vector<std::vector<SortedRun>>& sections) const override {

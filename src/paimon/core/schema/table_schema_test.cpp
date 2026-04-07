@@ -222,6 +222,61 @@ TEST_F(TableSchemaTest, TestDeserializePkTableSchema) {
     ASSERT_EQ(trimmed_primary_key_fields[1], field3);
 }
 
+TEST_F(TableSchemaTest, TestTrimmedPrimaryKeyInterfaces) {
+    arrow::FieldVector fields = {
+        arrow::field("pt", arrow::utf8()),
+        arrow::field("id", arrow::int64()),
+        arrow::field("val", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+
+    ASSERT_OK_AND_ASSIGN(auto table_schema, TableSchema::Create(/*schema_id=*/0, schema,
+                                                                /*partition_keys=*/{"pt"},
+                                                                /*primary_keys=*/{"pt", "id"},
+                                                                /*options=*/{}));
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::string> trimmed_primary_keys,
+                         table_schema->TrimmedPrimaryKeys());
+    ASSERT_EQ(trimmed_primary_keys, std::vector<std::string>({"id"}));
+
+    ASSERT_OK_AND_ASSIGN(std::vector<DataField> trimmed_primary_key_fields,
+                         table_schema->TrimmedPrimaryKeyFields());
+    ASSERT_EQ(trimmed_primary_key_fields.size(), 1);
+    ASSERT_EQ(trimmed_primary_key_fields[0].Name(), "id");
+    ASSERT_FALSE(trimmed_primary_key_fields[0].Nullable());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> trimmed_primary_key_schema,
+                         table_schema->TrimmedPrimaryKeySchema());
+    ASSERT_EQ(trimmed_primary_key_schema->num_fields(), 1);
+    ASSERT_EQ(trimmed_primary_key_schema->field(0)->name(), "id");
+    ASSERT_FALSE(trimmed_primary_key_schema->field(0)->nullable());
+}
+
+TEST_F(TableSchemaTest, TestTrimmedPrimaryKeyInterfacesWithoutPrimaryKeys) {
+    arrow::FieldVector fields = {
+        arrow::field("pt", arrow::utf8()),
+        arrow::field("val", arrow::int32()),
+    };
+    auto schema = arrow::schema(fields);
+
+    ASSERT_OK_AND_ASSIGN(auto table_schema, TableSchema::Create(/*schema_id=*/0, schema,
+                                                                /*partition_keys=*/{"pt"},
+                                                                /*primary_keys=*/{},
+                                                                /*options=*/{}));
+
+    ASSERT_OK_AND_ASSIGN(std::vector<std::string> trimmed_primary_keys,
+                         table_schema->TrimmedPrimaryKeys());
+    ASSERT_TRUE(trimmed_primary_keys.empty());
+
+    ASSERT_OK_AND_ASSIGN(std::vector<DataField> trimmed_primary_key_fields,
+                         table_schema->TrimmedPrimaryKeyFields());
+    ASSERT_TRUE(trimmed_primary_key_fields.empty());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::Schema> trimmed_primary_key_schema,
+                         table_schema->TrimmedPrimaryKeySchema());
+    ASSERT_EQ(trimmed_primary_key_schema->num_fields(), 0);
+}
+
 TEST_F(TableSchemaTest, TestDeserializeAppendTableSchemaWithTimestamp) {
     auto fs = std::make_shared<LocalFileSystem>();
 

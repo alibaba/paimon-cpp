@@ -33,6 +33,7 @@
 namespace paimon {
 class FileSystem;
 class DataOutputStream;
+class BucketedDvMaintainer;
 struct DeletionFile;
 
 /// The DeletionVector can efficiently record the positions of rows that are deleted in a file,
@@ -40,6 +41,13 @@ struct DeletionFile;
 class DeletionVector {
  public:
     using Factory = std::function<Result<std::shared_ptr<DeletionVector>>(const std::string&)>;
+
+    static Factory CreateFactory(
+        const std::shared_ptr<FileSystem>& file_system,
+        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    static Factory CreateFactory(const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
 
     virtual ~DeletionVector() = default;
 

@@ -230,13 +230,17 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/aggregate/field_sum_agg.cpp
     core/mergetree/compact/interval_partition.cpp
     core/mergetree/compact/loser_tree.cpp
+    core/mergetree/compact/merge_tree_compact_manager.cpp
+    core/mergetree/compact/merge_tree_compact_manager_factory.cpp
     core/mergetree/compact/merge_tree_compact_rewriter.cpp
+    core/mergetree/compact/merge_tree_compact_task.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
     core/mergetree/compact/sort_merge_reader_with_min_heap.cpp
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_levels.cpp
     core/migrate/file_meta_utils.cpp
@@ -400,6 +404,8 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/btree/btree_global_indexer_test.cpp
                     common/global_index/btree/btree_global_index_writer_test.cpp
                     common/global_index/btree/btree_global_index_integration_test.cpp
+                    common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
+                    common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp
                     common/io/data_input_output_stream_test.cpp
                     common/io/buffered_input_stream_test.cpp
@@ -516,7 +522,9 @@ if(PAIMON_BUILD_TESTS)
                     core/catalog/catalog_test.cpp
                     core/catalog/identifier_test.cpp
                     core/compact/compact_deletion_file_test.cpp
+                    core/compact/noop_compact_manager_test.cpp
                     core/core_options_test.cpp
+                    core/options/lookup_strategy_test.cpp
                     core/deletionvectors/apply_deletion_vector_batch_reader_test.cpp
                     core/deletionvectors/bitmap_deletion_vector_test.cpp
                     core/deletionvectors/bucketed_dv_maintainer_test.cpp
@@ -524,6 +532,7 @@ if(PAIMON_BUILD_TESTS)
                     core/deletionvectors/deletion_vector_test.cpp
                     core/deletionvectors/deletion_vector_index_file_writer_test.cpp
                     core/deletionvectors/deletion_vectors_index_file_test.cpp
+                    core/disk/io_manager_test.cpp
                     core/index/index_in_data_file_dir_path_factory_test.cpp
                     core/index/deletion_vector_meta_test.cpp
                     core/index/index_file_meta_serializer_test.cpp
@@ -584,10 +593,14 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/universal_compaction_test.cpp
                     core/mergetree/compact/force_up_level0_compaction_test.cpp
                     core/mergetree/compact/compact_strategy_test.cpp
+                    core/mergetree/compact/file_rewrite_compact_task_test.cpp
+                    core/mergetree/compact/merge_tree_compact_manager_test.cpp
+                    core/mergetree/compact/merge_tree_compact_manager_factory_test.cpp
                     core/mergetree/compact/merge_tree_compact_rewriter_test.cpp
                     core/mergetree/lookup/persist_processor_test.cpp
                     core/mergetree/drop_delete_reader_test.cpp
                     core/mergetree/merge_tree_writer_test.cpp
+                    core/mergetree/write_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp

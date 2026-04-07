@@ -90,7 +90,7 @@ Result<std::unique_ptr<FieldsComparator>> PrimaryKeyTableUtils::CreateSequenceFi
         }
     }
     return FieldsComparator::Create(value_fields, sort_field_idxs,
-                                    options.SequenceFieldSortOrderIsAscending(), /*use_view=*/true);
+                                    options.SequenceFieldSortOrderIsAscending());
 }
 
 }  // namespace paimon

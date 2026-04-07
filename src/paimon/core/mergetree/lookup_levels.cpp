@@ -31,29 +31,35 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     const CoreOptions& options, const std::shared_ptr<SchemaManager>& schema_manager,
     const std::shared_ptr<IOManager>& io_manager,
     const std::shared_ptr<FileStorePathFactory>& path_factory,
-    const std::shared_ptr<TableSchema>& table_schema, std::unique_ptr<Levels>&& levels,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::shared_ptr<TableSchema>& table_schema, const std::shared_ptr<Levels>& levels,
+    DeletionVector::Factory dv_factory,
     const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_pk, table_schema->TrimmedPrimaryKeys());
-    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields, table_schema->GetFields(trimmed_pk));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
+                           table_schema->TrimmedPrimaryKeyFields());
 
     auto pk_schema = DataField::ConvertDataFieldsToArrowSchema(pk_fields);
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<RowCompactedSerializer> key_serializer,
                            RowCompactedSerializer::Create(pk_schema, pool));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FieldsComparator> key_comparator,
-        FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FieldsComparator> key_comparator,
+                           FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true));
 
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> partition_fields,
                            table_schema->GetFields(table_schema->PartitionKeys()));
     auto partition_schema = DataField::ConvertDataFieldsToArrowSchema(partition_fields);
 
     // TODO(xinyu.lxy): set executor
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory->RootPath());
-    read_context_builder.SetOptions(options.ToMap()).EnablePrefetch(true).WithMemoryPool(pool);
+    read_context_builder.SetOptions(options.ToMap())
+        .EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .WithMemoryPool(pool)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(
@@ -68,8 +74,8 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     return std::unique_ptr<LookupLevels>(new LookupLevels(
         fs, partition, bucket, options, schema_manager, io_manager, std::move(key_comparator),
         data_file_path_factory, std::move(split_read), table_schema, partition_schema, pk_schema,
-        std::move(levels), deletion_file_map, processor_factory, std::move(key_serializer),
-        serializer_factory, lookup_store_factory, pool));
+        levels, dv_factory, processor_factory, std::move(key_serializer), serializer_factory,
+        lookup_store_factory, pool));
 }
 template <typename T>
 Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalRow>& key,
@@ -117,8 +123,8 @@ LookupLevels<T>::LookupLevels(
     std::unique_ptr<RawFileSplitRead>&& split_read,
     const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
-    const std::shared_ptr<arrow::Schema>& key_schema, std::unique_ptr<Levels>&& levels,
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+    const std::shared_ptr<arrow::Schema>& key_schema, const std::shared_ptr<Levels>& levels,
+    DeletionVector::Factory dv_factory,
     const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
     std::unique_ptr<RowCompactedSerializer>&& key_serializer,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
@@ -137,13 +143,18 @@ LookupLevels<T>::LookupLevels(
       table_schema_(table_schema),
       partition_schema_(partition_schema),
       key_schema_(key_schema),
-      levels_(std::move(levels)),
-      deletion_file_map_(deletion_file_map),
+      levels_(levels),
+      dv_factory_(dv_factory),
       processor_factory_(processor_factory),
       key_serializer_(std::move(key_serializer)),
       serializer_factory_(serializer_factory),
       lookup_store_factory_(lookup_store_factory) {
-    value_schema_ = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    if constexpr (std::is_same_v<T, FilePosition>) {
+        // if T is FilePosition, only read key fields to create sst file is enough
+        value_schema_ = key_schema_;
+    } else {
+        value_schema_ = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    }
     read_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema_);
 }
 template <typename T>
@@ -189,22 +200,21 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
 template <typename T>
 Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFileMeta>& file,
                                                   const std::string& kv_file_path) {
+    if constexpr (std::is_same_v<T, bool>) {
+        // Short-circuit logic: if T is bool, just write empty lookup file.
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<BloomFilter> bloom_filter,
+            LookupStoreFactory::BfGenerator(file->row_count, options_, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<LookupStoreWriter> kv_writer,
+            lookup_store_factory_->CreateWriter(fs_, kv_file_path, bloom_filter, pool_));
+        return kv_writer->Close();
+    }
     // Prepare reader to iterate KeyValue
-    auto dv_factory =
-        [this](const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        auto iter = deletion_file_map_.find(file_name);
-        if (iter != deletion_file_map_.end()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DeletionVector> dv,
-                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
     PAIMON_ASSIGN_OR_RAISE(
         std::vector<std::unique_ptr<FileBatchReader>> raw_readers,
         split_read_->CreateRawFileReaders(partition_, {file}, read_schema_,
-                                          /*predicate=*/nullptr, dv_factory,
+                                          /*predicate=*/nullptr, dv_factory_,
                                           /*row_ranges=*/std::nullopt, data_file_path_factory_));
     if (raw_readers.size() != 1) {
         return Status::Invalid("Unexpected, CreateSstFileFromDataFile only create single reader");

@@ -80,8 +80,9 @@ Result<std::shared_ptr<RangeBitmapFileIndexWriter>> RangeBitmapFileIndexWriter::
         PAIMON_ASSIGN_OR_RAISE(parsed_chunk_size, MemorySize::ParseBytes(chunk_size_it->second));
     }
     auto struct_type = arrow::struct_({field});
-    PAIMON_ASSIGN_OR_RAISE(auto appender_ptr, RangeBitmap::Appender::Create(
-                                                  shared_key_factory, parsed_chunk_size, pool));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<RangeBitmap::Appender> appender_ptr,
+        RangeBitmap::Appender::Create(shared_key_factory, parsed_chunk_size, pool));
     return std::make_shared<RangeBitmapFileIndexWriter>(
         struct_type, field->type(), options, pool, shared_key_factory, std::move(appender_ptr));
 }

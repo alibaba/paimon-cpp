@@ -18,6 +18,7 @@
 
 #include <set>
 
+#include "fmt/format.h"
 #include "gtest/gtest.h"
 #include "paimon/common/io/memory_segment_output_stream.h"
 #include "paimon/common/utils/path_util.h"
@@ -117,6 +118,51 @@ TEST(BitmapDeletionVectorTest, GetCardinality) {
     ASSERT_EQ(dv_del.GetCardinality(), 10);
     ASSERT_OK(dv_del.Delete(100));
     ASSERT_EQ(dv_del.GetCardinality(), 11);
+}
+
+TEST(BitmapDeletionVectorTest, PositionOutOfRangeShouldFail) {
+    RoaringBitmap32 roaring;
+    BitmapDeletionVector dv(roaring);
+    int64_t invalid_position = static_cast<int64_t>(RoaringBitmap32::MAX_VALUE) + 1;
+
+    ASSERT_NOK_WITH_MSG(dv.Delete(invalid_position), "too many rows");
+    ASSERT_NOK_WITH_MSG(dv.CheckedDelete(invalid_position), "too many rows");
+    ASSERT_NOK_WITH_MSG(dv.IsDeleted(invalid_position), "too many rows");
+}
+
+TEST(BitmapDeletionVectorTest, DeserializeShouldRejectInvalidMagicNumber) {
+    auto pool = GetDefaultPool();
+    MemorySegmentOutputStream output(MemorySegmentOutputStream::DEFAULT_SEGMENT_SIZE, pool);
+    output.WriteValue<int32_t>(BitmapDeletionVector::MAGIC_NUMBER + 1);
+
+    auto payload = MemorySegmentUtils::CopyToBytes(output.Segments(), /*offset=*/0,
+                                                   output.CurrentSize(), pool.get());
+
+    ASSERT_NOK_WITH_MSG(
+        BitmapDeletionVector::Deserialize(payload->data(), payload->size(), pool.get()),
+        fmt::format("invalid magic number: {}", BitmapDeletionVector::MAGIC_NUMBER + 1));
+}
+
+TEST(BitmapDeletionVectorTest, DeserializeWithoutMagicNumberShouldRoundTrip) {
+    auto pool = GetDefaultPool();
+
+    RoaringBitmap32 roaring;
+    roaring.Add(1);
+    roaring.Add(7);
+    roaring.Add(1024);
+    BitmapDeletionVector dv(roaring);
+
+    ASSERT_OK_AND_ASSIGN(auto bytes_with_magic, dv.SerializeToBytes(pool));
+    ASSERT_OK_AND_ASSIGN(
+        auto deserialized,
+        BitmapDeletionVector::DeserializeWithoutMagicNumber(
+            bytes_with_magic->data() + BitmapDeletionVector::MAGIC_NUMBER_SIZE_BYTES,
+            bytes_with_magic->size() - BitmapDeletionVector::MAGIC_NUMBER_SIZE_BYTES, pool.get()));
+
+    ASSERT_TRUE(deserialized->IsDeleted(1).value());
+    ASSERT_TRUE(deserialized->IsDeleted(7).value());
+    ASSERT_TRUE(deserialized->IsDeleted(1024).value());
+    ASSERT_FALSE(deserialized->IsDeleted(8).value());
 }
 
 }  // namespace paimon::test

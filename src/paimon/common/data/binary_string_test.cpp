@@ -17,6 +17,7 @@
 #include "paimon/common/data/binary_string.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
@@ -28,58 +29,24 @@
 namespace paimon::test {
 class BinaryStringTest : public testing::Test {
  private:
-    enum class Mode { ONE_SEG = 0, MULTI_SEGS = 1, STRING = 2, RANDOM = 3 };
-
     BinaryString FromString(const std::string& str) {
         auto pool = GetDefaultPool();
-        BinaryString string = BinaryString::FromString(str, pool.get());
-        if (mode_ == Mode::RANDOM) {
-            int32_t rnd = std::rand() % 3;
-            if (rnd == 0) {
-                mode_ = Mode::ONE_SEG;
-            } else if (rnd == 1) {
-                mode_ = Mode::MULTI_SEGS;
-            } else {
-                mode_ = Mode::STRING;
-            }
-        }
-        if (mode_ == Mode::STRING) {
-            return string;
-        }
-        if (mode_ == Mode::ONE_SEG || string.GetSizeInBytes() < 2) {
-            return string;
-        } else {
-            int32_t num_bytes = string.GetSizeInBytes();
-            int32_t pad = std::rand() % 5;
-            int32_t num_bytes_with_pad = num_bytes + pad;
-            int32_t seg_size = num_bytes_with_pad / 2 + 1;
-            std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(seg_size, pool.get());
-            std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(seg_size, pool.get());
-            if (seg_size - pad > 0 && num_bytes >= seg_size - pad) {
-                string.GetSegments()[0].Get(0, bytes1.get(), pad, seg_size - pad);
-            }
-            string.GetSegments()[0].Get(seg_size - pad, bytes2.get(), 0,
-                                        num_bytes - seg_size + pad);
-
-            std::vector<MemorySegment> segments = {MemorySegment::Wrap(bytes1),
-                                                   MemorySegment::Wrap(bytes2)};
-            return BinaryString::FromAddress(segments, pad, num_bytes);
-        }
+        return BinaryString::FromString(str, pool.get());
     }
 
     template <typename T, typename U>
     void InnerCheckEqual(T&& expected, U&& actual) {
-        ASSERT_EQ(std::forward<T>(expected), std::forward<U>(actual)) << static_cast<int>(mode_);
+        ASSERT_EQ(std::forward<T>(expected), std::forward<U>(actual));
     }
 
     template <typename T>
     void InnerCheck(T&& expected) {
-        ASSERT_TRUE(std::forward<T>(expected)) << static_cast<int>(mode_);
+        ASSERT_TRUE(std::forward<T>(expected));
     }
 
     template <typename T>
     void InnerCheckFalse(T&& expected) {
-        ASSERT_FALSE(std::forward<T>(expected)) << static_cast<int>(mode_);
+        ASSERT_FALSE(std::forward<T>(expected));
     }
 
     void CheckBasic(const std::string& str, int32_t len) {
@@ -103,8 +70,6 @@ class BinaryStringTest : public testing::Test {
         InnerCheck(s2.StartsWith(s2));
         InnerCheck(s2.EndsWith(s2));
     }
-
-    Mode mode_ = Mode::RANDOM;
 };
 
 TEST_F(BinaryStringTest, TestBasic) {
@@ -147,57 +112,44 @@ TEST_F(BinaryStringTest, TestCompareTo) {
     InnerCheck(FromString("你好123").CompareTo(FromString("你好122")) > 0);
 }
 
-TEST_F(BinaryStringTest, TestMultiSegments) {
+TEST_F(BinaryStringTest, TestSingleSegment) {
     // prepare
     auto pool = GetDefaultPool();
-    std::vector<MemorySegment> segments1;
-    segments1.push_back(MemorySegment::Wrap(Bytes::AllocateBytes(10, pool.get())));
-    segments1.push_back(MemorySegment::Wrap(Bytes::AllocateBytes(10, pool.get())));
-    auto bytes1 = Bytes::AllocateBytes("abcde", pool.get());
-    auto bytes2 = Bytes::AllocateBytes("aaaaa", pool.get());
-    segments1[0].Put(5, *bytes1, 0, 5);
-    segments1[1].Put(0, *bytes2, 0, 5);
+    std::shared_ptr<Bytes> data1 = Bytes::AllocateBytes("aaaaaabcde", pool.get());
+    MemorySegment seg1 = MemorySegment::Wrap(data1);
 
-    std::vector<MemorySegment> segments2;
-    segments2.push_back(MemorySegment::Wrap(Bytes::AllocateBytes(5, pool.get())));
-    segments2.push_back(MemorySegment::Wrap(Bytes::AllocateBytes(5, pool.get())));
-    auto bytes3 = Bytes::AllocateBytes("abcde", pool.get());
-    auto bytes4 = Bytes::AllocateBytes("b", pool.get());
-    segments2[0].Put(0, *bytes3, 0, 5);
-    segments2[1].Put(0, *bytes4, 0, 1);
+    std::shared_ptr<Bytes> data2 = Bytes::AllocateBytes("abcdeb", pool.get());
+    MemorySegment seg2 = MemorySegment::Wrap(data2);
 
-    // test go ahead both
-    BinaryString binary_string1 = BinaryString::FromAddress(segments1, 5, 10);
-    BinaryString binary_string2 = BinaryString::FromAddress(segments2, 0, 6);
-    InnerCheckEqual(binary_string1.ToString(), "abcdeaaaaa");
+    // test compare
+    BinaryString binary_string1 = BinaryString::FromAddress(seg1, 0, 10);
+    BinaryString binary_string2 = BinaryString::FromAddress(seg2, 0, 6);
+    InnerCheckEqual(binary_string1.ToString(), "aaaaaabcde");
     InnerCheckEqual(binary_string2.ToString(), "abcdeb");
     InnerCheckEqual(binary_string1.CompareTo(binary_string2), -1);
-    ASSERT_EQ(binary_string1, binary_string1);
-    ASSERT_TRUE(binary_string1 < binary_string2);
+    InnerCheckEqual(binary_string1, binary_string1);
+    InnerCheck(binary_string1 < binary_string2);
 
-    // test needCompare == len
-    binary_string1 = BinaryString::FromAddress(segments1, 5, 5);
-    binary_string2 = BinaryString::FromAddress(segments2, 0, 5);
+    // test equal length compare
+    binary_string1 = BinaryString::FromAddress(seg1, 5, 5);
+    binary_string2 = BinaryString::FromAddress(seg2, 0, 5);
     InnerCheckEqual(binary_string1.ToString(), "abcde");
     InnerCheckEqual(binary_string2.ToString(), "abcde");
     InnerCheckEqual(binary_string1, binary_string2);
 
-    // test find the first segment of this string
-    binary_string1 = BinaryString::FromAddress(segments1, 10, 5);
-    binary_string2 = BinaryString::FromAddress(segments2, 0, 5);
+    // test not equal
+    binary_string1 = BinaryString::FromAddress(seg1, 0, 5);
+    binary_string2 = BinaryString::FromAddress(seg2, 0, 5);
     InnerCheckEqual(binary_string1.ToString(), "aaaaa");
     InnerCheckEqual(binary_string2.ToString(), "abcde");
     InnerCheckEqual(binary_string1.CompareTo(binary_string2), -1);
     InnerCheckEqual(binary_string2.CompareTo(binary_string1), 1);
 
-    // test go ahead single
-    std::vector<MemorySegment> segments3;
-    segments3.push_back(MemorySegment::Wrap(Bytes::AllocateBytes(10, pool.get())));
-    segments3[0].Put(4, Bytes("abcdeb", pool.get()), 0, 6);
-
-    binary_string1 = BinaryString::FromAddress(segments1, 5, 10);
-    binary_string2 = BinaryString::FromAddress(segments3, 4, 6);
-    InnerCheckEqual(binary_string1.ToString(), "abcdeaaaaa");
+    // test with offset in single segment
+    std::shared_ptr<Bytes> data3 = Bytes::AllocateBytes(10, pool.get());
+    MemorySegment seg3 = MemorySegment::Wrap(data3);
+    seg3.Put(4, Bytes("abcdeb", pool.get()), 0, 6);
+    binary_string2 = BinaryString::FromAddress(seg3, 4, 6);
     InnerCheckEqual(binary_string2.ToString(), "abcdeb");
     InnerCheckEqual(binary_string1.CompareTo(binary_string2), -1);
     InnerCheckEqual(binary_string2.CompareTo(binary_string1), 1);
@@ -243,26 +195,21 @@ TEST_F(BinaryStringTest, TestSubstring) {
     InnerCheckEqual(FromString("ߵ梷").Substring(0, 2, pool.get()), FromString("ߵ梷"));
 }
 
-TEST_F(BinaryStringTest, TestSubStringMultiSegsAndCopyBinaryString) {
+TEST_F(BinaryStringTest, TestSubStringAndCopyBinaryString) {
     auto pool = GetDefaultPool();
-    std::string str1 = "hello world!";
-    std::string str2 = "nice to meet you!";
-    std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(str1, pool.get());
-    std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(str2, pool.get());
-    std::vector<MemorySegment> segs = {MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)};
-    BinaryString binary_string = BinaryString(segs, 0, str1.size() + str2.size());
-    int32_t left = str1.size() / 2, right = str1.size() + str2.size() / 2;
+    std::string combined = "hello world!nice to meet you!";
+    std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(combined, pool.get());
+    MemorySegment seg = MemorySegment::Wrap(bytes);
+    BinaryString binary_string = BinaryString(seg, 0, combined.size());
+    int32_t left = 6, right = 20;
 
     // Substring [left, right), The right is not included
-    InnerCheckEqual(
-        binary_string.Substring(left, right, pool.get()),
-        FromString(str1.substr(left, str1.size() - left) + str2.substr(0, right - str1.size())));
+    InnerCheckEqual(binary_string.Substring(left, right, pool.get()),
+                    FromString(combined.substr(left, right - left)));
     // CopyBinaryString [left, right], The right is included
     InnerCheckEqual(binary_string.CopyBinaryString(left, right, pool.get()),
-                    FromString(str1.substr(left, str1.size() - left) +
-                               str2.substr(0, right - str1.size() + 1)));
-    InnerCheckEqual(binary_string.CopyBinaryStringInOneSeg(0, str1.size(), pool.get()),
-                    FromString(str1));
+                    FromString(combined.substr(left, right - left + 1)));
+    InnerCheckEqual(binary_string.CopyBinaryString(0, 11, pool.get()), FromString("hello world!"));
 }
 
 TEST_F(BinaryStringTest, TestIndexOf) {
@@ -282,17 +229,14 @@ TEST_F(BinaryStringTest, TestIndexOf) {
     }
     {
         auto pool = GetDefaultPool();
-        std::string str1 = "Strive not to be a success, ";
-        std::string str2 = "but rather to be of value.";
-        auto bytes1 = std::make_shared<Bytes>(str1, pool.get());
-        auto bytes2 = std::make_shared<Bytes>(str2, pool.get());
-        std::vector<MemorySegment> mem_segs(
-            {MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-        auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/0,
-                                                       /*num_bytes=*/str1.length() + str2.length());
-        ASSERT_EQ(str1 + str2, binary_string.ToString());
-        InnerCheckEqual(binary_string.IndexOf(FromString("value"), 0), str1.length() + 20);
-        InnerCheckEqual(binary_string.IndexOf(FromString("value"), 5), str1.length() + 20);
+        std::string combined = "Strive not to be a success, but rather to be of value.";
+        auto bytes = std::make_shared<Bytes>(combined, pool.get());
+        MemorySegment seg = MemorySegment::Wrap(bytes);
+        auto binary_string = BinaryString::FromAddress(seg, /*offset=*/0,
+                                                       /*num_bytes=*/combined.length());
+        InnerCheckEqual(combined, binary_string.ToString());
+        InnerCheckEqual(binary_string.IndexOf(FromString("value"), 0), 48);
+        InnerCheckEqual(binary_string.IndexOf(FromString("value"), 5), 48);
         InnerCheckEqual(binary_string.IndexOf(FromString("vvalue"), 0), -1);
         InnerCheckEqual(binary_string.IndexOf(FromString("!"), 0), -1);
     }
@@ -317,16 +261,9 @@ TEST_F(BinaryStringTest, TestEmptyString) {
     BinaryString str3;
     auto pool = GetDefaultPool();
     {
-        std::vector<MemorySegment> segments;
-
         std::shared_ptr<Bytes> bytes0 = Bytes::AllocateBytes(10, pool.get());
-        std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(10, pool.get());
-
-        MemorySegment segments0 = MemorySegment::Wrap(bytes0);
-        MemorySegment segments1 = MemorySegment::Wrap(bytes1);
-        segments.push_back(segments0);
-        segments.push_back(segments1);
-        str3 = BinaryString::FromAddress(segments, /*offset=*/15, /*num_bytes=*/0);
+        MemorySegment seg0 = MemorySegment::Wrap(bytes0);
+        str3 = BinaryString::FromAddress(seg0, /*offset=*/5, /*num_bytes=*/0);
     }
 
     InnerCheck(BinaryString::EmptyUtf8().CompareTo(str2) < 0);
@@ -362,7 +299,7 @@ TEST_F(BinaryStringTest, TestFromBytes) {
     auto pool = GetDefaultPool();
     std::string s = "hahahe";
     std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(s, pool.get());
-    ASSERT_TRUE(BinaryString::FromBytes(bytes, 0, 6) == BinaryString::FromString(s, pool.get()));
+    InnerCheck(BinaryString::FromBytes(bytes, 0, 6) == BinaryString::FromString(s, pool.get()));
 }
 
 TEST_F(BinaryStringTest, TestCopy) {
@@ -371,39 +308,36 @@ TEST_F(BinaryStringTest, TestCopy) {
     std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(s, pool.get());
     BinaryString binary_string = BinaryString::FromBytes(bytes, 0, 6);
     BinaryString copy_binary_string = binary_string.Copy(pool.get());
-    ASSERT_EQ(binary_string, copy_binary_string);
-    ASSERT_EQ(copy_binary_string.ByteAt(2), 'h');
+    InnerCheckEqual(binary_string, copy_binary_string);
+    InnerCheckEqual(copy_binary_string.ByteAt(2), 'h');
 }
 
 TEST_F(BinaryStringTest, TestByteAt) {
     auto pool = GetDefaultPool();
-    std::string str1 = "hello";
-    std::string str2 = "world!";
-    auto bytes1 = std::make_shared<Bytes>(str1, pool.get());
-    auto bytes2 = std::make_shared<Bytes>(str2, pool.get());
-    std::vector<MemorySegment> mem_segs({MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-    auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/2,
-                                                   /*num_bytes=*/str1.length() + str2.length() - 2);
-    ASSERT_EQ(binary_string.ByteAt(0), 'l');
-    ASSERT_EQ(binary_string.ByteAt(5), 'r');
+    std::string combined = "helloworld!";
+    auto bytes = std::make_shared<Bytes>(combined, pool.get());
+    MemorySegment seg = MemorySegment::Wrap(bytes);
+    auto binary_string = BinaryString::FromAddress(seg, /*offset=*/2,
+                                                   /*num_bytes=*/combined.length() - 2);
+    InnerCheckEqual(binary_string.ByteAt(0), 'l');
+    InnerCheckEqual(binary_string.ByteAt(5), 'r');
 }
 
 TEST_F(BinaryStringTest, TestNumChars) {
     auto pool = GetDefaultPool();
-    auto bytes1 = std::make_shared<Bytes>("hello", pool.get());
-    auto bytes2 = std::make_shared<Bytes>("world", pool.get());
     {
-        std::vector<MemorySegment> mem_segs({MemorySegment::Wrap(bytes1)});
-        auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/0,
+        auto bytes = std::make_shared<Bytes>("hello", pool.get());
+        MemorySegment seg = MemorySegment::Wrap(bytes);
+        auto binary_string = BinaryString::FromAddress(seg, /*offset=*/0,
                                                        /*num_bytes=*/5);
-        ASSERT_EQ(5, binary_string.NumChars());
+        InnerCheckEqual(5, binary_string.NumChars());
     }
     {
-        std::vector<MemorySegment> mem_segs(
-            {MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-        auto binary_string = BinaryString::FromAddress(mem_segs, /*offset=*/0,
+        auto bytes = std::make_shared<Bytes>("helloworld", pool.get());
+        MemorySegment seg = MemorySegment::Wrap(bytes);
+        auto binary_string = BinaryString::FromAddress(seg, /*offset=*/0,
                                                        /*num_bytes=*/10);
-        ASSERT_EQ(10, binary_string.NumChars());
+        InnerCheckEqual(10, binary_string.NumChars());
     }
 }
 
@@ -412,32 +346,30 @@ TEST_F(BinaryStringTest, TestMatchAt) {
     {
         // abc
         std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes("abc", pool.get());
-        std::vector<MemorySegment> mem_segs1({MemorySegment::Wrap(bytes1)});
-        auto binary_string1 = BinaryString::FromAddress(mem_segs1, /*offset=*/0,
+        MemorySegment seg1 = MemorySegment::Wrap(bytes1);
+        auto binary_string1 = BinaryString::FromAddress(seg1, /*offset=*/0,
                                                         /*num_bytes=*/3);
         // bc
         std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes("bc", pool.get());
-        std::vector<MemorySegment> mem_segs2({MemorySegment::Wrap(bytes2)});
-        auto binary_string2 = BinaryString::FromAddress(mem_segs2, /*offset=*/0,
+        MemorySegment seg2 = MemorySegment::Wrap(bytes2);
+        auto binary_string2 = BinaryString::FromAddress(seg2, /*offset=*/0,
                                                         /*num_bytes=*/2);
-        ASSERT_TRUE(binary_string1.MatchAt(binary_string2, /*pos=*/1));
-        ASSERT_FALSE(binary_string1.MatchAt(binary_string2, /*pos=*/0));
+        InnerCheck(binary_string1.MatchAt(binary_string2, /*pos=*/1));
+        InnerCheckFalse(binary_string1.MatchAt(binary_string2, /*pos=*/0));
     }
     {
         // abcdef
-        std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes("abc", pool.get());
-        std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes("def", pool.get());
-        std::vector<MemorySegment> mem_segs1(
-            {MemorySegment::Wrap(bytes1), MemorySegment::Wrap(bytes2)});
-        auto binary_string1 = BinaryString::FromAddress(mem_segs1, /*offset=*/0,
+        std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes("abcdef", pool.get());
+        MemorySegment seg1 = MemorySegment::Wrap(bytes1);
+        auto binary_string1 = BinaryString::FromAddress(seg1, /*offset=*/0,
                                                         /*num_bytes=*/6);
         // bc
-        std::shared_ptr<Bytes> bytes3 = Bytes::AllocateBytes("bc", pool.get());
-        std::vector<MemorySegment> mem_segs2({MemorySegment::Wrap(bytes3)});
-        auto binary_string2 = BinaryString::FromAddress(mem_segs2, /*offset=*/0,
+        std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes("bc", pool.get());
+        MemorySegment seg2 = MemorySegment::Wrap(bytes2);
+        auto binary_string2 = BinaryString::FromAddress(seg2, /*offset=*/0,
                                                         /*num_bytes=*/2);
-        ASSERT_TRUE(binary_string1.MatchAt(binary_string2, /*pos=*/1));
-        ASSERT_FALSE(binary_string1.MatchAt(binary_string2, /*pos=*/0));
+        InnerCheck(binary_string1.MatchAt(binary_string2, /*pos=*/1));
+        InnerCheckFalse(binary_string1.MatchAt(binary_string2, /*pos=*/0));
     }
 }
 

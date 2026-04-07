@@ -87,7 +87,7 @@ TEST(RecordBatchTest, TestAssignAndMove) {
                                  arrow::field("f1", arrow::int8())};
     std::map<std::string, std::string> partition = {{"f1", "1"}};
     auto old_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [true, 1]
     ])")
             .ValueOrDie());
@@ -97,7 +97,7 @@ TEST(RecordBatchTest, TestAssignAndMove) {
                           &old_arrow_array);
 
     auto new_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [false, 1]
     ])")
             .ValueOrDie());

@@ -86,6 +86,6 @@ class Levels {
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::set<std::shared_ptr<DataFileMeta>, Level0Comparator> level0_;
     std::vector<SortedRun> levels_;
-    // TODO(lisizhuo.lsz): DropFileCallback?
+    // TODO(lisizhuo.lsz): DropFileCallback
 };
 }  // namespace paimon

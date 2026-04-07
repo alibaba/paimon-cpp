@@ -231,7 +231,7 @@ class BlobTableInteTest : public testing::Test, public ::testing::WithParamInter
         data_str.pop_back();
         data_str.append("]");
         return std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), data_str)
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), data_str)
                 .ValueOrDie());
     }
 

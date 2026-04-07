@@ -26,18 +26,16 @@ class BinarySectionTest : public ::testing::Test {
     void SetUp() override {
         pool_ = GetDefaultPool();
 
-        segments_ = {MemorySegment::AllocateHeapMemory(1024, pool_.get()),
-                     MemorySegment::AllocateHeapMemory(1024, pool_.get())};
-        for (int i = 0; i < 1024; ++i) {
-            segments_[0].Put(i, static_cast<uint8_t>(i));
-            segments_[1].Put(i, static_cast<uint8_t>(i + 1024));
+        segment_ = MemorySegment::AllocateHeapMemory(2048, pool_.get());
+        for (int i = 0; i < 2048; ++i) {
+            segment_.Put(i, static_cast<uint8_t>(i % 128));
         }
         offset_ = 0;
         size_in_bytes_ = 2048;
-        binary_section_ = BinarySection(segments_, offset_, size_in_bytes_);
+        binary_section_ = BinarySection(segment_, offset_, size_in_bytes_);
     }
 
-    std::vector<MemorySegment> segments_;
+    MemorySegment segment_;
     int32_t offset_;
     int32_t size_in_bytes_;
     BinarySection binary_section_;
@@ -45,10 +43,10 @@ class BinarySectionTest : public ::testing::Test {
 };
 
 TEST_F(BinarySectionTest, EqualityOperator) {
-    BinarySection other(segments_, offset_, size_in_bytes_);
+    BinarySection other(segment_, offset_, size_in_bytes_);
     EXPECT_TRUE(binary_section_ == other);
 
-    BinarySection different(segments_, offset_, size_in_bytes_ - 1);
+    BinarySection different(segment_, offset_, size_in_bytes_ - 1);
     EXPECT_FALSE(binary_section_ == different);
 }
 
@@ -56,7 +54,7 @@ TEST_F(BinarySectionTest, ToBytes) {
     auto bytes = binary_section_.ToBytes(pool_.get());
     ASSERT_EQ(bytes->size(), size_in_bytes_);
     for (int i = 0; i < size_in_bytes_; ++i) {
-        EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 1024));
+        EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 128));
     }
 }
 
@@ -68,10 +66,10 @@ TEST_F(BinarySectionTest, HashCode) {
 TEST_F(BinarySectionTest, ReadBinary) {
     int64_t variable_part_offset_and_len = (static_cast<int64_t>(offset_) << 32) | size_in_bytes_;
     auto bytes =
-        BinarySection::ReadBinary(segments_, 0, offset_, variable_part_offset_and_len, pool_.get());
+        BinarySection::ReadBinary(segment_, 0, offset_, variable_part_offset_and_len, pool_.get());
     ASSERT_EQ(bytes->size(), size_in_bytes_);
     for (int i = 0; i < size_in_bytes_; ++i) {
-        EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 1024));
+        EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 128));
     }
 }
 

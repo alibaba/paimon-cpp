@@ -178,7 +178,7 @@ class SimpleStatsEvolutionTest : public ::testing::Test {
             [](const InternalRow& row,
                const std::shared_ptr<arrow::Schema>& schema) -> std::vector<VariantType> {
             EXPECT_OK_AND_ASSIGN(auto getters,
-                                 InternalRowUtils::CreateFieldGetters(schema, /*use_view=*/false));
+                                 InternalRowUtils::CreateFieldGetters(schema, /*use_view=*/true));
             std::vector<VariantType> ret;
             for (const auto& getter : getters) {
                 ret.push_back(getter(row));

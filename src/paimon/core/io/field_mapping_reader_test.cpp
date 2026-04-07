@@ -20,7 +20,6 @@
 #include <ostream>
 #include <string>
 #include <utility>
-#include <variant>
 
 #include "arrow/api.h"
 #include "arrow/array/array_base.h"
@@ -418,7 +417,7 @@ TEST_F(FieldMappingReaderTest, TestDictionaryTypeWithSchemaEvolution) {
     std::shared_ptr<arrow::Schema> data_schema =
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
         ["apple", 4.0, 5.1, 10, 100, 1000, 10000, true],
         ["banana", 4.1, 6.2, 10, 200, 1000, 20000, null],
         [null, 4.2, null, 10, 300, 1000, 30000, true],
@@ -443,7 +442,7 @@ TEST_F(FieldMappingReaderTest, TestDictionaryTypeWithSchemaEvolution) {
     std::vector<std::string> partition_keys = {"f3", "f5"};
     BinaryRow partition = BinaryRowGenerator::GenerateRow({10, 1000}, pool_.get());
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
         [10000, 5.1, "apple", 4.0, 1000, 10, null, true, 100],
         [20000, 6.2, "banana", 4.1, 1000, 10, null, null, 200],
         [30000, null, null, 4.2, 1000,  10, null, true, 300],
@@ -464,7 +463,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyType) {
     std::shared_ptr<arrow::Schema> data_schema =
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
         ["true", 4.0, 5.1, 10],
         ["False", 4.1, 6.2, 10],
         [null, 4.2, null, 10],
@@ -485,7 +484,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyType) {
     std::vector<std::string> partition_keys = {"f3"};
     BinaryRow partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
         [true, "4", 5, 10],
         [false, "4.1", 6, 10],
         [null, "4.2", null,  10],
@@ -506,7 +505,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyTypeWithDict) {
     std::shared_ptr<arrow::Schema> data_schema =
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
         ["true", 4.0, 5.1, 10],
         ["false", 4.1, 6.2, 10],
         [null, 4.2, null, 10],
@@ -527,7 +526,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyTypeWithDict) {
     std::vector<std::string> partition_keys = {"f3"};
     BinaryRow partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
         [true, "4", 5, 10],
         [false, "4.1", 6, 10],
         [null, "4.2", null,  10],
@@ -548,7 +547,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithModifyTypeWithPredicate) {
     std::shared_ptr<arrow::Schema> data_schema =
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
         ["true", 4.0, 5, 10],
         ["False", 4.1, 6, 10],
         [null, 4.2, null, 10],
@@ -615,7 +614,7 @@ TEST_F(FieldMappingReaderTest, TestReadWithSchemaEvolutionWithRenameAndModifyTyp
         /*field_index=*/3, /*field_name=*/"f0", FieldType::STRING,
         Literal(FieldType::STRING, literal_str.data(), literal_str.size()));
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
         [0, "Emily", null, "15.1", 10],
         [0, "Bob", null, "12.1", 10],
         [0, "Alex", null, "16.1", 10]
@@ -632,7 +631,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
     std::shared_ptr<arrow::Schema> data_schema =
         DataField::ConvertDataFieldsToArrowSchema(data_fields);
     auto data_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({data_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(data_schema->fields()), R"([
         ["Bob", 4.0, 5.1, 10],
         ["Emily", 4.1, 6.2, 10],
         ["Alice", 4.2, null, 10],
@@ -653,7 +652,7 @@ TEST_F(FieldMappingReaderTest, TestSchemaEvolutionWithDictType) {
     std::vector<std::string> partition_keys = {"f3"};
     BinaryRow partition = BinaryRowGenerator::GenerateRow({10}, pool_.get());
     auto expected_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({read_schema->fields()}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(read_schema->fields()), R"([
         [10, "4", "Bob", 5],
         [10, "4.1", "Emily", 6],
         [10, "4.2", "Alice", null],

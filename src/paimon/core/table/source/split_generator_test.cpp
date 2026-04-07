@@ -52,7 +52,7 @@ class SplitGeneratorTest : public testing::Test {
         pool_ = GetDefaultPool();
         key_comparator_ =
             FieldsComparator::Create({DataField(0, arrow::field("f0", arrow::int32(), false))},
-                                     /*is_ascending_order=*/true, /*use_view=*/false)
+                                     /*is_ascending_order=*/true)
                 .value();
     }
     void TearDown() override {}

@@ -59,8 +59,8 @@ class TestGeneratedDeletionFile : public GeneratedDeletionFile {
 
 class NonGeneratedCompactDeletionFile : public CompactDeletionFile {
  public:
-    std::optional<std::shared_ptr<IndexFileMeta>> GetOrCompute() override {
-        return std::nullopt;
+    Result<std::optional<std::shared_ptr<IndexFileMeta>>> GetOrCompute() override {
+        return std::optional<std::shared_ptr<IndexFileMeta>>();
     }
 
     Result<std::shared_ptr<CompactDeletionFile>> MergeOldFile(
@@ -90,7 +90,7 @@ TEST(CompactDeletionFileTest, GenerateFilesShouldReturnFileWhenModified) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> generated,
                          CompactDeletionFile::GenerateFiles(maintainer));
-    auto file = generated->GetOrCompute();
+    ASSERT_OK_AND_ASSIGN(auto file, generated->GetOrCompute());
     ASSERT_TRUE(file.has_value());
     ASSERT_NE(file.value(), nullptr);
     ASSERT_EQ(file.value()->IndexType(), DeletionVectorsIndexFile::DELETION_VECTORS_INDEX);
@@ -108,7 +108,7 @@ TEST(CompactDeletionFileTest, GenerateFilesShouldReturnNulloptWhenNotModified) {
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> generated,
                          CompactDeletionFile::GenerateFiles(maintainer));
-    auto file = generated->GetOrCompute();
+    ASSERT_OK_AND_ASSIGN(auto file, generated->GetOrCompute());
     ASSERT_FALSE(file.has_value());
 }
 
@@ -149,7 +149,8 @@ TEST(CompactDeletionFileTest, MergeOldFileShouldRejectInvokedOldFile) {
 
     auto current = std::make_shared<GeneratedDeletionFile>(current_meta, dv_index_file);
     auto old = std::make_shared<GeneratedDeletionFile>(old_meta, dv_index_file);
-    ASSERT_TRUE(old->GetOrCompute().has_value());
+    ASSERT_OK_AND_ASSIGN(auto old_file, old->GetOrCompute());
+    ASSERT_TRUE(old_file.has_value());
 
     ASSERT_NOK_WITH_MSG(current->MergeOldFile(old), "old should not be get");
 }
@@ -225,6 +226,71 @@ TEST(CompactDeletionFileTest, CleanShouldDeleteIndexFile) {
 
     ASSERT_OK_AND_ASSIGN(bool exists_after, dv_index_file->Exists(file_meta));
     ASSERT_FALSE(exists_after);
+}
+
+TEST(CompactDeletionFileTest, LazyGenerationShouldComputeWhenInvoked) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+
+    RoaringBitmap32 roaring;
+    roaring.Add(1);
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+    deletion_vectors["data-a"] = std::make_shared<BitmapDeletionVector>(roaring);
+
+    auto maintainer = CreateMaintainer(fs, path_factory, pool, deletion_vectors);
+    maintainer->RemoveDeletionVectorOf("data-a");
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> lazy,
+                         CompactDeletionFile::LazyGeneration(maintainer));
+    ASSERT_OK_AND_ASSIGN(auto file, lazy->GetOrCompute());
+    ASSERT_TRUE(file.has_value());
+    ASSERT_NE(file.value(), nullptr);
+    ASSERT_EQ(file.value()->IndexType(), DeletionVectorsIndexFile::DELETION_VECTORS_INDEX);
+}
+
+TEST(CompactDeletionFileTest, LazyMergeOldFileShouldRejectNonLazyType) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+    auto maintainer = CreateMaintainer(fs, path_factory, pool, deletion_vectors);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> lazy,
+                         CompactDeletionFile::LazyGeneration(maintainer));
+    auto old = std::make_shared<NonGeneratedCompactDeletionFile>();
+
+    ASSERT_NOK_WITH_MSG(lazy->MergeOldFile(old), "LazyCompactDeletionFile");
+}
+
+TEST(CompactDeletionFileTest, LazyMergeOldFileShouldRejectGeneratedOldLazy) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FileSystem> fs,
+                         FileSystemFactory::Get("local", dir->Str(), {}));
+    auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
+    auto pool = GetDefaultPool();
+
+    RoaringBitmap32 roaring;
+    roaring.Add(1);
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
+    deletion_vectors["data-a"] = std::make_shared<BitmapDeletionVector>(roaring);
+    auto maintainer = CreateMaintainer(fs, path_factory, pool, deletion_vectors);
+    maintainer->RemoveDeletionVectorOf("data-a");
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> current,
+                         CompactDeletionFile::LazyGeneration(maintainer));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<CompactDeletionFile> old,
+                         CompactDeletionFile::LazyGeneration(maintainer));
+
+    ASSERT_OK_AND_ASSIGN(auto old_file, old->GetOrCompute());
+    ASSERT_TRUE(old_file.has_value());
+
+    ASSERT_NOK_WITH_MSG(current->MergeOldFile(old), "old should not be generated");
 }
 
 }  // namespace paimon::test

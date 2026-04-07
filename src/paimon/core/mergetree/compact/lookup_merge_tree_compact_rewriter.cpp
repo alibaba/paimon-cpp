@@ -30,16 +30,18 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     const BinaryRow& partition, int32_t bucket, int64_t schema_id,
     const std::vector<std::string>& trimmed_primary_keys, const CoreOptions& options,
     const std::shared_ptr<arrow::Schema>& data_schema,
-    const std::shared_ptr<arrow::Schema>& write_schema, DeletionVector::Factory dv_factory,
+    const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool)
-    : ChangelogMergeTreeRewriter(max_level, /*force_drop_delete=*/dv_maintainer != nullptr,
-                                 partition, bucket, schema_id, trimmed_primary_keys, options,
-                                 data_schema, write_schema, std::move(dv_factory),
-                                 path_factory_cache, std::move(merge_file_split_read),
-                                 std::move(merge_function_wrapper_factory), pool),
+    const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<CancellationController>& cancellation_controller)
+    : ChangelogMergeTreeRewriter(
+          max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
+          trimmed_primary_keys, options, data_schema, write_schema,
+          DeletionVector::CreateFactory(dv_maintainer), path_factory_cache,
+          std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool,
+          cancellation_controller),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer) {}
 
@@ -50,17 +52,24 @@ LookupMergeTreeCompactRewriter<T>::Create(
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
     MergeFunctionWrapperFactory merge_function_wrapper_factory, int32_t bucket,
     const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
-    DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool) {
+    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<CancellationController>& cancellation_controller) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
     // TODO(xinyu.lxy): set executor
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
-    read_context_builder.SetOptions(options.ToMap()).EnablePrefetch(true).WithMemoryPool(pool);
+    read_context_builder.SetOptions(options.ToMap())
+        .EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .WithMemoryPool(pool)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
 
@@ -75,9 +84,9 @@ LookupMergeTreeCompactRewriter<T>::Create(
         MergeFileSplitRead::Create(path_factory, internal_context, pool, CreateDefaultExecutor()));
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
-        trimmed_primary_keys, options, data_schema, write_schema, std::move(dv_factory),
-        path_factory_cache, std::move(merge_file_split_read),
-        std::move(merge_function_wrapper_factory), pool));
+        trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
+        std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool,
+        cancellation_controller));
 }
 
 template <typename T>

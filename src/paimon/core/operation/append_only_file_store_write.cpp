@@ -16,7 +16,6 @@
 
 #include "paimon/core/operation/append_only_file_store_write.h"
 
-#include <atomic>
 #include <vector>
 
 #include "paimon/common/data/binary_row.h"
@@ -45,7 +44,6 @@
 #include "paimon/logging.h"
 #include "paimon/read_context.h"
 #include "paimon/result.h"
-
 namespace arrow {
 class Schema;
 }  // namespace arrow
@@ -64,12 +62,12 @@ AppendOnlyFileStoreWrite::AppendOnlyFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& write_schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-    const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-    bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-    const std::shared_ptr<MemoryPool>& pool)
+    const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+    bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+    const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, write_schema, partition_schema,
-                             dv_maintainer_factory, options, ignore_previous_files,
+                             dv_maintainer_factory, io_manager, options, ignore_previous_files,
                              is_streaming_mode, ignore_num_bucket_check, executor, pool),
       logger_(Logger::GetLogger("AppendOnlyFileStoreWrite")) {
     write_cols_ = write_schema->field_names();
@@ -110,7 +108,7 @@ Result<std::unique_ptr<FileStoreScan>> AppendOnlyFileStoreWrite::CreateFileStore
 Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::CompactRewrite(
     const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
     const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
-    const std::shared_ptr<std::atomic_bool>& cancel_flag) {
+    const std::shared_ptr<CancellationController>& cancellation_controller) {
     if (to_compact.empty()) {
         return std::vector<std::shared_ptr<DataFileMeta>>{};
     }
@@ -135,7 +133,7 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
     });
 
     while (true) {
-        if (cancel_flag->load(std::memory_order_relaxed)) {
+        if (cancellation_controller->IsCancelled()) {
             return Status::Cancelled("Compaction cancelled while rewriting files.");
         }
         PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
@@ -188,12 +186,13 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             }
             return std::shared_ptr<DeletionVector>();
         };
-        auto cancel_flag = std::make_shared<std::atomic_bool>(false);
+        auto cancellation_controller = std::make_shared<CancellationController>();
 
-        auto rewriter = [this, partition, bucket, dv_factory,
-                         cancel_flag](const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
+        auto rewriter = [this, partition, bucket, dv_factory, cancellation_controller](
+                            const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
             -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
-            return CompactRewrite(partition, bucket, dv_factory, to_compact, cancel_flag);
+            return CompactRewrite(partition, bucket, dv_factory, to_compact,
+                                  cancellation_controller);
         };
 
         compact_manager = std::make_shared<BucketedAppendCompactManager>(
@@ -202,7 +201,7 @@ Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
             options_.GetCompactionFileSize(/*has_primary_key=*/false),
             options_.CompactionForceRewriteAllFiles(), rewriter,
-            compaction_metrics_->CreateReporter(partition, bucket), cancel_flag);
+            compaction_metrics_->CreateReporter(partition, bucket), cancellation_controller);
     }
 
     auto writer = std::make_shared<AppendOnlyWriter>(
@@ -251,7 +250,12 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyFileStoreWrite::CreateFilesReader
     const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
     const std::vector<std::shared_ptr<DataFileMeta>>& files) const {
     ReadContextBuilder context_builder(root_path_);
-    context_builder.EnablePrefetch(true).SetPrefetchMaxParallelNum(1);
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
+    context_builder.EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
     std::map<std::string, std::string> map = options_.ToMap();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_read_context,

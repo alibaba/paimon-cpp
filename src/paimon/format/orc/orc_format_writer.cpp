@@ -257,6 +257,8 @@ Result<::orc::CompressionKind> OrcFormatWriter::ToOrcCompressionKind(
         return ::orc::CompressionKind_ZLIB;
     } else if (file_compression == "lzo") {
         return ::orc::CompressionKind_LZO;
+    } else if (file_compression == "none") {
+        return ::orc::CompressionKind_NONE;
     } else {
         return Status::Invalid("unknown compression " + file_compression);
     }

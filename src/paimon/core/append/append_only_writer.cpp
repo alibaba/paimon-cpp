@@ -140,7 +140,7 @@ Status AppendOnlyWriter::Flush(bool wait_for_latest_compaction, bool forced_full
     }
     // add new generated files
     for (const auto& flushed_file : flushed_files) {
-        compact_manager_->AddNewFile(flushed_file);
+        PAIMON_RETURN_NOT_OK(compact_manager_->AddNewFile(flushed_file));
     }
     PAIMON_RETURN_NOT_OK(TrySyncLatestCompaction(wait_for_latest_compaction));
     PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(forced_full_compaction));
@@ -248,8 +248,9 @@ Status AppendOnlyWriter::Sync() {
 }
 
 Status AppendOnlyWriter::Close() {
-    // cancel compaction so that it does not block job cancelling
-    compact_manager_->CancelCompaction();
+    // Request cancellation and wait for running compaction to exit.
+    // This avoids reusing cancellation state while an old task is still running.
+    compact_manager_->CancelAndWaitCompaction();
     PAIMON_RETURN_NOT_OK(Sync());
 
     PAIMON_RETURN_NOT_OK(compact_manager_->Close());

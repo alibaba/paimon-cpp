@@ -16,6 +16,8 @@
 
 #include "paimon/core/operation/key_value_file_store_write.h"
 
+#include <limits>
+#include <map>
 #include <optional>
 #include <vector>
 
@@ -24,6 +26,7 @@
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/manifest_file.h"
 #include "paimon/core/manifest/manifest_list.h"
+#include "paimon/core/mergetree/levels.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/operation/file_store_scan.h"
 #include "paimon/core/operation/key_value_file_store_scan.h"
@@ -31,6 +34,7 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/snapshot.h"
 #include "paimon/core/utils/file_store_path_factory.h"
+#include "paimon/core/utils/primary_key_table_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"
 
 namespace arrow {
@@ -41,7 +45,6 @@ namespace paimon {
 class DataFilePathFactory;
 class Executor;
 class MemoryPool;
-class SchemaManager;
 struct KeyValue;
 template <typename T>
 class MergeFunctionWrapper;
@@ -54,6 +57,7 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<arrow::Schema>& partition_schema,
     const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+    const std::shared_ptr<IOManager>& io_manager,
     const std::shared_ptr<FieldsComparator>& key_comparator,
     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
@@ -62,12 +66,16 @@ KeyValueFileStoreWrite::KeyValueFileStoreWrite(
     const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, /*write_schema=*/schema,
-                             partition_schema, dv_maintainer_factory, options,
+                             partition_schema, dv_maintainer_factory, io_manager, options,
                              ignore_previous_files, is_streaming_mode, ignore_num_bucket_check,
                              executor, pool),
       key_comparator_(key_comparator),
       user_defined_seq_comparator_(user_defined_seq_comparator),
       merge_function_wrapper_(merge_function_wrapper),
+      compact_manager_factory_(std::make_unique<MergeTreeCompactManagerFactory>(
+          options_, key_comparator_, user_defined_seq_comparator_, compaction_metrics_,
+          table_schema_, schema_, schema_manager_, io_manager_, file_store_path_factory_,
+          root_path_, pool_)),
       logger_(Logger::GetLogger("KeyValueFileStoreWrite")) {}
 
 Result<std::unique_ptr<FileStoreScan>> KeyValueFileStoreWrite::CreateFileStoreScan(
@@ -99,11 +107,26 @@ Result<std::shared_ptr<BatchWriter>> KeyValueFileStoreWrite::CreateWriter(
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema_->TrimmedPrimaryKeys());
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<Levels> levels,
+        Levels::Create(key_comparator_, restore_data_files, options_.GetNumLevels()));
+    auto compact_strategy = compact_manager_factory_->CreateCompactStrategy();
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<CompactManager> compact_manager,
+        compact_manager_factory_->CreateCompactManager(partition, bucket, compact_strategy,
+                                                       compact_executor_, levels, dv_maintainer));
+
     auto writer = std::make_shared<MergeTreeWriter>(
         restore_max_seq_number, trimmed_primary_keys, data_file_path_factory, key_comparator_,
         user_defined_seq_comparator_, merge_function_wrapper_, table_schema_->Id(), schema_,
-        options_, pool_);
+        options_, compact_manager, pool_);
     return std::shared_ptr<BatchWriter>(writer);
+}
+
+Status KeyValueFileStoreWrite::Close() {
+    PAIMON_RETURN_NOT_OK(AbstractFileStoreWrite::Close());
+    compact_manager_factory_->Close();
+    return Status::OK();
 }
 
 }  // namespace paimon

@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "paimon/common/data/binary_section.h"
@@ -32,14 +33,17 @@ namespace paimon {
 class Bytes;
 class MemoryPool;
 
-/// A string which is backed by `MemorySegment`s.
+/// A string which is backed by a single `MemorySegment`.
+///
+/// @note: Unlike the Java implementation where a BinaryString may span multiple
+/// MemorySegments, in this C++ implementation all data resides within a single MemorySegment.
 class PAIMON_EXPORT BinaryString : public BinarySection {
  public:
     static const BinaryString& EmptyUtf8();
 
-    BinaryString(const std::vector<MemorySegment>& segments, int32_t offset, int32_t size_in_bytes);
+    BinaryString(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes);
 
-    static BinaryString FromAddress(const std::vector<MemorySegment>& segments, int32_t offset,
+    static BinaryString FromAddress(const MemorySegment& segment, int32_t offset,
                                     int32_t num_bytes);
     static BinaryString FromString(const std::string& str, MemoryPool* pool);
 
@@ -66,12 +70,8 @@ class PAIMON_EXPORT BinaryString : public BinarySection {
 
     int32_t CompareTo(const BinaryString& other) const;
 
-    /// Find the boundaries of segments, and then compare MemorySegment.
-    int32_t CompareMultiSegments(const BinaryString& other) const;
-
     /// @return the number of UTF-8 code points in the string.
     int32_t NumChars() const;
-    int32_t NumCharsMultiSegs() const;
 
     /// Returns the byte value at the specified index. An index ranges from `0` to
     /// `size_in_bytes_ - 1`.
@@ -128,90 +128,48 @@ class PAIMON_EXPORT BinaryString : public BinarySection {
     /// @return the BinaryString, converted to lowercase.
     BinaryString ToLowerCase(MemoryPool* pool) const;
 
+    std::string_view GetStringView() const;
+
+    // @return copied sub string from [start, end].
+    BinaryString CopyBinaryString(int32_t start, int32_t end, MemoryPool* pool) const;
+
     /// @return the number of bytes for a code point with the first byte as b.
     /// @param b The first byte of a code point
     static int32_t NumBytesForFirstByte(char b);
 
+ private:
     char GetByteOneSegment(int32_t i) const;
-    bool InFirstSegment() const;
     bool MatchAt(const BinaryString& s, int32_t pos) const;
     bool MatchAtOneSeg(const BinaryString& s, int32_t pos) const;
-    bool MatchAtVarSeg(const BinaryString& s, int32_t pos) const;
-    BinaryString CopyBinaryStringInOneSeg(int32_t start, int32_t len, MemoryPool* pool) const;
-    BinaryString CopyBinaryString(int32_t start, int32_t end, MemoryPool* pool) const;
 
     /// CurrentSegment and positionInSegment.
     class SegmentAndOffset {
         friend class BinaryString;
 
      public:
-        SegmentAndOffset(const std::vector<MemorySegment>& segments, int32_t seg_index,
-                         int32_t offset)
-            : seg_index_(seg_index),
-              offset_(offset),
-              segments_(segments),
-              segment_(segments[seg_index]) {}
+        SegmentAndOffset(const MemorySegment& segment, int32_t offset)
+            : offset_(offset), segment_(segment) {}
 
         void NextByte(int32_t seg_size) {
             offset_++;
-            CheckAdvance(seg_size);
         }
 
         void SkipBytes(int32_t n, int32_t seg_size) {
-            int32_t remaining = seg_size - offset_;
-            if (remaining > n) {
-                offset_ += n;
-            } else {
-                while (true) {
-                    int32_t to_skip = std::min(remaining, n);
-                    n -= to_skip;
-                    if (n <= 0) {
-                        offset_ += to_skip;
-                        CheckAdvance(seg_size);
-                        return;
-                    }
-                    Advance();
-                    remaining = seg_size - offset_;
-                }
-            }
+            offset_ += n;
         }
+
         char Value() const {
-            assert(segment_ != std::nullopt);
-            return segment_.value().Get(offset_);
+            return segment_.Get(offset_);
         }
 
      private:
-        int32_t seg_index_;
         int32_t offset_;
-        std::vector<MemorySegment> segments_;
-        std::optional<MemorySegment> segment_;
-
-        void AssignSegment() {
-            segment_ = seg_index_ >= 0 && seg_index_ < static_cast<int32_t>(segments_.size())
-                           ? std::optional<MemorySegment>(segments_[seg_index_])
-                           : std::nullopt;
-        }
-
-        void CheckAdvance(int32_t seg_size) {
-            if (offset_ == seg_size) {
-                Advance();
-            }
-        }
-
-        void Advance() {
-            seg_index_++;
-            AssignSegment();
-            offset_ = 0;
-        }
+        MemorySegment segment_;
     };
-    SegmentAndOffset FirstSegmentAndOffset(int32_t seg_size) const;
     SegmentAndOffset StartSegmentAndOffset(int32_t seg_size) const;
 
- private:
     BinaryString();
-    BinaryString SubStringMultiSegs(const int32_t start, const int32_t until,
-                                    MemoryPool* pool) const;
-    int32_t IndexOfMultiSegs(const BinaryString& str, int32_t fromIndex) const;
+
     BinaryString CppToLowerCase(MemoryPool* pool) const;
     BinaryString CppToUpperCase(MemoryPool* pool) const;
 };

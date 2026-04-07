@@ -54,7 +54,7 @@ class SerializationUtils {
             arity = EndianSwapValue(arity);
         }
         memcpy(bytes->data(), &arity, sizeof(int32_t));
-        MemorySegmentUtils::CopyToBytes(row.GetSegments(), row.GetOffset(), bytes.get(),
+        MemorySegmentUtils::CopyToBytes({row.GetSegment()}, row.GetOffset(), bytes.get(),
                                         sizeof(int32_t), size_in_row);
         return bytes;
     }
@@ -66,7 +66,7 @@ class SerializationUtils {
         }
         out->WriteValue<int32_t>(4 + row.GetSizeInBytes());
         out->WriteValue<int32_t>(row.GetFieldCount());
-        return MemorySegmentUtils::CopyToStream(row.GetSegments(), row.GetOffset(),
+        return MemorySegmentUtils::CopyToStream({row.GetSegment()}, row.GetOffset(),
                                                 row.GetSizeInBytes(), out);
     }
 

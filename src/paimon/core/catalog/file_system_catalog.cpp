@@ -227,7 +227,7 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
         return true;
     } else {
         // if schema-0 not exists, fallback to check other schemas
-        PAIMON_ASSIGN_OR_RAISE(auto schema_ids, schema_manager.ListAllIds());
+        PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
         return !schema_ids.empty();
     }
 }
@@ -393,21 +393,23 @@ Status FileSystemCatalog::DropTable(const Identifier& identifier, bool ignore_if
     PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> schema_ids, schema_manager.ListAllIds());
     std::vector<std::shared_ptr<TableSchema>> schemas;
     for (int64_t id : schema_ids) {
-        PAIMON_ASSIGN_OR_RAISE(auto schema, schema_manager.ReadSchema(id));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> schema, schema_manager.ReadSchema(id));
         schemas.push_back(schema);
     }
-    PAIMON_ASSIGN_OR_RAISE(auto main_external_paths, GetSchemaExternalPaths(schemas));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> main_external_paths,
+                           GetSchemaExternalPaths(schemas));
     external_paths_set.insert(main_external_paths.begin(), main_external_paths.end());
 
     // Get external paths from all branches
-    PAIMON_ASSIGN_OR_RAISE(auto branches, GetTableBranches(table_path));
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branches, GetTableBranches(table_path));
     for (const auto& branch : branches) {
         SchemaManager branch_schema_manager(fs_, table_path, branch);
         PAIMON_ASSIGN_OR_RAISE(std::vector<int64_t> branch_schema_ids,
                                branch_schema_manager.ListAllIds());
         std::vector<std::shared_ptr<TableSchema>> branch_schemas;
         for (int64_t id : branch_schema_ids) {
-            PAIMON_ASSIGN_OR_RAISE(auto schema, branch_schema_manager.ReadSchema(id));
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<TableSchema> schema,
+                                   branch_schema_manager.ReadSchema(id));
             branch_schemas.push_back(schema);
         }
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> branch_external_paths,

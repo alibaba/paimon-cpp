@@ -84,7 +84,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSimple) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, 1, 1, 10, 20, 30],
@@ -130,7 +130,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestSingleReaderInConcat) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, 1, 1, 10, 20, 30],
@@ -159,7 +159,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyResult) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
     ])")
@@ -180,7 +180,7 @@ TEST_F(ConcatKeyValueRecordReaderTest, TestEmptyReader) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
     ])")

@@ -15,7 +15,9 @@
  */
 
 #pragma once
+
 #include "arrow/api.h"
+#include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/async_key_value_producer_and_consumer.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -38,7 +40,8 @@ class MergeTreeCompactRewriter : public CompactRewriter {
         int32_t bucket, const BinaryRow& partition,
         const std::shared_ptr<TableSchema>& table_schema, DeletionVector::Factory dv_factory,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& memory_pool);
+        const CoreOptions& options, const std::shared_ptr<MemoryPool>& memory_pool,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     Result<CompactResult> Rewrite(int32_t output_level, bool drop_delete,
                                   const std::vector<std::vector<SortedRun>>& sections) override;
@@ -65,16 +68,16 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     static std::vector<std::shared_ptr<DataFileMeta>> ExtractFilesFromSections(
         const std::vector<std::vector<SortedRun>>& sections);
 
-    MergeTreeCompactRewriter(const BinaryRow& partition, int32_t bucket, int64_t schema_id,
-                             const std::vector<std::string>& trimmed_primary_keys,
-                             const CoreOptions& options,
-                             const std::shared_ptr<arrow::Schema>& data_schema,
-                             const std::shared_ptr<arrow::Schema>& write_schema,
-                             DeletionVector::Factory dv_factory,
-                             const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-                             std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
-                             MergeFunctionWrapperFactory merge_function_wrapper_factory,
-                             const std::shared_ptr<MemoryPool>& pool);
+    MergeTreeCompactRewriter(
+        const BinaryRow& partition, int32_t bucket, int64_t schema_id,
+        const std::vector<std::string>& trimmed_primary_keys, const CoreOptions& options,
+        const std::shared_ptr<arrow::Schema>& data_schema,
+        const std::shared_ptr<arrow::Schema>& write_schema, DeletionVector::Factory dv_factory,
+        const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
+        std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
+        MergeFunctionWrapperFactory merge_function_wrapper_factory,
+        const std::shared_ptr<MemoryPool>& pool,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     using KeyValueRollingFileWriter =
         RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>;
@@ -113,6 +116,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     DeletionVector::Factory dv_factory_;
     std::shared_ptr<FileStorePathFactoryCache> path_factory_cache_;
     MergeFunctionWrapperFactory merge_function_wrapper_factory_;
+    std::shared_ptr<CancellationController> cancellation_controller_;
 };
 
 }  // namespace paimon

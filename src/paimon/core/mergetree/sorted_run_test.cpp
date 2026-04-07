@@ -59,7 +59,7 @@ TEST_F(SortedRunTest, TestSortedRunIsValid) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<FieldsComparator> comparator,
         FieldsComparator::Create({DataField(0, arrow::field("test", arrow::int32()))},
-                                 /*is_ascending_order=*/true, /*use_view=*/false));
+                                 /*is_ascending_order=*/true));
 
     // m1 [10, 20]
     auto m1 = CreateDataFileMeta(10, 20);
@@ -91,7 +91,7 @@ TEST_F(SortedRunTest, TestFromUnsorted) {
     ASSERT_OK_AND_ASSIGN(
         std::shared_ptr<FieldsComparator> comparator,
         FieldsComparator::Create({DataField(0, arrow::field("test", arrow::int32()))},
-                                 /*is_ascending_order=*/true, /*use_view=*/false));
+                                 /*is_ascending_order=*/true));
 
     // m1 [10, 20]
     auto m1 = CreateDataFileMeta(10, 20);

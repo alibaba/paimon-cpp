@@ -39,23 +39,17 @@ class DataField;
 class FieldsComparator {
  public:
     static Result<std::unique_ptr<FieldsComparator>> Create(
-        const std::vector<DataField>& input_data_field, bool is_ascending_order, bool use_view);
+        const std::vector<DataField>& input_data_field, bool is_ascending_order);
 
     static Result<std::unique_ptr<FieldsComparator>> Create(
         const std::vector<DataField>& input_data_field, const std::vector<int32_t>& sort_fields,
-        bool is_ascending_order, bool use_view);
+        bool is_ascending_order);
 
     int32_t CompareTo(const InternalRow& lhs, const InternalRow& rhs) const;
 
     const std::vector<int32_t>& CompareFields() const {
         return sort_fields_;
     }
-
-    using VariantComparatorFunc =
-        std::function<int32_t(const VariantType& lhs, const VariantType& rhs)>;
-
-    static Result<VariantComparatorFunc> CompareVariant(
-        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view);
 
     /// Java-compatible ordering for floating-point types:
     /// -infinity < -0.0 < +0.0 < +infinity < NaN == NaN
@@ -97,7 +91,7 @@ class FieldsComparator {
     }
 
     static Result<FieldComparatorFunc> CompareField(
-        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type, bool use_view);
+        int32_t field_idx, const std::shared_ptr<arrow::DataType>& input_type);
 
  private:
     bool is_ascending_order_;

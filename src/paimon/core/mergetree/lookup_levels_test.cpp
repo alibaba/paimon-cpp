@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
@@ -51,6 +52,7 @@ class LookupLevelsTest : public testing::Test {
         tmp_dir_ = UniqueTestDirectory::Create("local");
         dir_ = UniqueTestDirectory::Create("local");
         fs_ = dir_->GetFileSystem();
+        noop_compact_manager_ = std::make_shared<NoopCompactManager>();
     }
 
     void TearDown() override {}
@@ -77,7 +79,7 @@ class LookupLevelsTest : public testing::Test {
             /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
             data_path_factory, key_comparator,
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, pool_);
+            arrow_schema_, options, noop_compact_manager_, pool_);
 
         // write data
         ArrowArray c_src_array;
@@ -100,8 +102,7 @@ class LookupLevelsTest : public testing::Test {
         std::vector<DataField> key_fields = {DataField(0, key_schema_->field(0))};
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(key_fields,
-                                                        /*is_ascending_order=*/true,
-                                                        /*use_view=*/false));
+                                                        /*is_ascending_order=*/true));
         return key_comparator;
     }
 
@@ -135,7 +136,7 @@ class LookupLevelsTest : public testing::Test {
     }
 
     Result<std::unique_ptr<LookupLevels<PositionedKeyValue>>> CreateLookupLevels(
-        const std::string& table_path, std::unique_ptr<Levels>&& levels) const {
+        const std::string& table_path, const std::shared_ptr<Levels>& levels) const {
         auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
@@ -151,9 +152,8 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
-            std::move(io_manager), path_factory, table_schema, std::move(levels),
-            /*deletion_file_map=*/{}, processor_factory, serializer_factory, lookup_store_factory,
-            pool_);
+            std::move(io_manager), path_factory, table_schema, levels,
+            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory, pool_);
     }
 
  private:
@@ -163,6 +163,7 @@ class LookupLevelsTest : public testing::Test {
     std::unique_ptr<UniqueTestDirectory> tmp_dir_;
     std::unique_ptr<UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
+    std::shared_ptr<NoopCompactManager> noop_compact_manager_;
 };
 
 TEST_F(LookupLevelsTest, TestMultiLevels) {
@@ -176,9 +177,10 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
                                               core_options, "[[2, 22], [5, 55]]"));
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     // only in level 1
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
@@ -245,9 +247,10 @@ TEST_F(LookupLevelsTest, TestMultiFiles) {
                                               core_options, "[[10, 1010], [11, 1111]]"));
 
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2, file3};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     std::map<int32_t, int32_t> contains = {{1, 11}, {2, 22}, {4, 44},    {5, 55},
                                            {7, 77}, {8, 88}, {10, 1010}, {11, 1111}};
@@ -282,9 +285,10 @@ TEST_F(LookupLevelsTest, TestLookupEmptyLevel) {
     ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/3, /*last_sequence_number=*/3, table_path,
                                               core_options, "[[2, 22], [5, 55]]"));
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
                          lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
@@ -309,9 +313,10 @@ TEST_F(LookupLevelsTest, TestLookupLevel0) {
                                               core_options, "[[2, 22], [5, 55]]"));
 
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
                          lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
@@ -333,9 +338,10 @@ TEST_F(LookupLevelsTest, TestLookupLevel0NotInLevel0) {
     ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
                                               core_options, "[[2, 22], [5, 55]]"));
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
                          lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
@@ -360,9 +366,10 @@ TEST_F(LookupLevelsTest, TestLookupLevel0WithMultipleFiles) {
                                               core_options, "[[2, 22], [5, 55]]"));
 
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
                          lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
@@ -413,9 +420,10 @@ TEST_F(LookupLevelsTest, TestWithPosistion) {
     ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
                                               core_options, "[[2, 22], [5, 55]]"));
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     // only in level 1
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,
@@ -463,9 +471,10 @@ TEST_F(LookupLevelsTest, TestLevelsWithValueFieldAppearBeforeKey) {
     ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/3, table_path,
                                               core_options, "[[22, 2], [55, 5]]"));
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
-    ASSERT_OK_AND_ASSIGN(auto levels, Levels::Create(key_comparator, files, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, std::move(levels)));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
 
     // only in level 1
     ASSERT_OK_AND_ASSIGN(auto positioned_kv,

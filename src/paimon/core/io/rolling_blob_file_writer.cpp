@@ -64,7 +64,8 @@ Status RollingBlobFileWriter::Write(::ArrowArray* record) {
                                       arrow::ImportArray(record, data_type_));
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
 
-    PAIMON_ASSIGN_OR_RAISE(auto separated_arrays, BlobUtils::SeparateBlobArray(struct_array));
+    PAIMON_ASSIGN_OR_RAISE(BlobUtils::SeparatedStructArrays separated_arrays,
+                           BlobUtils::SeparateBlobArray(struct_array));
     ::ArrowArray c_main_array;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(
         arrow::ExportArray(*separated_arrays.main_array, &c_main_array));

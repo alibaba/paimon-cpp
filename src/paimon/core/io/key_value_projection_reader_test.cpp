@@ -71,10 +71,9 @@ class KeyValueProjectionReaderTest : public testing::Test,
             const auto& key_field = key_schema->field(i);
             key_fields.emplace_back(i, key_field);
         }
-        EXPECT_OK_AND_ASSIGN(
-            std::shared_ptr<FieldsComparator> user_key_comparator,
-            FieldsComparator::Create(key_fields, key_sort_fields,
-                                     /*is_ascending_order=*/true, /*use_view=*/true));
+        EXPECT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                             FieldsComparator::Create(key_fields, key_sort_fields,
+                                                      /*is_ascending_order=*/true));
 
         auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
         auto merge_function_wrapper =
@@ -167,7 +166,7 @@ TEST_P(KeyValueProjectionReaderTest, TestBulkData) {
     std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
 
     auto arrow_pool = GetArrowPool(pool_);
     std::unique_ptr<arrow::ArrayBuilder> array_builder;
@@ -232,7 +231,7 @@ TEST_P(KeyValueProjectionReaderTest, TestSimple) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, 1, 1, 10, 20, null, 30.01],
@@ -276,7 +275,7 @@ TEST_P(KeyValueProjectionReaderTest, TestTimestampType) {
     std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(arrow::FieldVector(
         {fields[2], fields[3], fields[4], fields[5], fields[6], fields[7], fields[8], fields[9]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
 [0, 0, "1970-01-01 00:00:01", "1970-01-01 00:00:00.001", "1970-01-01 00:00:00.000001", "1970-01-01 00:00:00.000000001", "1970-01-01 00:00:02", "1970-01-01 00:00:00.002", "1970-01-01 00:00:00.000002", "1970-01-01 00:00:00.000000002"],
@@ -316,7 +315,7 @@ TEST_P(KeyValueProjectionReaderTest, TestComplexType) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, false, "apple",  null,   20, "1970-01-01 00:00:00.000000500", "123.23"],
@@ -357,7 +356,7 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType) {
     std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, "apple",  [1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
@@ -408,7 +407,7 @@ TEST_P(KeyValueProjectionReaderTest, TestNestedType2) {
     std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
         arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4], fields[5]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, "apple",  [null, [1, true], null], [[[1, true], true]], null],
@@ -462,7 +461,7 @@ TEST_P(KeyValueProjectionReaderTest, TestDictionary) {
     auto kind_array =
         arrow::ipc::internal::json::ArrayFromJSON(arrow::int8(), R"([0, 0, 0, 0, 0])").ValueOrDie();
 
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::make_shared<arrow::StructArray>(
         src_type, /*length=*/5, arrow::ArrayVector({seq_array, kind_array, key_array, f0_array}));
 
@@ -497,7 +496,7 @@ TEST_P(KeyValueProjectionReaderTest, TestInvalidProducer) {
         arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
     std::shared_ptr<arrow::Schema> value_schema = arrow::schema(
         arrow::FieldVector({fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]}));
-    std::shared_ptr<arrow::DataType> src_type = arrow::struct_({fields});
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
         [0, 0, 1, 1, 10, 20, null, 30.01],

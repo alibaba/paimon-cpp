@@ -2180,6 +2180,264 @@ TEST_P(GlobalIndexTest, TestIOException) {
 }
 #endif
 
+TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithRangeBitmap) {
+    CreateTable();
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields_);
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+["Alice", 10, 1, 11.1],
+["Bob", 10, 1, 12.1],
+["Emily", 15, 0, 13.1],
+["Tony", 20, 0, 14.1],
+["Lucy", 20, 1, 15.1],
+["Bob", 25, 1, 16.1],
+["Tony", 30, 0, 17.1],
+["Alice", 30, null, 18.1]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    auto result_fields = fields_;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    auto expected_all_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1],
+[0, "Bob", 10, 1, 12.1],
+[0, "Emily", 15, 0, 13.1],
+[0, "Tony", 20, 0, 14.1],
+[0, "Lucy", 20, 1, 15.1],
+[0, "Bob", 25, 1, 16.1],
+[0, "Tony", 30, 0, 17.1],
+[0, "Alice", 30, null, 18.1]
+    ])")
+            .ValueOrDie();
+
+    {
+        // read when no index is built
+        auto predicate = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                    FieldType::INT, Literal(20));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+        ASSERT_OK(ReadData(table_path, write_cols, expected_all_array, predicate, plan));
+    }
+
+    // write and commit range-bitmap global index on f1 (int32)
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "range-bitmap", /*options=*/{},
+                         Range(0, 7)));
+
+    // scan and read with range-bitmap global index
+    {
+        // f1 < 20: rows with f1=10,10,15 -> Alice(10), Bob(10), Emily(15)
+        auto predicate = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                    FieldType::INT, Literal(20));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1],
+[0, "Bob", 10, 1, 12.1],
+[0, "Emily", 15, 0, 13.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // f1 >= 25: rows with f1=25,30,30 -> Bob(25), Tony(30), Alice(30)
+        auto predicate = PredicateBuilder::GreaterOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                          FieldType::INT, Literal(25));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", 25, 1, 16.1],
+[0, "Tony", 30, 0, 17.1],
+[0, "Alice", 30, null, 18.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // f1 > 30: no rows match
+        auto predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                       FieldType::INT, Literal(30));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        ASSERT_OK(ReadData(table_path, write_cols, /*expected_array=*/nullptr, predicate, plan));
+    }
+    {
+        // f1 <= 10: rows with f1=10,10 -> Alice(10), Bob(10)
+        auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                       FieldType::INT, Literal(10));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1],
+[0, "Bob", 10, 1, 12.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // no predicate: return all rows
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr));
+        ASSERT_OK(
+            ReadData(table_path, write_cols, expected_all_array, /*predicate=*/nullptr, plan));
+    }
+    {
+        // f0 does not have range-bitmap index, should return all rows
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+        ASSERT_OK(ReadData(table_path, write_cols, expected_all_array, predicate, plan));
+    }
+}
+
+TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithRangeBitmapAndBitmap) {
+    CreateTable();
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "foo.db/bar");
+    auto schema = arrow::schema(fields_);
+    std::vector<std::string> write_cols = schema->field_names();
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields_), R"([
+["Alice", 10, 1, 11.1],
+["Bob", 10, 1, 12.1],
+["Emily", 15, 0, 13.1],
+["Tony", 20, 0, 14.1],
+["Lucy", 20, 1, 15.1],
+["Bob", 25, 1, 16.1],
+["Tony", 30, 0, 17.1],
+["Alice", 30, null, 18.1]
+    ])")
+                         .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(auto commit_msgs, WriteArray(table_path, write_cols, src_array));
+    ASSERT_OK(Commit(table_path, commit_msgs));
+
+    auto result_fields = fields_;
+    result_fields.insert(result_fields.begin(), SpecialFields::ValueKind().ArrowField());
+    auto expected_all_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1],
+[0, "Bob", 10, 1, 12.1],
+[0, "Emily", 15, 0, 13.1],
+[0, "Tony", 20, 0, 14.1],
+[0, "Lucy", 20, 1, 15.1],
+[0, "Bob", 25, 1, 16.1],
+[0, "Tony", 30, 0, 17.1],
+[0, "Alice", 30, null, 18.1]
+    ])")
+            .ValueOrDie();
+
+    // write and commit bitmap global index on f0 (string)
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f0", "bitmap", /*options=*/{},
+                         Range(0, 7)));
+
+    // write and commit range-bitmap global index on f1 (int32)
+    ASSERT_OK(WriteIndex(table_path, /*partition_filters=*/{}, "f1", "range-bitmap", /*options=*/{},
+                         Range(0, 7)));
+
+    // scan and read with both indexes
+    {
+        // bitmap: f0 == "Alice" AND range-bitmap: f1 < 20
+        // Alice has f1=10 and f1=30, only f1=10 < 20 -> Alice(10)
+        auto predicate1 =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto predicate2 = PredicateBuilder::LessThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                     FieldType::INT, Literal(20));
+        ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // bitmap: f0 == "Bob" AND range-bitmap: f1 >= 20
+        // Bob has f1=10 and f1=25, only f1=25 >= 20 -> Bob(25)
+        auto predicate1 =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Bob", 3));
+        auto predicate2 = PredicateBuilder::GreaterOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                           FieldType::INT, Literal(20));
+        ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({predicate1, predicate2}));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Bob", 25, 1, 16.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // bitmap: (f0 == "Alice" OR f0 == "Tony") AND range-bitmap: f1 > 20
+        // Alice: f1=10,30 -> f1=30 > 20; Tony: f1=20,30 -> f1=30 > 20
+        auto predicate_alice =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Alice", 5));
+        auto predicate_tony =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Tony", 4));
+        ASSERT_OK_AND_ASSIGN(auto or_predicate,
+                             PredicateBuilder::Or({predicate_alice, predicate_tony}));
+        auto range_predicate = PredicateBuilder::GreaterThan(/*field_index=*/1, /*field_name=*/"f1",
+                                                             FieldType::INT, Literal(20));
+        ASSERT_OK_AND_ASSIGN(auto predicate,
+                             PredicateBuilder::And({or_predicate, range_predicate}));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Tony", 30, 0, 17.1],
+[0, "Alice", 30, null, 18.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // only bitmap predicate: f0 == "Emily"
+        auto predicate =
+            PredicateBuilder::Equal(/*field_index=*/0, /*field_name=*/"f0", FieldType::STRING,
+                                    Literal(FieldType::STRING, "Emily", 5));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Emily", 15, 0, 13.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // only range-bitmap predicate: f1 <= 15
+        auto predicate = PredicateBuilder::LessOrEqual(/*field_index=*/1, /*field_name=*/"f1",
+                                                       FieldType::INT, Literal(15));
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, predicate));
+
+        auto expected_array =
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(result_fields), R"([
+[0, "Alice", 10, 1, 11.1],
+[0, "Bob", 10, 1, 12.1],
+[0, "Emily", 15, 0, 13.1]
+    ])")
+                .ValueOrDie();
+        ASSERT_OK(ReadData(table_path, write_cols, expected_array, predicate, plan));
+    }
+    {
+        // no predicate: return all rows
+        ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr));
+        ASSERT_OK(
+            ReadData(table_path, write_cols, expected_all_array, /*predicate=*/nullptr, plan));
+    }
+}
+
 #ifdef PAIMON_ENABLE_LUCENE
 TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),

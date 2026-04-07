@@ -141,14 +141,14 @@ TEST_F(LanceFileReaderWriterTest, TestSimple) {
                                  arrow::field("f2", arrow::utf8())};
     auto schema = arrow::schema(fields);
     auto array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [1, "Hello"],
         [2, "World"],
         [3, "apple"]
     ])")
             .ValueOrDie());
     auto array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [4, "Alice"],
         [5, "Bob"],
         [6, "Lucy"]
@@ -182,14 +182,14 @@ TEST_F(LanceFileReaderWriterTest, TestPrimitive) {
                                  arrow::field("f12", arrow::boolean())};
     auto schema = arrow::schema(fields);
     auto array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [1, 11, 111, 1111, 1.1, 1.11, "Hello", "你好", 1234, "2033-05-18 03:33:20.0", "1.22", true],
         [2, 22, 222, 2222, 2.2, 2.22, "World", "世界", -1234, "1899-01-01 00:59:20.001001001", "2.22", false],
         [null, null, 0, null, null, 0, null, null, null, null, null, null]
     ])")
             .ValueOrDie());
     auto array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [3, 33, 333, 3333, 3.3, 3.33, "Hello", "你好", 3234, "2033-05-28 03:33:20.0", "3.22", true],
         [4, 44, 444, 4444, 4.4, 4.44, "Pineapple", "好吃", -1434, "2025-01-01 00:59:40.001001001", "4.44", false]
     ])")
@@ -219,7 +219,7 @@ TEST_F(LanceFileReaderWriterTest, TestNestedType) {
                                            arrow::field("sub_f1", arrow::int64())}))};
     auto schema = arrow::schema(fields);
     auto array1 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null, [true, 2]],
         [[0.1, 0.3], [true, 1]],
         [[1.1, 1.2], null]
@@ -227,7 +227,7 @@ TEST_F(LanceFileReaderWriterTest, TestNestedType) {
             .ValueOrDie());
     // V2.0 not support [[1.1, 1.2], null], null in struct
     auto array2 = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[1.1, 1.2], [false, 2222]],
         [[2.2, null], [true, 2]],
         [[2.2, 3.2], [null, 2]]
@@ -286,7 +286,7 @@ TEST_F(LanceFileReaderWriterTest, TestBulkData) {
         data_str.pop_back();
         data_str.append("]");
         auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), data_str)
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), data_str)
                 .ValueOrDie());
         src_array_vec.push_back(array);
     }
@@ -329,7 +329,7 @@ TEST_F(LanceFileReaderWriterTest, TestDictionary) {
     data_str.pop_back();
     data_str.append("]");
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), data_str).ValueOrDie());
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), data_str).ValueOrDie());
     arrow::ArrayVector src_array_vec = {array};
     auto src_chunk_array = std::make_shared<arrow::ChunkedArray>(src_array_vec);
     CheckResult(src_chunk_array, schema);
@@ -367,7 +367,7 @@ TEST_F(LanceFileReaderWriterTest, TestReachTargetSize) {
         data_str.pop_back();
         data_str.append("]");
         auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), data_str)
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), data_str)
                 .ValueOrDie());
         src_array_vec.push_back(array);
     }
@@ -408,7 +408,7 @@ TEST_F(LanceFileReaderWriterTest, TestTimestampType) {
     };
     auto schema = std::make_shared<arrow::Schema>(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
 ["1970-01-01 00:00:01", "1970-01-01 00:00:00.001", "1970-01-01 00:00:00.000001", "1970-01-01 00:00:00.000000001", "1970-01-01 00:00:02", "1970-01-01 00:00:00.002", "1970-01-01 00:00:00.000002", "1970-01-01 00:00:00.000000002"],
 ["1970-01-01 00:00:03", "1970-01-01 00:00:00.003", null, "1970-01-01 00:00:00.000000003", "1970-01-01 00:00:04", "1970-01-01 00:00:00.004", "1970-01-01 00:00:00.000004", "1970-01-01 00:00:00.000000004"],
 ["1970-01-01 00:00:05", "1970-01-01 00:00:00.005", null, null, "1970-01-01 00:00:06", null, "1970-01-01 00:00:00.000006", null]
@@ -424,7 +424,7 @@ TEST_F(LanceFileReaderWriterTest, TestPreviousBatchFirstRowNumber) {
                                  arrow::field("f2", arrow::utf8())};
     auto schema = arrow::schema(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [1, "Hello"],
         [2, "World"],
         [3, "apple"],

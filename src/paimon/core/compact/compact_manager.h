@@ -31,7 +31,7 @@ class CompactManager {
  public:
     virtual ~CompactManager() = default;
     /// Add a new file.
-    virtual void AddNewFile(const std::shared_ptr<DataFileMeta>& file) = 0;
+    virtual Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) = 0;
 
     virtual std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const = 0;
 
@@ -44,8 +44,21 @@ class CompactManager {
     virtual Result<std::optional<std::shared_ptr<CompactResult>>> GetCompactionResult(
         bool blocking) = 0;
 
-    /// Cancel currently running compaction task.
-    virtual void CancelCompaction() = 0;
+    /// Request cancellation for currently running compaction task.
+    ///
+    /// This method should be non-blocking. It only signals cancellation and returns immediately.
+    virtual void RequestCancelCompaction() = 0;
+
+    /// Wait until the current compaction task exits.
+    ///
+    /// This method may block until the running compaction task finishes.
+    virtual void WaitForCompactionToExit() = 0;
+
+    /// Request cancellation and wait for compaction task exit.
+    void CancelAndWaitCompaction() {
+        RequestCancelCompaction();
+        WaitForCompactionToExit();
+    }
 
     /// Check if a compaction is in progress, or if a compaction result remains to be fetched, or if
     /// a compaction should be triggered later.

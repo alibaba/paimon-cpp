@@ -17,6 +17,7 @@
 #include "paimon/write_context.h"
 
 #include "gtest/gtest.h"
+#include "paimon/disk/io_manager.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -36,8 +37,18 @@ TEST(WriteContextTest, TestSimple) {
     ASSERT_TRUE(ctx->GetWriteSchema().empty());
     ASSERT_TRUE(ctx->GetMemoryPool());
     ASSERT_TRUE(ctx->GetExecutor());
+    ASSERT_FALSE(ctx->GetIOManager());
     ASSERT_TRUE(ctx->GetOptions().empty());
     ASSERT_TRUE(ctx->GetFileSystemSchemeToIdentifierMap().empty());
+}
+
+TEST(WriteContextTest, TestWithIOManager) {
+    WriteContextBuilder builder("table_root_path", "commit_user_1");
+    auto io_manager = IOManager::Create("/tmp");
+    auto io_manager_shared = std::shared_ptr<IOManager>(std::move(io_manager));
+
+    ASSERT_OK_AND_ASSIGN(auto ctx, builder.WithIOManager(io_manager_shared).Finish());
+    ASSERT_EQ(ctx->GetIOManager(), io_manager_shared);
 }
 
 }  // namespace paimon::test

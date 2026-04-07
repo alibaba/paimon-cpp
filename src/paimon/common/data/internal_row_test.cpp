@@ -70,7 +70,7 @@ TEST(InternalRowTest, TestCreateFieldGetter) {
     };
 
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [true, 1, 2, 3, 4, 5.1, 6.12, "abc", "def", "1970-01-02 00:00:01", "1970-01-02 00:00:00.001",
         "1970-01-02 00:00:00.000001", "1970-01-02 00:00:00.000000001", "1970-01-02 00:00:02", "1970-01-02 00:00:00.002",
         "1970-01-02 00:00:00.000002", "1970-01-02 00:00:00.000000002", "-123456789987654321.45678", 12345,
@@ -138,7 +138,7 @@ TEST(InternalRowTest, TestCreateFieldGetterWithNull) {
                                  arrow::field("f1", arrow::int8())};
 
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [true, null]
     ])")
             .ValueOrDie());
@@ -161,7 +161,7 @@ TEST(InternalRowTest, TestCreateFieldGetterWithInvalidType) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::large_utf8())};
 
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["hello"]
     ])")
             .ValueOrDie());

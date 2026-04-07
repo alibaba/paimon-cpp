@@ -140,7 +140,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
                        const std::shared_ptr<arrow::Schema>& read_schema,
                        const std::vector<int32_t>& projection,
                        const std::shared_ptr<FieldsComparator>& key_comparator,
-                       const std::shared_ptr<FieldsComparator>& interval_partition_comparator,
                        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                        const std::shared_ptr<Predicate>& predicate_for_keys,
                        const std::shared_ptr<MemoryPool>& memory_pool,
@@ -155,7 +154,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
         const std::shared_ptr<arrow::Schema>& raw_read_schema,
         std::shared_ptr<arrow::Schema>* value_schema, std::shared_ptr<arrow::Schema>* read_schema,
         std::shared_ptr<FieldsComparator>* key_comparator,
-        std::shared_ptr<FieldsComparator>* interval_partition_comparator,
         std::shared_ptr<FieldsComparator>* sequence_fields_comparator);
 
     static Status SplitKeyAndNonKeyField(const std::vector<std::string>& trimmed_key_fields,
@@ -180,7 +178,6 @@ class MergeFileSplitRead : public AbstractSplitRead {
     // merge_function_wrapper is lazy created, use through GetMergeFunctionWrapper()
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
     std::shared_ptr<FieldsComparator> key_comparator_;
-    std::shared_ptr<FieldsComparator> interval_partition_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<Predicate> predicate_for_keys_;
 };

@@ -29,7 +29,7 @@ and invoke ``cmake $CMAKE_ARGS ..`` from this directory.
 
 Building requires:
 
-* A C++17-enabled compiler. On Linux, gcc 9 and higher should be
+* A C++17-enabled compiler. On Linux, gcc 8 and higher should be
   sufficient. Windows and MacOS are not supported for now.
 * At least 2GB of RAM for a minimal build, 8GB for a minimal
   debug build with tests and 16GB for a full build.
@@ -122,7 +122,7 @@ boolean flags to ``cmake``.
 * ``-DPAIMON_ENABLE_LANCE=ON``: Paimon integration with Lance
 * ``-DPAIMON_ENABLE_AVRO=ON``: Apache Avro libraries and Paimon integration
 * ``-DPAIMON_ENABLE_JINDO=ON``: Support for Alibaba Jindo filesystems
-* ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index
+* ``-DPAIMON_ENABLE_LUMINA=ON``: Support for Lumina vector index, lumina is only supported on gcc9 or higher.
 
 Optional Targets
 ~~~~~~~~~~~~~~~~

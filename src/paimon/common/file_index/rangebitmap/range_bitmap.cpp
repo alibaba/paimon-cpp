@@ -261,11 +261,11 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
         return Status::Invalid(fmt::format(
             "Chunk size cannot be larger than 2GB, current bytes: {}", chunk_size_bytes_limit_));
     }
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ChunkedDictionary::Appender> dictionary_apender,
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ChunkedDictionary::Appender> dictionary_appender,
                            ChunkedDictionary::Appender::Create(
                                factory_, static_cast<int32_t>(chunk_size_bytes_limit_), pool_));
     for (const auto& [key, bitmap] : bitmaps_) {
-        PAIMON_RETURN_NOT_OK(dictionary_apender->AppendSorted(key, code));
+        PAIMON_RETURN_NOT_OK(dictionary_appender->AppendSorted(key, code));
         for (auto it = bitmap.Begin(); it != bitmap.End(); ++it) {
             PAIMON_RETURN_NOT_OK(bsi_appender->Append(*it, code));
         }
@@ -289,7 +289,7 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> RangeBitmap::Appender::Serialize() const {
     header_size += max.IsNull() ? 0 : max_size;  // max literal size
     header_size += sizeof(int32_t);              // dictionary length
     PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> dictionary_bytes,
-                           dictionary_apender->Serialize());
+                           dictionary_appender->Serialize());
     auto dictionary_length = static_cast<int32_t>(dictionary_bytes->size());
     PAIMON_ASSIGN_OR_RAISE(PAIMON_UNIQUE_PTR<Bytes> bsi_bytes, bsi_appender->Serialize());
     size_t bsi_length = bsi_bytes->size();

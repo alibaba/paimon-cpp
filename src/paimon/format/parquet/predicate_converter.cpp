@@ -95,7 +95,7 @@ Result<arrow::compute::Expression> PredicateConverter::ConvertCompound(
             std::vector<arrow::compute::Expression> sub_exprs;
             sub_exprs.reserve(children.size());
             for (const auto& child : children) {
-                PAIMON_ASSIGN_OR_RAISE(auto sub_expr, InnerConvert(child));
+                PAIMON_ASSIGN_OR_RAISE(arrow::compute::Expression sub_expr, InnerConvert(child));
                 sub_exprs.push_back(std::move(sub_expr));
             }
             return arrow::compute::and_(sub_exprs);

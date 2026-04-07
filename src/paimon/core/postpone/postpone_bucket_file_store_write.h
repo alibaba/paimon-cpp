@@ -41,7 +41,8 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<SchemaManager>& schema_manager, const std::string& commit_user,
         const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<arrow::Schema>& schema,
-        const std::shared_ptr<arrow::Schema>& partition_schema, const CoreOptions& options,
+        const std::shared_ptr<arrow::Schema>& partition_schema,
+        const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
         bool is_streaming_mode, bool ignore_num_bucket_check,
         const std::optional<int32_t>& write_id,
         const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
@@ -87,7 +88,8 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         // Because there is no merging when reading, sequence id across files are useless.
         return std::unique_ptr<PostponeBucketFileStoreWrite>(new PostponeBucketFileStoreWrite(
             file_store_path_factory, snapshot_manager, schema_manager, commit_user, root_path,
-            table_schema, schema, partition_schema, /*dv_maintainer_factory=*/nullptr, new_options,
+            table_schema, schema, partition_schema, /*dv_maintainer_factory=*/nullptr, io_manager,
+            new_options,
             /*ignore_previous_files=*/true, is_streaming_mode, ignore_num_bucket_check, executor,
             pool));
     }
@@ -101,13 +103,13 @@ class PostponeBucketFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
         const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
-        const CoreOptions& options, bool ignore_previous_files, bool is_streaming_mode,
-        bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
-        const std::shared_ptr<MemoryPool>& pool)
+        const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
+        bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
+        const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
         : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager,
                                  commit_user, root_path, table_schema, schema,
                                  /*write_schema=*/schema, partition_schema, dv_maintainer_factory,
-                                 options, ignore_previous_files, is_streaming_mode,
+                                 io_manager, options, ignore_previous_files, is_streaming_mode,
                                  ignore_num_bucket_check, executor, pool) {}
 
     Result<std::shared_ptr<BatchWriter>> CreateWriter(

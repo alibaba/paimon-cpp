@@ -308,7 +308,7 @@ TEST_F(ParquetFileBatchReaderTest, TestNextBatchWithDictionary) {
 
     arrow::FieldVector fields = {f0, f1, f2};
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [["a", "a", "b"], [["a", "q"], ["b", "w"]],             [10, "q", "a"]],
         [["a", "c"],      [["a", "e"], ["b", "r"], ["c", "e"]], [20, "w", "a"]],
         [["a", "d"],      [["d", "r"], ["e", "t"]],             [null, "e", "b"]],

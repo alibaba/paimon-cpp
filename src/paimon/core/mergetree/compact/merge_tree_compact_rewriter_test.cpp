@@ -44,10 +44,12 @@ class MergeTreeCompactRewriterTest : public testing::Test {
             return std::shared_ptr<DeletionVector>();
         };
 
+        auto cancellation_controller = std::make_shared<CancellationController>();
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, dv_factory,
-                                                path_factory_cache, options, pool_);
+                                                path_factory_cache, options, pool_,
+                                                cancellation_controller);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(
@@ -67,9 +69,8 @@ class MergeTreeCompactRewriterTest : public testing::Test {
 
         PAIMON_ASSIGN_OR_RAISE(auto pk_fields,
                                table_schema->GetFields(table_schema->TrimmedPrimaryKeys().value()));
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<FieldsComparator> key_comparator,
-            FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
+                               FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true));
         IntervalPartition interval_partition(metas, key_comparator);
         return interval_partition.Partition();
     }
@@ -294,10 +295,3 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
 }
 
 }  // namespace paimon::test
-// TODO(xinyu.lxy): e2e test
-// test multiple MergeFunction
-// test multiple RowKind
-// test external path
-// test branch
-// test with parititon
-// test key appears before value

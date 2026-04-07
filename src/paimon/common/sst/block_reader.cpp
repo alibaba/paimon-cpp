@@ -19,19 +19,19 @@
 #include "paimon/common/sst/block_trailer.h"
 namespace paimon {
 
-Result<std::shared_ptr<BlockReader>> BlockReader::Create(const std::shared_ptr<MemorySlice>& block,
+Result<std::shared_ptr<BlockReader>> BlockReader::Create(const MemorySlice& block,
                                                          MemorySlice::SliceComparator comparator) {
-    PAIMON_ASSIGN_OR_RAISE(BlockAlignedType type, From(block->ReadByte(block->Length() - 1)));
+    PAIMON_ASSIGN_OR_RAISE(BlockAlignedType type, From(block.ReadByte(block.Length() - 1)));
     const auto trailer_len = BlockTrailer::ENCODED_LENGTH;
-    int32_t size = block->ReadInt(block->Length() - trailer_len);
+    int32_t size = block.ReadInt(block.Length() - trailer_len);
     if (type == BlockAlignedType::ALIGNED) {
-        auto data = block->Slice(0, block->Length() - trailer_len);
+        auto data = block.Slice(0, block.Length() - trailer_len);
         return std::make_shared<AlignedBlockReader>(data, size, std::move(comparator));
     } else {
         int32_t index_length = size * 4;
-        int32_t index_offset = block->Length() - trailer_len - index_length;
-        auto data = block->Slice(0, index_offset);
-        auto index = block->Slice(index_offset, index_length);
+        int32_t index_offset = block.Length() - trailer_len - index_length;
+        auto data = block.Slice(0, index_offset);
+        auto index = block.Slice(index_offset, index_length);
         return std::make_shared<UnAlignedBlockReader>(data, index, std::move(comparator));
     }
 }
@@ -41,15 +41,15 @@ std::unique_ptr<BlockIterator> BlockReader::Iterator() {
     return std::make_unique<BlockIterator>(ptr);
 }
 
-std::shared_ptr<MemorySliceInput> BlockReader::BlockInput() {
-    return block_->ToInput();
+MemorySliceInput BlockReader::BlockInput() {
+    return block_.ToInput();
 }
 
 int32_t BlockReader::RecordCount() const {
     return record_count_;
 }
 
-MemorySlice::SliceComparator BlockReader::Comparator() const {
+const MemorySlice::SliceComparator& BlockReader::Comparator() const {
     return comparator_;
 }
 

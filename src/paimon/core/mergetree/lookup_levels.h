@@ -36,14 +36,14 @@ class LookupLevels {
         const CoreOptions& options, const std::shared_ptr<SchemaManager>& schema_manager,
         const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<FileStorePathFactory>& path_factory,
-        const std::shared_ptr<TableSchema>& table_schema, std::unique_ptr<Levels>&& levels,
-        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<TableSchema>& table_schema, const std::shared_ptr<Levels>& levels,
+        DeletionVector::Factory dv_factory,
         const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
         const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
         const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
         const std::shared_ptr<MemoryPool>& pool);
 
-    const std::unique_ptr<Levels>& GetLevels() const {
+    const std::shared_ptr<Levels>& GetLevels() const {
         return levels_;
     }
 
@@ -71,8 +71,8 @@ class LookupLevels {
                  std::unique_ptr<RawFileSplitRead>&& split_read,
                  const std::shared_ptr<TableSchema>& table_schema,
                  const std::shared_ptr<arrow::Schema>& partition_schema,
-                 const std::shared_ptr<arrow::Schema>& key_schema, std::unique_ptr<Levels>&& levels,
-                 const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+                 const std::shared_ptr<arrow::Schema>& key_schema,
+                 const std::shared_ptr<Levels>& levels, DeletionVector::Factory dv_factory,
                  const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
                  std::unique_ptr<RowCompactedSerializer>&& key_serializer,
                  const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
@@ -107,8 +107,8 @@ class LookupLevels {
     std::shared_ptr<arrow::Schema> read_schema_;
     std::shared_ptr<arrow::Schema> key_schema_;
     std::shared_ptr<arrow::Schema> value_schema_;
-    std::unique_ptr<Levels> levels_;
-    std::unordered_map<std::string, DeletionFile> deletion_file_map_;
+    std::shared_ptr<Levels> levels_;
+    DeletionVector::Factory dv_factory_;
 
     std::shared_ptr<typename PersistProcessor<T>::Factory> processor_factory_;
     std::unique_ptr<RowCompactedSerializer> key_serializer_;

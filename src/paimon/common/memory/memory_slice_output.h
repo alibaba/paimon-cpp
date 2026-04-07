@@ -39,7 +39,7 @@ class PAIMON_EXPORT MemorySliceOutput {
 
     int32_t Size() const;
     void Reset();
-    std::unique_ptr<MemorySlice> ToSlice();
+    MemorySlice ToSlice();
 
     template <typename T>
     void WriteValue(T value);

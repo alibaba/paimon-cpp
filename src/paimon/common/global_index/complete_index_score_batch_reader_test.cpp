@@ -72,7 +72,7 @@ TEST_F(CompleteIndexScoreBatchReaderTest, TestSimple) {
         arrow::field("_ROW_ID", arrow::int64()),
     };
 
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, null, 0],
         ["Bob", 11, null, 1],
         ["Cathy", 12, null, 2]
@@ -106,7 +106,7 @@ TEST_F(CompleteIndexScoreBatchReaderTest, TestWithBitmap) {
         arrow::field("_ROW_ID", arrow::int64()),
     };
 
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, null, 0],
         ["Bob", 11, null, 1],
         ["Cathy", 12, null, 2],
@@ -141,7 +141,7 @@ TEST_F(CompleteIndexScoreBatchReaderTest, TestReadWithNullScores) {
         arrow::field("_ROW_ID", arrow::int64()),
     };
 
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, null, 0],
         ["Bob", 11, null, 1],
         ["Cathy", 12, null, 2]

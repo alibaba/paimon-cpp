@@ -60,7 +60,7 @@ class OrcFileBatchReaderTest : public ::testing::Test,
             arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
 
         struct_array_ = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Bob", 10, 0, 12.1], ["Emily", 10, 0, 13.1], ["Tony", 10, 0, 14.1], ["Emily", 10, 0, 15.1],
         ["Bob", 10, 0, 12.1], ["Alex", 10, 0, 16.1], ["David", 10, 0, 17.1], ["Lily", 10, 0, 17.1]
     ])")
@@ -458,7 +458,7 @@ TEST_F(OrcFileBatchReaderTest, TestNextBatchWithDictionary) {
 
     arrow::FieldVector fields = {f0, f1, f2};
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [["a", "a", "b"], [["a", "q"], ["b", "w"]],             [10, "q", "a"]],
         [["a", "c"],      [["a", "e"], ["b", "r"], ["c", "e"]], [20, "w", "a"]],
         [["a", "d"],      [["d", "r"], ["e", "t"]],             [null, "e", "b"]],

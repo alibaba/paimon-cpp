@@ -124,21 +124,6 @@ std::unordered_map<std::string, DeletionFile> AbstractSplitRead::CreateDeletionF
     return deletion_file_map;
 }
 
-DeletionVector::Factory AbstractSplitRead::CreateDeletionVectorFactory(
-    const std::unordered_map<std::string, DeletionFile>& deletion_file_map) const {
-    return [this, deletion_file_map](
-               const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
-        auto iter = deletion_file_map.find(file_name);
-        if (iter != deletion_file_map.end()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DeletionVector> dv,
-                DeletionVector::Read(options_.GetFileSystem().get(), iter->second, pool_.get()));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
-}
-
 Result<std::unique_ptr<BatchReader>> AbstractSplitRead::ApplyPredicateFilterIfNeeded(
     std::unique_ptr<BatchReader>&& reader, const std::shared_ptr<Predicate>& predicate) const {
     if (!context_->EnablePredicateFilter() || predicate == nullptr) {

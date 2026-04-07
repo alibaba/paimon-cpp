@@ -278,7 +278,7 @@ TEST_F(ParquetStatsExtractorTest, TestNullForAllType) {
         ParquetFormatWriter::Create(out, schema, builder.build(),
                                     DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool));
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]
     ])")
             .ValueOrDie());

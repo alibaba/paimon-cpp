@@ -25,6 +25,7 @@
 #include "paimon/common/factories/io_hook.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
+#include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/io/data_file_path_factory.h"
@@ -94,7 +95,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
             data_path_factory, key_comparator,
             /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, pool_);
+            arrow_schema_, options, std::make_shared<NoopCompactManager>(), pool_);
 
         // write data
         ArrowArray c_src_array;
@@ -117,8 +118,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         std::vector<DataField> key_fields = {DataField(0, key_schema_->field(0))};
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
                                FieldsComparator::Create(key_fields,
-                                                        /*is_ascending_order=*/true,
-                                                        /*use_view=*/false));
+                                                        /*is_ascending_order=*/true));
         return key_comparator;
     }
 
@@ -138,9 +138,6 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<bool>>> CreateCompactRewriterForFirstRow(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options, std::unique_ptr<LookupLevels<bool>>&& lookup_levels) const {
-        auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
-            return std::shared_ptr<DeletionVector>();
-        };
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         auto merge_function_wrapper_factory =
@@ -152,22 +149,19 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
                     lookup_levels_ptr);
             return merge_function_wrapper;
         };
-
+        auto cancellation_controller = std::make_shared<CancellationController>();
         return LookupMergeTreeCompactRewriter<bool>::Create(
             /*max_level=*/5, std::move(lookup_levels), /*dv_maintainer=*/nullptr,
             std::move(merge_function_wrapper_factory),
             /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<KeyValue>>>
     CreateCompactRewriterForKeyValue(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options, std::unique_ptr<LookupLevels<KeyValue>>&& lookup_levels) const {
-        auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
-            return std::shared_ptr<DeletionVector>();
-        };
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         auto merge_function_wrapper_factory =
@@ -186,31 +180,25 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
                     /*user_defined_seq_comparator=*/nullptr, lookup_levels_ptr));
             return merge_function_wrapper;
         };
-
+        auto cancellation_controller = std::make_shared<CancellationController>();
         return LookupMergeTreeCompactRewriter<KeyValue>::Create(
             /*max_level=*/5, std::move(lookup_levels), /*dv_maintainer=*/nullptr,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>>>
     CreateCompactRewriterForFilePosition(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options, std::unique_ptr<LookupLevels<FilePosition>>&& lookup_levels,
-        DeletionVector::Factory dv_factory = nullptr) const {
-        if (!dv_factory) {
-            dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
-                return std::shared_ptr<DeletionVector>();
-            };
-        }
+        std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {}) const {
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
         auto path_factory = std::make_shared<MockIndexPathFactory>(table_path + "/index/");
         auto dv_index_file = std::make_shared<DeletionVectorsIndexFile>(fs_, path_factory,
                                                                         /*bitmap64=*/false, pool_);
-        std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors;
         auto dv_maintainer =
             std::make_shared<BucketedDvMaintainer>(dv_index_file, deletion_vectors);
 
@@ -227,12 +215,12 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
                     /*user_defined_seq_comparator=*/nullptr, lookup_levels_ptr));
             return merge_function_wrapper;
         };
-
+        auto cancellation_controller = std::make_shared<CancellationController>();
         return LookupMergeTreeCompactRewriter<FilePosition>::Create(
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<PositionedKeyValue>>>
@@ -240,10 +228,6 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options,
         std::unique_ptr<LookupLevels<PositionedKeyValue>>&& lookup_levels) const {
-        auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
-            return std::shared_ptr<DeletionVector>();
-        };
-
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
@@ -271,12 +255,12 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
                         /*user_defined_seq_comparator=*/nullptr, lookup_levels_ptr));
             return merge_function_wrapper;
         };
-
+        auto cancellation_controller = std::make_shared<CancellationController>();
         return LookupMergeTreeCompactRewriter<PositionedKeyValue>::Create(
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
-            /*partition=*/BinaryRow::EmptyRow(), table_schema, std::move(dv_factory),
-            path_factory_cache, options, pool_);
+            /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
+            cancellation_controller);
     }
 
     void CheckResult(const std::string& compact_file_name,
@@ -335,11 +319,11 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto lookup_store_factory,
                                LookupStoreFactory::Create(lookup_key_comparator, options));
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
-        return LookupLevels<T>::Create(fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options,
-                                       schema_manager, std::move(io_manager), path_factory,
-                                       table_schema, std::move(levels),
-                                       /*deletion_file_map=*/{}, processor_factory,
-                                       serializer_factory, lookup_store_factory, pool_);
+        return LookupLevels<T>::Create(
+            fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
+            std::move(io_manager), path_factory, table_schema, std::move(levels),
+            DeletionVector::CreateFactory(/*dv_maintainer=*/nullptr), processor_factory,
+            serializer_factory, lookup_store_factory, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(
@@ -866,21 +850,16 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     ASSERT_OK_AND_ASSIGN(
         auto lookup_levels,
         CreateLookupLevels<FilePosition>(table_path, table_schema, processor_factory, files));
-    auto dv_factory = [file_name = file1->file_name](
-                          const std::string& name) -> Result<std::shared_ptr<DeletionVector>> {
-        if (name == file_name) {
-            // rm the second row for file1
-            auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
-            PAIMON_RETURN_NOT_OK(dv->Delete(1));
-            return dv;
-        }
-        return std::shared_ptr<DeletionVector>();
-    };
+    // Seed a deletion vector for file1 to remove its second row before lookup/rewrite.
+    auto dv = std::make_shared<BitmapDeletionVector>(RoaringBitmap32());
+    ASSERT_OK(dv->Delete(1));
+    std::map<std::string, std::shared_ptr<DeletionVector>> deletion_vectors = {
+        {file1->file_name, dv}};
 
     // compact and rewrite
     ASSERT_OK_AND_ASSIGN(auto rewriter, CreateCompactRewriterForFilePosition(
                                             table_path, table_schema, core_options,
-                                            std::move(lookup_levels), std::move(dv_factory)));
+                                            std::move(lookup_levels), std::move(deletion_vectors)));
     ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file1, file2}));
 
     ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
@@ -901,7 +880,6 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     auto array_status =
         arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
 [6,  0,  2, 222],
-[4,  0,  4, 44],
 [7,  0,  5, 555]
 ])"},
                                                          &expected_array);
@@ -911,8 +889,8 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvFactory) {
     // test dv
     auto dv_maintainer = rewriter->dv_maintainer_;
     ASSERT_TRUE(dv_maintainer);
-    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
-    ASSERT_FALSE(dv);
+    auto dv_result = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_FALSE(dv_result);
 }
 
 TEST_F(LookupMergeTreeCompactRewriterTest, TestIOException) {
@@ -1001,6 +979,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestIOException) {
 }
 
 TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
+    auto cancellation_controller = std::make_shared<CancellationController>();
     auto create_meta = [this](int32_t level, std::optional<int64_t> delete_row_count) {
         return std::make_shared<DataFileMeta>(
             "file.orc", 100l, /*row_count=*/4,
@@ -1017,13 +996,13 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
     {
         std::map<std::string, std::string> options = {};
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
-
         LookupMergeTreeCompactRewriter<bool> rewriter(
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/1, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::NoChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1032,13 +1011,13 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
         std::map<std::string, std::string> options = {
             {Options::FILE_FORMAT, "orc"}, {Options::FILE_FORMAT_PER_LEVEL, "5:parquet"}};
         ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
-
         LookupMergeTreeCompactRewriter<bool> rewriter(
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1055,8 +1034,9 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, dv_maintainer,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/1);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1069,8 +1049,9 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1083,8 +1064,9 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1098,8 +1080,9 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*lookup_levels=*/nullptr, /*dv_maintainer=*/nullptr,
             /*max_level=*/5, BinaryRow::EmptyRow(), /*bucket=*/0, /*schema_id=*/0,
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
-            /*write_schema=*/nullptr, /*dv_factory*/ nullptr, /*path_factory_cache=*/nullptr,
-            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_);
+            /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
+            /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
+            cancellation_controller);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1161,6 +1144,79 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteLookupChangelogWithOutputL
                                                          &expected_array);
     ASSERT_TRUE(array_status.ok());
     CheckResult(compact_file_name, table_schema, "orc", expected_array);
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvAndAggForStringFields) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+    arrow::FieldVector fields = {
+        arrow::field("key", arrow::utf8()),
+        arrow::field("value", arrow::utf8()),
+    };
+    arrow_schema_ = arrow::schema(fields);
+    key_schema_ = arrow::schema({fields[0]});
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files
+    ASSERT_OK_AND_ASSIGN(
+        auto file0, NewFiles(/*level=*/5, /*last_sequence_number=*/-1, table_path, core_options,
+                             R"([["1", "11"], ["3", "33"], ["5", "55"]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1,
+                         NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path, core_options,
+                                  R"([["2", "22"], ["4", "44"], ["5", "5"]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([["2", "222"], ["5", "15"]])"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2};
+    auto processor_factory = std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
+    ASSERT_OK_AND_ASSIGN(
+        auto lookup_levels,
+        CreateLookupLevels<PositionedKeyValue>(table_path, table_schema, processor_factory, files));
+
+    // compact and rewrite
+    ASSERT_OK_AND_ASSIGN(auto rewriter,
+                         CreateCompactRewriterForPositionedKeyValue(
+                             table_path, table_schema, core_options, std::move(lookup_levels)));
+    ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns({file1, file2}));
+    ASSERT_OK_AND_ASSIGN(auto compact_result, rewriter->Rewrite(
+                                                  /*output_level=*/4, /*drop_delete=*/true, runs));
+    ASSERT_EQ(2, compact_result.Before().size());
+    ASSERT_EQ(1, compact_result.After().size());
+
+    const auto& compact_file_meta = compact_result.After()[0];
+    // check compact file exist
+    std::string compact_file_name = table_path + "/bucket-0/" + compact_file_meta->file_name;
+    ASSERT_OK_AND_ASSIGN(bool exist, fs_->Exists(compact_file_name));
+    ASSERT_TRUE(exist);
+
+    // check file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  "2", "222"],
+[4,  0,  "4", "44"],
+[7,  0,  "5", "55"]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // test dv
+    auto dv_maintainer = rewriter->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
 }
 
 }  // namespace paimon::test

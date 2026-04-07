@@ -26,12 +26,15 @@
 #include "paimon/visibility.h"
 
 namespace paimon {
-/// Describe a section of memory.
+/// Describe a section of a single MemorySegment.
+///
+/// @note: Unlike the Java implementation where data may span multiple MemorySegments,
+/// in this C++ implementation all data resides within a single MemorySegment.
 class PAIMON_EXPORT BinarySection {
  public:
     BinarySection() = default;
-    BinarySection(const std::vector<MemorySegment>& segments, int32_t offset, int32_t size_in_bytes)
-        : segments_(segments), offset_(offset), size_in_bytes_(size_in_bytes) {}
+    BinarySection(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes)
+        : segment_(segment), offset_(offset), size_in_bytes_(size_in_bytes) {}
     virtual ~BinarySection() = default;
     /// It decides whether to put data in FixLenPart or VarLenPart. See more in `/// BinaryRow`.
     /// If len is less than 8, its binary format is: 1-bit mark(1) = 1, 7-bits len, and
@@ -58,27 +61,21 @@ class PAIMON_EXPORT BinarySection {
     /// @param base_offset base offset of composite binary format.
     /// @param field_offset absolute start offset of variable_part_offset_and_len.
     /// @param variable_part_offset_and_len a long value, real data or offset and len.
-    static PAIMON_UNIQUE_PTR<Bytes> ReadBinary(const std::vector<MemorySegment>& segments,
-                                               int32_t base_offset, int32_t field_offset,
+    static PAIMON_UNIQUE_PTR<Bytes> ReadBinary(const MemorySegment& segment, int32_t base_offset,
+                                               int32_t field_offset,
                                                int64_t variable_part_offset_and_len,
                                                MemoryPool* pool);
 
     bool operator==(const BinarySection& that) const;
 
     virtual void PointTo(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes) {
-        std::vector<MemorySegment> segments = {segment};
-        PointTo(segments, offset, size_in_bytes);
-    }
-
-    virtual void PointTo(const std::vector<MemorySegment>& segments, int32_t offset,
-                         int32_t size_in_bytes) {
-        segments_ = segments;
+        segment_ = segment;
         offset_ = offset;
         size_in_bytes_ = size_in_bytes;
     }
 
-    const std::vector<MemorySegment>& GetSegments() const {
-        return segments_;
+    const MemorySegment& GetSegment() const {
+        return segment_;
     }
 
     int32_t GetOffset() const {
@@ -94,7 +91,7 @@ class PAIMON_EXPORT BinarySection {
     virtual int32_t HashCode() const;
 
  protected:
-    std::vector<MemorySegment> segments_;
+    MemorySegment segment_;
     int32_t offset_ = 0;
     int32_t size_in_bytes_ = 0;
 };

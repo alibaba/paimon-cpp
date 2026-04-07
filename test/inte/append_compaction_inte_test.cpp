@@ -44,7 +44,8 @@
 
 namespace paimon::test {
 
-class CompactionInteTest : public testing::Test, public ::testing::WithParamInterface<std::string> {
+class AppendCompactionInteTest : public testing::Test,
+                                 public ::testing::WithParamInterface<std::string> {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
@@ -140,7 +141,7 @@ class CompactionInteTest : public testing::Test, public ::testing::WithParamInte
     std::shared_ptr<MemoryPool> pool_;
 };
 
-std::vector<std::string> GetTestValuesForCompactionInteTest() {
+std::vector<std::string> GetTestValuesForAppendCompactionInteTest() {
     std::vector<std::string> values;
     values.emplace_back("parquet");
 #ifdef PAIMON_ENABLE_ORC
@@ -155,10 +156,10 @@ std::vector<std::string> GetTestValuesForCompactionInteTest() {
     return values;
 }
 
-INSTANTIATE_TEST_SUITE_P(FileFormat, CompactionInteTest,
-                         ::testing::ValuesIn(GetTestValuesForCompactionInteTest()));
+INSTANTIATE_TEST_SUITE_P(FileFormat, AppendCompactionInteTest,
+                         ::testing::ValuesIn(GetTestValuesForAppendCompactionInteTest()));
 
-TEST_P(CompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
+TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     arrow::FieldVector fields = {
@@ -243,7 +244,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteFullCompaction) {
     }
 }
 
-TEST_P(CompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {
+TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     arrow::FieldVector fields = {
@@ -328,7 +329,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteFullCompactionWithDv) {
     }
 }
 
-TEST_P(CompactionInteTest, TestAppendTableStreamWriteBestEffortCompaction) {
+TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteBestEffortCompaction) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     arrow::FieldVector fields = {
@@ -413,7 +414,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteBestEffortCompaction) {
     }
 }
 
-TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath) {
+TEST_P(AppendCompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
     auto external_dir = UniqueTestDirectory::Create();
@@ -504,7 +505,7 @@ TEST_P(CompactionInteTest, TestAppendTableStreamWriteCompactionWithExternalPath)
     }
 }
 
-TEST_F(CompactionInteTest, TestAppendTableCompactionWithIOException) {
+TEST_F(AppendCompactionInteTest, TestAppendTableCompactionWithIOException) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::utf8()), arrow::field("f1", arrow::int32()),
         arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};

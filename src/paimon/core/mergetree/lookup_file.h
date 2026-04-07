@@ -103,6 +103,6 @@ class LookupFile {
     int64_t request_count_ = 0;
     int64_t hit_count_ = 0;
     bool closed_ = false;
-    // TODO(lisizhuo.lsz): callback?
+    // TODO(lisizhuo.lsz): callback
 };
 }  // namespace paimon

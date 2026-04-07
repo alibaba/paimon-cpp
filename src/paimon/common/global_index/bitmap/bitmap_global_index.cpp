@@ -17,9 +17,6 @@
 
 #include "paimon/common/global_index/wrap/file_index_reader_wrapper.h"
 #include "paimon/common/global_index/wrap/file_index_writer_wrapper.h"
-#include "paimon/file_index/bitmap_index_result.h"
-#include "paimon/global_index/bitmap_global_index_result.h"
-#include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon {
 Result<std::shared_ptr<GlobalIndexWriter>> BitmapGlobalIndex::CreateWriter(
@@ -47,31 +44,9 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
         index_->CreateReader(arrow_schema, /*start=*/0, meta.file_size, in, pool));
     auto transform = [range_end = meta.range_end](const std::shared_ptr<FileIndexResult>& result)
         -> Result<std::shared_ptr<GlobalIndexResult>> {
-        return ToGlobalIndexResult(range_end, result);
+        return FileIndexReaderWrapper::ToGlobalIndexResult(range_end, result);
     };
     return std::make_shared<BitmapGlobalIndexReader>(reader, transform);
-}
-
-Result<std::shared_ptr<GlobalIndexResult>> BitmapGlobalIndex::ToGlobalIndexResult(
-    int64_t range_end, const std::shared_ptr<FileIndexResult>& result) {
-    if (auto remain = std::dynamic_pointer_cast<Remain>(result)) {
-        return std::make_shared<BitmapGlobalIndexResult>([range_end]() -> Result<RoaringBitmap64> {
-            RoaringBitmap64 bitmap;
-            bitmap.AddRange(0, range_end + 1);
-            return bitmap;
-        });
-    } else if (auto skip = std::dynamic_pointer_cast<Skip>(result)) {
-        return std::make_shared<BitmapGlobalIndexResult>(
-            []() -> Result<RoaringBitmap64> { return RoaringBitmap64(); });
-    } else if (auto bitmap_result = std::dynamic_pointer_cast<BitmapIndexResult>(result)) {
-        return std::make_shared<BitmapGlobalIndexResult>(
-            [bitmap_result]() -> Result<RoaringBitmap64> {
-                PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* bitmap, bitmap_result->GetBitmap());
-                return RoaringBitmap64(*bitmap);
-            });
-    }
-    return Status::Invalid(
-        "invalid FileIndexResult, supposed to be Remain or Skip or BitmapIndexResult");
 }
 
 }  // namespace paimon

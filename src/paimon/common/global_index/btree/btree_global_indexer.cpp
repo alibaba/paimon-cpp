@@ -269,8 +269,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     auto comparator = CreateComparator(field_type);
 
     // prepare file footer
-    auto cache_manager = std::make_shared<CacheManager>();
-    auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, pool, cache_manager);
+    auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, pool, std::make_unique<CacheManager>());
     PAIMON_ASSIGN_OR_RAISE(auto segment,
                            block_cache->GetBlock(meta.file_size - BTreeFileFooter::ENCODED_LENGTH,
                                                  BTreeFileFooter::ENCODED_LENGTH, true));

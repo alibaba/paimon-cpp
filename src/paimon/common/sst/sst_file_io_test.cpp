@@ -55,10 +55,9 @@ class SstFileIOTest : public ::testing::TestWithParam<SstFileParam> {
         dir_ = paimon::test::UniqueTestDirectory::Create();
         fs_ = dir_->GetFileSystem();
         pool_ = GetDefaultPool();
-        comparator_ = [](const std::shared_ptr<MemorySlice>& a,
-                         const std::shared_ptr<MemorySlice>& b) -> Result<int32_t> {
-            std::string_view va = a->ReadStringView();
-            std::string_view vb = b->ReadStringView();
+        comparator_ = [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+            std::string_view va = a.ReadStringView();
+            std::string_view vb = b.ReadStringView();
             if (va == vb) {
                 return 0;
             }
@@ -172,8 +171,8 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     // key range [1_000_000, 2_000_000], value is equal to the key
     std::string file = GetDataDir() + "/sst/" + param.file_path;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
-    auto cache_manager = std::make_shared<CacheManager>();
-    auto block_cache = std::make_shared<BlockCache>(file, in, pool_, cache_manager);
+    auto block_cache =
+        std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
 
     // test read
     ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));

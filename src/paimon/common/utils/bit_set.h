@@ -39,8 +39,8 @@ class PAIMON_EXPORT BitSet {
         return segment_;
     }
 
-    std::shared_ptr<MemorySlice> ToSlice() {
-        return std::make_shared<MemorySlice>(segment_, offset_, byte_length_);
+    MemorySlice ToSlice() {
+        return MemorySlice(segment_, offset_, byte_length_);
     }
 
     int32_t Offset() const {

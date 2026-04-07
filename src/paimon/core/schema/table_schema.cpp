@@ -55,7 +55,7 @@ Result<std::unique_ptr<TableSchema>> TableSchema::Create(
         primary_key_set.insert(primary_key);
     }
     for (const auto& field : schema->fields()) {
-        PAIMON_ASSIGN_OR_RAISE(auto field_with_id,
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> field_with_id,
                                AssignFieldIdsRecursively(field, /*set_field_id=*/true, &field_id));
         if (primary_key_set.count(field_with_id->name())) {
             field_with_id = field_with_id->WithNullable(false);
@@ -299,6 +299,16 @@ Result<std::vector<std::string>> TableSchema::TrimmedPrimaryKeys() const {
         return result;
     }
     return primary_keys_;
+}
+
+Result<std::vector<DataField>> TableSchema::TrimmedPrimaryKeyFields() const {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_key, TrimmedPrimaryKeys());
+    return GetFields(trimmed_primary_key);
+}
+
+Result<std::shared_ptr<arrow::Schema>> TableSchema::TrimmedPrimaryKeySchema() const {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields, TrimmedPrimaryKeyFields());
+    return DataField::ConvertDataFieldsToArrowSchema(pk_fields);
 }
 
 /// Original bucket keys, maybe empty.
