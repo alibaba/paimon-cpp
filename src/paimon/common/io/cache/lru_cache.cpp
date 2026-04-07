@@ -70,17 +70,32 @@ void LruCache::Invalidate(const std::shared_ptr<CacheKey>& key) {
 
     auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
-        current_weight_ -= GetWeight(it->second->second);
+        auto invalidated_key = it->second->first;
+        auto invalidated_value = it->second->second;
+        current_weight_ -= GetWeight(invalidated_value);
         lru_list_.erase(it->second);
         lru_map_.erase(it);
+
+        if (invalidated_value) {
+            invalidated_value->OnEvict(invalidated_key);
+        }
     }
 }
 
 void LruCache::InvalidateAll() {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    lru_list_.clear();
-    lru_map_.clear();
+    while (!lru_list_.empty()) {
+        auto invalidated_key = lru_list_.back().first;
+        auto invalidated_value = lru_list_.back().second;
+        current_weight_ -= GetWeight(invalidated_value);
+        lru_map_.erase(invalidated_key);
+        lru_list_.pop_back();
+
+        if (invalidated_value) {
+            invalidated_value->OnEvict(invalidated_key);
+        }
+    }
     current_weight_ = 0;
 }
 
