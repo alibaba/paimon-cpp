@@ -103,13 +103,6 @@ if [ -n "$JOBS" ]; then
 else
     echo "Parallel Jobs: auto-detect"
 fi
-if command -v ccache &> /dev/null; then
-    echo "ccache: $(ccache --version | head -1)"
-    echo "ccache stats before build:"
-    ccache -s | head -5
-else
-    echo "ccache: not found (install ccache to accelerate repeated builds)"
-fi
 if [ ${#CMAKE_OPTIONS[@]} -gt 0 ]; then
     echo "CMake Options: ${CMAKE_OPTIONS[*]}"
 else
