@@ -28,13 +28,13 @@
 #include "arrow/io/caching.h"
 #include "arrow/memory_pool.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/format/parquet/parquet_field_id_converter.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
@@ -118,7 +118,7 @@ class FileReaderWrapperTest : public ::testing::Test {
     Result<std::unique_ptr<FileReaderWrapper>> PrepareReaderWrapper(const std::string& file_path) {
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs_->Open(file_path));
         PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, in->Length());
-        auto input_stream = std::make_unique<ParquetInputStreamImpl>(in, arrow_pool_, file_length);
+        auto input_stream = std::make_unique<ArrowInputStreamAdapter>(in, arrow_pool_, file_length);
         ::parquet::arrow::FileReaderBuilder file_reader_builder;
         ::parquet::ReaderProperties reader_properties;
         reader_properties.enable_buffered_stream();

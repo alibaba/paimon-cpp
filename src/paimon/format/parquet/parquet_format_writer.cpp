@@ -20,12 +20,12 @@
 #include <utility>
 
 #include "arrow/c/bridge.h"
+#include "arrow/memory_pool.h"
 #include "arrow/record_batch.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/arrow/arrow_output_stream_adapter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
-#include "paimon/format/parquet/parquet_output_stream_impl.h"
-#include "paimon/metrics.h"
 #include "parquet/arrow/writer.h"
 #include "parquet/properties.h"
 
@@ -45,7 +45,7 @@ Result<std::unique_ptr<ParquetFormatWriter>> ParquetFormatWriter::Create(
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<::parquet::WriterProperties>& writer_properties, uint64_t max_memory_use,
     const std::shared_ptr<arrow::MemoryPool>& pool) {
-    auto out = std::make_shared<ParquetOutputStreamImpl>(output_stream);
+    auto out = std::make_shared<ArrowOutputStreamAdapter>(output_stream);
     ::parquet::ArrowWriterProperties::Builder arrow_properties_builder;
     auto arrow_writer_properties =
         arrow_properties_builder.enable_deprecated_int96_timestamps()->build();
@@ -93,7 +93,7 @@ Result<uint64_t> ParquetFormatWriter::GetEstimateLength() const {
 }
 
 ParquetFormatWriter::ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
-                                         const std::shared_ptr<ParquetOutputStreamImpl>& out,
+                                         const std::shared_ptr<ArrowOutputStreamAdapter>& out,
                                          const std::shared_ptr<arrow::Schema>& schema,
                                          uint64_t max_memory_use,
                                          const std::shared_ptr<arrow::MemoryPool>& pool)

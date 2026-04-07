@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,28 @@
  * limitations under the License.
  */
 
-#include "paimon/format/parquet/parquet_output_stream_impl.h"
+#include "paimon/common/utils/arrow/arrow_output_stream_adapter.h"
 
 #include "arrow/result.h"
-#include "arrow/status.h"
+#include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/math.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"
 
-namespace paimon::parquet {
+namespace paimon {
 
-ParquetOutputStreamImpl::ParquetOutputStreamImpl(const std::shared_ptr<paimon::OutputStream>& out)
-    : out_(out), closed_(false) {}
+ArrowOutputStreamAdapter::ArrowOutputStreamAdapter(const std::shared_ptr<paimon::OutputStream>& out)
+    : out_(out) {}
 
-arrow::Status ParquetOutputStreamImpl::Close() {
-    // output stream close is called by paimon single file writer, no need to close here
+arrow::Status ArrowOutputStreamAdapter::Close() {
+    // output stream close is called by paimon framework(such as single file writer), no need to
+    // close here
     closed_ = true;
     return arrow::Status::OK();
 }
 
-arrow::Result<int64_t> ParquetOutputStreamImpl::Tell() const {
+arrow::Result<int64_t> ArrowOutputStreamAdapter::Tell() const {
     paimon::Result<int64_t> pos = out_->GetPos();
     if (!pos.ok()) {
         return ToArrowStatus(pos.status());
@@ -41,20 +43,25 @@ arrow::Result<int64_t> ParquetOutputStreamImpl::Tell() const {
     return pos.value();
 }
 
-bool ParquetOutputStreamImpl::closed() const {
+bool ArrowOutputStreamAdapter::closed() const {
     return closed_;
 }
 
-arrow::Status ParquetOutputStreamImpl::Write(const void* data, int64_t nbytes) {
-    Result<int32_t> len = out_->Write(static_cast<const char*>(data), nbytes);
+arrow::Status ArrowOutputStreamAdapter::Write(const void* data, int64_t nbytes) {
+    if (!InRange<uint32_t>(nbytes)) {
+        return arrow::Status::Invalid(
+            fmt::format("nbytes value {} is out of bound of uint32_t", nbytes));
+    }
+    Result<int32_t> len =
+        out_->Write(static_cast<const char*>(data), static_cast<uint32_t>(nbytes));
     if (!len.ok()) {
         return ToArrowStatus(len.status());
     }
     return arrow::Status::OK();
 }
 
-arrow::Status ParquetOutputStreamImpl::Flush() {
+arrow::Status ArrowOutputStreamAdapter::Flush() {
     return ToArrowStatus(out_->Flush());
 }
 
-}  // namespace paimon::parquet
+}  // namespace paimon
