@@ -37,6 +37,7 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
 
     std::lock_guard<std::mutex> lock(mutex_);
+    auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
         // Another thread inserted the key while we were loading it
         lru_list_.splice(lru_list_.begin(), lru_list_, it->second);

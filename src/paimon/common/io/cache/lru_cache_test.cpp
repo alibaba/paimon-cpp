@@ -66,7 +66,7 @@ TEST_F(LruCacheTest, TestGetCacheHitAndMiss) {
     LruCache cache(1024);
 
     auto key = MakeKey(0);
-    int supplier_call_count = 0;
+    int32_t supplier_call_count = 0;
     auto supplier = [&](const std::shared_ptr<CacheKey>&) -> Result<std::shared_ptr<CacheValue>> {
         supplier_call_count++;
         return MakeValue(64, 'A');
@@ -131,7 +131,7 @@ TEST_F(LruCacheTest, TestWeightBasedEviction) {
     ASSERT_EQ(cache.GetCurrentWeight(), 200);
 
     // key0 should be evicted, Get should call supplier
-    int supplier_called = 0;
+    int32_t supplier_called = 0;
     auto supplier = [&](const std::shared_ptr<CacheKey>&) -> Result<std::shared_ptr<CacheValue>> {
         supplier_called++;
         return MakeValue(100, 'X');
@@ -208,35 +208,47 @@ TEST_F(LruCacheTest, TestInvalidate) {
     auto key0 = MakeKey(0);
     auto key1 = MakeKey(1);
 
-    cache.Put(key0, MakeValue(100));
-    cache.Put(key1, MakeValue(200));
+    std::vector<int64_t> evicted;
+    auto callback0 = [&evicted](const std::shared_ptr<CacheKey>&) { evicted.push_back(0); };
+    auto callback1 = [&evicted](const std::shared_ptr<CacheKey>&) { evicted.push_back(1); };
+    cache.Put(key0, MakeValue(100, 'A', callback0));
+    cache.Put(key1, MakeValue(200, 'B', callback1));
     ASSERT_EQ(cache.Size(), 2);
     ASSERT_EQ(cache.GetCurrentWeight(), 300);
+    ASSERT_TRUE(evicted.empty());
 
     // Invalidate key0
     cache.Invalidate(key0);
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 200);
+    ASSERT_EQ(evicted, std::vector<int64_t>({0}));
 
     // Invalidating a non-existent key is a no-op
     cache.Invalidate(MakeKey(999));
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 200);
+    ASSERT_EQ(evicted, std::vector<int64_t>({0}));
 }
 
 /// Verifies InvalidateAll clears all entries and resets weight.
 TEST_F(LruCacheTest, TestInvalidateAll) {
     LruCache cache(1024);
 
-    for (int i = 0; i < 5; i++) {
-        cache.Put(MakeKey(i), MakeValue(50));
+    std::vector<int64_t> evicted;
+    for (int32_t i = 0; i < 5; i++) {
+        auto callback = [&evicted, id = i](const std::shared_ptr<CacheKey>&) {
+            evicted.push_back(id);
+        };
+        cache.Put(MakeKey(i), MakeValue(50, 'A', callback));
     }
     ASSERT_EQ(cache.Size(), 5);
     ASSERT_EQ(cache.GetCurrentWeight(), 250);
+    ASSERT_TRUE(evicted.empty());
 
     cache.InvalidateAll();
     ASSERT_EQ(cache.Size(), 0);
     ASSERT_EQ(cache.GetCurrentWeight(), 0);
+    ASSERT_EQ(evicted, std::vector<int64_t>({0, 1, 2, 3, 4}));
 }
 
 /// Verifies weight tracking is accurate across Put, Update, Invalidate, and Eviction.

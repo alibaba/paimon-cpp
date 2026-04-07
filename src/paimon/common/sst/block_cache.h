@@ -75,10 +75,12 @@ class BlockCache {
     }
 
     void Close() {
-        for (const auto& [key, _] : blocks_) {
+        // Snapshot blocks_ to avoid iterator invalidation from `InvalidPage` callback.
+        auto copied_blocks = blocks_;
+        for (const auto& [key, _] : copied_blocks) {
             cache_manager_->InvalidPage(key);
         }
-        blocks_.clear();
+        assert(blocks_.empty());
     }
 
  private:
