@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
-#include <vector>
 
 #include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/common/memory/memory_segment.h"
@@ -56,7 +55,7 @@ class BlockCache {
                     [this](const std::shared_ptr<CacheKey>& evicted_key) {
                         blocks_.erase(evicted_key);
                     }));
-            auto container = SegmentContainer(segment);
+            auto container = CacheManager::SegmentContainer(segment);
             const auto& result_segment = container.Access();
             blocks_.insert_or_assign(key, container);
             return result_segment;
@@ -83,26 +82,6 @@ class BlockCache {
     }
 
  private:
-    /// Container that wraps a MemorySegment with an access counter for LRU refresh.
-    class SegmentContainer {
-     public:
-        explicit SegmentContainer(const MemorySegment& segment)
-            : segment_(segment), access_count_(0) {}
-
-        MemorySegment Access() {
-            access_count_++;
-            return segment_;
-        }
-
-        int32_t GetAccessCount() const {
-            return access_count_;
-        }
-
-     private:
-        MemorySegment segment_;
-        int32_t access_count_;
-    };
-
     Result<MemorySegment> ReadFrom(int64_t offset, int length) {
         PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
@@ -116,7 +95,8 @@ class BlockCache {
     std::shared_ptr<InputStream> in_;
 
     std::shared_ptr<CacheManager> cache_manager_;
-    std::unordered_map<std::shared_ptr<CacheKey>, SegmentContainer, CacheKeyHash, CacheKeyEqual>
+    std::unordered_map<std::shared_ptr<CacheKey>, CacheManager::SegmentContainer, CacheKeyHash,
+                       CacheKeyEqual>
         blocks_;
 };
 }  // namespace paimon

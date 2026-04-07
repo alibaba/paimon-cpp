@@ -23,8 +23,8 @@ Result<std::unique_ptr<LookupStoreWriter>> SortLookupStoreFactory::CreateWriter(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
                            fs->Create(file_path, /*overwrite=*/false));
     return std::make_unique<SortLookupStoreWriter>(
-        out, std::make_shared<SstFileWriter>(out, pool, bloom_filter, block_size_,
-                                             compression_factory_));
+        out, std::make_shared<SstFileWriter>(out, bloom_filter, block_size_, compression_factory_,
+                                             pool));
 }
 
 Result<std::unique_ptr<LookupStoreReader>> SortLookupStoreFactory::CreateReader(
@@ -32,7 +32,7 @@ Result<std::unique_ptr<LookupStoreReader>> SortLookupStoreFactory::CreateReader(
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SstFileReader> reader,
-                           SstFileReader::Create(pool, in, comparator_, cache_manager_));
+                           SstFileReader::Create(in, comparator_, cache_manager_, pool));
     return std::make_unique<SortLookupStoreReader>(in, reader);
 }
 

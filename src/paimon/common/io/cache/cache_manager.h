@@ -36,8 +36,7 @@ class CacheManager {
     /// Container that wraps a MemorySegment with an access counter for refresh.
     class SegmentContainer {
      public:
-        explicit SegmentContainer(const MemorySegment& segment)
-            : segment_(segment), access_count_(0) {}
+        explicit SegmentContainer(const MemorySegment& segment) : segment_(segment) {}
 
         const MemorySegment& Access() {
             access_count_++;
@@ -50,7 +49,7 @@ class CacheManager {
 
      private:
         MemorySegment segment_;
-        int32_t access_count_;
+        int32_t access_count_ = 0;
     };
 
     /// Constructs a CacheManager with LRU caching.

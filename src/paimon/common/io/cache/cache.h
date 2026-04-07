@@ -17,12 +17,8 @@
 #pragma once
 #include <cstdint>
 #include <functional>
-#include <list>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <unordered_map>
-#include <utility>
 
 #include "paimon/common/io/cache/cache_key.h"
 #include "paimon/common/memory/memory_segment.h"

@@ -41,9 +41,9 @@ class SstFileIterator;
 class SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input,
-        MemorySlice::SliceComparator comparator,
-        const std::shared_ptr<CacheManager>& cache_manager);
+        const std::shared_ptr<InputStream>& input, MemorySlice::SliceComparator comparator,
+        const std::shared_ptr<CacheManager>& cache_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
@@ -68,11 +68,10 @@ class SstFileReader {
                                                  const std::shared_ptr<BlockTrailer>& trailer,
                                                  const std::shared_ptr<MemoryPool>& pool);
 
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                  const std::shared_ptr<BlockCache>& block_cache,
+    SstFileReader(const std::shared_ptr<BlockCache>& block_cache,
                   const std::shared_ptr<BloomFilter>& bloom_filter,
                   const std::shared_ptr<BlockReader>& index_block_reader,
-                  MemorySlice::SliceComparator comparator);
+                  MemorySlice::SliceComparator comparator, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;

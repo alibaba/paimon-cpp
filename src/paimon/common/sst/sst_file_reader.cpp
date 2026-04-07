@@ -22,8 +22,8 @@
 namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
-    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& in,
-    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager) {
+    const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
+    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
@@ -71,14 +71,14 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockReader> reader,
                            BlockReader::Create(MemorySlice::Wrap(block_data), comparator));
     return std::shared_ptr<SstFileReader>(
-        new SstFileReader(pool, block_cache, bloom_filter, reader, comparator));
+        new SstFileReader(block_cache, bloom_filter, reader, comparator, pool));
 }
 
-SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                             const std::shared_ptr<BlockCache>& block_cache,
+SstFileReader::SstFileReader(const std::shared_ptr<BlockCache>& block_cache,
                              const std::shared_ptr<BloomFilter>& bloom_filter,
                              const std::shared_ptr<BlockReader>& index_block_reader,
-                             MemorySlice::SliceComparator comparator)
+                             MemorySlice::SliceComparator comparator,
+                             const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       block_cache_(block_cache),
       bloom_filter_(bloom_filter),
