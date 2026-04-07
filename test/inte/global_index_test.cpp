@@ -2491,6 +2491,15 @@ TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
         ASSERT_TRUE(index_result->ToString().find("row ids: {0,1,2}") != std::string::npos);
     }
     {
+        std::optional<RoaringBitmap64> pre_filter = RoaringBitmap64::From({1, 2, 3});
+        ASSERT_OK_AND_ASSIGN(
+            auto index_result,
+            index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
+                "f0",
+                /*limit=*/10, "document", FullTextSearch::SearchType::MATCH_ALL, pre_filter)));
+        ASSERT_TRUE(index_result->ToString().find("row ids: {1,2}") != std::string::npos);
+    }
+    {
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              index_reader->VisitFullTextSearch(std::make_shared<FullTextSearch>(
                                  "f0",
