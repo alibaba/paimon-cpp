@@ -40,18 +40,10 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
-      - name: Install ccache
-        run: sudo apt-get update && sudo apt-get install -y ccache
       - name: Setup ccache
-        uses: actions/cache@v4
+        uses: ./.github/actions/setup-ccache
         with:
-          path: ~/.ccache
-          key: ccache-sanitizer-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-          restore-keys: |
-            ccache-sanitizer-${{ runner.os }}-${{ github.ref_name }}-
-            ccache-sanitizer-${{ runner.os }}-
-      - name: Configure ccache
-        run: ci/scripts/setup_ccache.sh
+          cache-key-prefix: ccache-sanitizer
       - name: Build Paimon
         shell: bash
         env:

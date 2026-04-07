@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-8 g++-8 ninja-build git git-lfs tar curl tzdata zip unzip pkg-config build-essential python3-dev gdb ccache
+          DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-8 g++-8 ninja-build git git-lfs tar curl tzdata zip unzip pkg-config build-essential python3-dev gdb
           curl -L -O https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3-linux-x86_64.tar.gz
           tar -zxvf cmake-3.28.3-linux-x86_64.tar.gz -C /usr/local --strip-components=1
           rm cmake-3.28.3-linux-x86_64.tar.gz
@@ -60,15 +60,9 @@ jobs:
         with:
           lfs: true
       - name: Setup ccache
-        uses: actions/cache@v4
+        uses: ./.github/actions/setup-ccache
         with:
-          path: ~/.ccache
-          key: ccache-gcc8-test-${{ runner.os }}-${{ github.ref_name }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
-          restore-keys: |
-            ccache-gcc8-test-${{ runner.os }}-${{ github.ref_name }}-
-            ccache-gcc8-test-${{ runner.os }}-
-      - name: Configure ccache
-        run: ci/scripts/setup_ccache.sh
+          cache-key-prefix: ccache-gcc8-test
       - name: Build Paimon
         shell: bash
         env:
