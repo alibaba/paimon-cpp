@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,19 +22,16 @@
 #include "arrow/api.h"
 #include "arrow/io/interfaces.h"
 #include "arrow/util/future.h"
-#include "paimon/fs/file_system.h"
+#include "paimon/visibility.h"
 
 namespace paimon {
 class InputStream;
-}  // namespace paimon
 
-namespace paimon::parquet {
-
-class ParquetInputStreamImpl : public arrow::io::RandomAccessFile {
+class PAIMON_EXPORT ArrowInputStreamAdapter : public arrow::io::RandomAccessFile {
  public:
-    ParquetInputStreamImpl(const std::shared_ptr<::paimon::InputStream>& input_stream,
-                           const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size);
-    ~ParquetInputStreamImpl() override;
+    ArrowInputStreamAdapter(const std::shared_ptr<paimon::InputStream>& input_stream,
+                            const std::shared_ptr<arrow::MemoryPool>& pool, uint64_t file_size);
+    ~ArrowInputStreamAdapter() override;
 
     // NOTE: In paimon file system definition, position + nbytes should not exceed file_size_.
     arrow::Result<int64_t> Read(int64_t nbytes, void* out) override;
@@ -54,10 +51,11 @@ class ParquetInputStreamImpl : public arrow::io::RandomAccessFile {
 
  private:
     arrow::Status DoClose();
-    std::shared_ptr<::paimon::InputStream> input_stream_;
+
+    std::shared_ptr<paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
     uint64_t file_size_;
     bool closed_ = false;
 };
 
-}  // namespace paimon::parquet
+}  // namespace paimon

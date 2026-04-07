@@ -29,6 +29,7 @@
 #include "arrow/c/bridge.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/data/decimal.h"
@@ -37,16 +38,13 @@
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/result.h"
-#include "paimon/status.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
-#include "paimon/utils/roaring_bitmap32.h"
 #include "parquet/properties.h"
 
 namespace paimon {
@@ -107,7 +105,7 @@ class PredicatePushdownTest : public ::testing::Test {
                          paimon::parquet::DEFAULT_PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
         ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-        auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
         options[paimon::parquet::PARQUET_READ_PREDICATE_NODE_COUNT_LIMIT] =

@@ -21,9 +21,9 @@
 #include <string>
 #include <utility>
 
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/format/reader_builder.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/reader/file_batch_reader.h"
@@ -45,7 +45,8 @@ class ParquetReaderBuilder : public ReaderBuilder {
         const std::shared_ptr<InputStream>& path) const override {
         PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, path->Length());
         std::shared_ptr<arrow::MemoryPool> arrow_pool = GetArrowPool(pool_);
-        auto input_stream = std::make_unique<ParquetInputStreamImpl>(path, arrow_pool, file_length);
+        auto input_stream =
+            std::make_unique<ArrowInputStreamAdapter>(path, arrow_pool, file_length);
         return ParquetFileBatchReader::Create(std::move(input_stream), arrow_pool, options_,
                                               batch_size_);
     }

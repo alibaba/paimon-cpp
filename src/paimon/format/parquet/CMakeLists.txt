@@ -20,8 +20,6 @@ set(PAIMON_PARQUET_FILE_FORMAT
     parquet_file_batch_reader.cpp
     parquet_file_format_factory.cpp
     parquet_format_writer.cpp
-    parquet_input_stream_impl.cpp
-    parquet_output_stream_impl.cpp
     parquet_schema_util.cpp
     parquet_stats_extractor.cpp
     parquet_writer_builder.cpp)
@@ -52,7 +50,6 @@ if(PAIMON_BUILD_TESTS)
                     parquet_field_id_converter_test.cpp
                     parquet_file_batch_reader_test.cpp
                     parquet_format_writer_test.cpp
-                    parquet_input_output_stream_test.cpp
                     parquet_stats_extractor_test.cpp
                     parquet_writer_builder_test.cpp
                     predicate_converter_test.cpp

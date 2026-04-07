@@ -28,9 +28,36 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <type_traits>
 
 namespace paimon {
+
+template <typename To, typename From>
+constexpr bool InRange(From value) {
+    static_assert(std::is_integral_v<To> && std::is_integral_v<From>,
+                  "InRange only supports integral types");
+
+    if constexpr (std::is_signed_v<From> && std::is_unsigned_v<To>) {
+        if (value < 0) {
+            return false;
+        }
+        using CompareType = std::common_type_t<std::make_unsigned_t<From>, To>;
+        return static_cast<CompareType>(value) <=
+               static_cast<CompareType>(std::numeric_limits<To>::max());
+    } else if constexpr (std::is_unsigned_v<From> && std::is_signed_v<To>) {
+        using CompareType = std::common_type_t<From, std::make_unsigned_t<To>>;
+        return static_cast<CompareType>(value) <=
+               static_cast<CompareType>(std::numeric_limits<To>::max());
+    } else {
+        using CompareType = std::common_type_t<To, From>;
+        const auto numeric_value = static_cast<CompareType>(value);
+        const auto min_value = static_cast<CompareType>(std::numeric_limits<To>::min());
+        const auto max_value = static_cast<CompareType>(std::numeric_limits<To>::max());
+        return numeric_value >= min_value && numeric_value <= max_value;
+    }
+}
+
 // Swaps between big and little endian. Can be used in combination with the
 // little-endian encoding/decoding functions in coding_lean.h and coding.h to
 // encode/decode big endian.
@@ -46,10 +73,10 @@ inline T EndianSwapValue(T v) {
         using UintType = std::conditional_t<
             sizeof(T) == 2, uint16_t,
             std::conditional_t<sizeof(T) == 4, uint32_t,
-                               std::conditional_t<sizeof(T) == 8, uint64_t, void> > >;
+                               std::conditional_t<sizeof(T) == 8, uint64_t, void>>>;
 
         static_assert(!std::is_same_v<UintType, void>,
-                      "Unsupported size: only 4-byte and 8-byte types are supported.");
+                      "Unsupported size: only 2-byte, 4-byte, and 8-byte types are supported.");
 
         UintType int_repr;
         std::memcpy(&int_repr, &v, sizeof(T));

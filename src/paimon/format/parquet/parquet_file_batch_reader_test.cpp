@@ -31,13 +31,13 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/global_config.h"
@@ -130,7 +130,7 @@ class ParquetFileBatchReaderTest : public ::testing::Test,
         EXPECT_OK_AND_ASSIGN(auto input_stream, fs_->Open(file_name));
         auto length = fs_->GetFileStatus(file_name).value()->GetLen();
         auto in_stream =
-            std::make_unique<ParquetInputStreamImpl>(std::move(input_stream), pool_, length);
+            std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
         std::map<std::string, std::string> options = {};
         return PrepareParquetFileBatchReader(std::move(in_stream), options, read_schema, predicate,
                                              selection_bitmap, batch_size);
@@ -184,7 +184,7 @@ TEST_F(ParquetFileBatchReaderTest, TestSetReadSchema) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> input_stream, fs_->Open(file_name));
     auto length = fs_->GetFileStatus(file_name).value()->GetLen();
     auto in_stream =
-        std::make_unique<ParquetInputStreamImpl>(std::move(input_stream), pool_, length);
+        std::make_unique<ArrowInputStreamAdapter>(std::move(input_stream), pool_, length);
     std::map<std::string, std::string> options;
     ASSERT_OK_AND_ASSIGN(
         auto parquet_batch_reader,

@@ -469,9 +469,4 @@ inline Status GenericToStatus(Status&& st) {
         }                                                             \
     } while (false)
 
-// This is an internal-use macro and should not be used in public headers.
-#ifndef RETURN_NOT_OK
-#define RETURN_NOT_OK(s) PAIMON_RETURN_NOT_OK(s)
-#endif
-
 }  // namespace paimon
