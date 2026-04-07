@@ -14,24 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Centralized ccache configuration for CI environments.
-# All ccache parameters are defined here as environment variables so that
-# they can be tuned in a single place.
+echo "PAIMON_USE_CCACHE=ON" >> $GITHUB_ENV
 
-set -euo pipefail
+echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
+echo "CCACHE_DIR=${HOME}/.ccache" >> $GITHUB_ENV
+echo "CCACHE_MAXSIZE=5G" >> $GITHUB_ENV
+echo "CCACHE_COMPRESS=true" >> $GITHUB_ENV
+echo "CCACHE_COMPRESSLEVEL=6" >> $GITHUB_ENV
 
-# ---- ccache parameters (edit here to change defaults) ----
-export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-5G}"
-export CCACHE_COMPRESS="${CCACHE_COMPRESS:-true}"
-export CCACHE_COMPRESSLEVEL="${CCACHE_COMPRESSLEVEL:-6}"
-
-# Apply configuration via ccache CLI (persisted to ~/.ccache/ccache.conf)
-ccache --set-config=max_size="${CCACHE_MAXSIZE}"
-ccache --set-config=compression="${CCACHE_COMPRESS}"
-ccache --set-config=compression_level="${CCACHE_COMPRESSLEVEL}"
-
-# Reset statistics so post-build stats reflect only this build
-ccache -z
-
-echo "=== ccache configured ==="
-ccache -p | grep -E "max_size|compression" || true
+mkdir -p "${HOME}/.ccache"
