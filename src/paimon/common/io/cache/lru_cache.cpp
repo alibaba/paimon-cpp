@@ -23,17 +23,25 @@ LruCache::LruCache(int64_t max_weight) : max_weight_(max_weight), current_weight
 Result<std::shared_ptr<CacheValue>> LruCache::Get(
     const std::shared_ptr<CacheKey>& key,
     std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)> supplier) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
 
-    auto it = lru_map_.find(key);
+        auto it = lru_map_.find(key);
+        if (it != lru_map_.end()) {
+            // Cache hit: move to front of LRU list (most recently used)
+            lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
+            return it->second->second;
+        }
+    }
+    // Cache miss: load via supplier
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
+
+    std::lock_guard<std::mutex> lock(mutex_);
     if (it != lru_map_.end()) {
-        // Cache hit: move to front of LRU list (most recently used)
+        // Another thread inserted the key while we were loading it
         lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
         return it->second->second;
     }
-
-    // Cache miss: load via supplier
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
 
     // Insert at front of LRU list
     lru_list_.emplace_front(key, value);

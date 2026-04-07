@@ -17,6 +17,7 @@
 #include "paimon/common/sst/block_cache.h"
 
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <string>
 
@@ -25,7 +26,6 @@
 #include "paimon/common/io/cache/lru_cache.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 
 class BlockCacheTest : public ::testing::Test {
