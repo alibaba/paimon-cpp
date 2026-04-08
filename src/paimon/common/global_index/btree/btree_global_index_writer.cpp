@@ -95,8 +95,8 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
         PAIMON_ASSIGN_OR_RAISE(auto compression_factory,
                                BlockCompressionFactory::Create(BlockCompressionType::NONE));
 
-        sst_writer_ = std::make_unique<SstFileWriter>(output_stream_, pool_, bloom_filter_,
-                                                      block_size_, compression_factory);
+        sst_writer_ = std::make_unique<SstFileWriter>(output_stream_, bloom_filter_, block_size_,
+                                                      compression_factory, pool_);
     }
 
     // Group row IDs by key value

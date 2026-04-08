@@ -25,8 +25,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& in,
     const BlockHandle& index_block_handle,
     const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-    MemorySlice::SliceComparator comparator,
-    const std::shared_ptr<CacheManager>& cache_manager) {
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager) {
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
 

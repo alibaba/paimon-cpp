@@ -24,16 +24,46 @@
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
+#include "paimon/common/options/memory_size.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/roaring_navigable_map64.h"
+#include "paimon/defs.h"
 #include "paimon/file_index/bitmap_index_result.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/predicate/literal.h"
 
 namespace paimon {
+
+// Helper function to get cache size from options with default value
+static int64_t GetBTreeIndexCacheSize(const std::map<std::string, std::string>& options) {
+    auto it = options.find(Options::BTREE_INDEX_CACHE_SIZE);
+    if (it != options.end()) {
+        auto result = MemorySize::ParseBytes(it->second);
+        if (result.ok()) {
+            return result.value();
+        }
+    }
+    // Default: 128 MB
+    return 128 * 1024 * 1024;
+}
+
+// Helper function to get high priority pool ratio from options with default value
+static double GetBTreeIndexHighPriorityPoolRatio(
+    const std::map<std::string, std::string>& options) {
+    auto it = options.find(Options::BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO);
+    if (it != options.end()) {
+        try {
+            return std::stod(it->second);
+        } catch (...) {
+            // Ignore parsing errors, use default
+        }
+    }
+    // Default: 0.1
+    return 0.1;
+}
 
 Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
@@ -221,7 +251,9 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     };
 
     // Read BTree file footer first
-    auto cache_manager = std::make_shared<CacheManager>(1024 * 1024, 0.0);
+    int64_t cache_size = GetBTreeIndexCacheSize(options_);
+    double high_priority_pool_ratio = GetBTreeIndexHighPriorityPoolRatio(options_);
+    auto cache_manager = std::make_shared<CacheManager>(cache_size, high_priority_pool_ratio);
     auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, cache_manager, pool);
     PAIMON_ASSIGN_OR_RAISE(MemorySegment segment,
                            block_cache->GetBlock(meta.file_size - BTreeFileFooter::ENCODED_LENGTH,

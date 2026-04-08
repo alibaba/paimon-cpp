@@ -153,10 +153,10 @@ TEST_P(SstFileIOTest, TestSimple) {
     auto footer_input = footer_slice.ToInput();
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortLookupStoreFooter> read_footer,
                          SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
-                                               read_footer->GetBloomFilterHandle(), comparator_,
-                                               cache_manager_));
+    ASSERT_OK_AND_ASSIGN(
+        auto reader,
+        SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
+                              read_footer->GetBloomFilterHandle(), comparator_, cache_manager_));
 
     // not exist key
     std::string k0 = "k0";
@@ -200,10 +200,10 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
                          SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
 
     // test read
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
-                                               read_footer->GetBloomFilterHandle(), comparator_,
-                                               cache_manager_));
+    ASSERT_OK_AND_ASSIGN(
+        auto reader,
+        SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
+                              read_footer->GetBloomFilterHandle(), comparator_, cache_manager_));
     // not exist key
     std::string k0 = "10000";
     ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
@@ -310,10 +310,9 @@ TEST_F(SstFileIOTest, TestIOException) {
         auto read_footer_result = SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input);
         CHECK_HOOK_STATUS(read_footer_result.status(), i);
 
-        auto reader_result =
-            SstFileReader::Create(pool_, in, read_footer_result.value()->GetIndexBlockHandle(),
-                                  read_footer_result.value()->GetBloomFilterHandle(), comparator_,
-                                  cache_manager_);
+        auto reader_result = SstFileReader::Create(
+            pool_, in, read_footer_result.value()->GetIndexBlockHandle(),
+            read_footer_result.value()->GetBloomFilterHandle(), comparator_, cache_manager_);
         CHECK_HOOK_STATUS(reader_result.status(), i);
         std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
 
