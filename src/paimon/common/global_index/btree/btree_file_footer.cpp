@@ -20,7 +20,7 @@ namespace paimon {
 
 Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput& input) {
     // read version and verify magic number
-    input.SetPosition(ENCODED_LENGTH - 8);
+    PAIMON_RETURN_NOT_OK(input.SetPosition(ENCODED_LENGTH - 8));
 
     int32_t version = input.ReadInt();
     int32_t magic_number = input.ReadInt();
@@ -28,7 +28,7 @@ Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput&
         return Status::IOError("File is not a btree index file (bad magic number)");
     }
 
-    input.SetPosition(0);
+    PAIMON_RETURN_NOT_OK(input.SetPosition(0));
 
     // read bloom filter and index handles
     auto offset = input.ReadLong();
@@ -63,37 +63,37 @@ MemorySlice BTreeFileFooter::Write(const std::shared_ptr<BTreeFileFooter>& foote
 }
 
 MemorySlice BTreeFileFooter::Write(const std::shared_ptr<BTreeFileFooter>& footer,
-                                   MemorySliceOutput& ouput) {
+                                   MemorySliceOutput& output) {
     // write bloom filter and index handles
     auto bloom_filter_handle = footer->GetBloomFilterHandle();
     if (!bloom_filter_handle) {
-        ouput.WriteValue(static_cast<int64_t>(0));
-        ouput.WriteValue(static_cast<int32_t>(0));
-        ouput.WriteValue(static_cast<int64_t>(0));
+        output.WriteValue(static_cast<int64_t>(0));
+        output.WriteValue(static_cast<int32_t>(0));
+        output.WriteValue(static_cast<int64_t>(0));
     } else {
-        ouput.WriteValue(bloom_filter_handle->Offset());
-        ouput.WriteValue(bloom_filter_handle->Size());
-        ouput.WriteValue(bloom_filter_handle->ExpectedEntries());
+        output.WriteValue(bloom_filter_handle->Offset());
+        output.WriteValue(bloom_filter_handle->Size());
+        output.WriteValue(bloom_filter_handle->ExpectedEntries());
     }
 
     auto index_block_handle = footer->GetIndexBlockHandle();
-    ouput.WriteValue(index_block_handle->Offset());
-    ouput.WriteValue(index_block_handle->Size());
+    output.WriteValue(index_block_handle->Offset());
+    output.WriteValue(index_block_handle->Size());
 
     auto null_bitmap_handle = footer->GetNullBitmapHandle();
     if (!null_bitmap_handle) {
-        ouput.WriteValue(static_cast<int64_t>(0));
-        ouput.WriteValue(static_cast<int32_t>(0));
+        output.WriteValue(static_cast<int64_t>(0));
+        output.WriteValue(static_cast<int32_t>(0));
     } else {
-        ouput.WriteValue(null_bitmap_handle->Offset());
-        ouput.WriteValue(null_bitmap_handle->Size());
+        output.WriteValue(null_bitmap_handle->Offset());
+        output.WriteValue(null_bitmap_handle->Size());
     }
 
     // write version and magic number
-    ouput.WriteValue(footer->GetVersion());
-    ouput.WriteValue(MAGIC_NUMBER);
+    output.WriteValue(footer->GetVersion());
+    output.WriteValue(MAGIC_NUMBER);
 
-    return ouput.ToSlice();
+    return output.ToSlice();
 }
 
 }  // namespace paimon

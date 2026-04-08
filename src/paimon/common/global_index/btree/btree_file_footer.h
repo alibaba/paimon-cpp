@@ -30,7 +30,7 @@ class BTreeFileFooter {
     static Result<std::shared_ptr<BTreeFileFooter>> Read(MemorySliceInput& input);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer,
-                             MemorySliceOutput& ouput);
+                             MemorySliceOutput& output);
 
  public:
     BTreeFileFooter(const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,

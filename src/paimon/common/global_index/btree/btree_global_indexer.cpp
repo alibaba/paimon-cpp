@@ -248,19 +248,17 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     MemorySlice min_key_slice(MemorySegment(), 0, 0);
     MemorySlice max_key_slice(MemorySegment(), 0, 0);
     bool has_min_key = false;
-    bool has_max_key = false;
     if (index_meta->FirstKey()) {
         min_key_slice = MemorySlice::Wrap(index_meta->FirstKey());
         has_min_key = true;
     }
     if (index_meta->LastKey()) {
         max_key_slice = MemorySlice::Wrap(index_meta->LastKey());
-        has_max_key = true;
     }
 
     return std::make_shared<BTreeGlobalIndexReader>(sst_file_reader, null_bitmap, min_key_slice,
-                                                    max_key_slice, has_min_key, has_max_key, files,
-                                                    pool, comparator);
+                                                    max_key_slice, has_min_key, files, pool,
+                                                    comparator);
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexer::ToGlobalIndexResult(
@@ -330,7 +328,7 @@ Result<std::shared_ptr<RoaringNavigableMap64>> BTreeGlobalIndexer::ReadNullBitma
     } catch (const std::exception& e) {
         return Status::Invalid(
             "Fail to deserialize null bitmap but crc check passed, "
-            "this means the ser/de algorithms not match: " +
+            "this means the serialization/deserialization algorithms not match: " +
             std::string(e.what()));
     }
 
@@ -340,15 +338,14 @@ Result<std::shared_ptr<RoaringNavigableMap64>> BTreeGlobalIndexer::ReadNullBitma
 BTreeGlobalIndexReader::BTreeGlobalIndexReader(
     const std::shared_ptr<SstFileReader>& sst_file_reader,
     const std::shared_ptr<RoaringNavigableMap64>& null_bitmap, const MemorySlice& min_key,
-    const MemorySlice& max_key, bool has_min_key, bool has_max_key,
-    const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<MemoryPool>& pool,
+    const MemorySlice& max_key, bool has_min_key, const std::vector<GlobalIndexIOMeta>& files,
+    const std::shared_ptr<MemoryPool>& pool,
     std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator)
     : sst_file_reader_(sst_file_reader),
       null_bitmap_(null_bitmap),
       min_key_(min_key),
       max_key_(max_key),
       has_min_key_(has_min_key),
-      has_max_key_(has_max_key),
       files_(files),
       pool_(pool),
       comparator_(std::move(comparator)) {}
@@ -591,64 +588,62 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotBetwe
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitAnd(
     const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) {
-    return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &children]() -> Result<RoaringBitmap64> {
-            if (children.empty()) {
-                return Status::Invalid("VisitAnd called with no children");
+    return std::make_shared<BitmapGlobalIndexResult>([&children]() -> Result<RoaringBitmap64> {
+        if (children.empty()) {
+            return Status::Invalid("VisitAnd called with no children");
+        }
+
+        auto first_result_status = children[0];
+        if (!first_result_status.ok()) {
+            return first_result_status.status();
+        }
+        auto first_result = std::move(first_result_status).value();
+        PAIMON_ASSIGN_OR_RAISE(auto first_iterator, first_result->CreateIterator());
+
+        RoaringNavigableMap64 result_bitmap;
+        while (first_iterator->HasNext()) {
+            result_bitmap.Add(first_iterator->Next());
+        }
+
+        for (size_t i = 1; i < children.size(); ++i) {
+            auto child_status = children[i];
+            if (!child_status.ok()) {
+                return child_status.status();
+            }
+            auto child = std::move(child_status).value();
+            PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
+
+            RoaringNavigableMap64 child_bitmap;
+            while (child_iterator->HasNext()) {
+                child_bitmap.Add(child_iterator->Next());
             }
 
-            auto first_result_status = children[0];
-            if (!first_result_status.ok()) {
-                return first_result_status.status();
-            }
-            auto first_result = std::move(first_result_status).value();
-            PAIMON_ASSIGN_OR_RAISE(auto first_iterator, first_result->CreateIterator());
+            result_bitmap.And(child_bitmap);
+        }
 
-            RoaringNavigableMap64 result_bitmap;
-            while (first_iterator->HasNext()) {
-                result_bitmap.Add(first_iterator->Next());
-            }
-
-            for (size_t i = 1; i < children.size(); ++i) {
-                auto child_status = children[i];
-                if (!child_status.ok()) {
-                    return child_status.status();
-                }
-                auto child = std::move(child_status).value();
-                PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
-
-                RoaringNavigableMap64 child_bitmap;
-                while (child_iterator->HasNext()) {
-                    child_bitmap.Add(child_iterator->Next());
-                }
-
-                result_bitmap.And(child_bitmap);
-            }
-
-            return result_bitmap.GetBitmap();
-        });
+        return result_bitmap.GetBitmap();
+    });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitOr(
     const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) {
-    return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &children]() -> Result<RoaringBitmap64> {
-            RoaringNavigableMap64 result_bitmap;
+    return std::make_shared<BitmapGlobalIndexResult>([&children]() -> Result<RoaringBitmap64> {
+        RoaringNavigableMap64 result_bitmap;
 
-            for (const auto& child_status : children) {
-                if (!child_status.ok()) {
-                    return child_status.status();
-                }
-                auto child = std::move(child_status).value();
-                PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
-
-                while (child_iterator->HasNext()) {
-                    result_bitmap.Add(child_iterator->Next());
-                }
+        for (const auto& child_status : children) {
+            if (!child_status.ok()) {
+                return child_status.status();
             }
+            auto child = std::move(child_status).value();
+            PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
 
-            return result_bitmap.GetBitmap();
-        });
+            while (child_iterator->HasNext()) {
+                result_bitmap.Add(child_iterator->Next());
+            }
+        }
+
+        return result_bitmap.GetBitmap();
+    });
 }
 
 Result<std::shared_ptr<ScoredGlobalIndexResult>> BTreeGlobalIndexReader::VisitVectorSearch(
@@ -696,7 +691,7 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(const MemorySli
 
         // For the first block, we need to seek within the block to the exact position
         if (first_block && lower_bytes) {
-            PAIMON_ASSIGN_OR_RAISE(bool found, data_iterator->SeekTo(lower_bound));
+            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool found, data_iterator->SeekTo(lower_bound));
             first_block = false;
 
             if (!data_iterator->HasNext()) {

@@ -38,7 +38,6 @@ BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
       file_writer_(file_writer),
       pool_(pool),
       block_size_(block_size),
-      expected_entries_(expected_entries),
       null_bitmap_(std::make_shared<RoaringNavigableMap64>()),
       has_nulls_(false),
       current_row_id_(0),

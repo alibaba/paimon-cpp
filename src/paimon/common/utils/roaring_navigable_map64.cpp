@@ -122,7 +122,13 @@ std::vector<uint8_t> RoaringNavigableMap64::Serialize() const {
 void RoaringNavigableMap64::Deserialize(const std::vector<uint8_t>& data) {
     // This is a simplified deserialization - in practice, you might want to use
     // a more sophisticated approach
-    impl_->bitmap.Deserialize(reinterpret_cast<const char*>(data.data()), data.size());
+    auto status =
+        impl_->bitmap.Deserialize(reinterpret_cast<const char*>(data.data()), data.size());
+    if (!status.ok()) {
+        // Log error or handle deserialization failure
+        // For now, we'll just clear the bitmap on error
+        impl_->bitmap = RoaringBitmap64();
+    }
 }
 
 std::vector<Range> RoaringNavigableMap64::ToRangeList() const {
