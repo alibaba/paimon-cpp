@@ -37,12 +37,9 @@ class BTreeGlobalIndexerTest : public ::testing::Test {
 // Test CreateComparator for STRING type
 TEST_F(BTreeGlobalIndexerTest, CreateComparatorString) {
     // Create two MemorySlices for comparison
-    auto slice_a = MemorySlice::Wrap(
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("apple", pool_.get()).release()));
-    auto slice_b = MemorySlice::Wrap(
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("banana", pool_.get()).release()));
-    auto slice_same = MemorySlice::Wrap(
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("apple", pool_.get()).release()));
+    auto slice_a = MemorySlice::Wrap(std::make_shared<Bytes>("apple", pool_.get()));
+    auto slice_b = MemorySlice::Wrap(std::make_shared<Bytes>("banana", pool_.get()));
+    auto slice_same = MemorySlice::Wrap(std::make_shared<Bytes>("apple", pool_.get()));
 
     // Lexicographic comparison: "apple" < "banana"
     auto bytes_a = slice_a.GetHeapMemory();
@@ -66,17 +63,17 @@ TEST_F(BTreeGlobalIndexerTest, CreateComparatorInt) {
     int32_t val2 = 200;
     int32_t val3 = 100;
 
-    auto bytes1 = Bytes::AllocateBytes(sizeof(int32_t), pool_.get());
+    auto bytes1 = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
     memcpy(bytes1->data(), &val1, sizeof(int32_t));
-    auto slice1 = MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes1.release()));
+    auto slice1 = MemorySlice::Wrap(bytes1);
 
-    auto bytes2 = Bytes::AllocateBytes(sizeof(int32_t), pool_.get());
+    auto bytes2 = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
     memcpy(bytes2->data(), &val2, sizeof(int32_t));
-    auto slice2 = MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes2.release()));
+    auto slice2 = MemorySlice::Wrap(bytes2);
 
-    auto bytes3 = Bytes::AllocateBytes(sizeof(int32_t), pool_.get());
+    auto bytes3 = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
     memcpy(bytes3->data(), &val3, sizeof(int32_t));
-    auto slice3 = MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes3.release()));
+    auto slice3 = MemorySlice::Wrap(bytes3);
 
     // Compare values
     EXPECT_LT(val1, val2);

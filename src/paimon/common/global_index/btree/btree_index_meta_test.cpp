@@ -33,10 +33,11 @@ class BTreeIndexMetaTest : public ::testing::Test {
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeNormalKeys) {
     // Create a BTreeIndexMeta with normal keys
-    auto first_key = Bytes::AllocateBytes("first_key_data", pool_.get());
-    auto last_key = Bytes::AllocateBytes("last_key_data", pool_.get());
-    auto meta = std::make_shared<BTreeIndexMeta>(std::shared_ptr<Bytes>(first_key.release()),
-                                                 std::shared_ptr<Bytes>(last_key.release()), true);
+    // Use std::make_shared<Bytes> to create shared_ptr with proper memory management
+    // Bytes constructor uses pool->Malloc() for internal data, and destructor uses pool->Free()
+    auto first_key = std::make_shared<Bytes>("first_key_data", pool_.get());
+    auto last_key = std::make_shared<Bytes>("last_key_data", pool_.get());
+    auto meta = std::make_shared<BTreeIndexMeta>(first_key, last_key, true);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
@@ -87,16 +88,16 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeEmptyKeys) {
 
 TEST_F(BTreeIndexMetaTest, HasNullsAndOnlyNulls) {
     // Case 1: Has nulls with keys
-    auto meta1 = std::make_shared<BTreeIndexMeta>(
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("key", pool_.get()).release()),
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("key", pool_.get()).release()), true);
+    auto meta1 =
+        std::make_shared<BTreeIndexMeta>(std::make_shared<Bytes>("key", pool_.get()),
+                                         std::make_shared<Bytes>("key", pool_.get()), true);
     EXPECT_TRUE(meta1->HasNulls());
     EXPECT_FALSE(meta1->OnlyNulls());
 
     // Case 2: No nulls with keys
-    auto meta2 = std::make_shared<BTreeIndexMeta>(
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("key", pool_.get()).release()),
-        std::shared_ptr<Bytes>(Bytes::AllocateBytes("key", pool_.get()).release()), false);
+    auto meta2 =
+        std::make_shared<BTreeIndexMeta>(std::make_shared<Bytes>("key", pool_.get()),
+                                         std::make_shared<Bytes>("key", pool_.get()), false);
     EXPECT_FALSE(meta2->HasNulls());
     EXPECT_FALSE(meta2->OnlyNulls());
 
@@ -113,10 +114,9 @@ TEST_F(BTreeIndexMetaTest, HasNullsAndOnlyNulls) {
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeNoNulls) {
     // Create a BTreeIndexMeta without nulls
-    auto first_key = Bytes::AllocateBytes("abc", pool_.get());
-    auto last_key = Bytes::AllocateBytes("xyz", pool_.get());
-    auto meta = std::make_shared<BTreeIndexMeta>(std::shared_ptr<Bytes>(first_key.release()),
-                                                 std::shared_ptr<Bytes>(last_key.release()), false);
+    auto first_key = std::make_shared<Bytes>("abc", pool_.get());
+    auto last_key = std::make_shared<Bytes>("xyz", pool_.get());
+    auto meta = std::make_shared<BTreeIndexMeta>(first_key, last_key, false);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
@@ -132,9 +132,8 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeNoNulls) {
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyFirstKey) {
     // Create a BTreeIndexMeta with only first_key (edge case)
-    auto first_key = Bytes::AllocateBytes("first", pool_.get());
-    auto meta = std::make_shared<BTreeIndexMeta>(std::shared_ptr<Bytes>(first_key.release()),
-                                                 nullptr, false);
+    auto first_key = std::make_shared<Bytes>("first", pool_.get());
+    auto meta = std::make_shared<BTreeIndexMeta>(first_key, nullptr, false);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
@@ -155,9 +154,8 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyFirstKey) {
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyLastKey) {
     // Create a BTreeIndexMeta with only last_key (edge case)
-    auto last_key = Bytes::AllocateBytes("last", pool_.get());
-    auto meta = std::make_shared<BTreeIndexMeta>(nullptr,
-                                                 std::shared_ptr<Bytes>(last_key.release()), false);
+    auto last_key = std::make_shared<Bytes>("last", pool_.get());
+    auto meta = std::make_shared<BTreeIndexMeta>(nullptr, last_key, false);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
@@ -180,10 +178,9 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeBinaryKeys) {
     // Create a BTreeIndexMeta with binary keys containing null bytes
     std::string binary_first = std::string("key\0with\0nulls", 14);
     std::string binary_last = std::string("last\0key", 8);
-    auto first_key = Bytes::AllocateBytes(binary_first, pool_.get());
-    auto last_key = Bytes::AllocateBytes(binary_last, pool_.get());
-    auto meta = std::make_shared<BTreeIndexMeta>(std::shared_ptr<Bytes>(first_key.release()),
-                                                 std::shared_ptr<Bytes>(last_key.release()), true);
+    auto first_key = std::make_shared<Bytes>(binary_first, pool_.get());
+    auto last_key = std::make_shared<Bytes>(binary_last, pool_.get());
+    auto meta = std::make_shared<BTreeIndexMeta>(first_key, last_key, true);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
@@ -196,7 +193,8 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeBinaryKeys) {
     // Verify first_key
     auto deserialized_first = deserialized->FirstKey();
     ASSERT_NE(deserialized_first, nullptr);
-    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), binary_first);
+    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()),
+              binary_first);
 
     // Verify last_key
     auto deserialized_last = deserialized->LastKey();
