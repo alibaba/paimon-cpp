@@ -794,9 +794,15 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     if (type == FieldType::BIGINT) {
         try {
             int64_t value = literal.GetValue<int64_t>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
+            auto bytes = Bytes::AllocateBytes(8, pool);
+            bytes->data()[0] = static_cast<char>(value & 0xFF);
+            bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
+            bytes->data()[2] = static_cast<char>((value >> 16) & 0xFF);
+            bytes->data()[3] = static_cast<char>((value >> 24) & 0xFF);
+            bytes->data()[4] = static_cast<char>((value >> 32) & 0xFF);
+            bytes->data()[5] = static_cast<char>((value >> 40) & 0xFF);
+            bytes->data()[6] = static_cast<char>((value >> 48) & 0xFF);
+            bytes->data()[7] = static_cast<char>((value >> 56) & 0xFF);
             return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert bigint literal to MemorySlice: " +
@@ -807,7 +813,6 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     if (type == FieldType::INT) {
         try {
             int32_t value = literal.GetValue<int32_t>();
-            // Store as 4-byte little-endian binary to match Java format
             auto bytes = Bytes::AllocateBytes(4, pool);
             bytes->data()[0] = static_cast<char>(value & 0xFF);
             bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
@@ -823,9 +828,8 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     if (type == FieldType::TINYINT) {
         try {
             int8_t value = literal.GetValue<int8_t>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
+            auto bytes = Bytes::AllocateBytes(1, pool);
+            bytes->data()[0] = static_cast<char>(value);
             return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert tinyint literal to MemorySlice: " +
@@ -836,9 +840,9 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     if (type == FieldType::SMALLINT) {
         try {
             int16_t value = literal.GetValue<int16_t>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
+            auto bytes = Bytes::AllocateBytes(2, pool);
+            bytes->data()[0] = static_cast<char>(value & 0xFF);
+            bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
             return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert smallint literal to MemorySlice: " +
