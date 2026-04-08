@@ -64,9 +64,9 @@ set(PAIMON_COMMON_SRCS
     common/io/data_output_stream.cpp
     common/io/memory_segment_output_stream.cpp
     common/io/offset_input_stream.cpp
-    common/io/cache/cache.cpp
     common/io/cache/cache_key.cpp
     common/io/cache/cache_manager.cpp
+    common/io/cache/lru_cache.cpp
     common/logging/logging.cpp
     common/lookup/sort/sort_lookup_store_factory.cpp
     common/lookup/sort/sort_lookup_store_footer.cpp
@@ -124,6 +124,8 @@ set(PAIMON_COMMON_SRCS
     common/types/data_type_json_parser.cpp
     common/types/row_kind.cpp
     common/types/row_type.cpp
+    common/utils/arrow/arrow_input_stream_adapter.cpp
+    common/utils/arrow/arrow_output_stream_adapter.cpp
     common/utils/arrow/arrow_utils.cpp
     common/utils/arrow/mem_utils.cpp
     common/utils/binary_row_partition_computer.cpp
@@ -439,6 +441,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
+                    common/utils/arrow/arrow_stream_adapter_test.cpp
                     common/utils/arrow/mem_utils_test.cpp
                     common/utils/arrow/status_utils_test.cpp
                     common/utils/concurrent_hash_map_test.cpp
@@ -471,6 +474,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/roaring_navigable_map64_test.cpp
                     common/utils/range_helper_test.cpp
                     common/utils/read_ahead_cache_test.cpp
+                    common/io/cache/lru_cache_test.cpp
                     common/utils/byte_range_combiner_test.cpp
                     common/utils/scope_guard_test.cpp
                     common/utils/serialization_utils_test.cpp
@@ -500,6 +504,7 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     common/compression/block_compression_factory_test.cpp
                     common/sst/sst_file_io_test.cpp
+                    common/sst/block_cache_test.cpp
                     common/utils/crc32c_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared

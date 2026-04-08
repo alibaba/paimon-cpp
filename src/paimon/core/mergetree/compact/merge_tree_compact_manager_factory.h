@@ -20,6 +20,7 @@
 #include <memory>
 #include <string>
 
+#include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/compact/compact_manager.h"
 #include "paimon/core/core_options.h"
@@ -65,6 +66,7 @@ class MergeTreeCompactManagerFactory {
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<SchemaManager>& schema_manager,
         const std::shared_ptr<IOManager>& io_manager,
+        const std::shared_ptr<CacheManager>& cache_manager,
         const std::shared_ptr<FileStorePathFactory>& file_store_path_factory,
         const std::string& root_path, const std::shared_ptr<MemoryPool>& pool)
         : options_(options),
@@ -76,6 +78,7 @@ class MergeTreeCompactManagerFactory {
           schema_(schema),
           schema_manager_(schema_manager),
           io_manager_(io_manager),
+          cache_manager_(cache_manager),
           file_store_path_factory_(file_store_path_factory),
           root_path_(root_path) {}
 
@@ -128,6 +131,7 @@ class MergeTreeCompactManagerFactory {
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<SchemaManager> schema_manager_;
     std::shared_ptr<IOManager> io_manager_;
+    std::shared_ptr<CacheManager> cache_manager_;
     std::shared_ptr<FileStorePathFactory> file_store_path_factory_;
     std::string root_path_;
 };

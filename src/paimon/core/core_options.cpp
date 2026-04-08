@@ -424,6 +424,8 @@ struct CoreOptions::Impl {
     int64_t cache_page_size = 64 * 1024;  // 64KB
     std::map<int32_t, std::shared_ptr<FileFormat>> file_format_per_level;
     std::map<int32_t, std::string> file_compression_per_level;
+    int64_t lookup_cache_max_memory = 256 * 1024 * 1024;
+    double lookup_cache_high_prio_pool_ratio = 0.25;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -709,6 +711,18 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(parser.ParseLookupCompactMode(&impl->lookup_compact_mode));
     PAIMON_RETURN_NOT_OK(
         parser.Parse(Options::LOOKUP_COMPACT_MAX_INTERVAL, &impl->lookup_compact_max_interval));
+
+    // parse lookup cache
+    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::LOOKUP_CACHE_MAX_MEMORY_SIZE,
+                                                &impl->lookup_cache_max_memory));
+    PAIMON_RETURN_NOT_OK(parser.Parse<double>(Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO,
+                                              &impl->lookup_cache_high_prio_pool_ratio));
+    if (impl->lookup_cache_high_prio_pool_ratio < 0.0 ||
+        impl->lookup_cache_high_prio_pool_ratio >= 1.0) {
+        return Status::Invalid(fmt::format(
+            "The high priority pool ratio should in the range [0, 1), while input is {}",
+            impl->lookup_cache_high_prio_pool_ratio));
+    }
     return options;
 }
 
@@ -1175,6 +1189,14 @@ const CompressOptions& CoreOptions::GetLookupCompressOptions() const {
 
 int32_t CoreOptions::GetCachePageSize() const {
     return static_cast<int32_t>(impl_->cache_page_size);
+}
+
+int64_t CoreOptions::GetLookupCacheMaxMemory() const {
+    return impl_->lookup_cache_max_memory;
+}
+
+double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
+    return impl_->lookup_cache_high_prio_pool_ratio;
 }
 
 }  // namespace paimon

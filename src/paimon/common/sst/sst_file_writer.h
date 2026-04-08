@@ -40,9 +40,10 @@ class MemoryPool;
 /// point queries and range queries by key.
 class PAIMON_EXPORT SstFileWriter {
  public:
-    SstFileWriter(const std::shared_ptr<OutputStream>& out, const std::shared_ptr<MemoryPool>& pool,
+    SstFileWriter(const std::shared_ptr<OutputStream>& out,
                   const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,
-                  const std::shared_ptr<BlockCompressionFactory>& factory);
+                  const std::shared_ptr<BlockCompressionFactory>& factory,
+                  const std::shared_ptr<MemoryPool>& pool);
 
     ~SstFileWriter() = default;
 
@@ -72,10 +73,9 @@ class PAIMON_EXPORT SstFileWriter {
     }
 
  private:
-    const std::shared_ptr<OutputStream> out_;
+    std::shared_ptr<MemoryPool> pool_;
 
-    const std::shared_ptr<MemoryPool> pool_;
-
+    std::shared_ptr<OutputStream> out_;
     std::shared_ptr<BloomFilter> bloom_filter_;
 
     BlockCompressionType compression_type_;

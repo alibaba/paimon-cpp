@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +19,17 @@
 #include <cstdint>
 #include <memory>
 
-#include "arrow/buffer.h"
 #include "arrow/io/interfaces.h"
 #include "arrow/result.h"
 #include "arrow/status.h"
-#include "paimon/fs/file_system.h"
+#include "paimon/visibility.h"
 
 namespace paimon {
 class OutputStream;
-}  // namespace paimon
 
-namespace paimon::parquet {
-
-class ParquetOutputStreamImpl : public arrow::io::OutputStream {
+class PAIMON_EXPORT ArrowOutputStreamAdapter : public arrow::io::OutputStream {
  public:
-    explicit ParquetOutputStreamImpl(const std::shared_ptr<paimon::OutputStream>& out);
+    explicit ArrowOutputStreamAdapter(const std::shared_ptr<paimon::OutputStream>& out);
 
     arrow::Status Close() override;
     arrow::Result<int64_t> Tell() const override;
@@ -43,7 +39,7 @@ class ParquetOutputStreamImpl : public arrow::io::OutputStream {
 
  private:
     std::shared_ptr<paimon::OutputStream> out_;
-    bool closed_;
+    bool closed_ = false;
 };
 
-}  // namespace paimon::parquet
+}  // namespace paimon

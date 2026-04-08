@@ -20,6 +20,7 @@
 
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_cache.h"
+#include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
 #include "paimon/common/sst/block_iterator.h"
 #include "paimon/common/sst/block_reader.h"
@@ -40,15 +41,11 @@ class SstFileIterator;
 class PAIMON_EXPORT SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input,
-        const BlockHandle& index_block_handle,
-        const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-        MemorySlice::SliceComparator comparator);
+        const std::shared_ptr<InputStream>& input, MemorySlice::SliceComparator comparator,
+        const std::shared_ptr<CacheManager>& cache_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
-
-    /// Create an iterator for the index block.
-    std::unique_ptr<BlockIterator> CreateIndexIterator();
 
     /// Lookup the specified key in the file.
     ///
@@ -71,11 +68,10 @@ class PAIMON_EXPORT SstFileReader {
                                                  const std::shared_ptr<BlockTrailer>& trailer,
                                                  const std::shared_ptr<MemoryPool>& pool);
 
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                  const std::shared_ptr<BlockCache>& block_cache,
+    SstFileReader(const std::shared_ptr<BlockCache>& block_cache,
                   const std::shared_ptr<BloomFilter>& bloom_filter,
                   const std::shared_ptr<BlockReader>& index_block_reader,
-                  MemorySlice::SliceComparator comparator);
+                  MemorySlice::SliceComparator comparator, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;

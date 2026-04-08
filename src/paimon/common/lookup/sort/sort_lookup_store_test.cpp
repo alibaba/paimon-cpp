@@ -41,7 +41,10 @@ TEST(SortLookupStoreTest, TestSimple) {
                                                   arrow::schema(key_type->fields()), pool));
         ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(options_map));
 
-        ASSERT_OK_AND_ASSIGN(auto factory, LookupStoreFactory::Create(comparator, options));
+        ASSERT_OK_AND_ASSIGN(
+            auto factory,
+            LookupStoreFactory::Create(comparator, std::make_shared<CacheManager>(1024 * 1024, 0.0),
+                                       options));
         int64_t row_count = 6;
         ASSERT_OK_AND_ASSIGN(auto bloom_filter,
                              LookupStoreFactory::BfGenerator(row_count, options, pool.get()));

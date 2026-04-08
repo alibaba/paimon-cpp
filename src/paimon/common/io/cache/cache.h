@@ -25,7 +25,11 @@
 #include "paimon/result.h"
 
 namespace paimon {
+
 class CacheValue;
+
+/// Callback invoked when a cache entry is evicted by the LRU policy.
+using CacheCallback = std::function<void(const std::shared_ptr<CacheKey>&)>;
 
 class PAIMON_EXPORT Cache {
  public:
@@ -42,7 +46,7 @@ class PAIMON_EXPORT Cache {
 
     virtual void InvalidateAll() = 0;
 
-    virtual CacheKeyMap AsMap() = 0;
+    virtual size_t Size() const = 0;
 };
 
 class PAIMON_EXPORT NoCache : public Cache {
@@ -55,18 +59,27 @@ class PAIMON_EXPORT NoCache : public Cache {
              const std::shared_ptr<CacheValue>& value) override;
     void Invalidate(const std::shared_ptr<CacheKey>& key) override;
     void InvalidateAll() override;
-    CacheKeyMap AsMap() override;
+    size_t Size() const override;
 };
 
 class CacheValue {
  public:
-    explicit CacheValue(const MemorySegment& segment) : segment_(segment) {}
+    CacheValue(const MemorySegment& segment, CacheCallback callback = nullptr)
+        : segment_(segment), callback_(std::move(callback)) {}
 
     const MemorySegment& GetSegment() const {
         return segment_;
     }
 
+    /// Invoke the eviction callback, if one was registered.
+    void OnEvict(const std::shared_ptr<CacheKey>& key) const {
+        if (callback_) {
+            callback_(key);
+        }
+    }
+
  private:
     MemorySegment segment_;
+    CacheCallback callback_;
 };
 }  // namespace paimon

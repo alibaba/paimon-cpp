@@ -82,6 +82,7 @@ class MergeTreeCompactManagerFactoryStrategyTest : public ::testing::Test {
                                               /*schema=*/nullptr,
                                               /*schema_manager=*/nullptr,
                                               /*io_manager=*/nullptr,
+                                              /*cache_manager=*/nullptr,
                                               /*file_store_path_factory=*/nullptr,
                                               /*root_path=*/"",
                                               /*pool=*/nullptr);

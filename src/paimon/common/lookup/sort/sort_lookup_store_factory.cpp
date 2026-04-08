@@ -27,8 +27,8 @@ Result<std::unique_ptr<LookupStoreWriter>> SortLookupStoreFactory::CreateWriter(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> out,
                            fs->Create(file_path, /*overwrite=*/false));
     return std::make_unique<SortLookupStoreWriter>(
-        out,
-        std::make_shared<SstFileWriter>(out, pool, bloom_filter, block_size_, compression_factory_),
+        out, std::make_shared<SstFileWriter>(out, bloom_filter, block_size_, compression_factory_,
+                                             pool),
         pool);
 }
 
@@ -36,22 +36,8 @@ Result<std::unique_ptr<LookupStoreReader>> SortLookupStoreFactory::CreateReader(
     const std::shared_ptr<paimon::FileSystem>& fs, const std::string& file_path,
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
-
-    // read footer
-    PAIMON_RETURN_NOT_OK(
-        in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
-    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool.get());
-    PAIMON_RETURN_NOT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
-    auto segment = MemorySegment::Wrap(std::move(footer_bytes));
-    auto slice = MemorySlice::Wrap(segment);
-    auto input = slice.ToInput();
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortLookupStoreFooter> footer,
-                           SortLookupStoreFooter::ReadSortLookupStoreFooter(&input));
-
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SstFileReader> reader,
-                           SstFileReader::Create(pool, in, footer->GetIndexBlockHandle(),
-                                                 footer->GetBloomFilterHandle(), comparator_));
+                           SstFileReader::Create(in, comparator_, cache_manager_, pool));
     return std::make_unique<SortLookupStoreReader>(in, reader);
 }
 

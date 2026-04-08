@@ -19,12 +19,13 @@
 #include "paimon/common/lookup/sort/sort_lookup_store_factory.h"
 namespace paimon {
 Result<std::shared_ptr<LookupStoreFactory>> LookupStoreFactory::Create(
-    MemorySlice::SliceComparator comparator, const CoreOptions& options) {
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+    const CoreOptions& options) {
     const auto& compress_options = options.GetLookupCompressOptions();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockCompressionFactory> compression_factory,
                            BlockCompressionFactory::Create(compress_options));
     return std::make_shared<SortLookupStoreFactory>(
-        std::move(comparator), options.GetCachePageSize(), compression_factory);
+        std::move(comparator), cache_manager, options.GetCachePageSize(), compression_factory);
 }
 
 Result<std::shared_ptr<BloomFilter>> LookupStoreFactory::BfGenerator(int64_t row_count,

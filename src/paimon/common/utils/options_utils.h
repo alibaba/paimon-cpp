@@ -86,7 +86,6 @@ class OptionsUtils {
         return options_with_prefix;
     }
 
- private:
     template <typename T>
     static std::string GetTypeName() {
         int32_t status;

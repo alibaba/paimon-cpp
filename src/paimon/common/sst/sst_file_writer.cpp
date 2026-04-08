@@ -22,10 +22,10 @@
 
 namespace paimon {
 SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
-                             const std::shared_ptr<MemoryPool>& pool,
                              const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,
-                             const std::shared_ptr<BlockCompressionFactory>& factory)
-    : out_(out), pool_(pool), bloom_filter_(bloom_filter), block_size_(block_size) {
+                             const std::shared_ptr<BlockCompressionFactory>& factory,
+                             const std::shared_ptr<MemoryPool>& pool)
+    : pool_(pool), out_(out), bloom_filter_(bloom_filter), block_size_(block_size) {
     data_block_writer_ =
         std::make_unique<BlockWriter>(static_cast<int32_t>(block_size * 1.1), pool);
     index_block_writer_ =

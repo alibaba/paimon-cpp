@@ -157,6 +157,9 @@ class PAIMON_EXPORT CoreOptions {
     const CompressOptions& GetLookupCompressOptions() const;
     int32_t GetCachePageSize() const;
 
+    int64_t GetLookupCacheMaxMemory() const;
+    double GetLookupCacheHighPrioPoolRatio() const;
+
     const std::map<std::string, std::string>& ToMap() const;
 
  private:

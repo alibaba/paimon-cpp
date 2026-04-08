@@ -149,6 +149,18 @@ else()
     endif()
 endif()
 
+if(DEFINED ENV{PAIMON_RE2_URL})
+    set(RE2_SOURCE_URL "$ENV{PAIMON_RE2_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_RE2_PKG_NAME}")
+        set_urls(RE2_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_RE2_PKG_NAME}")
+    else()
+        set_urls(RE2_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/re2/archive/${PAIMON_RE2_BUILD_VERSION}.tar.gz"
+        )
+    endif()
+endif()
+
 if(DEFINED ENV{PAIMON_GLOG_URL})
     set(GLOG_SOURCE_URL "$ENV{PAIMON_GLOG_URL}")
 else()
@@ -645,6 +657,34 @@ macro(build_boost)
     add_dependencies(boost_system boost_ep)
 endmacro(build_boost)
 
+macro(build_re2)
+    message(STATUS "Building RE2 from source")
+    set(RE2_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/re2_ep-install")
+    set(RE2_INCLUDE_DIR "${RE2_PREFIX}/include")
+    set(RE2_STATIC_LIB
+        "${RE2_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}re2${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+    set(RE2_LIBRARIES ${RE2_STATIC_LIB})
+
+    set(RE2_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} "-DCMAKE_INSTALL_PREFIX=${RE2_PREFIX}")
+
+    externalproject_add(re2_ep
+                        ${EP_COMMON_OPTIONS}
+                        INSTALL_DIR ${RE2_PREFIX}
+                        URL ${RE2_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_RE2_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${RE2_CMAKE_ARGS} ${THIRDPARTY_LOG_OPTIONS}
+                        BUILD_BYPRODUCTS "${RE2_STATIC_LIB}")
+
+    file(MAKE_DIRECTORY "${RE2_INCLUDE_DIR}")
+
+    include_directories(SYSTEM ${RE2_INCLUDE_DIR})
+    add_library(re2::re2 STATIC IMPORTED)
+    set_target_properties(re2::re2 PROPERTIES IMPORTED_LOCATION "${RE2_STATIC_LIB}")
+    target_include_directories(re2::re2 INTERFACE "${RE2_INCLUDE_DIR}")
+    add_dependencies(re2::re2 re2_ep)
+endmacro()
+
 macro(build_snappy)
     message(STATUS "Building snappy from source")
     set(SNAPPY_HOME "${CMAKE_CURRENT_BINARY_DIR}/snappy_ep-install")
@@ -1080,6 +1120,9 @@ macro(build_arrow)
     get_target_property(ARROW_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(ARROW_ZLIB_ROOT "${ARROW_ZLIB_INCLUDE_DIR}" DIRECTORY)
 
+    get_target_property(ARROW_RE2_INCLUDE_DIR re2::re2 INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(ARROW_RE2_ROOT "${ARROW_RE2_INCLUDE_DIR}" DIRECTORY)
+
     set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
     set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
     string(REPLACE "-Werror" "" ARROW_CMAKE_CXX_FLAGS ${ARROW_CMAKE_CXX_FLAGS})
@@ -1146,6 +1189,7 @@ macro(build_arrow)
         -DZLIB_ROOT=${ARROW_ZLIB_ROOT}
         -DSnappy_ROOT=${ARROW_SNAPPY_ROOT}
         -DLZ4_ROOT=${ARROW_LZ4_ROOT}
+        -Dre2_ROOT=${ARROW_RE2_ROOT}
         -DBUILD_WARNING_LEVEL=PRODUCTION) # ignore warnings under gcc8
 
     set(ARROW_CONFIGURE SOURCE_SUBDIR "cpp" CMAKE_ARGS ${ARROW_CMAKE_ARGS})
@@ -1163,7 +1207,11 @@ macro(build_arrow)
                                          "${PARQUET_STATIC_LIB}"
                                          "${ARROW_DATASET_STATIC_LIB}"
                                          "${ARROW_ACERO_STATIC_LIB}"
-                        DEPENDS zstd snappy lz4 zlib)
+                        DEPENDS zstd
+                                snappy
+                                lz4
+                                zlib
+                                re2::re2)
 
     add_library(arrow STATIC IMPORTED)
     set_target_properties(arrow
@@ -1218,6 +1266,7 @@ macro(build_arrow)
                                     snappy
                                     lz4
                                     zlib
+                                    re2::re2
                                     arrow_bundled_dependencies)
 
     target_link_libraries(parquet
@@ -1391,6 +1440,7 @@ endmacro()
 
 build_fmt()
 build_rapidjson()
+build_re2()
 build_snappy()
 build_zstd()
 build_zlib()
