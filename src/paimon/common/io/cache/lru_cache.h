@@ -19,6 +19,8 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -36,7 +38,7 @@ namespace paimon {
 /// map stores key -> list::iterator for O(1) lookup
 /// capacity is measured in bytes (sum of MemorySegment sizes)
 /// when an entry is evicted, its CacheCallback is invoked to notify the upper layer
-/// @note Thread-safe: all public methods are protected by a mutex.
+/// @note Thread-safe: all public methods are protected by mutex (read-write lock).
 class LruCache : public Cache {
  public:
     explicit LruCache(int64_t max_weight);
@@ -64,6 +66,8 @@ class LruCache : public Cache {
     using LruList = std::list<LruEntry>;
     using LruMap = std::unordered_map<std::shared_ptr<CacheKey>, LruList::iterator, CacheKeyHash,
                                       CacheKeyEqual>;
+
+    std::optional<std::shared_ptr<CacheValue>> FindAndPromote(const std::shared_ptr<CacheKey>& key);
 
     void EvictIfNeeded();
 

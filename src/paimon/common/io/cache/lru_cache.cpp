@@ -25,22 +25,19 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
     std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)> supplier) {
     {
         std::unique_lock<std::shared_mutex> write_lock(mutex_);
-        auto it = lru_map_.find(key);
-        if (it != lru_map_.end()) {
-            // Cache hit: move to front of LRU list (most recently used)
-            lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
-            return it->second->second;
+        auto cached = FindAndPromote(key);
+        if (cached) {
+            return cached.value();
         }
     }
     // Cache miss: load via supplier (outside lock)
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
 
     std::unique_lock<std::shared_mutex> write_lock(mutex_);
-    auto it = lru_map_.find(key);
-    if (it != lru_map_.end()) {
-        // Another thread inserted the key while we were loading it
-        lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
-        return it->second->second;
+    // Another thread may have inserted the key while we were loading
+    auto cached = FindAndPromote(key);
+    if (cached) {
+        return cached.value();
     }
 
     // Insert at front of LRU list
@@ -122,6 +119,16 @@ int64_t LruCache::GetCurrentWeight() const {
 
 int64_t LruCache::GetMaxWeight() const {
     return max_weight_;
+}
+
+std::optional<std::shared_ptr<CacheValue>> LruCache::FindAndPromote(
+    const std::shared_ptr<CacheKey>& key) {
+    auto it = lru_map_.find(key);
+    if (it != lru_map_.end()) {
+        lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
+        return it->second->second;
+    }
+    return std::nullopt;
 }
 
 void LruCache::EvictIfNeeded() {
