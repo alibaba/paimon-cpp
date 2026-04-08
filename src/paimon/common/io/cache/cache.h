@@ -64,7 +64,7 @@ class PAIMON_EXPORT NoCache : public Cache {
 
 class CacheValue {
  public:
-    CacheValue(const MemorySegment& segment, CacheCallback callback = nullptr)
+    explicit CacheValue(const MemorySegment& segment, CacheCallback callback = nullptr)
         : segment_(segment), callback_(std::move(callback)) {}
 
     const MemorySegment& GetSegment() const {
