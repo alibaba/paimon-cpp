@@ -193,8 +193,7 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeBinaryKeys) {
     // Verify first_key
     auto deserialized_first = deserialized->FirstKey();
     ASSERT_NE(deserialized_first, nullptr);
-    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()),
-              binary_first);
+    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), binary_first);
 
     // Verify last_key
     auto deserialized_last = deserialized->LastKey();
