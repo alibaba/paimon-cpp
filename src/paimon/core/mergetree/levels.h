@@ -52,6 +52,15 @@ class Levels {
 
     int32_t NumberOfSortedRuns() const;
 
+    /// A callback to notify dropping file.
+    class DropFileCallback {
+     public:
+        virtual ~DropFileCallback() = default;
+        virtual void NotifyDropFile(const std::string& file) = 0;
+    };
+
+    void AddDropFileCallback(DropFileCallback* callback);
+
     Status AddLevel0File(const std::shared_ptr<DataFileMeta>& file);
 
     /// @return the highest non-empty level or -1 if all levels empty.
@@ -86,6 +95,6 @@ class Levels {
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::set<std::shared_ptr<DataFileMeta>, Level0Comparator> level0_;
     std::vector<SortedRun> levels_;
-    // TODO(lisizhuo.lsz): DropFileCallback
+    std::vector<DropFileCallback*> drop_file_callbacks_;
 };
 }  // namespace paimon

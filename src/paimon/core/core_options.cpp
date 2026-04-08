@@ -420,6 +420,8 @@ struct CoreOptions::Impl {
     int32_t compact_off_peak_ratio = 0;
     bool lookup_cache_bloom_filter = true;
     double lookup_cache_bloom_filter_fpp = 0.05;
+    bool lookup_remote_file_enabled = false;
+    int32_t lookup_remote_level_threshold = INT32_MIN;
     CompressOptions lookup_compress_options{"zstd", 1};
     int64_t cache_page_size = 64 * 1024;  // 64KB
     std::map<int32_t, std::shared_ptr<FileFormat>> file_format_per_level;
@@ -675,6 +677,14 @@ Result<CoreOptions> CoreOptions::FromMap(
     // Parse lookup.cache.bloom.filter.fpp
     PAIMON_RETURN_NOT_OK(parser.Parse<double>(Options::LOOKUP_CACHE_BLOOM_FILTER_FPP,
                                               &impl->lookup_cache_bloom_filter_fpp));
+
+    // Parse lookup.remote-file.enabled
+    PAIMON_RETURN_NOT_OK(
+        parser.Parse<bool>(Options::LOOKUP_REMOTE_FILE_ENABLED, &impl->lookup_remote_file_enabled));
+
+    // Parse lookup.remote-file.level-threshold
+    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::LOOKUP_REMOTE_LEVEL_THRESHOLD,
+                                               &impl->lookup_remote_level_threshold));
 
     // Parse lookup.cache-spill-compression
     std::string lookup_compress_options_compression_str;
@@ -1185,6 +1195,14 @@ double CoreOptions::GetLookupCacheBloomFilterFpp() const {
 
 const CompressOptions& CoreOptions::GetLookupCompressOptions() const {
     return impl_->lookup_compress_options;
+}
+
+bool CoreOptions::LookupRemoteFileEnabled() const {
+    return impl_->lookup_remote_file_enabled;
+}
+
+int32_t CoreOptions::GetLookupRemoteLevelThreshold() const {
+    return impl_->lookup_remote_level_threshold;
 }
 
 int32_t CoreOptions::GetCachePageSize() const {

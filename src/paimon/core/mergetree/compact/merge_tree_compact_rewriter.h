@@ -60,7 +60,7 @@ class MergeTreeCompactRewriter : public CompactRewriter {
     virtual void NotifyRewriteCompactBefore(
         const std::vector<std::shared_ptr<DataFileMeta>>& files) {}
 
-    virtual std::vector<std::shared_ptr<DataFileMeta>> NotifyRewriteCompactAfter(
+    virtual Result<std::vector<std::shared_ptr<DataFileMeta>>> NotifyRewriteCompactAfter(
         const std::vector<std::shared_ptr<DataFileMeta>>& files) {
         return files;
     }

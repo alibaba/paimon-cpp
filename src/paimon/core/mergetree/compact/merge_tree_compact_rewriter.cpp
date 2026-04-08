@@ -279,7 +279,7 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
                            rolling_writer->GetResult());
     write_guard.Release();
 
-    after = NotifyRewriteCompactAfter(after);
+    PAIMON_ASSIGN_OR_RAISE(after, NotifyRewriteCompactAfter(after));
     return CompactResult(before, after);
 }
 

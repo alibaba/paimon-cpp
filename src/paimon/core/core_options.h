@@ -154,6 +154,9 @@ class PAIMON_EXPORT CoreOptions {
     bool LookupCacheBloomFilterEnabled() const;
     double GetLookupCacheBloomFilterFpp() const;
 
+    bool LookupRemoteFileEnabled() const;
+    int32_t GetLookupRemoteLevelThreshold() const;
+
     const CompressOptions& GetLookupCompressOptions() const;
     int32_t GetCachePageSize() const;
 

@@ -384,6 +384,13 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.bloom.filter.fpp" - Define the default false positive probability for lookup
     /// cache bloom filters. Default value is 0.05.
     static const char LOOKUP_CACHE_BLOOM_FILTER_FPP[];
+    /// "lookup.remote-file.enabled" - Whether to enable the remote file for lookup.
+    /// Default value is false.
+    static const char LOOKUP_REMOTE_FILE_ENABLED[];
+    /// "lookup.remote-file.level-threshold" - Level threshold of lookup to generate remote lookup
+    /// files. Level files below this threshold will not generate remote lookup files.
+    /// Default value is INT32_MIN.
+    static const char LOOKUP_REMOTE_LEVEL_THRESHOLD[];
     /// "lookup.cache-spill-compression" - Spill compression for lookup cache, currently zstd, none,
     /// lz4 are supported. Default value is zstd.
     /// Noted that java paimon also supports lzo which paimon-cpp does not support for now.

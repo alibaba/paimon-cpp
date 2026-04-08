@@ -512,4 +512,47 @@ TEST_F(LookupLevelsTest, TestLevelsWithValueFieldAppearBeforeKey) {
     ASSERT_FALSE(positioned_kv);
 }
 
+TEST_F(LookupLevelsTest, TestDropFileCallbackOnUpdate) {
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11], [3, 33]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/2, table_path,
+                                              core_options, "[[2, 22], [5, 55]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
+
+    // Trigger lookup to populate the cache for both files.
+    ASSERT_OK_AND_ASSIGN(auto positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+
+    // Both files should be cached now.
+    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file0->file_name));
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+
+    // Update: remove file0 from level1, add a new file to level1.
+    ASSERT_OK_AND_ASSIGN(auto new_file, NewFiles(/*level=*/1, /*last_sequence_number=*/4,
+                                                 table_path, core_options, "[[1, 111], [3, 333]]"));
+    ASSERT_OK(levels->Update(/*before=*/{file0}, /*after=*/{new_file}));
+
+    // file0 was dropped, so its cache entry should be invalidated.
+    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 1);
+    ASSERT_FALSE(lookup_levels->lookup_file_cache_.count(file0->file_name));
+    // file1 was not dropped, so its cache entry should still exist.
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+}
+
 }  // namespace paimon::test

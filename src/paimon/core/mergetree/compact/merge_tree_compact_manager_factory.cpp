@@ -186,11 +186,14 @@ Result<std::shared_ptr<CompactRewriter>> MergeTreeCompactManagerFactory::CreateL
             return merge_function_wrapper;
         };
         PAIMON_ASSIGN_OR_RAISE(
-            std::unique_ptr<LookupMergeTreeCompactRewriter<bool>> rewriter,
-            LookupMergeTreeCompactRewriter<bool>::Create(
-                max_level, std::move(lookup_levels), dv_maintainer,
-                std::move(merge_function_wrapper_factory), bucket, partition, table_schema_,
-                path_factory_cache, options_, pool_, cancellation_controller));
+            std::unique_ptr<RemoteLookupFileManager<bool>> remote_lookup_file_manager,
+            CreateRemoteLookupFileManager<bool>(partition, bucket, lookup_levels.get()));
+        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupMergeTreeCompactRewriter<bool>> rewriter,
+                               LookupMergeTreeCompactRewriter<bool>::Create(
+                                   max_level, std::move(lookup_levels), dv_maintainer,
+                                   std::move(merge_function_wrapper_factory), bucket, partition,
+                                   table_schema_, path_factory_cache, options_, pool_,
+                                   cancellation_controller, std::move(remote_lookup_file_manager)));
         return std::shared_ptr<CompactRewriter>(std::move(rewriter));
     }
 
@@ -241,13 +244,17 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithDeletionVector(
                         lookup_levels_ptr));
             return merge_function_wrapper;
         };
-
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<RemoteLookupFileManager<PositionedKeyValue>> remote_lookup_file_manager,
+            CreateRemoteLookupFileManager<PositionedKeyValue>(partition, bucket,
+                                                              lookup_levels.get()));
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<LookupMergeTreeCompactRewriter<PositionedKeyValue>> rewriter,
             LookupMergeTreeCompactRewriter<PositionedKeyValue>::Create(
                 max_level, std::move(lookup_levels), dv_maintainer,
                 std::move(merge_function_wrapper_factory), bucket, partition, table_schema_,
-                path_factory_cache, options_, pool_, cancellation_controller));
+                path_factory_cache, options_, pool_, cancellation_controller,
+                std::move(remote_lookup_file_manager)));
         return std::shared_ptr<CompactRewriter>(std::move(rewriter));
     }
 
@@ -274,13 +281,15 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithDeletionVector(
                 lookup_levels_ptr));
         return merge_function_wrapper;
     };
-
     PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>> rewriter,
-        LookupMergeTreeCompactRewriter<FilePosition>::Create(
-            max_level, std::move(lookup_levels), dv_maintainer,
-            std::move(merge_function_wrapper_factory), bucket, partition, table_schema_,
-            path_factory_cache, options_, pool_, cancellation_controller));
+        std::unique_ptr<RemoteLookupFileManager<FilePosition>> remote_lookup_file_manager,
+        CreateRemoteLookupFileManager<FilePosition>(partition, bucket, lookup_levels.get()));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>> rewriter,
+                           LookupMergeTreeCompactRewriter<FilePosition>::Create(
+                               max_level, std::move(lookup_levels), dv_maintainer,
+                               std::move(merge_function_wrapper_factory), bucket, partition,
+                               table_schema_, path_factory_cache, options_, pool_,
+                               cancellation_controller, std::move(remote_lookup_file_manager)));
     return std::shared_ptr<CompactRewriter>(std::move(rewriter));
 }
 
@@ -317,11 +326,15 @@ MergeTreeCompactManagerFactory::CreateLookupRewriterWithoutDeletionVector(
         return merge_function_wrapper;
     };
     PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<LookupMergeTreeCompactRewriter<KeyValue>> rewriter,
-        LookupMergeTreeCompactRewriter<KeyValue>::Create(
-            max_level, std::move(lookup_levels), dv_maintainer,
-            std::move(merge_function_wrapper_factory), bucket, partition, table_schema_,
-            path_factory_cache, options_, pool_, cancellation_controller));
+        std::unique_ptr<RemoteLookupFileManager<KeyValue>> remote_lookup_file_manager,
+        CreateRemoteLookupFileManager<KeyValue>(partition, bucket, lookup_levels.get()));
+
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupMergeTreeCompactRewriter<KeyValue>> rewriter,
+                           LookupMergeTreeCompactRewriter<KeyValue>::Create(
+                               max_level, std::move(lookup_levels), dv_maintainer,
+                               std::move(merge_function_wrapper_factory), bucket, partition,
+                               table_schema_, path_factory_cache, options_, pool_,
+                               cancellation_controller, std::move(remote_lookup_file_manager)));
     return std::shared_ptr<CompactRewriter>(std::move(rewriter));
 }
 
