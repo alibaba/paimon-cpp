@@ -53,7 +53,7 @@ namespace paimon::test {
 // ---------------------------------------------------------------------------
 // Test data directory (relative to project root)
 // ---------------------------------------------------------------------------
-static const char kTestDataDir[] = "test/test_data/global_index/btree/btree_compatibility_data";
+static constexpr char kTestDataDir[] = "test/test_data/global_index/btree/btree_compatibility_data";
 
 // ---------------------------------------------------------------------------
 // CSV record parsed from the Java-generated CSV files
