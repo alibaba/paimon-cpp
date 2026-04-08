@@ -38,4 +38,4 @@ runs:
 
     - name: Configure ccache
       shell: bash
-      run: pwd && ${{ github.workspace }}/ci/scripts/setup_ccache.sh
+      run: ci/scripts/setup_ccache.sh
