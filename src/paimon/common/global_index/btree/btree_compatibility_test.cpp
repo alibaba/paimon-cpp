@@ -53,8 +53,7 @@ namespace paimon::test {
 // ---------------------------------------------------------------------------
 // Test data directory (relative to project root)
 // ---------------------------------------------------------------------------
-static const std::string kTestDataDir =
-    "test/test_data/global_index/btree/btree_compatibility_data";
+static const char kTestDataDir[] = "test/test_data/global_index/btree/btree_compatibility_data";
 
 // ---------------------------------------------------------------------------
 // CSV record parsed from the Java-generated CSV files
@@ -263,9 +262,8 @@ class BTreeCompatibilityTest : public ::testing::Test {
 
     // Helper: build expected row IDs for string keys in range
     std::set<int64_t> GetRowIdsForStringRange(const std::vector<CsvRecord>& records,
-                                              const std::string& lower,
-                                              const std::string& upper, bool lower_inclusive,
-                                              bool upper_inclusive) {
+                                              const std::string& lower, const std::string& upper,
+                                              bool lower_inclusive, bool upper_inclusive) {
         std::set<int64_t> ids;
         for (const auto& rec : records) {
             if (rec.is_null) continue;
@@ -378,8 +376,8 @@ TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
             auto result = reader->VisitLessThan(literal);
             ASSERT_OK(result.status()) << prefix << ": VisitLessThan(" << mid_key << ") failed";
             auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForIntRange(records, non_null_keys.front(), mid_key,
-                                                     true, false);
+            auto expected_ids =
+                GetRowIdsForIntRange(records, non_null_keys.front(), mid_key, true, false);
             EXPECT_EQ(actual_ids, expected_ids)
                 << prefix << ": VisitLessThan(" << mid_key << ") mismatch";
         }
@@ -399,8 +397,8 @@ TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
             ASSERT_OK(result.status())
                 << prefix << ": VisitGreaterOrEqual(" << mid_key << ") failed";
             auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForIntRange(records, mid_key, non_null_keys.back(),
-                                                     true, true);
+            auto expected_ids =
+                GetRowIdsForIntRange(records, mid_key, non_null_keys.back(), true, true);
             EXPECT_EQ(actual_ids, expected_ids)
                 << prefix << ": VisitGreaterOrEqual(" << mid_key << ") mismatch";
         }
@@ -439,8 +437,7 @@ TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
             int32_t k1 = *it++;
             int32_t k2 = *it++;
             int32_t k3 = *it++;
-            std::vector<Literal> in_literals = {
-                Literal(k1), Literal(k2), Literal(k3)};
+            std::vector<Literal> in_literals = {Literal(k1), Literal(k2), Literal(k3)};
             auto result = reader->VisitIn(in_literals);
             ASSERT_OK(result.status())
                 << prefix << ": VisitIn({" << k1 << "," << k2 << "," << k3 << "}) failed";
@@ -450,8 +447,7 @@ TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
             for (auto id : GetRowIdsForIntKey(records, k1)) expected_ids.insert(id);
             for (auto id : GetRowIdsForIntKey(records, k2)) expected_ids.insert(id);
             for (auto id : GetRowIdsForIntKey(records, k3)) expected_ids.insert(id);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitIn mismatch";
+            EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIn mismatch";
         }
     }
 
@@ -462,8 +458,7 @@ TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
                 auto result = reader->VisitNotEqual(literal);
-                ASSERT_OK(result.status())
-                    << prefix << ": VisitNotEqual(" << key_val << ") failed";
+                ASSERT_OK(result.status()) << prefix << ": VisitNotEqual(" << key_val << ") failed";
                 auto actual_ids = CollectRowIds(result.value());
 
                 // Expected: all non-null rows except those with this key
@@ -580,8 +575,8 @@ TEST_P(BTreeCompatibilityVarcharTest, ReadAndQueryVarcharData) {
             auto result = reader->VisitLessThan(literal);
             ASSERT_OK(result.status()) << prefix << ": VisitLessThan(" << mid_key << ") failed";
             auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForStringRange(records, non_null_keys.front(), mid_key,
-                                                        true, false);
+            auto expected_ids =
+                GetRowIdsForStringRange(records, non_null_keys.front(), mid_key, true, false);
             EXPECT_EQ(actual_ids, expected_ids)
                 << prefix << ": VisitLessThan(" << mid_key << ") mismatch";
         }
@@ -602,8 +597,8 @@ TEST_P(BTreeCompatibilityVarcharTest, ReadAndQueryVarcharData) {
             ASSERT_OK(result.status())
                 << prefix << ": VisitGreaterOrEqual(" << mid_key << ") failed";
             auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForStringRange(records, mid_key, non_null_keys.back(),
-                                                        true, true);
+            auto expected_ids =
+                GetRowIdsForStringRange(records, mid_key, non_null_keys.back(), true, true);
             EXPECT_EQ(actual_ids, expected_ids)
                 << prefix << ": VisitGreaterOrEqual(" << mid_key << ") mismatch";
         }
@@ -639,10 +634,8 @@ TEST_P(BTreeCompatibilityVarcharTest, ReadAndQueryVarcharData) {
             std::sort(non_null_keys.begin(), non_null_keys.end());
             std::string lower = non_null_keys[non_null_keys.size() / 4];
             std::string upper = non_null_keys[non_null_keys.size() * 3 / 4];
-            Literal lit_lower(FieldType::STRING, lower.c_str(),
-                              static_cast<int32_t>(lower.size()));
-            Literal lit_upper(FieldType::STRING, upper.c_str(),
-                              static_cast<int32_t>(upper.size()));
+            Literal lit_lower(FieldType::STRING, lower.c_str(), static_cast<int32_t>(lower.size()));
+            Literal lit_upper(FieldType::STRING, upper.c_str(), static_cast<int32_t>(upper.size()));
             auto result = reader->VisitBetween(lit_lower, lit_upper);
             ASSERT_OK(result.status())
                 << prefix << ": VisitBetween(" << lower << ", " << upper << ") failed";
@@ -748,8 +741,7 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
                 auto result = reader->VisitEqual(literal);
-                ASSERT_OK(result.status())
-                    << prefix << ": VisitEqual(" << key_val << ") failed";
+                ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
                 auto actual_ids = CollectRowIds(result.value());
                 auto expected_ids = GetRowIdsForIntKey(records, key_val);
                 EXPECT_EQ(actual_ids, expected_ids)
@@ -782,8 +774,7 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
         auto result = reader->VisitGreaterThan(literal);
         ASSERT_OK(result.status()) << prefix << ": VisitGreaterThan(" << max_key << ") failed";
         auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty())
-            << prefix << ": VisitGreaterThan(max) should be empty";
+        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitGreaterThan(max) should be empty";
     }
 }
 
@@ -832,8 +823,7 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
                 auto result = reader->VisitEqual(literal);
-                ASSERT_OK(result.status())
-                    << prefix << ": VisitEqual(" << key_val << ") failed";
+                ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
                 auto actual_ids = CollectRowIds(result.value());
                 auto expected_ids = GetRowIdsForIntKey(records, key_val);
                 EXPECT_EQ(actual_ids, expected_ids)
@@ -844,10 +834,9 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
 
     // ---- Test: VisitIn for keys 0, 5, 9 ----
     {
-        std::vector<Literal> in_literals = {
-            Literal(static_cast<int32_t>(0)),
-            Literal(static_cast<int32_t>(5)),
-            Literal(static_cast<int32_t>(9))};
+        std::vector<Literal> in_literals = {Literal(static_cast<int32_t>(0)),
+                                            Literal(static_cast<int32_t>(5)),
+                                            Literal(static_cast<int32_t>(9))};
         auto result = reader->VisitIn(in_literals);
         ASSERT_OK(result.status()) << prefix << ": VisitIn({0,5,9}) failed";
         auto actual_ids = CollectRowIds(result.value());
@@ -975,14 +964,10 @@ TEST_F(BTreeCompatibilityTest, MetaDeserialization) {
 TEST_F(BTreeCompatibilityTest, RowCountConsistency) {
     // For each test data set, verify that null_count + non_null_count == total_count
     std::vector<std::pair<std::string, std::shared_ptr<arrow::DataType>>> test_cases = {
-        {"btree_test_int_50", arrow::int32()},
-        {"btree_test_int_100", arrow::int32()},
-        {"btree_test_int_500", arrow::int32()},
-        {"btree_test_varchar_50", arrow::utf8()},
-        {"btree_test_varchar_100", arrow::utf8()},
-        {"btree_test_int_all_nulls", arrow::int32()},
-        {"btree_test_int_no_nulls", arrow::int32()},
-        {"btree_test_int_duplicates", arrow::int32()},
+        {"btree_test_int_50", arrow::int32()},       {"btree_test_int_100", arrow::int32()},
+        {"btree_test_int_500", arrow::int32()},      {"btree_test_varchar_50", arrow::utf8()},
+        {"btree_test_varchar_100", arrow::utf8()},   {"btree_test_int_all_nulls", arrow::int32()},
+        {"btree_test_int_no_nulls", arrow::int32()}, {"btree_test_int_duplicates", arrow::int32()},
     };
 
     for (const auto& [prefix, arrow_type] : test_cases) {
