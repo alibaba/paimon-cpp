@@ -1207,7 +1207,11 @@ macro(build_arrow)
                                          "${PARQUET_STATIC_LIB}"
                                          "${ARROW_DATASET_STATIC_LIB}"
                                          "${ARROW_ACERO_STATIC_LIB}"
-                        DEPENDS zstd snappy lz4 zlib re2::re2)
+                        DEPENDS zstd
+                                snappy
+                                lz4
+                                zlib
+                                re2::re2)
 
     add_library(arrow STATIC IMPORTED)
     set_target_properties(arrow
