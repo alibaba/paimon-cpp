@@ -60,7 +60,7 @@ class RemoteLookupFileManager {
         // Get the file size from the local file system
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> local_file_status,
                                file_system_->GetFileStatus(local_file_path));
-        int64_t length = static_cast<int64_t>(local_file_status->GetLen());
+        auto length = static_cast<int64_t>(local_file_status->GetLen());
 
         std::string remote_sst_name = lookup_levels_->NewRemoteSst(file, length);
         std::string remote_sst_path = RemoteSstPath(file, remote_sst_name);

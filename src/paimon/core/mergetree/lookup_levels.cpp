@@ -16,8 +16,6 @@
 
 #include "paimon/core/mergetree/lookup_levels.h"
 
-#include <iostream>
-
 #include "fmt/format.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -207,7 +205,6 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
     auto download_ser_version = TryToDownloadRemoteSst(file, kv_file_path);
     if (download_ser_version.has_value()) {
         // use schema id from remote file
-        std::cout << "download success" << std::endl;
         schema_id = file->schema_id;
         file_ser_version = download_ser_version.value();
     } else {

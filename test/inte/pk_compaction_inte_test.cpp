@@ -309,7 +309,7 @@ class PkCompactionInteTest : public ::testing::Test,
             builder.WithSnapshot(snapshot_id).IsStreaming(false).RawConvertible(true).Build();
         EXPECT_TRUE(split.ok()) << split.status().ToString();
         return split.value();
-    };
+    }
 
  private:
     std::shared_ptr<MemoryPool> pool_;
