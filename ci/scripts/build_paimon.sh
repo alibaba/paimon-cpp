@@ -22,6 +22,15 @@ check_clang_tidy=${3:-false}
 build_type=${4:-Debug}
 build_dir=${1}/build
 
+# Display ccache status if available
+if command -v ccache &> /dev/null; then
+    echo "=== ccache found: $(ccache --version | head -1) ==="
+    ccache -p | grep -E "cache_dir|max_size|compression" || true
+    ccache -z  # Reset statistics for this build
+else
+    echo "=== ccache not found, compiling without cache acceleration ==="
+fi
+
 mkdir ${build_dir}
 pushd ${build_dir}
 
@@ -59,6 +68,12 @@ ctest --output-on-failure -j $(nproc)
 
 if [[ "${check_clang_tidy}" == "true" ]]; then
     cmake --build . --target check-clang-tidy
+fi
+
+# Print ccache statistics after build
+if command -v ccache &> /dev/null; then
+    echo "=== ccache statistics after build ==="
+    ccache -s
 fi
 
 popd

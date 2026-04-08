@@ -187,6 +187,21 @@ if(UNIX)
                       all)
 endif(UNIX)
 
+# Setup ccache to accelerate compilation if available
+if(PAIMON_USE_CCACHE
+   AND NOT CMAKE_C_COMPILER_LAUNCHER
+   AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    else()
+        message(STATUS "ccache not found, compiling without cache acceleration")
+    endif()
+endif()
+
 include(SetupCxxFlags)
 
 # set compile output directory
