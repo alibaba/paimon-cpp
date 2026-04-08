@@ -221,8 +221,8 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     };
 
     // Read BTree file footer first
-    auto block_cache =
-        std::make_shared<BlockCache>(meta.file_path, in, pool, std::make_unique<CacheManager>());
+    auto cache_manager = std::make_shared<CacheManager>(1024 * 1024, 0.0);
+    auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, cache_manager, pool);
     PAIMON_ASSIGN_OR_RAISE(MemorySegment segment,
                            block_cache->GetBlock(meta.file_size - BTreeFileFooter::ENCODED_LENGTH,
                                                  BTreeFileFooter::ENCODED_LENGTH, true,
@@ -236,7 +236,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<SstFileReader> sst_file_reader,
         SstFileReader::Create(pool, in, *footer->GetIndexBlockHandle(),
-                              footer->GetBloomFilterHandle(), result_comparator));
+                              footer->GetBloomFilterHandle(), result_comparator, cache_manager));
 
     // prepare null_bitmap
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RoaringNavigableMap64> null_bitmap,
