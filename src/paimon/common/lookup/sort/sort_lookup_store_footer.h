@@ -30,7 +30,8 @@ namespace paimon {
 /// Footer of a sort lookup store.
 class PAIMON_EXPORT SortLookupStoreFooter {
  public:
-    static Result<std::unique_ptr<SortLookupStoreFooter>> ReadSortLookupStoreFooter(MemorySliceInput* input);
+    static Result<std::unique_ptr<SortLookupStoreFooter>> ReadSortLookupStoreFooter(
+        MemorySliceInput* input);
 
  public:
     SortLookupStoreFooter(const BlockHandle& index_block_handle,

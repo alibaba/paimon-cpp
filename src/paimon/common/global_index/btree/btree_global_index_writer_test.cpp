@@ -36,7 +36,8 @@ class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
         return prefix + "_" + std::to_string(file_counter_++);
     }
 
-    Result<std::unique_ptr<OutputStream>> NewOutputStream(const std::string& file_name) const override {
+    Result<std::unique_ptr<OutputStream>> NewOutputStream(
+        const std::string& file_name) const override {
         return fs_->Create(base_path_ + "/" + file_name, true);
     }
 
@@ -68,7 +69,7 @@ class BTreeGlobalIndexWriterTest : public ::testing::Test {
 
     // Helper to create ArrowSchema from arrow type
     std::unique_ptr<ArrowSchema> CreateArrowSchema(const std::shared_ptr<arrow::DataType>& type,
-                                                    const std::string& field_name) {
+                                                   const std::string& field_name) {
         auto schema = arrow::schema({arrow::field(field_name, type)});
         auto c_schema = std::make_unique<ArrowSchema>();
         EXPECT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
@@ -89,7 +90,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteIntData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with int values
     auto array =
@@ -118,7 +120,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteIntData) {
 
     // Release the ArrowArray
     ArrowArrayRelease(&c_array);
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -131,7 +133,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteStringData) {
     auto c_schema = CreateArrowSchema(arrow::utf8(), "string_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", c_schema.get(),
+                                                           file_writer, pool_);
 
     // Create an Arrow array with string values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(
@@ -159,7 +162,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteStringData) {
 
     // Release the ArrowArray
     ArrowArrayRelease(&c_array);
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -172,7 +175,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteWithNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, null, 3, null, 5]")
@@ -202,7 +206,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteWithNulls) {
 
     // Release the ArrowArray
     ArrowArrayRelease(&c_array);
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -215,7 +219,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteMultipleBatches) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create first batch
     auto array1 =
@@ -250,7 +255,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteMultipleBatches) {
     // Verify metadata
     const auto& meta = metas[0];
     EXPECT_EQ(meta.range_end, 5);  // 6 elements, 0-indexed
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -263,14 +268,15 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteEmptyData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Finish without adding any data
     auto result = writer->Finish();
     ASSERT_OK(result.status());
     auto metas = result.value();
     ASSERT_EQ(metas.size(), 0);  // No data, no metadata
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -283,7 +289,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteAllNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with all null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[null, null, null]")
@@ -309,7 +316,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteAllNulls) {
 
     // Release the ArrowArray
     ArrowArrayRelease(&c_array);
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }
@@ -322,7 +329,8 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteDoubleData) {
     auto c_schema = CreateArrowSchema(arrow::float64(), "double_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("double_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("double_field", c_schema.get(),
+                                                           file_writer, pool_);
 
     // Create an Arrow array with double values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::float64(), "[1.5, 2.5, 3.5, 1.5]")
@@ -344,7 +352,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteDoubleData) {
 
     // Release the ArrowArray
     ArrowArrayRelease(&c_array);
-    
+
     // Release the ArrowSchema
     ArrowSchemaRelease(c_schema.get());
 }

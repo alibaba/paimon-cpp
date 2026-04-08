@@ -57,14 +57,12 @@ class BTreeGlobalIndexer : public GlobalIndexer {
 
 class BTreeGlobalIndexReader : public GlobalIndexReader {
  public:
-    BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
-                           const std::shared_ptr<RoaringNavigableMap64>& null_bitmap,
-                           const MemorySlice& min_key, const MemorySlice& max_key,
-                           bool has_min_key, bool has_max_key,
-                           const std::vector<GlobalIndexIOMeta>& files,
-                           const std::shared_ptr<MemoryPool>& pool,
-                           std::function<int32_t(const MemorySlice&, const MemorySlice&)>
-                               comparator);
+    BTreeGlobalIndexReader(
+        const std::shared_ptr<SstFileReader>& sst_file_reader,
+        const std::shared_ptr<RoaringNavigableMap64>& null_bitmap, const MemorySlice& min_key,
+        const MemorySlice& max_key, bool has_min_key, bool has_max_key,
+        const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<MemoryPool>& pool,
+        std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
 
@@ -124,8 +122,8 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
 
  private:
     Result<RoaringNavigableMap64> RangeQuery(const MemorySlice& lower_bound,
-                                             const MemorySlice& upper_bound,
-                                             bool lower_inclusive, bool upper_inclusive);
+                                             const MemorySlice& upper_bound, bool lower_inclusive,
+                                             bool upper_inclusive);
 
     Result<RoaringNavigableMap64> AllNonNullRows();
 

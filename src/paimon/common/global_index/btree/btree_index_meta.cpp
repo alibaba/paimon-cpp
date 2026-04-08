@@ -39,7 +39,8 @@ std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_pt
 }
 
 std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) const {
-    // Calculate total size: first_key_len(4) + first_key + last_key_len(4) + last_key + has_nulls(1)
+    // Calculate total size: first_key_len(4) + first_key + last_key_len(4) + last_key +
+    // has_nulls(1)
     int32_t first_key_size = first_key_ ? first_key_->size() : 0;
     int32_t last_key_size = last_key_ ? last_key_->size() : 0;
     int32_t total_size = 4 + first_key_size + 4 + last_key_size + 1;
