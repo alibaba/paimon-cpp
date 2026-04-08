@@ -17,42 +17,61 @@
 #pragma once
 
 #include <memory>
-#include "paimon/common/sst/bloom_filter_handle.h"
-#include "paimon/common/sst/block_handle.h"
+
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/memory/memory_slice_output.h"
+#include "paimon/common/sst/block_handle.h"
+#include "paimon/common/sst/bloom_filter_handle.h"
 
 namespace paimon {
 /// The Footer for BTree file.
 class BTreeFileFooter {
  public:
-    static Result<std::shared_ptr<BTreeFileFooter>> Read(const std::shared_ptr<MemorySliceInput>& input);
-    static std::shared_ptr<MemorySlice> Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
-    static std::shared_ptr<MemorySlice> Write(const std::shared_ptr<BTreeFileFooter>& footer, const std::shared_ptr<MemorySliceOutput>& ouput);
+    static Result<std::shared_ptr<BTreeFileFooter>> Read(MemorySliceInput& input);
+    static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
+    static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer,
+                             MemorySliceOutput& ouput);
 
  public:
-    BTreeFileFooter(const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle, const std::shared_ptr<BlockHandle>& index_block_handle,
-                   const std::shared_ptr<BlockHandle>& null_bitmap_handle)
-        : bloom_filter_handle_(bloom_filter_handle), index_block_handle_(index_block_handle), null_bitmap_handle_(null_bitmap_handle) {}
+    BTreeFileFooter(const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+                    const std::shared_ptr<BlockHandle>& index_block_handle,
+                    const std::shared_ptr<BlockHandle>& null_bitmap_handle)
+        : version_(CURRENT_VERSION),
+          bloom_filter_handle_(bloom_filter_handle),
+          index_block_handle_(index_block_handle),
+          null_bitmap_handle_(null_bitmap_handle) {}
 
-   std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
-      return bloom_filter_handle_;
-   }
+    BTreeFileFooter(int32_t version, const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+                    const std::shared_ptr<BlockHandle>& index_block_handle,
+                    const std::shared_ptr<BlockHandle>& null_bitmap_handle)
+        : version_(version),
+          bloom_filter_handle_(bloom_filter_handle),
+          index_block_handle_(index_block_handle),
+          null_bitmap_handle_(null_bitmap_handle) {}
 
-   std::shared_ptr<BlockHandle> GetIndexBlockHandle() const {
-      return index_block_handle_;
-   }
+    int32_t GetVersion() const {
+        return version_;
+    }
 
-   std::shared_ptr<BlockHandle> GetNullBitmapHandle() const {
-      return null_bitmap_handle_;
-   }
+    std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
+        return bloom_filter_handle_;
+    }
 
+    std::shared_ptr<BlockHandle> GetIndexBlockHandle() const {
+        return index_block_handle_;
+    }
+
+    std::shared_ptr<BlockHandle> GetNullBitmapHandle() const {
+        return null_bitmap_handle_;
+    }
 
  public:
-    static constexpr int32_t MAGIC_NUMBER = 198732882;
-    static constexpr int32_t ENCODED_LENGTH = 48;
+    static constexpr int32_t MAGIC_NUMBER = 0x50425449;
+    static constexpr int32_t CURRENT_VERSION = 1;
+    static constexpr int32_t ENCODED_LENGTH = 52;
 
  private:
+    int32_t version_;
     std::shared_ptr<BloomFilterHandle> bloom_filter_handle_;
     std::shared_ptr<BlockHandle> index_block_handle_;
     std::shared_ptr<BlockHandle> null_bitmap_handle_;

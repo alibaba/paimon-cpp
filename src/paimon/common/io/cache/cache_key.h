@@ -20,6 +20,8 @@
 #include <string>
 #include <unordered_map>
 
+#include "paimon/visibility.h"
+
 namespace paimon {
 
 class CacheValue;

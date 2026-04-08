@@ -23,24 +23,14 @@ namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& in,
+    const BlockHandle& index_block_handle,
+    const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
     MemorySlice::SliceComparator comparator) {
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache =
         std::make_shared<BlockCache>(file_path, in, pool, std::make_unique<CacheManager>());
 
-    // read footer
-    PAIMON_ASSIGN_OR_RAISE(
-        MemorySegment segment,
-        block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH, BlockFooter::ENCODED_LENGTH,
-                              /*is_index=*/true, /*decompress_func=*/nullptr));
-    auto slice = MemorySlice::Wrap(segment);
-    auto input = slice.ToInput();
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockFooter> footer,
-                           BlockFooter::ReadBlockFooter(&input));
-
     // read bloom filter directly now
-    auto bloom_filter_handle = footer->GetBloomFilterHandle();
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
     if (bloom_filter_handle && (bloom_filter_handle->ExpectedEntries() ||
                                 bloom_filter_handle->Size() || bloom_filter_handle->Offset())) {
@@ -54,7 +44,6 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     }
 
     // create index block reader
-    auto index_block_handle = footer->GetIndexBlockHandle();
     PAIMON_ASSIGN_OR_RAISE(
         MemorySegment trailer_data,
         block_cache->GetBlock(index_block_handle.Offset() + index_block_handle.Size(),
@@ -88,6 +77,10 @@ SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,
 
 std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {
     return std::make_unique<SstFileIterator>(this, index_block_reader_->Iterator());
+}
+
+std::unique_ptr<BlockIterator> SstFileReader::CreateIndexIterator() {
+    return index_block_reader_->Iterator();
 }
 
 Result<std::shared_ptr<Bytes>> SstFileReader::Lookup(const std::shared_ptr<Bytes>& key) {

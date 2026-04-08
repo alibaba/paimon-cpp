@@ -27,17 +27,17 @@
 
 namespace paimon {
 
-/// Footer of a block.
-class PAIMON_EXPORT BlockFooter {
+/// Footer of a sort lookup store.
+class PAIMON_EXPORT SortLookupStoreFooter {
  public:
-    static Result<std::unique_ptr<BlockFooter>> ReadBlockFooter(MemorySliceInput* input);
+    static Result<std::unique_ptr<SortLookupStoreFooter>> ReadSortLookupStoreFooter(MemorySliceInput* input);
 
  public:
-    BlockFooter(const BlockHandle& index_block_handle,
-                const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle)
+    SortLookupStoreFooter(const BlockHandle& index_block_handle,
+                          const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle)
         : index_block_handle_(index_block_handle), bloom_filter_handle_(bloom_filter_handle) {}
 
-    ~BlockFooter() = default;
+    ~SortLookupStoreFooter() = default;
 
     const BlockHandle& GetIndexBlockHandle() const {
         return index_block_handle_;
@@ -46,7 +46,7 @@ class PAIMON_EXPORT BlockFooter {
         return bloom_filter_handle_;
     }
 
-    MemorySlice WriteBlockFooter(MemoryPool* pool);
+    MemorySlice WriteSortLookupStoreFooter(MemoryPool* pool);
 
  public:
     // 20 bytes for bloom filter handle, 12 bytes for index block handle, 4 bytes for magic number

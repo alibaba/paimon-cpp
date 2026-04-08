@@ -59,12 +59,11 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
  public:
     BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
                            const std::shared_ptr<RoaringNavigableMap64>& null_bitmap,
-                           const std::shared_ptr<MemorySlice>& min_key,
-                           const std::shared_ptr<MemorySlice>& max_key,
+                           const MemorySlice& min_key, const MemorySlice& max_key,
+                           bool has_min_key, bool has_max_key,
                            const std::vector<GlobalIndexIOMeta>& files,
                            const std::shared_ptr<MemoryPool>& pool,
-                           std::function<int32_t(const std::shared_ptr<MemorySlice>&,
-                                                 const std::shared_ptr<MemorySlice>&)>
+                           std::function<int32_t(const MemorySlice&, const MemorySlice&)>
                                comparator);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
@@ -124,20 +123,21 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     }
 
  private:
-    Result<RoaringNavigableMap64> RangeQuery(const std::shared_ptr<MemorySlice>& lower_bound,
-                                             const std::shared_ptr<MemorySlice>& upper_bound,
+    Result<RoaringNavigableMap64> RangeQuery(const MemorySlice& lower_bound,
+                                             const MemorySlice& upper_bound,
                                              bool lower_inclusive, bool upper_inclusive);
 
     Result<RoaringNavigableMap64> AllNonNullRows();
 
     std::shared_ptr<SstFileReader> sst_file_reader_;
     std::shared_ptr<RoaringNavigableMap64> null_bitmap_;
-    std::shared_ptr<MemorySlice> min_key_;
-    std::shared_ptr<MemorySlice> max_key_;
+    MemorySlice min_key_;
+    MemorySlice max_key_;
+    bool has_min_key_;
+    bool has_max_key_;
     std::vector<GlobalIndexIOMeta> files_;
     std::shared_ptr<MemoryPool> pool_;
-    std::function<int32_t(const std::shared_ptr<MemorySlice>&, const std::shared_ptr<MemorySlice>&)>
-        comparator_;
+    std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator_;
 };
 
 }  // namespace paimon

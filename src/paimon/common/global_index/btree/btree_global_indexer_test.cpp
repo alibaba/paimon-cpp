@@ -14,19 +14,22 @@
  * limitations under the License.
  */
 
+#include "paimon/common/global_index/btree/btree_global_indexer.h"
+
 #include <gtest/gtest.h>
 
-#include "paimon/common/global_index/btree/btree_global_indexer.h"
 #include "paimon/common/memory/memory_slice.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
-#include "paimon/common/utils/field_type_utils.h"
 
 namespace paimon::test {
 
 class BTreeGlobalIndexerTest : public ::testing::Test {
-protected:
-    void SetUp() override { pool_ = GetDefaultPool(); }
+ protected:
+    void SetUp() override {
+        pool_ = GetDefaultPool();
+    }
 
     std::shared_ptr<MemoryPool> pool_;
 };
@@ -42,8 +45,8 @@ TEST_F(BTreeGlobalIndexerTest, CreateComparatorString) {
         std::shared_ptr<Bytes>(Bytes::AllocateBytes("apple", pool_.get()).release()));
 
     // Lexicographic comparison: "apple" < "banana"
-    auto bytes_a = slice_a->GetHeapMemory();
-    auto bytes_b = slice_b->GetHeapMemory();
+    auto bytes_a = slice_a.GetHeapMemory();
+    auto bytes_b = slice_b.GetHeapMemory();
     ASSERT_NE(bytes_a, nullptr);
     ASSERT_NE(bytes_b, nullptr);
 
@@ -52,7 +55,7 @@ TEST_F(BTreeGlobalIndexerTest, CreateComparatorString) {
     EXPECT_LT(cmp, 0);  // "apple" < "banana"
 
     // Same strings should be equal
-    auto bytes_same = slice_same->GetHeapMemory();
+    auto bytes_same = slice_same.GetHeapMemory();
     EXPECT_EQ(bytes_a->size(), bytes_same->size());
     EXPECT_EQ(memcmp(bytes_a->data(), bytes_same->data(), bytes_a->size()), 0);
 }
@@ -178,10 +181,8 @@ TEST_F(BTreeGlobalIndexerTest, CreateIndexer) {
     BTreeGlobalIndexer indexer(options);
 
     // CreateWriter should return NotImplemented
-    auto writer_result = indexer.CreateWriter(
-        "test_field", nullptr, nullptr, pool_);
-    EXPECT_FALSE(writer_result.ok());
-    EXPECT_TRUE(writer_result.status().IsNotImplemented());
+    auto writer_result = indexer.CreateWriter("test_field", nullptr, nullptr, pool_);
+    EXPECT_TRUE(writer_result.ok());
 }
 
 // Test RangeQuery boundary conditions conceptually

@@ -31,11 +31,10 @@ namespace paimon {
 /// Writer for BTree Global Index files.
 /// This writer builds an SST file where each key maps to a list of row IDs.
 class BTreeGlobalIndexWriter : public GlobalIndexWriter {
-public:
-    BTreeGlobalIndexWriter(const std::string& field_name,
+ public:
+    BTreeGlobalIndexWriter(const std::string& field_name, ::ArrowSchema* arrow_schema,
                            const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-                           const std::shared_ptr<MemoryPool>& pool,
-                           int32_t block_size = 4096,
+                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size = 4096,
                            int64_t expected_entries = 100000);
 
     ~BTreeGlobalIndexWriter() override = default;
@@ -47,9 +46,9 @@ public:
     /// Finish writing and return the index metadata.
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
-private:
+ private:
     // Helper method to write a key-value pair to the SST file
-    Status WriteKeyValue(const std::shared_ptr<Bytes>& key, const std::vector<int64_t>& row_ids);
+    Status WriteKeyValue(std::shared_ptr<Bytes> key, const std::vector<int64_t>& row_ids);
 
     // Helper method to serialize row IDs into a Bytes object
     std::shared_ptr<Bytes> SerializeRowIds(const std::vector<int64_t>& row_ids);
@@ -57,8 +56,13 @@ private:
     // Helper method to write null bitmap to the output stream
     Result<std::shared_ptr<BlockHandle>> WriteNullBitmap(const std::shared_ptr<OutputStream>& out);
 
-private:
+    // Helper method to compare binary keys for std::map ordering
+    int32_t CompareBinaryKeys(const std::shared_ptr<Bytes>& a,
+                              const std::shared_ptr<Bytes>& b) const;
+
+ private:
     std::string field_name_;
+    std::shared_ptr<arrow::DataType> arrow_type_;
     std::shared_ptr<GlobalIndexFileWriter> file_writer_;
     std::shared_ptr<MemoryPool> pool_;
     int32_t block_size_;

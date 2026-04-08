@@ -48,8 +48,9 @@ class SortLookupStoreReader : public LookupStoreReader {
 class SortLookupStoreWriter : public LookupStoreWriter {
  public:
     SortLookupStoreWriter(const std::shared_ptr<OutputStream>& out,
-                          const std::shared_ptr<SstFileWriter>& writer)
-        : out_(out), writer_(writer) {}
+                          const std::shared_ptr<SstFileWriter>& writer,
+                          const std::shared_ptr<MemoryPool>& pool)
+        : out_(out), writer_(writer), pool_(pool) {}
 
     Status Put(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) override {
         return writer_->Write(std::move(key), std::move(value));
@@ -60,6 +61,7 @@ class SortLookupStoreWriter : public LookupStoreWriter {
  private:
     std::shared_ptr<OutputStream> out_;
     std::shared_ptr<SstFileWriter> writer_;
+    std::shared_ptr<MemoryPool> pool_;
 };
 
 /// A `LookupStoreFactory` which uses hash to lookup records on disk.

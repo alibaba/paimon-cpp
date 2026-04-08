@@ -20,6 +20,7 @@
 #include <memory>
 #include <vector>
 
+#include "paimon/memory/memory_pool.h"
 #include "paimon/utils/range.h"
 #include "paimon/utils/roaring_bitmap64.h"
 
@@ -107,7 +108,8 @@ void RoaringNavigableMap64::Clear() {
 std::vector<uint8_t> RoaringNavigableMap64::Serialize() const {
     // This is a simplified serialization - in practice, you might want to use
     // a more sophisticated approach
-    auto bytes = impl_->bitmap.Serialize(nullptr);  // nullptr for default pool
+    // Use default pool when no pool is provided
+    auto bytes = impl_->bitmap.Serialize(GetDefaultPool().get());
     if (!bytes) {
         return {};
     }

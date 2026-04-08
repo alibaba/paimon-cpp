@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
+#include <arrow/c/bridge.h>
+#include <arrow/ipc/json_simple.h>
 #include <gtest/gtest.h>
 
-#include <arrow/c/bridge.h>
-#include <arrow/ipc/json.h>
-
-#include "paimon/common/global_index/btree/btree_global_indexer.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
+#include "paimon/common/global_index/btree/btree_global_indexer.h"
+#include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
@@ -31,7 +31,7 @@
 namespace paimon::test {
 
 class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
-public:
+ public:
     FakeGlobalIndexFileWriter(const std::shared_ptr<FileSystem>& fs, const std::string& base_path)
         : fs_(fs), base_path_(base_path), file_counter_(0) {}
 
@@ -39,57 +39,58 @@ public:
         return prefix + "_" + std::to_string(file_counter_++);
     }
 
-    Result<std::unique_ptr<OutputStream>> NewOutputStream(const std::string& file_name) const override {
-        return fs_->CreateOutputStream(base_path_ + "/" + file_name);
+    Result<std::unique_ptr<OutputStream>> NewOutputStream(
+        const std::string& file_name) const override {
+        return fs_->Create(base_path_ + "/" + file_name, true);
     }
 
     Result<int64_t> GetFileSize(const std::string& file_name) const override {
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(base_path_ + "/" + file_name));
-        return file_status->Length();
+        return static_cast<int64_t>(file_status->GetLen());
     }
 
     std::string ToPath(const std::string& file_name) const override {
         return base_path_ + "/" + file_name;
     }
 
-private:
+ private:
     std::shared_ptr<FileSystem> fs_;
     std::string base_path_;
     mutable int64_t file_counter_;
 };
 
 class FakeGlobalIndexFileReader : public GlobalIndexFileReader {
-public:
+ public:
     FakeGlobalIndexFileReader(const std::shared_ptr<FileSystem>& fs, const std::string& base_path)
         : fs_(fs), base_path_(base_path) {}
 
-    Result<std::unique_ptr<InputStream>> GetInputStream(const std::string& file_path) const override {
-        return fs_->OpenInputStream(file_path);
+    Result<std::unique_ptr<InputStream>> GetInputStream(
+        const std::string& file_path) const override {
+        return fs_->Open(file_path);
     }
 
-private:
+ private:
     std::shared_ptr<FileSystem> fs_;
     std::string base_path_;
 };
 
 class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
-protected:
+ protected:
     void SetUp() override {
         pool_ = GetDefaultPool();
         test_dir_ = UniqueTestDirectory::Create("local");
-        ASSERT_OK(test_dir_.status());
         fs_ = test_dir_->GetFileSystem();
         base_path_ = test_dir_->Str();
     }
 
-    void TearDown() override { test_dir_->Delete(); }
+    void TearDown() override {}
 
     // Helper to create ArrowSchema from arrow type
-    Result<ArrowSchema*> CreateArrowSchema(const std::shared_ptr<arrow::DataType>& type,
-                                           const std::string& field_name) {
+    std::unique_ptr<ArrowSchema> CreateArrowSchema(const std::shared_ptr<arrow::DataType>& type,
+                                                   const std::string& field_name) {
         auto schema = arrow::schema({arrow::field(field_name, type)});
-        ArrowSchema* c_schema;
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &c_schema));
+        auto c_schema = std::make_unique<ArrowSchema>();
+        EXPECT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
         return c_schema;
     }
 
@@ -99,7 +100,7 @@ protected:
         if (!iterator_result.ok()) {
             return false;
         }
-        auto iterator = iterator_result.value();
+        auto iterator = std::move(iterator_result).value();
         while (iterator->HasNext()) {
             if (iterator->Next() == row_id) {
                 return true;
@@ -109,7 +110,7 @@ protected:
     }
 
     std::shared_ptr<MemoryPool> pool_;
-    Result<std::unique_ptr<UniqueTestDirectory>> test_dir_;
+    std::unique_ptr<UniqueTestDirectory> test_dir_;
     std::shared_ptr<FileSystem> fs_;
     std::string base_path_;
 };
@@ -118,20 +119,24 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     // Create file writer
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
 
+    // Create ArrowSchema
+    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
+
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with int values
     // Row IDs: 0->1, 1->2, 2->3, 3->2, 4->1, 5->4, 6->5, 7->5, 8->5
-    auto json_array = arrow::ipc::internal::json::ArrayFromJSON(
-        arrow::int32(), "[1, 2, 3, 2, 1, 4, 5, 5, 5]");
-    ASSERT_OK(json_array.status());
+    auto array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 2, 1, 4, 5, 5, 5]")
+            .ValueOrDie();
 
-    ArrowArray* c_array;
-    ASSERT_OK_FROM_ARROW(arrow::ExportArray(*json_array, &c_array));
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
     // Add batch
-    ASSERT_OK(writer->AddBatch(c_array));
+    ASSERT_OK(writer->AddBatch(&c_array));
 
     // Finish writing
     auto result = writer->Finish();
@@ -140,20 +145,18 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     ASSERT_EQ(metas.size(), 1);
 
     // Release ArrowArray
-    ArrowArrayRelease(c_array);
+    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // Create ArrowSchema
-    auto schema_result = CreateArrowSchema(arrow::int32(), "int_field");
-    ASSERT_OK(schema_result.status());
-    ArrowSchema* c_schema = schema_result.value();
+    // Create a new ArrowSchema for reading (the original was consumed by the writer)
+    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create reader
-    auto reader_result = indexer.CreateReader(c_schema, file_reader, metas, pool_);
+    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
     ASSERT_OK(reader_result.status());
     auto reader = reader_result.value();
 
@@ -174,26 +177,31 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     EXPECT_TRUE(ContainsRowId(equal_result_5.value(), 8));
 
     // Release ArrowSchema
-    ArrowSchemaRelease(c_schema);
+    ArrowSchemaRelease(c_schema.get());
+    ArrowSchemaRelease(c_schema_read.get());
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     // Create file writer
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
 
+    // Create ArrowSchema
+    auto c_schema = CreateArrowSchema(arrow::utf8(), "string_field");
+
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", c_schema.get(),
+                                                           file_writer, pool_);
 
     // Create an Arrow array with string values
-    auto json_array = arrow::ipc::internal::json::ArrayFromJSON(
-        arrow::utf8(), R"(["apple", "banana", "cherry", "apple", "banana"])");
-    ASSERT_OK(json_array.status());
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(
+                     arrow::utf8(), R"(["apple", "banana", "cherry", "apple", "banana"])")
+                     .ValueOrDie();
 
-    ArrowArray* c_array;
-    ASSERT_OK_FROM_ARROW(arrow::ExportArray(*json_array, &c_array));
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
     // Add batch
-    ASSERT_OK(writer->AddBatch(c_array));
+    ASSERT_OK(writer->AddBatch(&c_array));
 
     // Finish writing
     auto result = writer->Finish();
@@ -202,20 +210,18 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     ASSERT_EQ(metas.size(), 1);
 
     // Release ArrowArray
-    ArrowArrayRelease(c_array);
+    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // Create ArrowSchema
-    auto schema_result = CreateArrowSchema(arrow::utf8(), "string_field");
-    ASSERT_OK(schema_result.status());
-    ArrowSchema* c_schema = schema_result.value();
+    // Create a new ArrowSchema for reading (the original was consumed by the writer)
+    auto c_schema_read = CreateArrowSchema(arrow::utf8(), "string_field");
 
     // Create reader
-    auto reader_result = indexer.CreateReader(c_schema, file_reader, metas, pool_);
+    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
     ASSERT_OK(reader_result.status());
     auto reader = reader_result.value();
 
@@ -227,27 +233,31 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     EXPECT_TRUE(ContainsRowId(equal_result.value(), 3));
 
     // Release ArrowSchema
-    ArrowSchemaRelease(c_schema);
+    ArrowSchemaRelease(c_schema.get());
+    ArrowSchemaRelease(c_schema_read.get());
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadWithNulls) {
     // Create file writer
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
 
+    // Create ArrowSchema
+    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
+
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with null values
     // Row IDs: 0->1, 1->null, 2->3, 3->null, 4->5
-    auto json_array = arrow::ipc::internal::json::ArrayFromJSON(
-        arrow::int32(), "[1, null, 3, null, 5]");
-    ASSERT_OK(json_array.status());
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, null, 3, null, 5]")
+                     .ValueOrDie();
 
-    ArrowArray* c_array;
-    ASSERT_OK_FROM_ARROW(arrow::ExportArray(*json_array, &c_array));
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
     // Add batch
-    ASSERT_OK(writer->AddBatch(c_array));
+    ASSERT_OK(writer->AddBatch(&c_array));
 
     // Finish writing
     auto result = writer->Finish();
@@ -256,20 +266,18 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadWithNulls) {
     ASSERT_EQ(metas.size(), 1);
 
     // Release ArrowArray
-    ArrowArrayRelease(c_array);
+    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // Create ArrowSchema
-    auto schema_result = CreateArrowSchema(arrow::int32(), "int_field");
-    ASSERT_OK(schema_result.status());
-    ArrowSchema* c_schema = schema_result.value();
+    // Create a new ArrowSchema for reading (the original was consumed by the writer)
+    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create reader
-    auto reader_result = indexer.CreateReader(c_schema, file_reader, metas, pool_);
+    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
     ASSERT_OK(reader_result.status());
     auto reader = reader_result.value();
 
@@ -289,26 +297,30 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadWithNulls) {
     EXPECT_FALSE(ContainsRowId(is_not_null_result.value(), 1));
 
     // Release ArrowSchema
-    ArrowSchemaRelease(c_schema);
+    ArrowSchemaRelease(c_schema.get());
+    ArrowSchemaRelease(c_schema_read.get());
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadRangeQuery) {
     // Create file writer
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
 
+    // Create ArrowSchema
+    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
+
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with int values
-    auto json_array = arrow::ipc::internal::json::ArrayFromJSON(
-        arrow::int32(), "[1, 2, 3, 4, 5]");
-    ASSERT_OK(json_array.status());
+    auto array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 4, 5]").ValueOrDie();
 
-    ArrowArray* c_array;
-    ASSERT_OK_FROM_ARROW(arrow::ExportArray(*json_array, &c_array));
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
     // Add batch
-    ASSERT_OK(writer->AddBatch(c_array));
+    ASSERT_OK(writer->AddBatch(&c_array));
 
     // Finish writing
     auto result = writer->Finish();
@@ -316,20 +328,18 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadRangeQuery) {
     auto metas = result.value();
 
     // Release ArrowArray
-    ArrowArrayRelease(c_array);
+    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // Create ArrowSchema
-    auto schema_result = CreateArrowSchema(arrow::int32(), "int_field");
-    ASSERT_OK(schema_result.status());
-    ArrowSchema* c_schema = schema_result.value();
+    // Create a new ArrowSchema for reading (the original was consumed by the writer)
+    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create reader
-    auto reader_result = indexer.CreateReader(c_schema, file_reader, metas, pool_);
+    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
     ASSERT_OK(reader_result.status());
     auto reader = reader_result.value();
 
@@ -350,26 +360,30 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadRangeQuery) {
     EXPECT_FALSE(ContainsRowId(gte_result.value(), 1));
 
     // Release ArrowSchema
-    ArrowSchemaRelease(c_schema);
+    ArrowSchemaRelease(c_schema.get());
+    ArrowSchemaRelease(c_schema_read.get());
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadInQuery) {
     // Create file writer
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
 
+    // Create ArrowSchema
+    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
+
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", file_writer, pool_);
+    auto writer =
+        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
 
     // Create an Arrow array with int values
-    auto json_array = arrow::ipc::internal::json::ArrayFromJSON(
-        arrow::int32(), "[1, 2, 3, 4, 5]");
-    ASSERT_OK(json_array.status());
+    auto array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 4, 5]").ValueOrDie();
 
-    ArrowArray* c_array;
-    ASSERT_OK_FROM_ARROW(arrow::ExportArray(*json_array, &c_array));
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
     // Add batch
-    ASSERT_OK(writer->AddBatch(c_array));
+    ASSERT_OK(writer->AddBatch(&c_array));
 
     // Finish writing
     auto result = writer->Finish();
@@ -377,29 +391,25 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadInQuery) {
     auto metas = result.value();
 
     // Release ArrowArray
-    ArrowArrayRelease(c_array);
+    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // Create ArrowSchema
-    auto schema_result = CreateArrowSchema(arrow::int32(), "int_field");
-    ASSERT_OK(schema_result.status());
-    ArrowSchema* c_schema = schema_result.value();
+    // Create a new ArrowSchema for reading (the original was consumed by the writer)
+    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create reader
-    auto reader_result = indexer.CreateReader(c_schema, file_reader, metas, pool_);
+    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
     ASSERT_OK(reader_result.status());
     auto reader = reader_result.value();
 
     // Test VisitIn for values 1, 3, 5 (should return row IDs 0, 2, 4)
-    std::vector<Literal> in_literals = {
-        Literal(static_cast<int32_t>(1)),
-        Literal(static_cast<int32_t>(3)),
-        Literal(static_cast<int32_t>(5))
-    };
+    std::vector<Literal> in_literals = {Literal(static_cast<int32_t>(1)),
+                                        Literal(static_cast<int32_t>(3)),
+                                        Literal(static_cast<int32_t>(5))};
     auto in_result = reader->VisitIn(in_literals);
     ASSERT_OK(in_result.status());
     EXPECT_TRUE(ContainsRowId(in_result.value(), 0));
@@ -409,7 +419,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadInQuery) {
     EXPECT_FALSE(ContainsRowId(in_result.value(), 3));
 
     // Release ArrowSchema
-    ArrowSchemaRelease(c_schema);
+    ArrowSchemaRelease(c_schema.get());
+    ArrowSchemaRelease(c_schema_read.get());
 }
 
 }  // namespace paimon::test

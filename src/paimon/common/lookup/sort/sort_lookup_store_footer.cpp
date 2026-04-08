@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-#include "paimon/common/sst/block_footer.h"
+#include "paimon/common/lookup/sort/sort_lookup_store_footer.h"
 
 #include "paimon/common/memory/memory_slice_output.h"
 
 namespace paimon {
 
-Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(MemorySliceInput* input) {
+Result<std::unique_ptr<SortLookupStoreFooter>> SortLookupStoreFooter::ReadSortLookupStoreFooter(
+    MemorySliceInput* input) {
     auto offset = input->ReadLong();
     auto size = input->ReadInt();
     auto expected_entries = input->ReadLong();
@@ -37,10 +38,10 @@ Result<std::unique_ptr<BlockFooter>> BlockFooter::ReadBlockFooter(MemorySliceInp
         return Status::IOError(
             fmt::format("Expected magic number {}, but got {}", MAGIC_NUMBER, magic));
     }
-    return std::make_unique<BlockFooter>(index_block_handle, bloom_filter_handle);
+    return std::make_unique<SortLookupStoreFooter>(index_block_handle, bloom_filter_handle);
 }
 
-MemorySlice BlockFooter::WriteBlockFooter(MemoryPool* pool) {
+MemorySlice SortLookupStoreFooter::WriteSortLookupStoreFooter(MemoryPool* pool) {
     MemorySliceOutput output(ENCODED_LENGTH, pool);
     // 20 bytes
     if (!bloom_filter_handle_.get()) {

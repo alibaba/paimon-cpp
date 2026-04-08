@@ -18,8 +18,10 @@
 
 #include <arrow/c/bridge.h>
 
-#include <unordered_map>
+#include <map>
 
+#include "paimon/common/compression/block_compression_factory.h"
+#include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
@@ -29,11 +31,9 @@
 namespace paimon {
 
 BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
-    const std::string& field_name,
+    const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-    const std::shared_ptr<MemoryPool>& pool,
-    int32_t block_size,
-    int64_t expected_entries)
+    const std::shared_ptr<MemoryPool>& pool, int32_t block_size, int64_t expected_entries)
     : field_name_(field_name),
       file_writer_(file_writer),
       pool_(pool),
@@ -42,27 +42,72 @@ BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
       null_bitmap_(std::make_shared<RoaringNavigableMap64>()),
       has_nulls_(false),
       current_row_id_(0),
-      bloom_filter_(std::make_shared<BloomFilter>(expected_entries, 0.01)) {}
+      bloom_filter_(BloomFilter::Create(expected_entries, 0.01)) {
+    // Allocate memory for bloom filter and set memory segment
+    if (bloom_filter_) {
+        int64_t bloom_filter_size = bloom_filter_->ByteLength();
+        auto bloom_filter_segment =
+            MemorySegment::AllocateHeapMemory(bloom_filter_size, pool.get());
+        auto status = bloom_filter_->SetMemorySegment(bloom_filter_segment);
+        if (!status.ok()) {
+            // Failed to set memory segment for bloom filter
+        }
+    }
+
+    // Import schema to get the field type
+    if (arrow_schema) {
+        auto schema_result = arrow::ImportSchema(arrow_schema);
+        if (schema_result.ok()) {
+            auto schema = schema_result.ValueOrDie();
+            if (schema->num_fields() > 0) {
+                arrow_type_ = schema->field(0)->type();
+            }
+        }
+    }
+}
 
 Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     if (!arrow_array) {
         return Status::Invalid("ArrowArray is null");
     }
 
-    // Import Arrow array
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
-                                      arrow::ImportArray(arrow_array, arrow::null()));
+    if (!arrow_type_) {
+        return Status::Invalid(
+            "Arrow type is not set. Please provide a valid ArrowSchema in constructor.");
+    }
+
+    // Import Arrow array with the correct type
+    auto import_result = arrow::ImportArray(arrow_array, arrow_type_);
+    if (!import_result.ok()) {
+        return Status::Invalid("Failed to import array: " + import_result.status().ToString());
+    }
+    auto array = import_result.ValueOrDie();
 
     // Initialize SST writer on first batch
     if (!sst_writer_) {
-        PAIMON_ASSIGN_OR_RAISE(file_name_, file_writer_->NewFileName(field_name_));
+        auto file_name_result = file_writer_->NewFileName(field_name_);
+        if (!file_name_result.ok()) {
+            return file_name_result.status();
+        }
+        file_name_ = file_name_result.value();
+
         PAIMON_ASSIGN_OR_RAISE(output_stream_, file_writer_->NewOutputStream(file_name_));
+
+        PAIMON_ASSIGN_OR_RAISE(auto compression_factory,
+                               BlockCompressionFactory::Create(BlockCompressionType::NONE));
+
         sst_writer_ = std::make_unique<SstFileWriter>(output_stream_, pool_, bloom_filter_,
-                                                       block_size_, nullptr);
+                                                      block_size_, compression_factory);
     }
 
     // Group row IDs by key value
-    std::unordered_map<std::string, std::vector<int64_t>> key_to_row_ids;
+    // Use std::map with custom comparator for binary keys
+    // Keys are stored in binary format to match Java's serialization
+    std::map<std::shared_ptr<Bytes>, std::vector<int64_t>,
+             std::function<bool(const std::shared_ptr<Bytes>&, const std::shared_ptr<Bytes>&)>>
+        key_to_row_ids([this](const std::shared_ptr<Bytes>& a, const std::shared_ptr<Bytes>& b) {
+            return CompareBinaryKeys(a, b) < 0;
+        });
 
     // Process each element in the array
     for (int64_t i = 0; i < array->length(); ++i) {
@@ -75,53 +120,76 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
             continue;
         }
 
-        // Convert array element to string key
-        // For simplicity, we use string representation for all types
-        // TODO: Support type-specific serialization for better comparison
-        std::string key_str;
+        // Convert array element to binary key
+        // Use type-specific binary serialization to match Java format
+        std::shared_ptr<Bytes> key_bytes;
 
-        // Get the value as string based on array type
+        // Get the value as binary based on array type
         auto type_id = array->type_id();
+
         switch (type_id) {
             case arrow::Type::STRING:
             case arrow::Type::BINARY: {
                 auto str_array = std::static_pointer_cast<arrow::StringArray>(array);
-                key_str = std::string(str_array->GetView(i));
+                auto view = str_array->GetView(i);
+                key_bytes = Bytes::AllocateBytes(view.size(), pool_.get());
+                memcpy(key_bytes->data(), view.data(), view.size());
                 break;
             }
             case arrow::Type::INT32: {
                 auto int_array = std::static_pointer_cast<arrow::Int32Array>(array);
-                key_str = std::to_string(int_array->Value(i));
+                int32_t value = int_array->Value(i);
+                // Store as 4-byte little-endian to match Java's DataOutputStream.writeInt
+                key_bytes = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(int32_t));
                 break;
             }
             case arrow::Type::INT64: {
                 auto int_array = std::static_pointer_cast<arrow::Int64Array>(array);
-                key_str = std::to_string(int_array->Value(i));
+                int64_t value = int_array->Value(i);
+                // Store as 8-byte little-endian to match Java's DataOutputStream.writeLong
+                key_bytes = std::make_shared<Bytes>(sizeof(int64_t), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(int64_t));
                 break;
             }
             case arrow::Type::FLOAT: {
                 auto float_array = std::static_pointer_cast<arrow::FloatArray>(array);
-                key_str = std::to_string(float_array->Value(i));
+                float value = float_array->Value(i);
+                // Store as 4-byte IEEE 754 to match Java's DataOutputStream.writeFloat
+                key_bytes = std::make_shared<Bytes>(sizeof(float), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(float));
                 break;
             }
             case arrow::Type::DOUBLE: {
                 auto double_array = std::static_pointer_cast<arrow::DoubleArray>(array);
-                key_str = std::to_string(double_array->Value(i));
+                double value = double_array->Value(i);
+                // Store as 8-byte IEEE 754 to match Java's DataOutputStream.writeDouble
+                key_bytes = std::make_shared<Bytes>(sizeof(double), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(double));
                 break;
             }
             case arrow::Type::BOOL: {
                 auto bool_array = std::static_pointer_cast<arrow::BooleanArray>(array);
-                key_str = bool_array->Value(i) ? "1" : "0";
+                bool value = bool_array->Value(i);
+                // Store as single byte (0 or 1)
+                key_bytes = std::make_shared<Bytes>(1, pool_.get());
+                key_bytes->data()[0] = value ? 1 : 0;
                 break;
             }
             case arrow::Type::DATE32: {
                 auto date_array = std::static_pointer_cast<arrow::Date32Array>(array);
-                key_str = std::to_string(date_array->Value(i));
+                int32_t value = date_array->Value(i);
+                // Store as 4-byte little-endian
+                key_bytes = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(int32_t));
                 break;
             }
             case arrow::Type::TIMESTAMP: {
                 auto ts_array = std::static_pointer_cast<arrow::TimestampArray>(array);
-                key_str = std::to_string(ts_array->Value(i));
+                int64_t value = ts_array->Value(i);
+                // Store as 8-byte little-endian
+                key_bytes = std::make_shared<Bytes>(sizeof(int64_t), pool_.get());
+                memcpy(key_bytes->data(), &value, sizeof(int64_t));
                 break;
             }
             default:
@@ -129,48 +197,57 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
                                               array->type()->ToString());
         }
 
-        key_to_row_ids[key_str].push_back(row_id);
+        key_to_row_ids[key_bytes].push_back(row_id);
     }
 
     // Write each key and its row IDs to the SST file
-    for (const auto& [key_str, row_ids] : key_to_row_ids) {
-        auto key_bytes = Bytes::AllocateBytes(key_str, pool_.get());
-        auto key = std::shared_ptr<Bytes>(key_bytes.release());
-
+    for (const auto& [key_bytes, row_ids] : key_to_row_ids) {
         // Track first and last keys
         if (!first_key_) {
-            first_key_ = key;
+            first_key_ = key_bytes;
         }
-        last_key_ = key;
+        last_key_ = key_bytes;
 
         // Write key-value pair
-        PAIMON_RETURN_NOT_OK(WriteKeyValue(key, row_ids));
+        PAIMON_RETURN_NOT_OK(WriteKeyValue(key_bytes, row_ids));
     }
 
     current_row_id_ += array->length();
     return Status::OK();
 }
 
-Status BTreeGlobalIndexWriter::WriteKeyValue(const std::shared_ptr<Bytes>& key,
-                                              const std::vector<int64_t>& row_ids) {
+Status BTreeGlobalIndexWriter::WriteKeyValue(std::shared_ptr<Bytes> key,
+                                             const std::vector<int64_t>& row_ids) {
     auto value = SerializeRowIds(row_ids);
-    // Copy key since we can't move from a const reference
-    auto key_copy = key;
-    return sst_writer_->Write(std::move(key_copy), std::move(value));
+
+    return sst_writer_->Write(std::move(key), std::move(value));
 }
 
-std::shared_ptr<Bytes> BTreeGlobalIndexWriter::SerializeRowIds(const std::vector<int64_t>& row_ids) {
-    // Format: [num_row_ids (varint)][row_id1 (int64)][row_id2]...
-    int32_t estimated_size = 10 + row_ids.size() * 8;  // Conservative estimate
+std::shared_ptr<Bytes> BTreeGlobalIndexWriter::SerializeRowIds(
+    const std::vector<int64_t>& row_ids) {
+    // Format: [num_row_ids (VarLenLong)][row_id1 (VarLenLong)][row_id2]...
+    // Use VarLenLong for row IDs to match Java's DataOutputStream.writeVarLong
+    int32_t estimated_size = 10 + row_ids.size() * 10;  // Conservative estimate
     auto output = std::make_shared<MemorySliceOutput>(estimated_size, pool_.get());
 
     output->WriteVarLenLong(static_cast<int64_t>(row_ids.size()));
     for (int64_t row_id : row_ids) {
-        output->WriteValue(row_id);
+        output->WriteVarLenLong(row_id);
     }
 
     auto slice = output->ToSlice();
-    return slice->CopyBytes(pool_.get());
+    return slice.CopyBytes(pool_.get());
+}
+
+int32_t BTreeGlobalIndexWriter::CompareBinaryKeys(const std::shared_ptr<Bytes>& a,
+                                                  const std::shared_ptr<Bytes>& b) const {
+    if (!a || !b) return 0;
+    size_t min_len = std::min(a->size(), b->size());
+    int cmp = memcmp(a->data(), b->data(), min_len);
+    if (cmp != 0) return cmp < 0 ? -1 : 1;
+    if (a->size() < b->size()) return -1;
+    if (a->size() > b->size()) return 1;
+    return 0;
 }
 
 Result<std::shared_ptr<BlockHandle>> BTreeGlobalIndexWriter::WriteNullBitmap(
@@ -189,12 +266,12 @@ Result<std::shared_ptr<BlockHandle>> BTreeGlobalIndexWriter::WriteNullBitmap(
     PAIMON_ASSIGN_OR_RAISE(int64_t offset, out->GetPos());
 
     // Write bitmap data
-    PAIMON_RETURN_NOT_OK(out->Write(reinterpret_cast<const char*>(bitmap_data.data()),
-                                    bitmap_data.size()));
+    PAIMON_RETURN_NOT_OK(
+        out->Write(reinterpret_cast<const char*>(bitmap_data.data()), bitmap_data.size()));
 
     // Calculate and write CRC32C
-    uint32_t crc = CRC32C::calculate(reinterpret_cast<const char*>(bitmap_data.data()),
-                                     bitmap_data.size());
+    uint32_t crc =
+        CRC32C::calculate(reinterpret_cast<const char*>(bitmap_data.data()), bitmap_data.size());
     PAIMON_RETURN_NOT_OK(out->Write(reinterpret_cast<const char*>(&crc), sizeof(crc)));
 
     return std::make_shared<BlockHandle>(offset, bitmap_data.size());
@@ -219,10 +296,10 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     PAIMON_ASSIGN_OR_RAISE(auto null_bitmap_handle, WriteNullBitmap(output_stream_));
 
     // Write BTree file footer
-    auto footer = std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle,
-                                                     null_bitmap_handle);
+    auto footer = std::make_shared<BTreeFileFooter>(
+        bloom_filter_handle, std::make_shared<BlockHandle>(index_block_handle), null_bitmap_handle);
     auto footer_slice = BTreeFileFooter::Write(footer, pool_.get());
-    auto footer_bytes = footer_slice->CopyBytes(pool_.get());
+    auto footer_bytes = footer_slice.CopyBytes(pool_.get());
     PAIMON_RETURN_NOT_OK(output_stream_->Write(footer_bytes->data(), footer_bytes->size()));
 
     // Close the output stream

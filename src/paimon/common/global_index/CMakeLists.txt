@@ -31,11 +31,13 @@ add_paimon_lib(paimon_global_index
                paimon_file_index_shared
                STATIC_LINK_LIBS
                arrow
+               glog
                fmt
                dl
                Threads::Threads
                SHARED_LINK_LIBS
                paimon_shared
                paimon_file_index_shared
+               paimon_static
                SHARED_LINK_FLAGS
                ${PAIMON_VERSION_SCRIPT_FLAGS})

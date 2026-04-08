@@ -27,6 +27,7 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/lookup/sort/sort_lookup_store_footer.h"
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/common/sst/sst_file_writer.h"
 #include "paimon/common/utils/scope_guard.h"
@@ -118,7 +119,9 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     ASSERT_OK_AND_ASSIGN(auto bloom_filter_handle, writer->WriteBloomFilter());
     ASSERT_OK_AND_ASSIGN(auto index_block_handle, writer->WriteIndexBlock());
-    ASSERT_OK(writer->WriteFooter(index_block_handle, bloom_filter_handle));
+    SortLookupStoreFooter footer(index_block_handle, bloom_filter_handle);
+    auto slice = footer.WriteSortLookupStoreFooter(pool_.get());
+    ASSERT_OK(writer->WriteSlice(slice));
 
     ASSERT_OK(out->Flush());
     ASSERT_OK(out->Close());
@@ -140,7 +143,18 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     // test read
     ASSERT_OK_AND_ASSIGN(in, fs_->Open(index_path));
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
+    ASSERT_OK_AND_ASSIGN(uint64_t file_len, in->Length());
+    ASSERT_OK(in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
+    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
+    ASSERT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
+    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
+    auto footer_slice = MemorySlice::Wrap(footer_segment);
+    auto footer_input = footer_slice.ToInput();
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortLookupStoreFooter> read_footer,
+                         SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
+                                               read_footer->GetBloomFilterHandle(), comparator_));
 
     // not exist key
     std::string k0 = "k0";
@@ -174,8 +188,21 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     auto block_cache =
         std::make_shared<BlockCache>(file, in, pool_, std::make_unique<CacheManager>());
 
+    // read footer
+    ASSERT_OK_AND_ASSIGN(uint64_t file_len, in->Length());
+    ASSERT_OK(in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
+    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
+    ASSERT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
+    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
+    auto footer_slice = MemorySlice::Wrap(footer_segment);
+    auto footer_input = footer_slice.ToInput();
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortLookupStoreFooter> read_footer,
+                         SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
+
     // test read
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::Create(pool_, in, comparator_));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
+                                               read_footer->GetBloomFilterHandle(), comparator_));
     // not exist key
     std::string k0 = "10000";
     ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
@@ -253,9 +280,10 @@ TEST_F(SstFileIOTest, TestIOException) {
         CHECK_HOOK_STATUS(bloom_filter_handle_result.status(), i);
         auto index_block_handle_result = writer->WriteIndexBlock();
         CHECK_HOOK_STATUS(index_block_handle_result.status(), i);
-        CHECK_HOOK_STATUS(writer->WriteFooter(index_block_handle_result.value(),
-                                              bloom_filter_handle_result.value()),
-                          i);
+        SortLookupStoreFooter test_footer(index_block_handle_result.value(),
+                                          bloom_filter_handle_result.value());
+        auto test_slice = test_footer.WriteSortLookupStoreFooter(pool_.get());
+        CHECK_HOOK_STATUS(writer->WriteSlice(test_slice), i);
 
         CHECK_HOOK_STATUS(out->Flush(), i);
         CHECK_HOOK_STATUS(out->Close(), i);
@@ -265,7 +293,25 @@ TEST_F(SstFileIOTest, TestIOException) {
         CHECK_HOOK_STATUS(in_result.status(), i);
         std::shared_ptr<InputStream> in = std::move(in_result).value();
 
-        auto reader_result = SstFileReader::Create(pool_, in, comparator_);
+        auto file_len_result = in->Length();
+        CHECK_HOOK_STATUS(file_len_result.status(), i);
+        uint64_t file_len = file_len_result.value();
+
+        CHECK_HOOK_STATUS(
+            in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET), i);
+        auto footer_bytes =
+            Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
+        auto read_result = in->Read(footer_bytes->data(), footer_bytes->size());
+        CHECK_HOOK_STATUS(read_result.status(), i);
+        auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
+        auto footer_slice = MemorySlice::Wrap(footer_segment);
+        auto footer_input = footer_slice.ToInput();
+        auto read_footer_result = SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input);
+        CHECK_HOOK_STATUS(read_footer_result.status(), i);
+
+        auto reader_result =
+            SstFileReader::Create(pool_, in, read_footer_result.value()->GetIndexBlockHandle(),
+                                  read_footer_result.value()->GetBloomFilterHandle(), comparator_);
         CHECK_HOOK_STATUS(reader_result.status(), i);
         std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
 
