@@ -19,7 +19,7 @@
 #include <functional>
 #include <list>
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -73,7 +73,7 @@ class LruCache : public Cache {
     int64_t current_weight_;
     LruList lru_list_;
     LruMap lru_map_;
-    mutable std::mutex mutex_;
+    mutable std::shared_mutex mutex_;
 };
 
 }  // namespace paimon

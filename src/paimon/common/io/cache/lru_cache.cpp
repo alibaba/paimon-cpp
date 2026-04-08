@@ -24,8 +24,7 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
     const std::shared_ptr<CacheKey>& key,
     std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)> supplier) {
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-
+        std::unique_lock<std::shared_mutex> write_lock(mutex_);
         auto it = lru_map_.find(key);
         if (it != lru_map_.end()) {
             // Cache hit: move to front of LRU list (most recently used)
@@ -33,10 +32,10 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
             return it->second->second;
         }
     }
-    // Cache miss: load via supplier
+    // Cache miss: load via supplier (outside lock)
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
 
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::shared_mutex> write_lock(mutex_);
     auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
         // Another thread inserted the key while we were loading it
@@ -55,7 +54,10 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
 }
 
 void LruCache::Put(const std::shared_ptr<CacheKey>& key, const std::shared_ptr<CacheValue>& value) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    if (GetWeight(value) > max_weight_) {
+        return;
+    }
+    std::unique_lock<std::shared_mutex> write_lock(mutex_);
 
     auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
@@ -75,7 +77,7 @@ void LruCache::Put(const std::shared_ptr<CacheKey>& key, const std::shared_ptr<C
 }
 
 void LruCache::Invalidate(const std::shared_ptr<CacheKey>& key) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::shared_mutex> write_lock(mutex_);
 
     auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
@@ -92,7 +94,7 @@ void LruCache::Invalidate(const std::shared_ptr<CacheKey>& key) {
 }
 
 void LruCache::InvalidateAll() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::unique_lock<std::shared_mutex> write_lock(mutex_);
 
     while (!lru_list_.empty()) {
         auto invalidated_key = lru_list_.back().first;
@@ -109,12 +111,12 @@ void LruCache::InvalidateAll() {
 }
 
 size_t LruCache::Size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> read_lock(mutex_);
     return lru_map_.size();
 }
 
 int64_t LruCache::GetCurrentWeight() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::shared_lock<std::shared_mutex> read_lock(mutex_);
     return current_weight_;
 }
 
