@@ -19,6 +19,7 @@ Builder parameters only take effect during index build.
 
 ### Main Parameters
 
+These keys belong to `api::BuilderOptions`.
 
 | Key | Type | Effect |
 | --- | --- | --- |
@@ -33,7 +34,7 @@ Builder parameters only take effect during index build.
 ### In-Memory Quantization Parameters
 
 In-memory quantization is a generic configuration and is not specific to DiskANN. For more detailed parameter
-configuration, see [Quantization Parameters and Tuning](QuantizationParameters.md). The DiskANN-specific behavior is
+configuration, see [Quantization Parameters and Tuning](./QuantizationParameters.md). The DiskANN-specific behavior is
 that in-memory quantization must always be enabled. If `encoding.type` is not set, DiskANN defaults to `pq`.
 
 ### Disk Quantization Parameters
@@ -71,6 +72,7 @@ Current behavior:
 
 Searcher parameters affect all queries handled by the same searcher.
 
+These keys belong to `api::SearcherOptions`.
 
 | Key | Type | Effect |
 | --- | --- | --- |
@@ -92,6 +94,7 @@ Current aligned-read behavior:
 
 Query parameters only affect a single query.
 
+These keys belong to `api::SearchOptions`.
 
 | Key | Type | Effect |
 | --- | --- | --- |
@@ -138,4 +141,4 @@ Query parameters only affect a single query.
 
 ## Status
 
-v0.2.0 Release Tag (2026-04-01).
+v0.2.1 Release Tag (2026-04-07).

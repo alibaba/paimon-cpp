@@ -19,6 +19,8 @@ Builder parameters only take effect during index build.
 
 ### Main Quantization Parameters
 
+These keys belong to `api::BuilderOptions`.
+
 | Key | Type | Effect |
 | --- | --- | --- |
 | `encoding.type` | `FieldType::kString` | Selects the quantization algorithm. Supported values are `rawf32`, `sq8`, `pq`, and `rabitq`. |
@@ -85,7 +87,8 @@ Current behavior:
   `rabitq` can usually reduce memory further, but they also come with stricter constraints and more tuning overhead.
   If you want a clear memory reduction without adding much complexity, `sq8` is usually the first option to try.
 - `Computation speed`: if distance evaluation on encoded vectors becomes the query-side bottleneck, consider `sq8`,
-  `pq`, or `rabitq`. Use your own workload measurements to compare encoded distance paths in practice.
+  `pq`, or `rabitq`. Benchmarks for different quantized distance paths are available under `test/impl/quantizer` for
+  reference.
 - `Build time`: if you care more about build speed and configuration simplicity, prefer `rawf32` or `sq8`.
   `encoding.pq.thread_count` and `encoding.rabitq.thread_count` mainly improve build throughput. Increasing
   `encoding.pq.max_epoch`, `encoding.rabitq.max_epoch`, and `encoding.rabitq.centroid_count` also increases build
@@ -109,4 +112,4 @@ Current behavior:
 
 ## Status
 
-v0.2.0 Release Tag (2026-04-01).
+v0.2.1 Release Tag (2026-04-07).
