@@ -216,7 +216,7 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"},
         {Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4,3:none"},
         {Options::LOOKUP_CACHE_MAX_MEMORY_SIZE, "1MB"},
-        {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"}
+        {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"},
         {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
         {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"}};
 
