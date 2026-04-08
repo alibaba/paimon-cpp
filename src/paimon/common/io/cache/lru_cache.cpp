@@ -32,6 +32,9 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
     }
     // Cache miss: load via supplier (outside lock)
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> value, supplier(key));
+    if (GetWeight(value) > max_weight_) {
+        return value;
+    }
 
     std::unique_lock<std::shared_mutex> write_lock(mutex_);
     // Another thread may have inserted the key while we were loading
@@ -40,13 +43,8 @@ Result<std::shared_ptr<CacheValue>> LruCache::Get(
         return cached.value();
     }
 
-    // Insert at front of LRU list
-    lru_list_.emplace_front(key, value);
-    lru_map_[key] = lru_list_.begin();
-    current_weight_ += GetWeight(value);
-
+    Insert(key, value);
     EvictIfNeeded();
-
     return value;
 }
 
@@ -64,10 +62,7 @@ void LruCache::Put(const std::shared_ptr<CacheKey>& key, const std::shared_ptr<C
         current_weight_ += GetWeight(value);
         lru_list_.splice(lru_list_.begin(), lru_list_, it->second);
     } else {
-        // Insert new entry
-        lru_list_.emplace_front(key, value);
-        lru_map_[key] = lru_list_.begin();
-        current_weight_ += GetWeight(value);
+        Insert(key, value);
     }
 
     EvictIfNeeded();
@@ -78,15 +73,7 @@ void LruCache::Invalidate(const std::shared_ptr<CacheKey>& key) {
 
     auto it = lru_map_.find(key);
     if (it != lru_map_.end()) {
-        auto invalidated_key = it->second->first;
-        auto invalidated_value = it->second->second;
-        current_weight_ -= GetWeight(invalidated_value);
-        lru_list_.erase(it->second);
-        lru_map_.erase(it);
-
-        if (invalidated_value) {
-            invalidated_value->OnEvict(invalidated_key);
-        }
+        RemoveEntry(it->second);
     }
 }
 
@@ -94,15 +81,7 @@ void LruCache::InvalidateAll() {
     std::unique_lock<std::shared_mutex> write_lock(mutex_);
 
     while (!lru_list_.empty()) {
-        auto invalidated_key = lru_list_.back().first;
-        auto invalidated_value = lru_list_.back().second;
-        current_weight_ -= GetWeight(invalidated_value);
-        lru_map_.erase(invalidated_key);
-        lru_list_.pop_back();
-
-        if (invalidated_value) {
-            invalidated_value->OnEvict(invalidated_key);
-        }
+        RemoveEntry(std::prev(lru_list_.end()));
     }
     current_weight_ = 0;
 }
@@ -131,20 +110,29 @@ std::optional<std::shared_ptr<CacheValue>> LruCache::FindAndPromote(
     return std::nullopt;
 }
 
+void LruCache::Insert(const std::shared_ptr<CacheKey>& key,
+                      const std::shared_ptr<CacheValue>& value) {
+    // Insert at front of LRU list
+    lru_list_.emplace_front(key, value);
+    lru_map_[key] = lru_list_.begin();
+    current_weight_ += GetWeight(value);
+}
+
+void LruCache::RemoveEntry(LruList::iterator list_it) {
+    auto entry_key = list_it->first;
+    auto entry_value = list_it->second;
+    current_weight_ -= GetWeight(entry_value);
+    lru_map_.erase(entry_key);
+    lru_list_.erase(list_it);
+
+    if (entry_value) {
+        entry_value->OnEvict(entry_key);
+    }
+}
+
 void LruCache::EvictIfNeeded() {
     while (current_weight_ > max_weight_ && !lru_list_.empty()) {
-        // Evict the least recently used entry (back of list)
-        auto evicted_key = lru_list_.back().first;
-        auto evicted_value = lru_list_.back().second;
-        current_weight_ -= GetWeight(evicted_value);
-        lru_map_.erase(evicted_key);
-        lru_list_.pop_back();
-
-        // Notify the upper layer (e.g. BlockCache) that this entry was evicted,
-        // so it can remove the entry from its local map and release memory.
-        if (evicted_value) {
-            evicted_value->OnEvict(evicted_key);
-        }
+        RemoveEntry(std::prev(lru_list_.end()));
     }
 }
 

@@ -68,6 +68,8 @@ class LruCache : public Cache {
                                       CacheKeyEqual>;
 
     std::optional<std::shared_ptr<CacheValue>> FindAndPromote(const std::shared_ptr<CacheKey>& key);
+    void Insert(const std::shared_ptr<CacheKey>& key, const std::shared_ptr<CacheValue>& value);
+    void RemoveEntry(LruList::iterator list_it);
 
     void EvictIfNeeded();
 
