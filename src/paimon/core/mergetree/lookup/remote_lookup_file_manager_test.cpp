@@ -171,7 +171,7 @@ class RemoteLookupFileManagerTest : public testing::Test {
             /*level_threshold=*/1, data_path_factory, fs_, pool_, lookup_levels);
     }
 
- protected:
+ private:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<arrow::Schema> arrow_schema_;
     std::shared_ptr<arrow::Schema> key_schema_;

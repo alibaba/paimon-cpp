@@ -267,12 +267,10 @@ class PkCompactionInteTest : public ::testing::Test,
         const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
         for (const auto& msg : commit_messages) {
             auto impl = dynamic_cast<CommitMessageImpl*>(msg.get());
-            if (impl) {
-                for (const auto& index_file : impl->GetCompactIncrement().NewIndexFiles()) {
-                    if (index_file->IndexType() ==
-                        DeletionVectorsIndexFile::DELETION_VECTORS_INDEX) {
-                        return true;
-                    }
+            EXPECT_TRUE(impl);
+            for (const auto& index_file : impl->GetCompactIncrement().NewIndexFiles()) {
+                if (index_file->IndexType() == DeletionVectorsIndexFile::DELETION_VECTORS_INDEX) {
+                    return true;
                 }
             }
         }
@@ -283,14 +281,20 @@ class PkCompactionInteTest : public ::testing::Test,
     bool HasExtraLookupFiles(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
         for (const auto& msg : commit_messages) {
             auto impl = dynamic_cast<CommitMessageImpl*>(msg.get());
-            if (impl) {
-                for (const auto& file : impl->GetCompactIncrement().CompactAfter()) {
-                    for (const auto& extra_file : file->extra_files) {
-                        if (extra_file && StringUtils::EndsWith(extra_file.value(), ".lookup")) {
-                            return true;
-                        }
-                    }
+            EXPECT_TRUE(impl);
+            for (const auto& file : impl->GetCompactIncrement().CompactAfter()) {
+                if (HasExtraLookupFiles(file)) {
+                    return true;
                 }
+            }
+        }
+        return false;
+    }
+
+    bool HasExtraLookupFiles(const std::shared_ptr<DataFileMeta>& file) {
+        for (const auto& extra_file : file->extra_files) {
+            if (extra_file && StringUtils::EndsWith(extra_file.value(), ".lookup")) {
+                return true;
             }
         }
         return false;
@@ -1096,6 +1100,7 @@ TEST_F(PkCompactionInteTest, CompactWithSchemaEvolution) {
         ASSERT_OK_AND_ASSIGN(write_msgs_p0, WriteArray(table_path, {{"key0", "0"}, {"key1", "1"}},
                                                        0, array, commit_id, /*is_streaming=*/true,
                                                        /*row_kinds=*/{}, /*write_only=*/false));
+        ASSERT_FALSE(HasExtraLookupFiles(write_msgs_p0));
         ASSERT_OK(Commit(table_path, write_msgs_p0));
         commit_id++;
     }
@@ -1112,6 +1117,7 @@ TEST_F(PkCompactionInteTest, CompactWithSchemaEvolution) {
         ASSERT_OK_AND_ASSIGN(write_msgs_p1, WriteArray(table_path, {{"key0", "1"}, {"key1", "1"}},
                                                        0, array, commit_id, /*is_streaming=*/true,
                                                        /*row_kinds=*/{}, /*write_only=*/false));
+        ASSERT_FALSE(HasExtraLookupFiles(write_msgs_p1));
         ASSERT_OK(Commit(table_path, write_msgs_p1));
         commit_id++;
     }

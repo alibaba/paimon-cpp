@@ -115,9 +115,8 @@ Result<CompactResult> ChangelogMergeTreeRewriter::RewriteOrProduceChangelog(
     if (rewrite_compact_file) {
         NotifyRewriteCompactBefore(before);
     }
-    write_guard.Release();
-
     PAIMON_ASSIGN_OR_RAISE(after, NotifyRewriteCompactAfter(after));
+    write_guard.Release();
     return CompactResult(before, after);
 }
 

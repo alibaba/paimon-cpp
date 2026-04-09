@@ -166,7 +166,9 @@ Status Levels::Update(const std::vector<std::shared_ptr<DataFileMeta>>& before,
             dropped_files.erase(file->file_name);
         }
         for (auto* callback : drop_file_callbacks_) {
-            assert(callback);
+            if (!callback) {
+                continue;
+            }
             for (const auto& file_name : dropped_files) {
                 callback->NotifyDropFile(file_name);
             }
