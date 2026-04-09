@@ -263,7 +263,7 @@ TEST_F(RemoteLookupFileManagerTest, TryToDownloadLargeFileAcrossMultipleBuffers)
 
     // Prepare a 2.3MB file (2.3 * 1024 * 1024 bytes) to test multi-buffer copy.
     // file_size is 1MB, so this requires 3 iterations: 1MB + 1MB + 0.3MB.
-    uint64_t file_size = static_cast<uint64_t>(2.3 * 1024 * 1024);
+    auto file_size = static_cast<uint64_t>(2.3 * 1024 * 1024);
 
     std::string remote_sst_name = "test_large_file.lookup";
     std::string remote_file_path = manager->RemoteSstPath(file0, remote_sst_name);
