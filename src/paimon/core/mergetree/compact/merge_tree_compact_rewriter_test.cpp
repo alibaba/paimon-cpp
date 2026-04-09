@@ -48,8 +48,8 @@ class MergeTreeCompactRewriterTest : public testing::Test {
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
         return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, dv_factory,
-                                                path_factory_cache, options, pool_,
-                                                cancellation_controller);
+                                                path_factory_cache, options,
+                                                cancellation_controller, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(

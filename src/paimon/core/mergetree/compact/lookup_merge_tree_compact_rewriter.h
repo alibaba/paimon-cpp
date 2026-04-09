@@ -36,9 +36,10 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         MergeFunctionWrapperFactory merge_function_wrapper_factory, int32_t bucket,
         const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+        const CoreOptions& options,
         const std::shared_ptr<CancellationController>& cancellation_controller,
-        std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager);
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     Status Close() override {
         return lookup_levels_->Close();
@@ -66,9 +67,9 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
         std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
         MergeFunctionWrapperFactory merge_function_wrapper_factory,
-        const std::shared_ptr<MemoryPool>& pool,
         const std::shared_ptr<CancellationController>& cancellation_controller,
-        std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager);
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     bool RewriteChangelog(int32_t output_level, bool drop_delete,
                           const std::vector<std::vector<SortedRun>>& sections) const override {
@@ -87,6 +88,6 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
  private:
     std::unique_ptr<LookupLevels<T>> lookup_levels_;
     std::shared_ptr<BucketedDvMaintainer> dv_maintainer_;
-    std::unique_ptr<RemoteLookupFileManager<T>> remote_lookup_file_manager_;
+    std::shared_ptr<RemoteLookupFileManager> remote_lookup_file_manager_;
 };
 }  // namespace paimon

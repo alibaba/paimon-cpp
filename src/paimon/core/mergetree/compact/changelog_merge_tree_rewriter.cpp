@@ -24,12 +24,12 @@ ChangelogMergeTreeRewriter::ChangelogMergeTreeRewriter(
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::shared_ptr<CancellationController>& cancellation_controller)
+    const std::shared_ptr<CancellationController>& cancellation_controller,
+    const std::shared_ptr<MemoryPool>& pool)
     : MergeTreeCompactRewriter(
           partition, bucket, schema_id, trimmed_primary_keys, options, data_schema, write_schema,
           std::move(dv_factory), path_factory_cache, std::move(merge_file_split_read),
-          std::move(merge_function_wrapper_factory), pool, cancellation_controller),
+          std::move(merge_function_wrapper_factory), cancellation_controller, pool),
       max_level_(max_level),
       force_drop_delete_(force_drop_delete) {}
 
