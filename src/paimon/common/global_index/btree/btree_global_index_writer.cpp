@@ -131,7 +131,7 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
             case arrow::Type::BINARY: {
                 auto str_array = std::static_pointer_cast<arrow::StringArray>(array);
                 auto view = str_array->GetView(i);
-                key_bytes = Bytes::AllocateBytes(view.size(), pool_.get());
+                key_bytes = std::make_shared<Bytes>(view.size(), pool_.get());
                 memcpy(key_bytes->data(), view.data(), view.size());
                 break;
             }

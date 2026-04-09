@@ -110,7 +110,7 @@ TEST_F(BTreeGlobalIndexerTest, LiteralToMemorySliceString) {
     EXPECT_FALSE(literal.IsNull());
     EXPECT_EQ(literal.GetType(), FieldType::STRING);
 
-    std::string value = literal.GetValue<std::string>();
+    auto value = literal.GetValue<std::string>();
     EXPECT_EQ(value, "test_value");
 }
 
@@ -120,7 +120,7 @@ TEST_F(BTreeGlobalIndexerTest, LiteralToMemorySliceInt) {
     EXPECT_FALSE(literal.IsNull());
     EXPECT_EQ(literal.GetType(), FieldType::INT);
 
-    int32_t value = literal.GetValue<int32_t>();
+    auto value = literal.GetValue<int32_t>();
     EXPECT_EQ(value, 42);
 }
 
@@ -130,7 +130,7 @@ TEST_F(BTreeGlobalIndexerTest, LiteralToMemorySliceBigInt) {
     EXPECT_FALSE(literal.IsNull());
     EXPECT_EQ(literal.GetType(), FieldType::BIGINT);
 
-    int64_t value = literal.GetValue<int64_t>();
+    auto value = literal.GetValue<int64_t>();
     EXPECT_EQ(value, 12345678901234LL);
 }
 
@@ -140,7 +140,7 @@ TEST_F(BTreeGlobalIndexerTest, LiteralToMemorySliceFloat) {
     EXPECT_FALSE(literal.IsNull());
     EXPECT_EQ(literal.GetType(), FieldType::FLOAT);
 
-    float value = literal.GetValue<float>();
+    auto value = literal.GetValue<float>();
     EXPECT_FLOAT_EQ(value, 3.14f);
 }
 
@@ -150,7 +150,7 @@ TEST_F(BTreeGlobalIndexerTest, LiteralToMemorySliceDouble) {
     EXPECT_FALSE(literal.IsNull());
     EXPECT_EQ(literal.GetType(), FieldType::DOUBLE);
 
-    double value = literal.GetValue<double>();
+    auto value = literal.GetValue<double>();
     EXPECT_DOUBLE_EQ(value, 3.14159265358979);
 }
 

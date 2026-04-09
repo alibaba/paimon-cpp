@@ -103,9 +103,9 @@ static std::shared_ptr<Bytes> ReadBinaryFile(const std::string& path, MemoryPool
     if (!ifs.is_open()) return nullptr;
     auto size = ifs.tellg();
     ifs.seekg(0, std::ios::beg);
-    auto bytes = Bytes::AllocateBytes(static_cast<int32_t>(size), pool);
+    auto bytes = std::make_shared<Bytes>(static_cast<size_t>(size), pool);
     ifs.read(bytes->data(), size);
-    return std::shared_ptr<Bytes>(bytes.release());
+    return bytes;
 }
 
 // ---------------------------------------------------------------------------

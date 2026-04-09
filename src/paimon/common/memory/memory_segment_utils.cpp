@@ -63,7 +63,9 @@ PAIMON_UNIQUE_PTR<Bytes> MemorySegmentUtils::CopyToBytes(const std::vector<Memor
                                                          MemoryPool* pool) {
     assert(pool);
     auto bytes = Bytes::AllocateBytes(num_bytes, pool);
-    CopyToBytes(segments, offset, bytes.get(), 0, num_bytes);
+    if (num_bytes > 0) {
+        CopyToBytes(segments, offset, bytes.get(), 0, num_bytes);
+    }
     return bytes;
 }
 

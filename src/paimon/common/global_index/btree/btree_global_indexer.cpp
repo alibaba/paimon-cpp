@@ -411,7 +411,7 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWi
             std::string upper_bound_str(prefix_bytes->data(), prefix_bytes->size());
             bool overflow = true;
             for (int i = static_cast<int>(upper_bound_str.size()) - 1; i >= 0 && overflow; --i) {
-                unsigned char c = static_cast<unsigned char>(upper_bound_str[i]);
+                auto c = static_cast<unsigned char>(upper_bound_str[i]);
                 if (c < 0xFF) {
                     upper_bound_str[i] = c + 1;
                     overflow = false;
@@ -421,9 +421,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWi
             }
 
             if (!overflow) {
-                auto upper_bytes = Bytes::AllocateBytes(upper_bound_str, pool_.get());
-                auto upper_bound_slice =
-                    MemorySlice::Wrap(std::shared_ptr<Bytes>(upper_bytes.release()));
+                auto upper_bytes = std::make_shared<Bytes>(upper_bound_str, pool_.get());
+                auto upper_bound_slice = MemorySlice::Wrap(upper_bytes);
                 PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                        RangeQuery(prefix_slice, upper_bound_slice, true, false));
                 return result.GetBitmap();
@@ -461,7 +460,7 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
         return Status::Invalid("LIKE pattern cannot be null");
     }
 
-    std::string pattern = literal.GetValue<std::string>();
+    auto pattern = literal.GetValue<std::string>();
 
     bool is_prefix_pattern = false;
     std::string prefix;
@@ -808,9 +807,9 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     // Handle string/binary types
     if (type == FieldType::STRING || type == FieldType::BINARY) {
         try {
-            std::string str_value = literal.GetValue<std::string>();
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto str_value = literal.GetValue<std::string>();
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert string/binary literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -820,8 +819,8 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
     // Handle integer types
     if (type == FieldType::BIGINT) {
         try {
-            int64_t value = literal.GetValue<int64_t>();
-            auto bytes = Bytes::AllocateBytes(8, pool);
+            auto value = literal.GetValue<int64_t>();
+            auto bytes = std::make_shared<Bytes>(8, pool);
             bytes->data()[0] = static_cast<char>(value & 0xFF);
             bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
             bytes->data()[2] = static_cast<char>((value >> 16) & 0xFF);
@@ -830,7 +829,7 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
             bytes->data()[5] = static_cast<char>((value >> 40) & 0xFF);
             bytes->data()[6] = static_cast<char>((value >> 48) & 0xFF);
             bytes->data()[7] = static_cast<char>((value >> 56) & 0xFF);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert bigint literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -839,13 +838,13 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::INT) {
         try {
-            int32_t value = literal.GetValue<int32_t>();
-            auto bytes = Bytes::AllocateBytes(4, pool);
+            auto value = literal.GetValue<int32_t>();
+            auto bytes = std::make_shared<Bytes>(4, pool);
             bytes->data()[0] = static_cast<char>(value & 0xFF);
             bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
             bytes->data()[2] = static_cast<char>((value >> 16) & 0xFF);
             bytes->data()[3] = static_cast<char>((value >> 24) & 0xFF);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert int literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -854,10 +853,10 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::TINYINT) {
         try {
-            int8_t value = literal.GetValue<int8_t>();
-            auto bytes = Bytes::AllocateBytes(1, pool);
+            auto value = literal.GetValue<int8_t>();
+            auto bytes = std::make_shared<Bytes>(1, pool);
             bytes->data()[0] = static_cast<char>(value);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert tinyint literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -866,11 +865,11 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::SMALLINT) {
         try {
-            int16_t value = literal.GetValue<int16_t>();
-            auto bytes = Bytes::AllocateBytes(2, pool);
+            auto value = literal.GetValue<int16_t>();
+            auto bytes = std::make_shared<Bytes>(2, pool);
             bytes->data()[0] = static_cast<char>(value & 0xFF);
             bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert smallint literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -882,8 +881,8 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
             bool value = literal.GetValue<bool>();
             // Convert to string "1" or "0" to match the format used in BTreeGlobalIndexWriter
             std::string str_value = value ? "1" : "0";
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert boolean literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -892,11 +891,11 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::FLOAT) {
         try {
-            float value = literal.GetValue<float>();
+            auto value = literal.GetValue<float>();
             // Convert to string to match the format used in BTreeGlobalIndexWriter
             std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert float literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -905,11 +904,11 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::DOUBLE) {
         try {
-            double value = literal.GetValue<double>();
+            auto value = literal.GetValue<double>();
             // Convert to string to match the format used in BTreeGlobalIndexWriter
             std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert double literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -918,11 +917,11 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::DATE) {
         try {
-            int32_t value = literal.GetValue<int32_t>();
+            auto value = literal.GetValue<int32_t>();
             // Convert to string to match the format used in BTreeGlobalIndexWriter
             std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert date literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -931,11 +930,11 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::TIMESTAMP) {
         try {
-            int64_t value = literal.GetValue<int64_t>();
+            auto value = literal.GetValue<int64_t>();
             // Convert to string to match the format used in BTreeGlobalIndexWriter
             std::string str_value = std::to_string(value);
-            auto bytes = Bytes::AllocateBytes(str_value, pool);
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            auto bytes = std::make_shared<Bytes>(str_value, pool);
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert timestamp literal to MemorySlice: " +
                                    std::string(e.what()));
@@ -944,8 +943,8 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     if (type == FieldType::DECIMAL) {
         try {
-            Decimal decimal_value = literal.GetValue<Decimal>();
-            auto bytes = Bytes::AllocateBytes(16, pool);
+            auto decimal_value = literal.GetValue<Decimal>();
+            auto bytes = std::make_shared<Bytes>(16, pool);
             uint64_t high_bits = decimal_value.HighBits();
             uint64_t low_bits = decimal_value.LowBits();
             for (int i = 0; i < 8; ++i) {
@@ -954,7 +953,7 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
             for (int i = 0; i < 8; ++i) {
                 bytes->data()[8 + i] = static_cast<char>((low_bits >> (56 - i * 8)) & 0xFF);
             }
-            return MemorySlice::Wrap(std::shared_ptr<Bytes>(bytes.release()));
+            return MemorySlice::Wrap(bytes);
         } catch (const std::exception& e) {
             return Status::Invalid("Failed to convert decimal literal to MemorySlice: " +
                                    std::string(e.what()));

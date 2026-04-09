@@ -30,7 +30,7 @@ namespace paimon::test {
 class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
  public:
     FakeGlobalIndexFileWriter(const std::shared_ptr<FileSystem>& fs, const std::string& base_path)
-        : fs_(fs), base_path_(base_path), file_counter_(0) {}
+        : fs_(fs), base_path_(base_path) {}
 
     Result<std::string> NewFileName(const std::string& prefix) const override {
         return prefix + "_" + std::to_string(file_counter_++);
@@ -53,7 +53,7 @@ class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
  private:
     std::shared_ptr<FileSystem> fs_;
     std::string base_path_;
-    mutable int64_t file_counter_;
+    mutable int64_t file_counter_{0};
 };
 
 class BTreeGlobalIndexWriterTest : public ::testing::Test {
