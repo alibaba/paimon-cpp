@@ -6,3 +6,5 @@
 test/test_data/sst/none/79d01717-8380-4504-86e1-387e6c058d0a filter=lfs diff=lfs merge=lfs -text
 test/test_data/sst/lz4/10540951-41d3-4216-aa2c-b15dfd25eb75 filter=lfs diff=lfs merge=lfs -text
 test/test_data/sst/zstd/83d05c53-2353-4160-b756-d50dd851b474 filter=lfs diff=lfs merge=lfs -text
+test/test_data/global_index/btree/btree_compatibility_data/*.bin filter=lfs diff=lfs merge=lfs -text
+test/test_data/global_index/btree/btree_compatibility_data/*.bin.meta filter=lfs diff=lfs merge=lfs -text

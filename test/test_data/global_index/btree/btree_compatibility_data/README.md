@@ -1,15 +1,15 @@
-# BTree 兼容性测试数据
+# BTree Compatibility Test Data
 
-## 文件说明
+## File Description
 
-### 数据文件
-- `btree_test_int_<count>.csv` - 整数类型测试数据（CSV格式）
-- `btree_test_int_<count>.bin` - 整数类型测试数据（二进制格式）
-- `btree_test_varchar_<count>.csv` - 字符串类型测试数据（CSV格式）
-- `btree_test_varchar_<count>.bin` - 字符串类型测试数据（二进制格式）
+### Data Files
+- `btree_test_int_<count>.csv` - Integer type test data (CSV format)
+- `btree_test_int_<count>.bin` - Integer type test data (binary format)
+- `btree_test_varchar_<count>.csv` - String type test data (CSV format)
+- `btree_test_varchar_<count>.bin` - String type test data (binary format)
 
-### 数据格式
-CSV文件格式：
+### Data Format
+CSV file format:
 ```
 row_id,key,is_null
 0,123,false
@@ -17,11 +17,11 @@ row_id,key,is_null
 2,456,false
 ```
 
-### 测试场景
-1. **小规模数据**：50、100条记录
-2. **中等规模数据**：500、1000条记录  
-3. **大规模数据**：5000条记录
-4. **边界条件**：空值、重复键、边界值
+### Test Scenarios
+1. **Small-scale data**: 50, 100 records
+2. **Medium-scale data**: 500, 1000 records
+3. **Large-scale data**: 5000 records
+4. **Edge cases**: null values, duplicate keys, boundary values
 
-### 使用说明
-这些数据可用于验证 C++ 版本的 BTree 索引实现与 Java 版本的兼容性。
+### Usage
+This data can be used to verify the compatibility between the C++ BTree index implementation and the Java version.
