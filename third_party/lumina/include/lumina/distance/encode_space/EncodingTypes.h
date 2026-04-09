@@ -28,7 +28,7 @@
 namespace lumina::dist::encode_space {
 
 // -- Encoding enum --
-enum class EncodingE { rawf32, sq8, pq, dummy };
+enum class EncodingE { rawf32, sq8, pq, rabitq, dummy };
 
 // -- Read-only view of encoded data --
 struct EncodedRow {
@@ -67,8 +67,14 @@ struct EncodingT<EncodingE::pq> {
     static constexpr std::string_view Name = core::kEncodingPQ;
 };
 
+template <>
+struct EncodingT<EncodingE::rabitq> {
+    static constexpr std::string_view Name = core::kEncodingRabitQ;
+};
+
 using RawF32 = EncodingT<EncodingE::rawf32>;
 using SQ8 = EncodingT<EncodingE::sq8>;
 using PQ = EncodingT<EncodingE::pq>;
+using RabitQ = EncodingT<EncodingE::rabitq>;
 
 } // namespace lumina::dist::encode_space

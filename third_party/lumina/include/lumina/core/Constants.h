@@ -15,6 +15,7 @@
  */
 
 #pragma once
+#include <cstdint>
 #include <string_view>
 namespace lumina::core {
 
@@ -56,6 +57,7 @@ constexpr std::string_view kEncodingType = "encoding.type"; // Encoding type
 constexpr std::string_view kEncodingRawf32 = "rawf32";
 constexpr std::string_view kEncodingSQ8 = "sq8";
 constexpr std::string_view kEncodingPQ = "pq";
+constexpr std::string_view kEncodingRabitQ = "rabitq";
 constexpr std::string_view kEncodingDummy = "dummy";
 
 // IO options
@@ -88,6 +90,7 @@ constexpr std::string_view kExtensionPrefix = "extension.";
 constexpr std::string_view kExtensionSearchWithFilter = "extension.search_with_filter";
 constexpr std::string_view kExtensionCkptThreshold = "extension.build.ckpt.threshold";
 constexpr std::string_view kExtensionCkptCount = "extension.build.ckpt.count";
+constexpr std::string_view kExtensionGetVector = "extension.search.get_vector";
 
 /* constexpr std::string_view kExtensionFilterDsl = "filter.dsl"; */
 /* constexpr std::string_view kExtensionFilterTags = "filter.tags"; */
