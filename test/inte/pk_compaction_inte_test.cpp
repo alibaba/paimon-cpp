@@ -2802,10 +2802,10 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
     ASSERT_OK_AND_ASSIGN(auto table_schema0, schema_manager->ReadSchema(0));
     auto table_schema1 = std::make_shared<TableSchema>(*table_schema0);
     std::vector<DataField> new_fields = {
+        DataField(3, arrow::field("f3", arrow::utf8())),   // value field (min agg), double->string
         DataField(0, arrow::field("f0", arrow::utf8())),   // value field (min agg), int32->string
         DataField(1, arrow::field("f1", arrow::utf8())),   // PK (schema index 1, pk index 1)
         DataField(2, arrow::field("f2", arrow::int32())),  // PK (schema index 2, pk index 0)
-        DataField(3, arrow::field("f3", arrow::utf8())),   // value field (min agg), double->string
         DataField(4, arrow::field("f4", arrow::utf8()))};  // padding value field (min agg)
 
     table_schema1->id_ = 1;
@@ -2817,8 +2817,8 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
     // Step 4: Write batch2 with overlapping keys (first new level-0 file).
     {
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
-            ["50",  "Alice", 3, "0.5", "a1"],
-            ["300", "Bob",   5, "3.5", "b1"]
+            ["0.5", "50",  "Alice", 3, "a1"],
+            ["3.5", "300", "Bob",   5, "b1"]
         ])")
                          .ValueOrDie();
         ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
@@ -2827,8 +2827,8 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
     // Step 5: Write batch3 with overlapping keys (second new level-0 file).
     {
         auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
-            ["80",  "Alice", 3, "1.0", "a2"],
-            ["150", "Carol", 1, "1.5", "c1"]
+            ["1.0", "80",  "Alice", 3, "a2"],
+            ["1.5", "150", "Carol", 1, "c1"]
         ])")
                          .ValueOrDie();
         ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
@@ -2855,9 +2855,9 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
                              TestHelper::Create(table_path, options, /*is_streaming_mode=*/false));
         // clang-format off
         std::string expected_data = R"([
-[0, "150", "Carol", 1, "1.5", ")" + padding + R"("],
-[0, "100", "Alice", 3, "0.5", ")" + padding + R"("],
-[0, "200", "Bob",   5, "2.5", ")" + padding + R"("]
+[0, "1.5", "150", "Carol", 1, ")" + padding + R"("],
+[0, "0.5", "100", "Alice", 3, ")" + padding + R"("],
+[0, "2.5", "200", "Bob",   5, ")" + padding + R"("]
 ])";
         // clang-format on
         ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type_with_row_kind,
@@ -2878,11 +2878,11 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
                              TestHelper::Create(table_path, options, /*is_streaming_mode=*/false));
         // clang-format off
         std::string expected_data = R"([
-[0, "150", "Carol", 1, "1.5", ")" + padding + R"("],
-[0, "500", "Eve",   2, "5.5", ")" + padding + R"("],
-[0, "100", "Alice", 3, "0.5", ")" + padding + R"("],
-[0, "400", "Dave",  4, "4.5", ")" + padding + R"("],
-[0, "200", "Bob",   5, "2.5", ")" + padding + R"("]
+[0, "1.5", "150", "Carol", 1, ")" + padding + R"("],
+[0, "5.5", "500", "Eve",   2, ")" + padding + R"("],
+[0, "0.5", "100", "Alice", 3, ")" + padding + R"("],
+[0, "4.5", "400", "Dave",  4, ")" + padding + R"("],
+[0, "2.5", "200", "Bob",   5, ")" + padding + R"("]
 ])";
         // clang-format on
         ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type_with_row_kind,
@@ -2901,7 +2901,7 @@ TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
 //   4. ScanAndVerify after DV compact
 //   5. Full compact
 //   6. ScanAndVerify after full compact
-TEST_P(PkCompactionInteTest, TestLookupCompatiblity) {
+TEST_P(PkCompactionInteTest, TestLookupCompatibility) {
     auto file_format = GetParam();
     if (file_format == "lance" || file_format == "avro") {
         return;

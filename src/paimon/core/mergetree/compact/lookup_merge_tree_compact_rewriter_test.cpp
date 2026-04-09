@@ -1466,4 +1466,63 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileWithSchemaEvoluti
     ASSERT_TRUE(dv.value()->IsDeleted(2).value());
 }
 
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileReadFailFallbackToLocal) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files: file0, file1 and file2 at level 0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, R"([[1, 11], [3, 33], [5, 55]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path,
+                                              core_options, R"([[2, 22], [4, 44], [5, 5]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([[2, 222], [5, 15]])"));
+    // Step 1: Upgrade file0 from level 0 to level 5
+    // This triggers NotifyRewriteCompactAfter -> GenRemoteLookupFile
+    // which should produce a .lookup file for file0
+    auto [rewriter0, new_file0] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {file0}, {file0}, /*rewrite=*/false);
+    // rename lookup file in file meta to simulate TryToDownload failed, will fallback to generate
+    // local lookup file
+    ASSERT_EQ(new_file0->extra_files.size(), 1);
+    new_file0->extra_files = {"non-exist-" + new_file0->extra_files[0].value()};
+
+    // Step 2: Rewrite file1 and file2, will not use .lookup file for file0
+    auto [rewriter1, file_rewrite] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {new_file0, file1, file2}, {file1, file2},
+        /*rewrite=*/true);
+
+    std::string compact_file_name = table_path + "/bucket-0/" + file_rewrite->file_name;
+    // Check compact file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  2, 222],
+[4,  0,  4, 44],
+[7,  0,  5, 55]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // Verify DV for file0 (key "5" was overridden by compact result)
+    auto dv_maintainer = rewriter1->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
+}
+
 }  // namespace paimon::test
