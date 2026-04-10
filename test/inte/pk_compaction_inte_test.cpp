@@ -2998,7 +2998,7 @@ TEST_F(PkCompactionInteTest, PkDvAndAggWithIOException) {
 
     bool run_complete = false;
     auto io_hook = IOHook::GetInstance();
-    for (size_t i = 0; i < 800; i += rand() % 23) {
+    for (size_t i = 0; i < 800; i += RandomNumber(1, 23)) {
         dir_ = UniqueTestDirectory::Create("local");
         std::string table_path = TablePath();
         CreateTable(fields, partition_keys, primary_keys, options);
