@@ -75,6 +75,9 @@ class PAIMON_EXPORT BucketIdCalculator {
     Status CalculateBucketIds(ArrowArray* bucket_keys, ArrowSchema* bucket_schema,
                               int32_t* bucket_ids) const;
 
+    /// Destructor
+    ~BucketIdCalculator();
+
  private:
     BucketIdCalculator(int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
                        const std::shared_ptr<MemoryPool>& pool)

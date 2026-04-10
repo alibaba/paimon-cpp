@@ -146,7 +146,7 @@ class HiveHasher {
         // Compute Java BigDecimal.hashCode():
         // hashCode = intValue(unscaledValue) * 31 + scale
         // intValue() returns the low 32 bits of the value
-        int32_t int_value = static_cast<int32_t>(static_cast<int64_t>(value));
+        auto int_value = static_cast<int32_t>(static_cast<int64_t>(value));
         return int_value * 31 + scale;
     }
 
