@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ enum class BucketFunctionType {
     DEFAULT = 1,
     // Mod bucket function using modulo operation on bucket key.
     MOD = 2,
-    // Hive bucket function (not yet implemented).
+    // Hive bucket function
     HIVE = 3
 };
 
