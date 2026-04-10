@@ -238,6 +238,11 @@ static Result<WriteFunction> WriteBucketRow(int32_t col_id,
 }
 }  // namespace
 
+BucketIdCalculator::BucketIdCalculator(int32_t num_buckets,
+                                       std::unique_ptr<BucketFunction> bucket_function,
+                                       const std::shared_ptr<MemoryPool>& pool)
+    : num_buckets_(num_buckets), bucket_function_(std::move(bucket_function)), pool_(pool) {}
+
 BucketIdCalculator::~BucketIdCalculator() = default;
 
 Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(

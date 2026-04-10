@@ -80,8 +80,7 @@ class PAIMON_EXPORT BucketIdCalculator {
 
  private:
     BucketIdCalculator(int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
-                       const std::shared_ptr<MemoryPool>& pool)
-        : num_buckets_(num_buckets), bucket_function_(std::move(bucket_function)), pool_(pool) {}
+                       const std::shared_ptr<MemoryPool>& pool);
 
  private:
     int32_t num_buckets_;
