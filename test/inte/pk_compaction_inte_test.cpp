@@ -27,6 +27,7 @@
 #include "paimon/catalog/catalog.h"
 #include "paimon/commit_context.h"
 #include "paimon/common/factories/io_hook.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/deletionvectors/deletion_vectors_index_file.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -155,11 +156,15 @@ class PkCompactionInteTest : public ::testing::Test,
     Result<std::vector<std::shared_ptr<CommitMessage>>> WriteArray(
         const std::string& table_path, const std::map<std::string, std::string>& partition,
         int32_t bucket, const std::shared_ptr<arrow::Array>& write_array, int64_t commit_identifier,
-        bool is_streaming = true, const std::vector<RecordBatch::RowKind>& row_kinds = {}) const {
+        bool is_streaming = true, const std::vector<RecordBatch::RowKind>& row_kinds = {},
+        bool write_only = true) const {
         auto io_manager = std::shared_ptr<IOManager>(
             IOManager::Create(PathUtil::JoinPath(dir_->Str(), "tmp")).release());
         WriteContextBuilder write_builder(table_path, "commit_user_1");
         write_builder.WithStreamingMode(is_streaming).WithIOManager(io_manager);
+        if (write_only) {
+            write_builder.AddOption(Options::WRITE_ONLY, "true");
+        }
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto file_store_write,
                                FileStoreWrite::Create(std::move(write_context)));
@@ -262,16 +267,52 @@ class PkCompactionInteTest : public ::testing::Test,
         const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
         for (const auto& msg : commit_messages) {
             auto impl = dynamic_cast<CommitMessageImpl*>(msg.get());
-            if (impl) {
-                for (const auto& index_file : impl->GetCompactIncrement().NewIndexFiles()) {
-                    if (index_file->IndexType() ==
-                        DeletionVectorsIndexFile::DELETION_VECTORS_INDEX) {
-                        return true;
-                    }
+            EXPECT_TRUE(impl);
+            for (const auto& index_file : impl->GetCompactIncrement().NewIndexFiles()) {
+                if (index_file->IndexType() == DeletionVectorsIndexFile::DELETION_VECTORS_INDEX) {
+                    return true;
                 }
             }
         }
         return false;
+    }
+
+    // Helper: check whether compact commit messages contain extra lookup files.
+    bool HasExtraLookupFiles(const std::vector<std::shared_ptr<CommitMessage>>& commit_messages) {
+        for (const auto& msg : commit_messages) {
+            auto impl = dynamic_cast<CommitMessageImpl*>(msg.get());
+            EXPECT_TRUE(impl);
+            for (const auto& file : impl->GetCompactIncrement().CompactAfter()) {
+                if (HasExtraLookupFiles(file)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool HasExtraLookupFiles(const std::shared_ptr<DataFileMeta>& file) {
+        for (const auto& extra_file : file->extra_files) {
+            if (extra_file && StringUtils::EndsWith(extra_file.value(), ".lookup")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Helper: build split based on CommitMessage, as we do not support schema evolution in scan.
+    std::shared_ptr<Split> BuildSplit(const std::vector<std::shared_ptr<CommitMessage>>& msgs,
+                                      int64_t snapshot_id) {
+        auto impl = dynamic_cast<CommitMessageImpl*>(msgs[0].get());
+        auto file_metas = impl->GetCompactIncrement().CompactAfter();
+        EXPECT_EQ(file_metas.size(), 1);
+        std::string bucket_path = "fake-bucket-path";
+        DataSplitImpl::Builder builder(impl->Partition(), impl->Bucket(), bucket_path,
+                                       std::move(file_metas));
+        auto split =
+            builder.WithSnapshot(snapshot_id).IsStreaming(false).RawConvertible(true).Build();
+        EXPECT_TRUE(split.ok()) << split.status().ToString();
+        return split.value();
     }
 
  private:
@@ -1057,7 +1098,9 @@ TEST_F(PkCompactionInteTest, CompactWithSchemaEvolution) {
         ])")
                          .ValueOrDie();
         ASSERT_OK_AND_ASSIGN(write_msgs_p0, WriteArray(table_path, {{"key0", "0"}, {"key1", "1"}},
-                                                       0, array, commit_id));
+                                                       0, array, commit_id, /*is_streaming=*/true,
+                                                       /*row_kinds=*/{}, /*write_only=*/false));
+        ASSERT_FALSE(HasExtraLookupFiles(write_msgs_p0));
         ASSERT_OK(Commit(table_path, write_msgs_p0));
         commit_id++;
     }
@@ -1072,7 +1115,9 @@ TEST_F(PkCompactionInteTest, CompactWithSchemaEvolution) {
         ])")
                          .ValueOrDie();
         ASSERT_OK_AND_ASSIGN(write_msgs_p1, WriteArray(table_path, {{"key0", "1"}, {"key1", "1"}},
-                                                       0, array, commit_id));
+                                                       0, array, commit_id, /*is_streaming=*/true,
+                                                       /*row_kinds=*/{}, /*write_only=*/false));
+        ASSERT_FALSE(HasExtraLookupFiles(write_msgs_p1));
         ASSERT_OK(Commit(table_path, write_msgs_p1));
         commit_id++;
     }
@@ -1084,29 +1129,12 @@ TEST_F(PkCompactionInteTest, CompactWithSchemaEvolution) {
         ASSERT_OK_AND_ASSIGN(auto read_context, context_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
 
-        // Helper: build a DataSplit from write commit messages (which contain compact info).
-        auto build_split = [&](const std::vector<std::shared_ptr<CommitMessage>>& msgs,
-                               const std::string& partition_path,
-                               int64_t snapshot_id) -> std::shared_ptr<Split> {
-            auto impl = dynamic_cast<CommitMessageImpl*>(msgs[0].get());
-            auto file_metas = impl->GetCompactIncrement().CompactAfter();
-            EXPECT_EQ(file_metas.size(), 1);
-            std::string bucket_path =
-                table_path + "/" + partition_path + "/bucket-" + std::to_string(impl->Bucket());
-            DataSplitImpl::Builder builder(impl->Partition(), impl->Bucket(), bucket_path,
-                                           std::move(file_metas));
-            auto split =
-                builder.WithSnapshot(snapshot_id).IsStreaming(false).RawConvertible(true).Build();
-            EXPECT_TRUE(split.ok()) << split.status().ToString();
-            return split.value();
-        };
-
         // Use the latest snapshot id for both splits.
         // The original table has 6 snapshots. Each write with force-compact produces
         // 2 snapshots (append + compact), so 2 writes => 6 + 4 = 10.
         int64_t latest_snapshot_id = 10;
-        auto split_p0 = build_split(write_msgs_p0, "key0=0/key1=1", latest_snapshot_id);
-        auto split_p1 = build_split(write_msgs_p1, "key0=1/key1=1", latest_snapshot_id);
+        auto split_p0 = BuildSplit(write_msgs_p0, latest_snapshot_id);
+        auto split_p1 = BuildSplit(write_msgs_p1, latest_snapshot_id);
 
         // Read partition (key0=0, key1=1)
         {
@@ -1631,14 +1659,7 @@ TEST_F(PkCompactionInteTest, WriteAndCompactWithBranch) {
         ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
 
         // Build a fake DataSplit using the compact_after file metadata.
-        auto compact_after_files = impl->GetCompactIncrement().CompactAfter();
-        std::string bucket_path = table_path + "/dt=20240726/bucket-0";
-        DataSplitImpl::Builder split_builder(impl->Partition(), impl->Bucket(), bucket_path,
-                                             std::move(compact_after_files));
-        ASSERT_OK_AND_ASSIGN(
-            auto fake_split,
-            split_builder.WithSnapshot(1).IsStreaming(false).RawConvertible(true).Build());
-
+        auto fake_split = BuildSplit(commit_msgs, /*snapshot_id=*/1);
         ASSERT_OK_AND_ASSIGN(auto batch_reader,
                              table_read->CreateReader(std::shared_ptr<Split>(fake_split)));
         ASSERT_OK_AND_ASSIGN(auto result_array,
@@ -2579,6 +2600,376 @@ TEST_P(PkCompactionInteTest, TestKeyValueTableStreamWriteFullCompaction) {
         ASSERT_OK_AND_ASSIGN(bool success,
                              helper->ReadAndCheckResult(data_type, {split}, iter->second));
         ASSERT_TRUE(success);
+    }
+}
+
+// Test: PK table with aggregation merge engine (min), Enable DV, enable remote file.
+//
+// Strategy (same DV pattern as other tests):
+//   1. Write batch1 (5 keys, large padding) → level-0
+//   2. Full compact → upgrade to max level → generate .lookup file
+//   3. Write batch2 (overlap Alice, Bob) → level-0
+//   4. Write batch3 (overlap Alice, Carol) → level-0
+//   5. Non-full compact → merge level-0 files, DV on max-level overlapping rows, use .lookup file
+//   6. Assert DV index files present
+//   7. ScanAndVerify after DV compact
+//   8. Full compact
+//   9. ScanAndVerify after full compact
+TEST_F(PkCompactionInteTest, RemoteLookupFileWithExternalPath) {
+    // f4 is a large padding field to inflate the initial file size for DV strategy.
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),    // value field (min agg)
+        arrow::field("f1", arrow::utf8()),     // PK (schema index 1, pk index 1)
+        arrow::field("f2", arrow::int32()),    // PK (schema index 2, pk index 0)
+        arrow::field("f3", arrow::float64()),  // value field (min agg)
+        arrow::field("f4", arrow::utf8())};    // padding value field (min agg)
+    std::vector<std::string> primary_keys = {"f2", "f1"};
+    std::vector<std::string> partition_keys = {};
+
+    // Create external path directories.
+    auto external_dir = UniqueTestDirectory::Create("local");
+    ASSERT_TRUE(external_dir);
+    std::string external_path = external_dir->Str();
+
+    std::map<std::string, std::string> options = {
+        {Options::FILE_FORMAT, "parquet"},
+        {Options::BUCKET, "1"},
+        {Options::FILE_SYSTEM, "local"},
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "min"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::LOOKUP_REMOTE_FILE_ENABLED, "true"},
+        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "1"},
+        {Options::DATA_FILE_EXTERNAL_PATHS, "FILE://" + external_path},
+        {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "round-robin"}};
+    CreateTable(fields, partition_keys, primary_keys, options);
+    std::string table_path = TablePath();
+    auto data_type = arrow::struct_(fields);
+    int64_t commit_id = 0;
+
+    // A long padding string (~2KB) to inflate the initial file size.
+    std::string padding(2048, 'X');
+
+    // Step 1: Write initial data with large padding (creates a big level-0 file).
+    // Dave and Eve are NOT overwritten by later batches.
+    {
+        // clang-format off
+        std::string json_data = R"([
+[100, "Alice", 3, 1.5, ")" + padding + R"("],
+[200, "Bob",   5, 2.5, ")" + padding + R"("],
+[300, "Carol", 1, 3.5, ")" + padding + R"("],
+[400, "Dave",  4, 4.5, ")" + padding + R"("],
+[500, "Eve",   2, 5.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 2: Full compact → upgrades level-0 file to max level.
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto upgrade_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_TRUE(HasExtraLookupFiles(upgrade_msgs));
+
+    // Step 3: Write batch2 with overlapping keys (first new level-0 file).
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [50,  "Alice", 3, 0.5, "a1"],
+            [300, "Bob",   5, 3.5, "b1"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 4: Write batch3 with overlapping keys (second new level-0 file).
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [80,  "Alice", 3, 1.0, "a2"],
+            [150, "Carol", 1, 1.5, "c1"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 5: Non-full compact → two level-0 files merge, lookup against max-level produces DV.
+    ASSERT_OK_AND_ASSIGN(
+        auto dv_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++));
+
+    // Step 6: Assert DV index files are present.
+    ASSERT_TRUE(HasDeletionVectorIndexFiles(dv_compact_msgs))
+        << "Non-full compact should produce DV index files";
+    ASSERT_TRUE(HasExtraLookupFiles(dv_compact_msgs));
+
+    // Step 7: ScanAndVerify after DV compact.
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
+        expected_data[std::make_pair("", 0)] = R"([
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ScanAndVerify(table_path, fields, expected_data);
+    }
+
+    // Step 8: Full compact to merge everything.
+    ASSERT_OK_AND_ASSIGN(
+        auto full_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_TRUE(HasExtraLookupFiles(full_compact_msgs));
+
+    // Step 9: ScanAndVerify after full compact.
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
+        expected_data[std::make_pair("", 0)] = R"([
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ScanAndVerify(table_path, fields, expected_data);
+    }
+}
+
+// Test: PK table with aggregation merge engine (min), Enable DV, enable remote file.
+//
+// Strategy (same DV pattern as other tests):
+//   1. Write batch1 (5 keys, large padding) → level-0
+//   2. Full compact → upgrade to max level → generate .lookup file
+//   3. Alter table, write schema-1
+//   4. Write batch2 (overlap Alice, Bob) → level-0
+//   5. Write batch3 (overlap Alice, Carol) → level-0
+//   6. Non-full compact → merge level-0 files, DV on max-level overlapping rows, not use .lookup
+//   file
+//   7. Assert DV index files present
+//   8. ScanAndVerify after DV compact
+//   9. Full compact
+//   10. ScanAndVerify after full compact
+TEST_F(PkCompactionInteTest, RemoteLookupFileWithSchemaEvolution) {
+    // f4 is a large padding field to inflate the initial file size for DV strategy.
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),    // value field (min agg)
+        arrow::field("f1", arrow::utf8()),     // PK (schema index 1, pk index 1)
+        arrow::field("f2", arrow::int32()),    // PK (schema index 2, pk index 0)
+        arrow::field("f3", arrow::float64()),  // value field (min agg)
+        arrow::field("f4", arrow::utf8())};    // padding value field (min agg)
+    std::vector<std::string> primary_keys = {"f2", "f1"};
+    std::vector<std::string> partition_keys = {};
+
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::MERGE_ENGINE, "aggregation"},
+                                                  {Options::FIELDS_DEFAULT_AGG_FUNC, "min"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                  {Options::LOOKUP_REMOTE_FILE_ENABLED, "true"},
+                                                  {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "1"}};
+    CreateTable(fields, partition_keys, primary_keys, options);
+    std::string table_path = TablePath();
+    auto data_type = arrow::struct_(fields);
+    int64_t commit_id = 0;
+
+    // A long padding string (~2KB) to inflate the initial file size.
+    std::string padding(2048, 'X');
+
+    // Step 1: Write initial data with large padding (creates a big level-0 file).
+    // Dave and Eve are NOT overwritten by later batches.
+    {
+        // clang-format off
+        std::string json_data = R"([
+[100, "Alice", 3, 1.5, ")" + padding + R"("],
+[200, "Bob",   5, 2.5, ")" + padding + R"("],
+[300, "Carol", 1, 3.5, ")" + padding + R"("],
+[400, "Dave",  4, 4.5, ")" + padding + R"("],
+[500, "Eve",   2, 5.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 2: Full compact → upgrades level-0 file to max level.
+    ASSERT_OK_AND_ASSIGN(
+        [[maybe_unused]] auto upgrade_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_TRUE(HasExtraLookupFiles(upgrade_msgs));
+
+    // Step 3: Alter table
+    auto fs = dir_->GetFileSystem();
+    auto schema_manager = std::make_shared<SchemaManager>(fs, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema0, schema_manager->ReadSchema(0));
+    auto table_schema1 = std::make_shared<TableSchema>(*table_schema0);
+    std::vector<DataField> new_fields = {
+        DataField(3, arrow::field("f3", arrow::utf8())),   // value field (min agg), double->string
+        DataField(0, arrow::field("f0", arrow::utf8())),   // value field (min agg), int32->string
+        DataField(1, arrow::field("f1", arrow::utf8())),   // PK (schema index 1, pk index 1)
+        DataField(2, arrow::field("f2", arrow::int32())),  // PK (schema index 2, pk index 0)
+        DataField(4, arrow::field("f4", arrow::utf8()))};  // padding value field (min agg)
+
+    table_schema1->id_ = 1;
+    table_schema1->fields_ = new_fields;
+    ASSERT_OK_AND_ASSIGN(std::string schema_content, table_schema1->ToJsonString());
+    ASSERT_OK(fs->AtomicStore(schema_manager->ToSchemaPath(1), schema_content));
+    data_type = DataField::ConvertDataFieldsToArrowStructType(new_fields);
+
+    // Step 4: Write batch2 with overlapping keys (first new level-0 file).
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            ["0.5", "50",  "Alice", 3, "a1"],
+            ["3.5", "300", "Bob",   5, "b1"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 5: Write batch3 with overlapping keys (second new level-0 file).
+    {
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            ["1.0", "80",  "Alice", 3, "a2"],
+            ["1.5", "150", "Carol", 1, "c1"]
+        ])")
+                         .ValueOrDie();
+        ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+    }
+
+    // Step 6: Non-full compact → two level-0 files merge, lookup against max-level produces DV.
+    ASSERT_OK_AND_ASSIGN(
+        auto dv_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++));
+
+    // Step 7: Assert DV index files are present.
+    ASSERT_TRUE(HasDeletionVectorIndexFiles(dv_compact_msgs))
+        << "Non-full compact should produce DV index files";
+    ASSERT_TRUE(HasExtraLookupFiles(dv_compact_msgs));
+
+    // Step 8: Fake a DataSplit from compact_after to read and verify the compacted data.
+    std::vector<DataField> fields_with_row_kind = new_fields;
+    fields_with_row_kind.insert(fields_with_row_kind.begin(), SpecialFields::ValueKind());
+    auto data_type_with_row_kind =
+        DataField::ConvertDataFieldsToArrowStructType(fields_with_row_kind);
+    {
+        auto split = BuildSplit(dv_compact_msgs, /*snapshot_id=*/4);
+        ASSERT_OK_AND_ASSIGN(auto helper,
+                             TestHelper::Create(table_path, options, /*is_streaming_mode=*/false));
+        // clang-format off
+        std::string expected_data = R"([
+[0, "1.5", "150", "Carol", 1, ")" + padding + R"("],
+[0, "0.5", "100", "Alice", 3, ")" + padding + R"("],
+[0, "2.5", "200", "Bob",   5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type_with_row_kind,
+                                                                      {split}, expected_data));
+        ASSERT_TRUE(success);
+    }
+
+    // Step 9: Full compact to merge everything.
+    ASSERT_OK_AND_ASSIGN(
+        auto full_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_TRUE(HasExtraLookupFiles(full_compact_msgs));
+
+    // Step 10: ScanAndVerify after full compact.
+    {
+        auto split = BuildSplit(full_compact_msgs, /*snapshot_id=*/5);
+        ASSERT_OK_AND_ASSIGN(auto helper,
+                             TestHelper::Create(table_path, options, /*is_streaming_mode=*/false));
+        // clang-format off
+        std::string expected_data = R"([
+[0, "1.5", "150", "Carol", 1, ")" + padding + R"("],
+[0, "5.5", "500", "Eve",   2, ")" + padding + R"("],
+[0, "0.5", "100", "Alice", 3, ")" + padding + R"("],
+[0, "4.5", "400", "Dave",  4, ")" + padding + R"("],
+[0, "2.5", "200", "Bob",   5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ASSERT_OK_AND_ASSIGN(bool success, helper->ReadAndCheckResult(data_type_with_row_kind,
+                                                                      {split}, expected_data));
+        ASSERT_TRUE(success);
+    }
+}
+
+// Test: Compatibility for lookup file generated by java.
+//
+// Strategy (same DV pattern as other tests):
+//   1. Copy data from existing table generated by java which contains a level-5 (with lookup file)
+//   and two level-0.
+//   2. Non-full compact → merge level-0 files, DV on max-level overlapping rows, use .lookup file
+//   3. Assert DV index files present
+//   4. ScanAndVerify after DV compact
+//   5. Full compact
+//   6. ScanAndVerify after full compact
+TEST_P(PkCompactionInteTest, TestLookupCompatibility) {
+    auto file_format = GetParam();
+    if (file_format == "lance" || file_format == "avro") {
+        return;
+    }
+    // Step 1: Copy pk_compact_lookup table to temp dir.
+    std::string src_table_path =
+        paimon::test::GetDataDir() + "/" + file_format + "/pk_compact_lookup.db/pk_compact_lookup/";
+    std::string table_path = PathUtil::JoinPath(dir_->Str(), "copied_table");
+    ASSERT_TRUE(TestUtil::CopyDirectory(src_table_path, table_path));
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),    // value field (min agg)
+        arrow::field("f1", arrow::utf8()),     // PK (schema index 1, pk index 1)
+        arrow::field("f2", arrow::int32()),    // PK (schema index 2, pk index 0)
+        arrow::field("f3", arrow::float64()),  // value field (min agg)
+        arrow::field("f4", arrow::utf8())};    // padding value field (min agg)
+
+    int64_t commit_id = 6;
+    // Step 2: Non-full compact → two level-0 files merge, lookup against max-level produces DV.
+    ASSERT_OK_AND_ASSIGN(
+        auto dv_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++));
+
+    // Step 2: Assert DV index files are present.
+    ASSERT_TRUE(HasDeletionVectorIndexFiles(dv_compact_msgs))
+        << "Non-full compact should produce DV index files";
+    ASSERT_TRUE(HasExtraLookupFiles(dv_compact_msgs));
+
+    // Step 3: ScanAndVerify after DV compact.
+    std::string padding(2048, 'X');
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
+        expected_data[std::make_pair("", 0)] = R"([
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ScanAndVerify(table_path, fields, expected_data);
+    }
+
+    // Step 4: Full compact to merge everything.
+    ASSERT_OK_AND_ASSIGN(
+        auto full_compact_msgs,
+        CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+    ASSERT_TRUE(HasExtraLookupFiles(full_compact_msgs));
+
+    // Step 5: ScanAndVerify after full compact.
+    {
+        std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+        // clang-format off
+        expected_data[std::make_pair("", 0)] = R"([
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+        // clang-format on
+        ScanAndVerify(table_path, fields, expected_data);
     }
 }
 

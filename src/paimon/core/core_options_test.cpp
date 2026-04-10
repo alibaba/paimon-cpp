@@ -128,6 +128,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(10, core_options.GetLookupCompactMaxInterval());
     ASSERT_EQ(256 * 1024 * 1024, core_options.GetLookupCacheMaxMemory());
     ASSERT_EQ(0.25, core_options.GetLookupCacheHighPrioPoolRatio());
+    ASSERT_FALSE(core_options.LookupRemoteFileEnabled());
+    ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), INT32_MIN);
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -214,7 +216,9 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"},
         {Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4,3:none"},
         {Options::LOOKUP_CACHE_MAX_MEMORY_SIZE, "1MB"},
-        {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"}};
+        {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"},
+        {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
+        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -327,6 +331,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(6 * 1024 * 1024, core_options.GetCachePageSize());
     ASSERT_EQ(1024 * 1024, core_options.GetLookupCacheMaxMemory());
     ASSERT_EQ(0.35, core_options.GetLookupCacheHighPrioPoolRatio());
+    ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
+    ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {

@@ -90,12 +90,18 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
         auto merge_function_wrapper =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
-
+        auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                               schema_manager->Latest());
+        if (!latest_schema) {
+            return Status::Invalid("cannot find latest schema");
+        }
         auto writer = std::make_shared<MergeTreeWriter>(
             /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
             data_path_factory, key_comparator,
-            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper, /*schema_id=*/0,
-            arrow_schema_, options, std::make_shared<NoopCompactManager>(), pool_);
+            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper,
+            /*schema_id=*/latest_schema.value()->Id(), arrow_schema_, options,
+            std::make_shared<NoopCompactManager>(), pool_);
 
         // write data
         ArrowArray c_src_array;
@@ -155,7 +161,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             std::move(merge_function_wrapper_factory),
             /*bucket=*/0,
             /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<KeyValue>>>
@@ -185,7 +191,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             /*max_level=*/5, std::move(lookup_levels), /*dv_maintainer=*/nullptr,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
             /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<FilePosition>>>
@@ -220,14 +226,16 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
             /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
     }
 
     Result<std::unique_ptr<LookupMergeTreeCompactRewriter<PositionedKeyValue>>>
     CreateCompactRewriterForPositionedKeyValue(
         const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
         const CoreOptions& options,
-        std::unique_ptr<LookupLevels<PositionedKeyValue>>&& lookup_levels) const {
+        std::unique_ptr<LookupLevels<PositionedKeyValue>>&& lookup_levels,
+        std::unique_ptr<RemoteLookupFileManager<PositionedKeyValue>>&& remote_lookup_file_manager =
+            nullptr) const {
         auto path_factory_cache =
             std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
 
@@ -260,7 +268,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             /*max_level=*/5, std::move(lookup_levels), dv_maintainer,
             std::move(merge_function_wrapper_factory), /*bucket=*/0,
             /*partition=*/BinaryRow::EmptyRow(), table_schema, path_factory_cache, options, pool_,
-            cancellation_controller);
+            cancellation_controller, std::move(remote_lookup_file_manager));
     }
 
     void CheckResult(const std::string& compact_file_name,
@@ -333,6 +341,65 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto key_comparator, CreateKeyComparator());
         IntervalPartition interval_partition(files, key_comparator);
         return interval_partition.Partition();
+    }
+
+    std::pair<std::unique_ptr<LookupMergeTreeCompactRewriter<PositionedKeyValue>>,
+              std::shared_ptr<DataFileMeta>>
+    CompactAndCheckWithRemoteLookupFile(
+        const std::string& table_path, const std::shared_ptr<TableSchema>& table_schema,
+        const CoreOptions& core_options,
+        const std::vector<std::shared_ptr<DataFileMeta>>& total_files,
+        const std::vector<std::shared_ptr<DataFileMeta>>& compact_files, bool rewrite) const {
+        auto processor_factory =
+            std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
+        EXPECT_OK_AND_ASSIGN(auto lookup_levels,
+                             CreateLookupLevels<PositionedKeyValue>(
+                                 table_path, table_schema, processor_factory, total_files));
+
+        EXPECT_OK_AND_ASSIGN(auto file_store_path_factory,
+                             CreateFileStorePathFactory(table_path, core_options));
+        EXPECT_OK_AND_ASSIGN(
+            auto data_file_path_factory,
+            file_store_path_factory->CreateDataFilePathFactory(BinaryRow::EmptyRow(),
+                                                               /*bucket=*/0));
+        auto remote_lookup_file_manager =
+            std::make_unique<RemoteLookupFileManager<PositionedKeyValue>>(
+                /*level_threshold=*/0, data_file_path_factory, fs_, pool_, lookup_levels.get());
+
+        // Create rewriter with remote lookup file manager
+        EXPECT_OK_AND_ASSIGN(auto rewriter,
+                             CreateCompactRewriterForPositionedKeyValue(
+                                 table_path, table_schema, core_options, std::move(lookup_levels),
+                                 std::move(remote_lookup_file_manager)));
+        CompactResult result;
+        if (rewrite) {
+            EXPECT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(compact_files));
+            EXPECT_OK_AND_ASSIGN(result,
+                                 rewriter->Rewrite(/*output_level=*/4, /*drop_delete=*/true, runs));
+        } else {
+            EXPECT_EQ(compact_files.size(), 1);
+            EXPECT_OK_AND_ASSIGN(result, rewriter->Upgrade(/*output_level=*/5, compact_files[0]));
+        }
+        EXPECT_EQ(compact_files.size(), result.Before().size());
+        EXPECT_EQ(1, result.After().size());
+        // Verify the upgraded file has a .lookup entry in extra_files
+        const auto& compact_after = result.After()[0];
+        EXPECT_EQ(1, compact_after->extra_files.size());
+        EXPECT_TRUE(compact_after->extra_files[0]);
+        EXPECT_TRUE(
+            StringUtils::EndsWith(compact_after->extra_files[0].value(),
+                                  LookupLevels<PositionedKeyValue>::REMOTE_LOOKUP_FILE_SUFFIX));
+
+        // Verify the .lookup file actually exists in the data directory
+        std::string base_data_path =
+            core_options.GetExternalPathStrategy() == ExternalPathStrategy::NONE
+                ? table_path
+                : core_options.CreateExternalPaths().value()[0];
+        std::string lookup_file_path =
+            base_data_path + "/bucket-0/" + compact_after->extra_files[0].value();
+        EXPECT_OK_AND_ASSIGN(bool lookup_exists, fs_->Exists(lookup_file_path));
+        EXPECT_TRUE(lookup_exists);
+        return {std::move(rewriter), compact_after};
     }
 
  private:
@@ -1004,7 +1071,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/1, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::NoChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1019,7 +1086,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1038,7 +1105,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/1);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1053,7 +1120,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/5, file));
@@ -1068,7 +1135,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogNoRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1084,7 +1151,7 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestGenerateUpgradeStrategy) {
             /*trimmed_primary_keys=*/{"key"}, core_options, /*data_schema=*/nullptr,
             /*write_schema=*/nullptr, /*path_factory_cache=*/nullptr,
             /*merge_file_split_read=*/nullptr, /*merge_function_wrapper_factory=*/nullptr, pool_,
-            cancellation_controller);
+            cancellation_controller, /*remote_lookup_file_manager=*/nullptr);
         auto file = create_meta(/*level=*/0, /*delete_row_count=*/std::nullopt);
         ASSERT_EQ(ChangelogMergeTreeRewriter::UpgradeStrategy::ChangelogWithRewrite(),
                   rewriter.GenerateUpgradeStrategy(/*output_level=*/2, file));
@@ -1214,6 +1281,243 @@ TEST_F(LookupMergeTreeCompactRewriterTest, TestRewriteWithDvAndAggForStringField
 
     // test dv
     auto dv_maintainer = rewriter->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileManagerAfterCompaction) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files: file0, file1 and file2 at level 0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, R"([[1, 11], [3, 33], [5, 55]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path,
+                                              core_options, R"([[2, 22], [4, 44], [5, 5]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([[2, 222], [5, 15]])"));
+    // Step 1: Upgrade file0 from level 0 to level 5
+    // This triggers NotifyRewriteCompactAfter -> GenRemoteLookupFile
+    // which should produce a .lookup file for file0
+    auto [rewriter0, new_file0] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {file0}, {file0}, /*rewrite=*/false);
+
+    // Step 2: Rewrite file1 and file2, will use .lookup file for file0
+    auto [rewriter1, file_rewrite] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {new_file0, file1, file2}, {file1, file2},
+        /*rewrite=*/true);
+
+    std::string compact_file_name = table_path + "/bucket-0/" + file_rewrite->file_name;
+    // Check compact file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  2, 222],
+[4,  0,  4, 44],
+[7,  0,  5, 55]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // Verify DV for file0 (key "5" was overridden by compact result)
+    auto dv_maintainer = rewriter1->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileWithExternalPath) {
+    auto external_dir = UniqueTestDirectory::Create("local");
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::DATA_FILE_EXTERNAL_PATHS, "FILE://" + external_dir->Str()},
+        {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "round-robin"}};
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files: file0, file1 and file2 at level 0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, R"([[1, 11], [3, 33], [5, 55]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path,
+                                              core_options, R"([[2, 22], [4, 44], [5, 5]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([[2, 222], [5, 15]])"));
+    // Step 1: Upgrade file0 from level 0 to level 5
+    // This triggers NotifyRewriteCompactAfter -> GenRemoteLookupFile
+    // which should produce a .lookup file for file0
+    auto [rewriter0, new_file0] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {file0}, {file0}, /*rewrite=*/false);
+
+    // Step 2: Rewrite file1 and file2, will use .lookup file for file0
+    auto [rewriter1, file_rewrite] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {new_file0, file1, file2}, {file1, file2},
+        /*rewrite=*/true);
+
+    std::string compact_file_name = external_dir->Str() + "/bucket-0/" + file_rewrite->file_name;
+    // Check compact file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  2, 222],
+[4,  0,  4, 44],
+[7,  0,  5, 55]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // Verify DV for file0 (key "5" was overridden by compact result)
+    auto dv_maintainer = rewriter1->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileWithSchemaEvolution) {
+    auto external_dir = UniqueTestDirectory::Create("local");
+    std::map<std::string, std::string> options = {{Options::MERGE_ENGINE, "aggregation"},
+                                                  {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+                                                  {Options::FILE_FORMAT, "orc"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"}};
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema0, schema_manager->ReadSchema(0));
+
+    // write file0 at level 0, use table_schema0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, R"([[1, 11], [3, 33], [5, 55]])"));
+    // Step 1: Upgrade file0 from level 0 to level 5
+    // This triggers NotifyRewriteCompactAfter -> GenRemoteLookupFile
+    // which should produce a .lookup file for file0 with schema0
+    auto [rewriter0, new_file0] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema0, core_options, {file0}, {file0}, /*rewrite=*/false);
+
+    // simulate alter table with schema1
+    auto table_schema1 = std::make_shared<TableSchema>(*table_schema0);
+    std::vector<DataField> fields = {DataField(0, arrow::field("key", arrow::int32())),
+                                     DataField(1, arrow::field("value", arrow::utf8()))};
+    table_schema1->id_ = 1;
+    table_schema1->fields_ = fields;
+    arrow_schema_ = DataField::ConvertDataFieldsToArrowSchema(fields);
+    key_schema_ = DataField::ConvertDataFieldsToArrowSchema({fields[0]});
+    ASSERT_OK_AND_ASSIGN(std::string schema_content, table_schema1->ToJsonString());
+    ASSERT_OK(fs_->AtomicStore(schema_manager->ToSchemaPath(1), schema_content));
+
+    // Step 2: Rewrite file1 and file2, will not use .lookup file for file0, as schema mismatch
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path,
+                                              core_options, R"([[2, "22"], [4, "44"], [5, "5"]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([[2, "222"], [5, "15"]])"));
+
+    auto [rewriter1, file_rewrite] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema1, core_options, {new_file0, file1, file2}, {file1, file2},
+        /*rewrite=*/true);
+
+    std::string compact_file_name = table_path + "/bucket-0/" + file_rewrite->file_name;
+    // Check compact file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  2, "222"],
+[4,  0,  4, "44"],
+[7,  0,  5, "55"]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema1, "orc", expected_array);
+
+    // Verify DV for file0 (key "5" was overridden by compact result)
+    auto dv_maintainer = rewriter1->dv_maintainer_;
+    ASSERT_TRUE(dv_maintainer);
+    auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
+    ASSERT_TRUE(dv);
+    ASSERT_FALSE(dv.value()->IsDeleted(0).value());
+    ASSERT_TRUE(dv.value()->IsDeleted(2).value());
+}
+
+TEST_F(LookupMergeTreeCompactRewriterTest, TestRemoteLookupFileReadFailFallbackToLocal) {
+    std::map<std::string, std::string> options = {
+        {Options::MERGE_ENGINE, "aggregation"},
+        {Options::FIELDS_DEFAULT_AGG_FUNC, "max"},
+        {Options::FILE_FORMAT, "orc"},
+        {Options::DELETION_VECTORS_ENABLED, "true"},
+    };
+
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(0));
+
+    // write 3 files: file0, file1 and file2 at level 0
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/0, /*last_sequence_number=*/-1, table_path,
+                                              core_options, R"([[1, 11], [3, 33], [5, 55]])"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/0, /*last_sequence_number=*/2, table_path,
+                                              core_options, R"([[2, 22], [4, 44], [5, 5]])"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/0, /*last_sequence_number=*/5, table_path,
+                                              core_options, R"([[2, 222], [5, 15]])"));
+    // Step 1: Upgrade file0 from level 0 to level 5
+    // This triggers NotifyRewriteCompactAfter -> GenRemoteLookupFile
+    // which should produce a .lookup file for file0
+    auto [rewriter0, new_file0] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {file0}, {file0}, /*rewrite=*/false);
+    // rename lookup file in file meta to simulate TryToDownload failed, will fallback to generate
+    // local lookup file
+    ASSERT_EQ(new_file0->extra_files.size(), 1);
+    new_file0->extra_files = {"non-exist-" + new_file0->extra_files[0].value()};
+
+    // Step 2: Rewrite file1 and file2, will not use .lookup file for file0
+    auto [rewriter1, file_rewrite] = CompactAndCheckWithRemoteLookupFile(
+        table_path, table_schema, core_options, {new_file0, file1, file2}, {file1, file2},
+        /*rewrite=*/true);
+
+    std::string compact_file_name = table_path + "/bucket-0/" + file_rewrite->file_name;
+    // Check compact file content
+    auto type_with_special_fields =
+        arrow::struct_(SpecialFields::CompleteSequenceAndValueKindField(arrow_schema_)->fields());
+    std::shared_ptr<arrow::ChunkedArray> expected_array;
+    auto array_status =
+        arrow::ipc::internal::json::ChunkedArrayFromJSON(type_with_special_fields, {R"([
+[6,  0,  2, 222],
+[4,  0,  4, 44],
+[7,  0,  5, 55]
+])"},
+                                                         &expected_array);
+    ASSERT_TRUE(array_status.ok());
+    CheckResult(compact_file_name, table_schema, "orc", expected_array);
+
+    // Verify DV for file0 (key "5" was overridden by compact result)
+    auto dv_maintainer = rewriter1->dv_maintainer_;
     ASSERT_TRUE(dv_maintainer);
     auto dv = dv_maintainer->DeletionVectorOf(file0->file_name);
     ASSERT_TRUE(dv);

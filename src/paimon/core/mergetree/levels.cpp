@@ -92,6 +92,10 @@ int32_t Levels::NumberOfSortedRuns() const {
     return number_of_runs;
 }
 
+void Levels::AddDropFileCallback(DropFileCallback* callback) {
+    drop_file_callbacks_.push_back(callback);
+}
+
 Status Levels::AddLevel0File(const std::shared_ptr<DataFileMeta>& file) {
     if (file->level != 0) {
         return Status::Invalid("must add level0 file in AddLevel0File");
@@ -152,8 +156,25 @@ Status Levels::Update(const std::vector<std::shared_ptr<DataFileMeta>>& before,
         PAIMON_RETURN_NOT_OK(UpdateLevel(i, grouped_before[i], grouped_after[i], key_comparator_,
                                          &levels_, &level0_));
     }
+    if (!drop_file_callbacks_.empty()) {
+        std::set<std::string> dropped_files;
+        for (const auto& file : before) {
+            dropped_files.insert(file->file_name);
+        }
+        // exclude upgrade files
+        for (const auto& file : after) {
+            dropped_files.erase(file->file_name);
+        }
+        for (auto* callback : drop_file_callbacks_) {
+            if (!callback) {
+                continue;
+            }
+            for (const auto& file_name : dropped_files) {
+                callback->NotifyDropFile(file_name);
+            }
+        }
+    }
     return Status::OK();
-    // TODO(lisizhuo.lsz): dropFileCallbacks
 }
 
 Status Levels::UpdateLevel(int32_t level, const std::vector<std::shared_ptr<DataFileMeta>>& before,

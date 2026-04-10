@@ -512,4 +512,132 @@ TEST_F(LookupLevelsTest, TestLevelsWithValueFieldAppearBeforeKey) {
     ASSERT_FALSE(positioned_kv);
 }
 
+TEST_F(LookupLevelsTest, TestDropFileCallbackOnUpdate) {
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11], [3, 33]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/2, table_path,
+                                              core_options, "[[2, 22], [5, 55]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
+
+    // Trigger lookup to populate the cache for both files.
+    ASSERT_OK_AND_ASSIGN(auto positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+    ASSERT_OK_AND_ASSIGN(positioned_kv,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(positioned_kv);
+
+    // Both files should be cached now.
+    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file0->file_name));
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+
+    // Update: remove file0 from level1, add a new file to level1.
+    ASSERT_OK_AND_ASSIGN(auto new_file, NewFiles(/*level=*/1, /*last_sequence_number=*/4,
+                                                 table_path, core_options, "[[1, 111], [3, 333]]"));
+    ASSERT_OK(levels->Update(/*before=*/{file0}, /*after=*/{new_file}));
+
+    // file0 was dropped, so its cache entry should be invalidated.
+    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 1);
+    ASSERT_FALSE(lookup_levels->lookup_file_cache_.count(file0->file_name));
+    // file1 was not dropped, so its cache entry should still exist.
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+}
+
+TEST_F(LookupLevelsTest, TestRemoteSst) {
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
+
+    // The processor identifier for PositionedKeyValue is "position-and-value"
+    // RemoteSst format: {fileName}.{length}.{processorId}.{serVersion}.lookup
+
+    // 1. Empty extra_files: should return nullopt
+    auto result = lookup_levels->RemoteSst(file0);
+    ASSERT_FALSE(result.has_value());
+
+    // 2. extra_files with only nullopt elements: should return nullopt
+    auto meta_with_nullopt_extras = file0->CopyWithExtraFiles({std::nullopt, std::nullopt});
+    result = lookup_levels->RemoteSst(meta_with_nullopt_extras);
+    ASSERT_FALSE(result.has_value());
+
+    // 3. extra_files with non-.lookup suffix: should return nullopt
+    auto meta_with_non_lookup = file0->CopyWithExtraFiles({std::string("some_file.index")});
+    result = lookup_levels->RemoteSst(meta_with_non_lookup);
+    ASSERT_FALSE(result.has_value());
+
+    // 4. .lookup file with fewer than 3 dot-separated parts (e.g. "x.lookup"):
+    //    split("x.lookup", ".") = ["x", "lookup"], size=2 < 3, should return nullopt
+    auto meta_with_short_lookup = file0->CopyWithExtraFiles({std::string("x.lookup")});
+    result = lookup_levels->RemoteSst(meta_with_short_lookup);
+    ASSERT_FALSE(result.has_value());
+
+    // 5. .lookup file with mismatched processorId: should return nullopt
+    //    Format: name.100.wrong_processor.v1.lookup
+    //    parts = ["name", "100", "wrong_processor", "v1", "lookup"]
+    //    processorId = parts[size-3] = "wrong_processor" != "position-and-value"
+    auto meta_with_wrong_processor =
+        file0->CopyWithExtraFiles({std::string("name.100.wrong_processor.v1.lookup")});
+    result = lookup_levels->RemoteSst(meta_with_wrong_processor);
+    ASSERT_FALSE(result.has_value());
+
+    // 6. Valid .lookup file with matching processorId: should return RemoteSstFile
+    //    Format: data.orc.1024.position-and-value.v1.lookup
+    std::string valid_lookup_name = "data.orc.1024.position-and-value.v1.lookup";
+    auto meta_with_valid_lookup = file0->CopyWithExtraFiles({std::string(valid_lookup_name)});
+    result = lookup_levels->RemoteSst(meta_with_valid_lookup);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().sst_file_name, valid_lookup_name);
+    ASSERT_EQ(result.value().ser_version, "v1");
+
+    // 7. Multiple extra_files: first matching .lookup is used, non-matching ones are skipped
+    auto meta_with_multiple_extras =
+        file0->CopyWithExtraFiles({std::string("changelog.orc"), std::nullopt,
+                                   std::string("first.100.position-and-value.ver1.lookup"),
+                                   std::string("second.200.position-and-value.ver2.lookup")});
+    result = lookup_levels->RemoteSst(meta_with_multiple_extras);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().sst_file_name, "first.100.position-and-value.ver1.lookup");
+    ASSERT_EQ(result.value().ser_version, "ver1");
+
+    // 8. Verify NewRemoteSst generates a name that RemoteSst can correctly parse
+    std::string generated_name = lookup_levels->NewRemoteSst(file0, /*length=*/2048);
+    auto meta_with_generated = file0->CopyWithExtraFiles({std::string(generated_name)});
+    result = lookup_levels->RemoteSst(meta_with_generated);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().sst_file_name, generated_name);
+
+    // 9. Exactly 3 parts with matching processorId: "position-and-value.v2.lookup"
+    //    parts = ["position-and-value", "v2", "lookup"]
+    //    processorId = parts[0] = "position-and-value" (matches)
+    auto meta_with_minimal_parts =
+        file0->CopyWithExtraFiles({std::string("position-and-value.v2.lookup")});
+    result = lookup_levels->RemoteSst(meta_with_minimal_parts);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().sst_file_name, "position-and-value.v2.lookup");
+    ASSERT_EQ(result.value().ser_version, "v2");
+
+    ASSERT_OK(lookup_levels->Close());
+}
+
 }  // namespace paimon::test

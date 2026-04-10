@@ -21,6 +21,7 @@
 #include "paimon/core/mergetree/compact/changelog_merge_tree_rewriter.h"
 #include "paimon/core/mergetree/compact/first_row_merge_function.h"
 #include "paimon/core/mergetree/compact/lookup_merge_function.h"
+#include "paimon/core/mergetree/lookup/remote_lookup_file_manager.h"
 #include "paimon/core/mergetree/lookup_levels.h"
 #include "paimon/core/schema/table_schema.h"
 namespace paimon {
@@ -36,7 +37,8 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
         const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
+        const std::shared_ptr<CancellationController>& cancellation_controller,
+        std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager);
 
     Status Close() override {
         return lookup_levels_->Close();
@@ -65,7 +67,8 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
         std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
         MergeFunctionWrapperFactory merge_function_wrapper_factory,
         const std::shared_ptr<MemoryPool>& pool,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
+        const std::shared_ptr<CancellationController>& cancellation_controller,
+        std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager);
 
     bool RewriteChangelog(int32_t output_level, bool drop_delete,
                           const std::vector<std::vector<SortedRun>>& sections) const override {
@@ -78,11 +81,12 @@ class LookupMergeTreeCompactRewriter : public ChangelogMergeTreeRewriter {
     void NotifyRewriteCompactBefore(
         const std::vector<std::shared_ptr<DataFileMeta>>& files) override;
 
-    std::vector<std::shared_ptr<DataFileMeta>> NotifyRewriteCompactAfter(
+    Result<std::vector<std::shared_ptr<DataFileMeta>>> NotifyRewriteCompactAfter(
         const std::vector<std::shared_ptr<DataFileMeta>>& files) override;
 
  private:
     std::unique_ptr<LookupLevels<T>> lookup_levels_;
     std::shared_ptr<BucketedDvMaintainer> dv_maintainer_;
+    std::unique_ptr<RemoteLookupFileManager<T>> remote_lookup_file_manager_;
 };
 }  // namespace paimon

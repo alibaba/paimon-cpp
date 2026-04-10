@@ -277,9 +277,9 @@ Result<CompactResult> MergeTreeCompactRewriter::RewriteCompaction(
     NotifyRewriteCompactBefore(before);
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<DataFileMeta>> after,
                            rolling_writer->GetResult());
+    PAIMON_ASSIGN_OR_RAISE(after, NotifyRewriteCompactAfter(after));
     write_guard.Release();
 
-    after = NotifyRewriteCompactAfter(after);
     return CompactResult(before, after);
 }
 

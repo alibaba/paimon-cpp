@@ -199,4 +199,85 @@ TEST_F(LevelsTest, TestRunOfLevelInvalidLevel) {
     ASSERT_NOK_WITH_MSG(result_neg, "Level0 does not have one single sorted run.");
 }
 
+/// A simple test callback that records dropped file names.
+class TestDropFileCallback : public Levels::DropFileCallback {
+ public:
+    void NotifyDropFile(const std::string& file) override {
+        dropped_files.push_back(file);
+    }
+    std::vector<std::string> dropped_files;
+};
+
+TEST_F(LevelsTest, TestUpdateDropFileCallback) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {
+        CreateDataFileMeta(0, 100, 200, 0), CreateDataFileMeta(0, 0, 200, 0),
+        CreateDataFileMeta(1, 0, 500, 0), CreateDataFileMeta(1, 600, 1000, 0)};
+
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+
+    TestDropFileCallback callback;
+    levels->AddDropFileCallback(&callback);
+
+    // Remove input_files[0] from level0 and input_files[2] from level1,
+    // add new files to level0 and level1.
+    std::vector<std::shared_ptr<DataFileMeta>> before = {input_files[0], input_files[2]};
+    std::vector<std::shared_ptr<DataFileMeta>> after = {CreateDataFileMeta(0, 0, 100, 0),
+                                                        CreateDataFileMeta(1, 0, 550, 0)};
+    ASSERT_OK(levels->Update(before, after));
+
+    // Both files in before are replaced by new files, so both should be dropped.
+    ASSERT_EQ(callback.dropped_files.size(), 2);
+    std::set<std::string> dropped_set(callback.dropped_files.begin(), callback.dropped_files.end());
+    ASSERT_TRUE(dropped_set.count(input_files[0]->file_name));
+    ASSERT_TRUE(dropped_set.count(input_files[2]->file_name));
+}
+
+TEST_F(LevelsTest, TestUpdateDropFileCallbackExcludesUpgradeFiles) {
+    auto file_level0 = CreateDataFileMeta(0, 0, 100, 0);
+    auto file_level1 = CreateDataFileMeta(1, 200, 300, 0);
+
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {file_level0, file_level1};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+
+    TestDropFileCallback callback;
+    levels->AddDropFileCallback(&callback);
+
+    // Simulate an upgrade: file_level0 appears in both before and after (same file_name).
+    // Create a new version of the file at level 1 with the same file_name.
+    auto upgraded_file = std::make_shared<DataFileMeta>(
+        /*file_name=*/file_level0->file_name, /*file_size=*/file_level0->file_size,
+        /*row_count=*/file_level0->row_count, file_level0->min_key, file_level0->max_key,
+        file_level0->key_stats, file_level0->value_stats, file_level0->min_sequence_number,
+        file_level0->max_sequence_number, file_level0->schema_id, /*level=*/1,
+        file_level0->extra_files, file_level0->creation_time, std::nullopt, nullptr,
+        FileSource::Append(), std::nullopt, std::nullopt, std::nullopt, std::nullopt);
+
+    std::vector<std::shared_ptr<DataFileMeta>> before = {file_level0};
+    std::vector<std::shared_ptr<DataFileMeta>> after = {upgraded_file};
+    ASSERT_OK(levels->Update(before, after));
+
+    // The file was upgraded (same file_name in before and after), so it should NOT be dropped.
+    ASSERT_TRUE(callback.dropped_files.empty());
+}
+
+TEST_F(LevelsTest, TestUpdateNoCallbackWhenNoDroppedFiles) {
+    std::vector<std::shared_ptr<DataFileMeta>> input_files = {CreateDataFileMeta(0, 0, 100, 0)};
+    ASSERT_OK_AND_ASSIGN(auto levels,
+                         Levels::Create(CreateComparator(), input_files, /*num_levels=*/3));
+
+    TestDropFileCallback callback;
+    levels->AddDropFileCallback(&callback);
+
+    // Update with empty before and after.
+    ASSERT_OK(levels->Update({}, {}));
+    ASSERT_TRUE(callback.dropped_files.empty());
+
+    // Update with only after (adding new files).
+    std::vector<std::shared_ptr<DataFileMeta>> after = {CreateDataFileMeta(0, 200, 300, 0)};
+    ASSERT_OK(levels->Update({}, after));
+    ASSERT_TRUE(callback.dropped_files.empty());
+}
+
 }  // namespace paimon::test

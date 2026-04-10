@@ -85,6 +85,15 @@ Result<std::shared_ptr<DataFileMeta>> DataFileMeta::Upgrade(int32_t new_level) c
         first_row_id, write_cols);
 }
 
+std::shared_ptr<DataFileMeta> DataFileMeta::CopyWithExtraFiles(
+    const std::vector<std::optional<std::string>>& new_extra_files) const {
+    return std::make_shared<DataFileMeta>(
+        file_name, file_size, row_count, min_key, max_key, key_stats, value_stats,
+        min_sequence_number, max_sequence_number, schema_id, level, new_extra_files, creation_time,
+        delete_row_count, embedded_index, file_source, value_stats_cols, external_path,
+        first_row_id, write_cols);
+}
+
 DataFileMeta::DataFileMeta(
     const std::string& _file_name, int64_t _file_size, int64_t _row_count,
     const BinaryRow& _min_key, const BinaryRow& _max_key, const SimpleStats& _key_stats,

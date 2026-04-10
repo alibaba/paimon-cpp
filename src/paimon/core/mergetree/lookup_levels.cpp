@@ -16,11 +16,13 @@
 
 #include "paimon/core/mergetree/lookup_levels.h"
 
+#include "fmt/format.h"
 #include "paimon/common/table/special_fields.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
 #include "paimon/core/mergetree/lookup/file_position.h"
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
+#include "paimon/core/mergetree/lookup/remote_lookup_file_manager.h"
 #include "paimon/core/mergetree/lookup_utils.h"
 #include "paimon/core/operation/internal_read_context.h"
 #include "paimon/result.h"
@@ -156,7 +158,14 @@ LookupLevels<T>::LookupLevels(
         value_schema_ = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
     }
     read_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema_);
+    levels_->AddDropFileCallback(this);
 }
+
+template <typename T>
+void LookupLevels<T>::NotifyDropFile(const std::string& file) {
+    lookup_file_cache_.erase(file);
+}
+
 template <typename T>
 Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalRow>& key,
                                                  const std::shared_ptr<DataFileMeta>& file) {
@@ -164,7 +173,7 @@ Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalR
     std::shared_ptr<LookupFile> lookup_file;
     if (iter == lookup_file_cache_.end()) {
         PAIMON_ASSIGN_OR_RAISE(lookup_file, CreateLookupFile(file));
-        lookup_file_cache_[file->file_name] = lookup_file;
+        AddLocalFile(file, lookup_file);
     } else {
         lookup_file = iter->second;
     }
@@ -190,12 +199,101 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
         std::string prefix,
         LookupFile::LocalFilePrefix(partition_schema_, partition_, bucket_, file->file_name));
     PAIMON_ASSIGN_OR_RAISE(std::string kv_file_path, io_manager_->GenerateTempFilePath(prefix));
-    // TODO(lisizhuo.lsz): support DownloadRemoteSst
-    PAIMON_RETURN_NOT_OK(CreateSstFileFromDataFile(file, kv_file_path));
+
+    int64_t schema_id = table_schema_->Id();
+    std::string file_ser_version = serializer_factory_->Version();
+    auto download_ser_version = TryToDownloadRemoteSst(file, kv_file_path);
+    if (download_ser_version.has_value()) {
+        // use schema id from remote file
+        schema_id = file->schema_id;
+        file_ser_version = download_ser_version.value();
+    } else {
+        PAIMON_RETURN_NOT_OK(CreateSstFileFromDataFile(file, kv_file_path));
+    }
+
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupStoreReader> reader,
                            lookup_store_factory_->CreateReader(fs_, kv_file_path, pool_));
-    return std::make_shared<LookupFile>(fs_, kv_file_path, file->level, table_schema_->Id(),
-                                        serializer_factory_->Version(), std::move(reader));
+    return std::make_shared<LookupFile>(fs_, kv_file_path, file->level, schema_id, file_ser_version,
+                                        std::move(reader));
+}
+
+template <typename T>
+std::optional<RemoteSstFile> LookupLevels<T>::RemoteSst(
+    const std::shared_ptr<DataFileMeta>& file) const {
+    // Find the first extra file that ends with REMOTE_LOOKUP_FILE_SUFFIX
+    std::optional<std::string> sst_file_name;
+    for (const auto& extra_file : file->extra_files) {
+        if (extra_file.has_value()) {
+            const std::string& name = extra_file.value();
+            if (StringUtils::EndsWith(name, REMOTE_LOOKUP_FILE_SUFFIX)) {
+                sst_file_name = name;
+                break;
+            }
+        }
+    }
+    if (!sst_file_name.has_value()) {
+        return std::nullopt;
+    }
+
+    // Parse: {fileName}.{length}.{processorId}.{serVersion}.lookup
+    // Split by '.'
+    const std::string& name = sst_file_name.value();
+    std::vector<std::string> parts = StringUtils::Split(name, ".");
+    // Need at least 3 parts: ...processorId.serVersion.lookup
+    if (parts.size() < 3) {
+        return std::nullopt;
+    }
+
+    // parts[size-1] is "lookup", parts[size-2] is serVersion, parts[size-3] is processorId
+    const std::string& processor_id = parts[parts.size() - 3];
+    if (processor_id != processor_factory_->Identifier()) {
+        return std::nullopt;
+    }
+
+    const std::string& ser_version = parts[parts.size() - 2];
+    return RemoteSstFile{name, ser_version};
+}
+
+template <typename T>
+std::string LookupLevels<T>::NewRemoteSst(const std::shared_ptr<DataFileMeta>& file,
+                                          int64_t length) const {
+    return fmt::format("{}.{}.{}.{}{}", file->file_name, std::to_string(length),
+                       processor_factory_->Identifier(), serializer_factory_->Version(),
+                       REMOTE_LOOKUP_FILE_SUFFIX);
+}
+
+template <typename T>
+void LookupLevels<T>::AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
+                                   const std::shared_ptr<LookupFile>& lookup_file) {
+    lookup_file_cache_[file->file_name] = lookup_file;
+}
+
+template <typename T>
+std::optional<std::string> LookupLevels<T>::TryToDownloadRemoteSst(
+    const std::shared_ptr<DataFileMeta>& file, const std::string& local_file) {
+    if (remote_lookup_file_manager_ == nullptr) {
+        return std::nullopt;
+    }
+    auto remote_sst_file = RemoteSst(file);
+    if (!remote_sst_file.has_value()) {
+        return std::nullopt;
+    }
+
+    const auto& remote_sst = remote_sst_file.value();
+
+    // Validate schema matched, no error status here
+    auto processor_result = GetOrCreateProcessor(file->schema_id, remote_sst.ser_version);
+    if (!processor_result.ok()) {
+        return std::nullopt;
+    }
+
+    bool success =
+        remote_lookup_file_manager_->TryToDownload(file, remote_sst.sst_file_name, local_file);
+    if (!success) {
+        return std::nullopt;
+    }
+
+    return remote_sst.ser_version;
 }
 template <typename T>
 Status LookupLevels<T>::CreateSstFileFromDataFile(const std::shared_ptr<DataFileMeta>& file,
@@ -277,9 +375,14 @@ Result<std::shared_ptr<PersistProcessor<T>>> LookupLevels<T>::GetOrCreateProcess
     if (iter != schema_id_and_ser_version_to_processors_.end()) {
         return iter->second;
     }
+    auto file_schema = value_schema_;
+    if (table_schema_->Id() != schema_id) {
+        PAIMON_ASSIGN_OR_RAISE(auto file_table_schema, schema_manager_->ReadSchema(schema_id));
+        file_schema = DataField::ConvertDataFieldsToArrowSchema(file_table_schema->Fields());
+    }
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<PersistProcessor<T>> processor,
-        processor_factory_->Create(ser_version, serializer_factory_, value_schema_, pool_));
+        processor_factory_->Create(ser_version, serializer_factory_, file_schema, pool_));
     schema_id_and_ser_version_to_processors_[key] = processor;
     return processor;
 }

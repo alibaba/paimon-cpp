@@ -1,0 +1,40 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "INT"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "STRING NOT NULL"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "INT NOT NULL"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 4,
+    "name" : "f4",
+    "type" : "STRING"
+  } ],
+  "highestFieldId" : 4,
+  "partitionKeys" : [ ],
+  "primaryKeys" : [ "f2", "f1" ],
+  "options" : {
+    "bucket" : "1",
+    "lookup.remote-file.enabled" : "true",
+    "file.compression" : "none",
+    "fields.default-aggregate-function" : "min",
+    "lookup.remote-file.level-threshold" : "1",
+    "merge-engine" : "aggregation",
+    "manifest.format" : "orc",
+    "file.format" : "orc",
+    "deletion-vectors.enabled" : "true"
+  },
+  "timeMillis" : 1775650042347
+}
