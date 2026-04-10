@@ -57,7 +57,6 @@ class LookupLevels : public Levels::DropFileCallback {
         const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
         const std::shared_ptr<MemoryPool>& pool);
 
-    ~LookupLevels();
     const std::shared_ptr<Levels>& GetLevels() const {
         return levels_;
     }

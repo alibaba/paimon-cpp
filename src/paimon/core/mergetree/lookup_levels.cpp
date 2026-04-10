@@ -155,8 +155,8 @@ LookupLevels<T>::LookupLevels(
       key_serializer_(std::move(key_serializer)),
       serializer_factory_(serializer_factory),
       lookup_store_factory_(lookup_store_factory),
-      lookup_file_cache_(lookup_file_cache)
-          remote_lookup_file_manager_(remote_lookup_file_manager) {
+      lookup_file_cache_(lookup_file_cache),
+      remote_lookup_file_manager_(remote_lookup_file_manager) {
     if constexpr (std::is_same_v<T, FilePosition>) {
         // if T is FilePosition, only read key fields to create sst file is enough
         value_schema_ = key_schema_;
@@ -418,15 +418,15 @@ Result<std::shared_ptr<PersistProcessor<T>>> LookupLevels<T>::GetOrCreateProcess
 template <typename T>
 Status LookupLevels<T>::Close() {
     levels_->RemoveDropFileCallback(this);
-    for (const auto& cached_file : own_cached_files_) {
+    // Move own_cached_files_ to a local copy before iterating.
+    // Invalidate triggers LookupFile::Close() -> callback -> own_cached_files_.erase(),
+    // which would invalidate iterators if we iterated over own_cached_files_ directly.
+    auto cached_files_copy = std::move(own_cached_files_);
+    own_cached_files_.clear();
+    for (const auto& cached_file : cached_files_copy) {
         lookup_file_cache_->Invalidate(cached_file);
     }
     return Status::OK();
-}
-
-template <typename T>
-LookupLevels<T>::~LookupLevels() {
-    [[maybe_unused]] auto status = Close();
 }
 
 template class LookupLevels<KeyValue>;
