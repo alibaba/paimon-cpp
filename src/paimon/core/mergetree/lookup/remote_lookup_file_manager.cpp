@@ -32,6 +32,9 @@ RemoteLookupFileManager::RemoteLookupFileManager(
 template <typename T>
 Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager::GenRemoteLookupFile(
     const std::shared_ptr<DataFileMeta>& file, LookupLevels<T>* lookup_levels) const {
+    if (!lookup_levels) {
+        return Status::Invalid("lookup_levels must not be null in GenRemoteLookupFile");
+    }
     if (file->level < level_threshold_) {
         return file;
     }
