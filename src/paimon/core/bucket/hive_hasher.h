@@ -64,7 +64,6 @@ class HiveHasher {
         // For non-compact decimals, we need to handle the 128-bit value.
 
         // First normalize: strip trailing zeros and limit scale
-        int32_t precision = decimal.Precision();
         int32_t scale = decimal.Scale();
         auto value = decimal.Value();
 
