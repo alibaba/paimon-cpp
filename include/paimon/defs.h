@@ -113,7 +113,7 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_TARGET_FILE_SIZE[];
 
     /// "partition.default-name" - The default partition name in case the dynamic partition column
-    /// value is null/empty string.
+    /// value is null/empty string. Default is "__DEFAULT_PARTITION__".
     static const char PARTITION_DEFAULT_NAME[];
 
     /// "file.compression" - The default file compression is zstd. For faster read and write, it is

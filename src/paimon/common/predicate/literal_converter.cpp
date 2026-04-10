@@ -72,6 +72,10 @@ Result<Literal> LiteralConverter::ConvertLiteralsFromString(const FieldType& typ
             }
             return Literal(value.value());
         }
+        case FieldType::DATE: {
+            PAIMON_ASSIGN_OR_RAISE(int32_t value, StringUtils::StringToDate(value_str));
+            return Literal(FieldType::DATE, value);
+        }
         case FieldType::BIGINT: {
             auto value = StringUtils::StringToValue<int64_t>(value_str);
             if (value == std::nullopt) {
@@ -98,7 +102,8 @@ Result<Literal> LiteralConverter::ConvertLiteralsFromString(const FieldType& typ
             return Literal(type, value_str.data(), value_str.size());
         default:
             return Status::Invalid(
-                fmt::format("Do not support type {}", FieldTypeUtils::FieldTypeToString(type)));
+                fmt::format("Do not support type {} in ConvertLiteralsFromString",
+                            FieldTypeUtils::FieldTypeToString(type)));
     }
 }
 

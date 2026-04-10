@@ -400,6 +400,11 @@ TEST_F(LiteralConverterTest, TestDateLiteral) {
     CheckResult(field_array,
                 std::vector<Literal>({Literal(FieldType::DATE, 0l), Literal(FieldType::DATE, 4l),
                                       Literal(FieldType::DATE, -5l), Literal(FieldType::DATE)}));
+    CheckLiteralsFromString(
+        FieldType::DATE, {"1", "0", "1970-01-02", "1969-12-31"},
+        std::vector<Literal>({Literal(FieldType::DATE, 1), Literal(FieldType::DATE, 0),
+                              Literal(FieldType::DATE, 1), Literal(FieldType::DATE, -1)}));
+
     CheckLiteralFromRow(arrow::date32(), {0, 4, -5, NullType()}, FieldType::DATE,
                         {Literal(FieldType::DATE, 0l), Literal(FieldType::DATE, 4l),
                          Literal(FieldType::DATE, -5l), Literal(FieldType::DATE)});
