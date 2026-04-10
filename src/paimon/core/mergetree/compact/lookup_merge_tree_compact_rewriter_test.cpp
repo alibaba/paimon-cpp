@@ -322,7 +322,7 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
                                Levels::Create(key_comparator, files, /*num_levels=*/5));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
-        auto io_manager = IOManager::Create(tmp_dir_->Str());
+        auto io_manager = std::make_shared<IOManager>(tmp_dir_->Str(), tmp_dir_->GetFileSystem());
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
         PAIMON_ASSIGN_OR_RAISE(auto lookup_key_comparator,
                                RowCompactedSerializer::CreateSliceComparator(key_schema_, pool_));

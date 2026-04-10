@@ -145,7 +145,7 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
-        auto io_manager = IOManager::Create(tmp_dir_->Str());
+        auto io_manager = std::make_shared<IOManager>(tmp_dir_->Str(), tmp_dir_->GetFileSystem());
         auto processor_factory =
             std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();

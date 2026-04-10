@@ -146,7 +146,9 @@ set(PAIMON_COMMON_SRCS
     common/utils/string_utils.cpp)
 
 set(PAIMON_CORE_SRCS
-    core/disk/io_manager.cpp
+    core/disk/file_io_channel.cpp
+    core/mergetree/spill_reader.cpp
+    core/mergetree/spill_writer.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
     core/casting/binary_to_string_cast_executor.cpp
@@ -605,6 +607,8 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
+                    core/mergetree/spill_channel_manager_test.cpp
+                    core/mergetree/spill_reader_writer_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp
                     core/operation/data_evolution_file_store_scan_test.cpp

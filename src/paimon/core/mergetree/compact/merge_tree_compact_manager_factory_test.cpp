@@ -35,7 +35,6 @@
 #include "paimon/core/core_options.h"
 #include "paimon/core/mergetree/compact/force_up_level0_compaction.h"
 #include "paimon/core/mergetree/compact/universal_compaction.h"
-#include "paimon/disk/io_manager.h"
 #include "paimon/file_store_write.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
@@ -116,8 +115,7 @@ class MergeTreeCompactManagerFactoryWriteTest : public ::testing::Test {
             context_builder.SetOptions(context_options);
         }
         if (with_io_manager) {
-            auto io_manager = IOManager::Create(dir->Str());
-            context_builder.WithIOManager(std::shared_ptr<IOManager>(std::move(io_manager)));
+            context_builder.WithTempDirectory(dir->Str());
         }
 
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,

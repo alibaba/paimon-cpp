@@ -22,9 +22,9 @@
 #include "arrow/util/compression.h"
 #include "arrow/util/type_fwd.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/options_utils.h"
-#include "paimon/common/utils/string_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
@@ -52,13 +52,8 @@ Result<std::unique_ptr<FormatWriter>> ParquetWriterBuilder::Build(
 Result<std::shared_ptr<::parquet::WriterProperties>> ParquetWriterBuilder::PrepareWriterProperties(
     const std::string& compression) {
     PAIMON_ASSIGN_OR_RAISE(CoreOptions core_options, CoreOptions::FromMap(options_));
-    std::string normalized_compression = StringUtils::ToLowerCase(compression);
-    if (normalized_compression == "none") {
-        normalized_compression = "uncompressed";
-    }
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        arrow::Compression::type compression_type,
-        arrow::util::Codec::GetCompressionType(StringUtils::ToLowerCase(normalized_compression)));
+    PAIMON_ASSIGN_OR_RAISE(arrow::Compression::type compression_type,
+                           ArrowUtils::GetCompressionType(compression));
     ::parquet::WriterProperties::Builder builder;
     builder.memory_pool(pool_.get());
     builder.write_batch_size(batch_size_);

@@ -20,6 +20,7 @@
 #include <string>
 
 #include "paimon/common/data/serializer/row_compacted_serializer.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
 #include "paimon/core/mergetree/lookup/lookup_serializer_factory.h"
 #include "paimon/core/mergetree/lookup/persist_processor.h"
@@ -27,7 +28,6 @@
 #include "paimon/core/mergetree/lookup_utils.h"
 #include "paimon/core/operation/raw_file_split_read.h"
 #include "paimon/core/schema/schema_manager.h"
-#include "paimon/disk/io_manager.h"
 #include "paimon/result.h"
 
 namespace paimon {
