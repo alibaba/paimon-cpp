@@ -117,5 +117,6 @@ const char Options::LOOKUP_COMPACT[] = "lookup-compact";
 const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
 const char Options::LOOKUP_CACHE_MAX_MEMORY_SIZE[] = "lookup.cache-max-memory-size";
 const char Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[] = "lookup.cache.high-priority-pool-ratio";
+const char Options::BUCKET_FUNCTION_TYPE[] = "bucket-function.type";
 
 }  // namespace paimon

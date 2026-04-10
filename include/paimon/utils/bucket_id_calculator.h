@@ -27,6 +27,7 @@ struct ArrowSchema;
 struct ArrowArray;
 
 namespace paimon {
+class BucketFunction;
 class MemoryPool;
 
 /// Calculator for determining bucket ids based on the given bucket keys.
@@ -47,6 +48,22 @@ class PAIMON_EXPORT BucketIdCalculator {
     /// @param num_buckets Number of buckets.
     static Result<std::unique_ptr<BucketIdCalculator>> Create(bool is_pk_table,
                                                               int32_t num_buckets);
+
+    /// Create `BucketIdCalculator` with a custom bucket function and memory pool.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param bucket_function The bucket function to use for bucket assignment.
+    /// @param pool Memory pool for memory allocation.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    /// Create `BucketIdCalculator` with a custom bucket function and default memory pool.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param bucket_function The bucket function to use for bucket assignment.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function);
     /// Calculate bucket ids for the given bucket keys.
     /// @param bucket_keys Arrow struct array containing the bucket key values.
     /// @param bucket_schema Arrow schema describing the structure of bucket_keys.
@@ -58,11 +75,13 @@ class PAIMON_EXPORT BucketIdCalculator {
                               int32_t* bucket_ids) const;
 
  private:
-    BucketIdCalculator(int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool)
-        : num_buckets_(num_buckets), pool_(pool) {}
+    BucketIdCalculator(int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+                       const std::shared_ptr<MemoryPool>& pool)
+        : num_buckets_(num_buckets), bucket_function_(std::move(bucket_function)), pool_(pool) {}
 
  private:
     int32_t num_buckets_;
+    std::unique_ptr<BucketFunction> bucket_function_;
     std::shared_ptr<MemoryPool> pool_;
 };
 }  // namespace paimon

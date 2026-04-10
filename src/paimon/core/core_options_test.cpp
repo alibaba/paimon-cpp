@@ -21,6 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/common/fs/resolving_file_system.h"
+#include "paimon/core/bucket/bucket_function_type.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
 #include "paimon/format/file_format.h"
@@ -130,6 +131,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(0.25, core_options.GetLookupCacheHighPrioPoolRatio());
     ASSERT_FALSE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), INT32_MIN);
+    ASSERT_EQ(BucketFunctionType::DEFAULT, core_options.GetBucketFunctionType());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -218,7 +220,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_MAX_MEMORY_SIZE, "1MB"},
         {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"},
         {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
-        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"}};
+        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"},
+        {Options::BUCKET_FUNCTION_TYPE, "mod"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -333,6 +336,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(0.35, core_options.GetLookupCacheHighPrioPoolRatio());
     ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
+    ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -355,6 +359,8 @@ TEST(CoreOptionsTest, TestInvalidCase) {
     ASSERT_NOK_WITH_MSG(
         CoreOptions::FromMap({{Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "1.1"}}),
         "The high priority pool ratio should in the range [0, 1), while input is 1.1");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET_FUNCTION_TYPE, "invalid"}}),
+                        "invalid bucket function type: invalid");
 }
 
 TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {
@@ -564,6 +570,7 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
         {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"},
         {Options::LOOKUP_COMPACT, "GENTLE"},
         {Options::SCAN_MODE, "DEFAULT"},
+        {Options::BUCKET_FUNCTION_TYPE, "MOD"},
     };
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
 
@@ -574,5 +581,6 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
     ASSERT_EQ(SortEngine::MIN_HEAP, core_options.GetSortEngine());
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
+    ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
 }
 }  // namespace paimon::test

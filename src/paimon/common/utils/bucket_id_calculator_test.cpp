@@ -31,6 +31,8 @@
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/core/bucket/default_bucket_function.h"
+#include "paimon/core/bucket/mod_bucket_function.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -62,6 +64,34 @@ class BucketIdCalculatorTest : public ::testing::Test {
                                           arrow::ipc::internal::json::ArrayFromJSON(
                                               arrow::struct_(bucket_schema->fields()), data_str));
         return CalculateBucketIds(is_pk_table, num_buckets, bucket_schema, bucket_array);
+    }
+
+    Result<std::vector<int32_t>> CalculateBucketIds(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<arrow::Schema>& bucket_schema,
+        const std::shared_ptr<arrow::Array>& bucket_array) const {
+        ::ArrowArray c_bucket_array;
+        EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_bucket_array).ok());
+        ::ArrowSchema c_bucket_schema;
+        EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_bucket_schema).ok());
+        std::vector<int32_t> bucket_ids(bucket_array->length());
+        EXPECT_OK_AND_ASSIGN(
+            auto bucket_id_cal,
+            BucketIdCalculator::Create(is_pk_table, num_buckets, std::move(bucket_function)));
+        PAIMON_RETURN_NOT_OK(bucket_id_cal->CalculateBucketIds(
+            /*bucket_keys=*/&c_bucket_array, /*bucket_schema=*/&c_bucket_schema,
+            /*bucket_ids=*/bucket_ids.data()));
+        return bucket_ids;
+    }
+
+    Result<std::vector<int32_t>> CalculateBucketIds(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<arrow::Schema>& bucket_schema, const std::string& data_str) const {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto bucket_array,
+                                          arrow::ipc::internal::json::ArrayFromJSON(
+                                              arrow::struct_(bucket_schema->fields()), data_str));
+        return CalculateBucketIds(is_pk_table, num_buckets, std::move(bucket_function),
+                                  bucket_schema, bucket_array);
     }
 };
 
@@ -303,5 +333,37 @@ TEST_F(BucketIdCalculatorTest, TestVariantType) {
         std::vector<int32_t> result2,
         CalculateBucketIds(/*is_pk_table=*/true, 12345, bucket_schema, bucket_array));
     ASSERT_EQ(expected, result2);
+}
+
+TEST_F(BucketIdCalculatorTest, TestWithModBucketFunction) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    ASSERT_OK_AND_ASSIGN(auto mod_func, ModBucketFunction::Create(FieldType::INT));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<int32_t> result,
+        CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, std::move(mod_func),
+                           bucket_schema, "[[10], [-1], [50], [-13], [0]]"));
+    // Java Math.floorMod semantics:
+    // floorMod(10, 10) = 0
+    // floorMod(-1, 10) = 9
+    // floorMod(50, 10) = 0
+    // floorMod(-13, 10) = 7
+    // floorMod(0, 10) = 0
+    std::vector<int32_t> expected = {0, 9, 0, 7, 0};
+    ASSERT_EQ(expected, result);
+}
+
+TEST_F(BucketIdCalculatorTest, TestWithDefaultBucketFunctionExplicit) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    // Calculate with explicit DefaultBucketFunction
+    auto default_func = std::make_unique<DefaultBucketFunction>();
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<int32_t> result_explicit,
+        CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, std::move(default_func),
+                           bucket_schema, "[[10], [-1], [50], [-13], [0]]"));
+    // Calculate with default (no BucketFunction passed)
+    ASSERT_OK_AND_ASSIGN(std::vector<int32_t> result_default,
+                         CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, bucket_schema,
+                                            "[[10], [-1], [50], [-13], [0]]"));
+    ASSERT_EQ(result_default, result_explicit);
 }
 }  // namespace paimon::test

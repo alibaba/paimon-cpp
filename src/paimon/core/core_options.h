@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/core/bucket/bucket_function_type.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
@@ -164,6 +165,8 @@ class PAIMON_EXPORT CoreOptions {
     double GetLookupCacheHighPrioPoolRatio() const;
 
     const std::map<std::string, std::string>& ToMap() const;
+
+    BucketFunctionType GetBucketFunctionType() const;
 
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;

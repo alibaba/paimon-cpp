@@ -255,6 +255,24 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // Parse BucketFunctionType
+    Status ParseBucketFunctionType(BucketFunctionType* bucket_function_type) const {
+        auto iter = config_map_.find(Options::BUCKET_FUNCTION_TYPE);
+        if (iter != config_map_.end()) {
+            std::string str = StringUtils::ToLowerCase(iter->second);
+            if (str == "default") {
+                *bucket_function_type = BucketFunctionType::DEFAULT;
+            } else if (str == "mod") {
+                *bucket_function_type = BucketFunctionType::MOD;
+            } else if (str == "hive") {
+                *bucket_function_type = BucketFunctionType::HIVE;
+            } else {
+                return Status::Invalid(fmt::format("invalid bucket function type: {}", str));
+            }
+        }
+        return Status::OK();
+    }
+
     // Parse StartupMode
     Status ParseStartupMode(StartupMode* startup_mode) const {
         auto iter = config_map_.find(Options::SCAN_MODE);
@@ -389,6 +407,7 @@ struct CoreOptions::Impl {
     ExternalPathStrategy external_path_strategy = ExternalPathStrategy::NONE;
     LookupCompactMode lookup_compact_mode = LookupCompactMode::RADICAL;
     std::optional<int32_t> lookup_compact_max_interval;
+    BucketFunctionType bucket_function_type = BucketFunctionType::DEFAULT;
 
     int32_t file_compression_zstd_level = 1;
 
@@ -733,6 +752,9 @@ Result<CoreOptions> CoreOptions::FromMap(
             "The high priority pool ratio should in the range [0, 1), while input is {}",
             impl->lookup_cache_high_prio_pool_ratio));
     }
+
+    // Parse bucket function type
+    PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&impl->bucket_function_type));
     return options;
 }
 
@@ -1215,6 +1237,10 @@ int64_t CoreOptions::GetLookupCacheMaxMemory() const {
 
 double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
     return impl_->lookup_cache_high_prio_pool_ratio;
+}
+
+BucketFunctionType CoreOptions::GetBucketFunctionType() const {
+    return impl_->bucket_function_type;
 }
 
 }  // namespace paimon

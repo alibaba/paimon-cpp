@@ -414,6 +414,10 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
     /// high-priority data like index, filter. Default value is 0.25.
     static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
+
+    /// "bucket-function.type" - The bucket function type for paimon bucket.
+    /// Values can be: "default", "mod", "hive". Default value is "default".
+    static const char BUCKET_FUNCTION_TYPE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();
