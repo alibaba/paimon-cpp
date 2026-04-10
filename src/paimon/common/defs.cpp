@@ -117,5 +117,7 @@ const char Options::LOOKUP_COMPACT[] = "lookup-compact";
 const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
 const char Options::LOOKUP_CACHE_MAX_MEMORY_SIZE[] = "lookup.cache-max-memory-size";
 const char Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[] = "lookup.cache.high-priority-pool-ratio";
+const char Options::LOOKUP_CACHE_FILE_RETENTION[] = "lookup.cache-file-retention";
+const char Options::LOOKUP_CACHE_MAX_DISK_SIZE[] = "lookup.cache-max-disk-size";
 
 }  // namespace paimon

@@ -331,11 +331,14 @@ class LookupMergeTreeCompactRewriterTest : public testing::Test {
             LookupStoreFactory::Create(lookup_key_comparator,
                                        std::make_shared<CacheManager>(1024 * 1024, 0.0), options));
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
-        return LookupLevels<T>::Create(
-            fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
-            std::move(io_manager), path_factory, table_schema, std::move(levels),
-            DeletionVector::CreateFactory(/*dv_maintainer=*/nullptr), processor_factory,
-            serializer_factory, lookup_store_factory, remote_lookup_file_manager, pool_);
+        auto lookup_file_cache = LookupFile::CreateLookupFileCache(
+            options.GetLookupCacheFileRetentionMs(), options.GetLookupCacheMaxDiskSize());
+        return LookupLevels<T>::Create(fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options,
+                                       schema_manager, std::move(io_manager), path_factory,
+                                       table_schema, std::move(levels),
+                                       DeletionVector::CreateFactory(/*dv_maintainer=*/nullptr),
+                                       processor_factory, serializer_factory, lookup_store_factory,
+                                       lookup_file_cache, remote_lookup_file_manager, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(

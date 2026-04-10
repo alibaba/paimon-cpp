@@ -95,12 +95,12 @@ TEST_F(LruCacheTest, TestPutInsertAndUpdate) {
     auto value_b = MakeValue(128, 'B');
 
     // Insert
-    cache.Put(key, value_a);
+    ASSERT_OK(cache.Put(key, value_a));
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 64);
 
     // Update with larger value
-    cache.Put(key, value_b);
+    ASSERT_OK(cache.Put(key, value_b));
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 128);
 
@@ -120,13 +120,13 @@ TEST_F(LruCacheTest, TestWeightBasedEviction) {
     auto key2 = MakeKey(2);
 
     // Insert 2 entries of 100 bytes each (total 200, at capacity)
-    cache.Put(key0, MakeValue(100, 'A'));
-    cache.Put(key1, MakeValue(100, 'B'));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A')));
+    ASSERT_OK(cache.Put(key1, MakeValue(100, 'B')));
     ASSERT_EQ(cache.Size(), 2);
     ASSERT_EQ(cache.GetCurrentWeight(), 200);
 
     // Insert a 3rd entry: should evict key0 (LRU, inserted first)
-    cache.Put(key2, MakeValue(100, 'C'));
+    ASSERT_OK(cache.Put(key2, MakeValue(100, 'C')));
     ASSERT_EQ(cache.Size(), 2);
     ASSERT_EQ(cache.GetCurrentWeight(), 200);
 
@@ -156,12 +156,12 @@ TEST_F(LruCacheTest, TestEvictionCallback) {
     auto key1 = MakeKey(1);
     auto key2 = MakeKey(2);
 
-    cache.Put(key0, MakeValue(100, 'A', make_callback(0)));
-    cache.Put(key1, MakeValue(100, 'B', make_callback(1)));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A', make_callback(0))));
+    ASSERT_OK(cache.Put(key1, MakeValue(100, 'B', make_callback(1))));
     ASSERT_TRUE(evicted_positions.empty());
 
     // Insert key2: should evict key0 and trigger its callback
-    cache.Put(key2, MakeValue(100, 'C', make_callback(2)));
+    ASSERT_OK(cache.Put(key2, MakeValue(100, 'C', make_callback(2))));
     ASSERT_EQ(evicted_positions.size(), 1);
     ASSERT_EQ(evicted_positions[0], 0);
 }
@@ -174,8 +174,8 @@ TEST_F(LruCacheTest, TestLruOrdering) {
     auto key1 = MakeKey(1);
     auto key2 = MakeKey(2);
 
-    cache.Put(key0, MakeValue(100, 'A'));
-    cache.Put(key1, MakeValue(100, 'B'));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A')));
+    ASSERT_OK(cache.Put(key1, MakeValue(100, 'B')));
 
     // Access key0 via Get to move it to front (most recently used)
     ASSERT_OK_AND_ASSIGN(auto val, cache.Get(key0, MakeSupplier(0)));
@@ -188,14 +188,14 @@ TEST_F(LruCacheTest, TestLruOrdering) {
 
     // Re-insert with callbacks to track eviction
     cache.InvalidateAll();
-    cache.Put(key0, MakeValue(100, 'A', callback0));
-    cache.Put(key1, MakeValue(100, 'B', callback1));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A', callback0)));
+    ASSERT_OK(cache.Put(key1, MakeValue(100, 'B', callback1)));
 
     // Access key0 to move it to front
     ASSERT_OK_AND_ASSIGN(val, cache.Get(key0, MakeSupplier(0)));
 
     // Insert key2: key1 should be evicted (it's at the back)
-    cache.Put(key2, MakeValue(100, 'C'));
+    ASSERT_OK(cache.Put(key2, MakeValue(100, 'C')));
     ASSERT_EQ(evicted.size(), 1);
     ASSERT_EQ(evicted[0], 1);
     ASSERT_EQ(cache.Size(), 2);
@@ -211,8 +211,8 @@ TEST_F(LruCacheTest, TestInvalidate) {
     std::vector<int64_t> evicted;
     auto callback0 = [&evicted](const std::shared_ptr<CacheKey>&) { evicted.push_back(0); };
     auto callback1 = [&evicted](const std::shared_ptr<CacheKey>&) { evicted.push_back(1); };
-    cache.Put(key0, MakeValue(100, 'A', callback0));
-    cache.Put(key1, MakeValue(200, 'B', callback1));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A', callback0)));
+    ASSERT_OK(cache.Put(key1, MakeValue(200, 'B', callback1)));
     ASSERT_EQ(cache.Size(), 2);
     ASSERT_EQ(cache.GetCurrentWeight(), 300);
     ASSERT_TRUE(evicted.empty());
@@ -239,7 +239,7 @@ TEST_F(LruCacheTest, TestInvalidateAll) {
         auto callback = [&evicted, id = i](const std::shared_ptr<CacheKey>&) {
             evicted.push_back(id);
         };
-        cache.Put(MakeKey(i), MakeValue(50, 'A', callback));
+        ASSERT_OK(cache.Put(MakeKey(i), MakeValue(50, 'A', callback)));
     }
     ASSERT_EQ(cache.Size(), 5);
     ASSERT_EQ(cache.GetCurrentWeight(), 250);
@@ -259,15 +259,15 @@ TEST_F(LruCacheTest, TestWeightTracking) {
     auto key1 = MakeKey(1);
 
     // Put 100 bytes
-    cache.Put(key0, MakeValue(100));
+    ASSERT_OK(cache.Put(key0, MakeValue(100)));
     ASSERT_EQ(cache.GetCurrentWeight(), 100);
 
     // Put 200 bytes
-    cache.Put(key1, MakeValue(200));
+    ASSERT_OK(cache.Put(key1, MakeValue(200)));
     ASSERT_EQ(cache.GetCurrentWeight(), 300);
 
     // Update key0 from 100 to 150 bytes
-    cache.Put(key0, MakeValue(150));
+    ASSERT_OK(cache.Put(key0, MakeValue(150)));
     ASSERT_EQ(cache.GetCurrentWeight(), 350);
 
     // Invalidate key1 (200 bytes)
@@ -275,11 +275,11 @@ TEST_F(LruCacheTest, TestWeightTracking) {
     ASSERT_EQ(cache.GetCurrentWeight(), 150);
 
     // Put 200 bytes
-    cache.Put(MakeKey(2), MakeValue(200));
+    ASSERT_OK(cache.Put(MakeKey(2), MakeValue(200)));
     ASSERT_EQ(cache.GetCurrentWeight(), 350);
 
     // Add: total would be 550 > 500, should evict key0 (150 bytes)
-    cache.Put(MakeKey(3), MakeValue(200));
+    ASSERT_OK(cache.Put(MakeKey(3), MakeValue(200)));
     ASSERT_EQ(cache.GetCurrentWeight(), 400);
     ASSERT_EQ(cache.Size(), 2);
 }
@@ -347,14 +347,14 @@ TEST_F(LruCacheTest, TestPutMovesToFront) {
         return [&evicted, pos](const std::shared_ptr<CacheKey>&) { evicted.push_back(pos); };
     };
 
-    cache.Put(key0, MakeValue(100, 'A', make_callback(0)));
-    cache.Put(key1, MakeValue(100, 'B', make_callback(1)));
+    ASSERT_OK(cache.Put(key0, MakeValue(100, 'A', make_callback(0))));
+    ASSERT_OK(cache.Put(key1, MakeValue(100, 'B', make_callback(1))));
 
-    // Update key0 via Put (should move it to front)
-    cache.Put(key0, MakeValue(100, 'A', make_callback(0)));
+    // Get key0 (should move it to front)
+    ASSERT_OK(cache.Get(key0, /*supplier=*/nullptr));
 
     // Insert key2: should evict key1 (now at back), not key0
-    cache.Put(key2, MakeValue(100, 'C', make_callback(2)));
+    ASSERT_OK(cache.Put(key2, MakeValue(100, 'C', make_callback(2))));
     ASSERT_EQ(evicted.size(), 1);
     ASSERT_EQ(evicted[0], 1);
 }
@@ -369,14 +369,14 @@ TEST_F(LruCacheTest, TestMultipleEvictions) {
     };
 
     // Insert 3 entries of 100 bytes each
-    cache.Put(MakeKey(0), MakeValue(100, 'A', make_callback(0)));
-    cache.Put(MakeKey(1), MakeValue(100, 'B', make_callback(1)));
-    cache.Put(MakeKey(2), MakeValue(100, 'C', make_callback(2)));
+    ASSERT_OK(cache.Put(MakeKey(0), MakeValue(100, 'A', make_callback(0))));
+    ASSERT_OK(cache.Put(MakeKey(1), MakeValue(100, 'B', make_callback(1))));
+    ASSERT_OK(cache.Put(MakeKey(2), MakeValue(100, 'C', make_callback(2))));
     ASSERT_EQ(cache.Size(), 3);
     ASSERT_EQ(cache.GetCurrentWeight(), 300);
 
     // Insert a 250-byte entry: should evict key0, key1 and key2.
-    cache.Put(MakeKey(3), MakeValue(250, 'D'));
+    ASSERT_OK(cache.Put(MakeKey(3), MakeValue(250, 'D')));
     ASSERT_EQ(cache.Size(), 1);
     ASSERT_EQ(cache.GetCurrentWeight(), 250);
 

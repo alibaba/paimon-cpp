@@ -163,6 +163,9 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetLookupCacheMaxMemory() const;
     double GetLookupCacheHighPrioPoolRatio() const;
 
+    int64_t GetLookupCacheFileRetentionMs() const;
+    int64_t GetLookupCacheMaxDiskSize() const;
+
     const std::map<std::string, std::string>& ToMap() const;
 
  private:

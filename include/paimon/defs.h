@@ -414,6 +414,13 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
     /// high-priority data like index, filter. Default value is 0.25.
     static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
+    /// "lookup.cache-file-retention" - The cached files retention time for lookup.
+    /// After the file expires, if there is a need for access, it will be re-read from the DFS
+    /// to build an index on the local disk. Default value is 1 hour.
+    static const char LOOKUP_CACHE_FILE_RETENTION[];
+    /// "lookup.cache-max-disk-size" - Max disk size for lookup cache, you can use this option
+    /// to limit the use of local disks. Default value is unlimited (INT64_MAX).
+    static const char LOOKUP_CACHE_MAX_DISK_SIZE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

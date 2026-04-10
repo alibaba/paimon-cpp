@@ -15,30 +15,25 @@
  */
 
 #pragma once
+
 #include <cstdint>
 #include <functional>
-#include <list>
 #include <memory>
-#include <mutex>
-#include <optional>
-#include <shared_mutex>
-#include <string>
-#include <unordered_map>
-#include <utility>
 
 #include "paimon/common/io/cache/cache.h"
 #include "paimon/common/io/cache/cache_key.h"
-#include "paimon/common/memory/memory_segment.h"
+#include "paimon/common/utils/generic_lru_cache.h"
 #include "paimon/result.h"
 
 namespace paimon {
-/// LRU Cache implementation with weight-based eviction.
-/// Uses std::list + unordered_map for O(1) get/put/evict:
-/// list stores entries in LRU order (most recently used at front)
-/// map stores key -> list::iterator for O(1) lookup
-/// capacity is measured in bytes (sum of MemorySegment sizes)
-/// when an entry is evicted, its CacheCallback is invoked to notify the upper layer
-/// @note Thread-safe: all public methods are protected by mutex (read-write lock).
+
+/// LRU Cache implementation with weight-based eviction for block cache.
+///
+/// Wraps GenericLruCache with CacheKey/CacheValue types. Capacity is measured
+/// in bytes (sum of MemorySegment sizes). When an entry is evicted, its
+/// CacheCallback is invoked to notify the upper layer.
+///
+/// @note Thread-safe: all public methods are protected by the underlying GenericLruCache lock.
 class LruCache : public Cache {
  public:
     explicit LruCache(int64_t max_weight);
@@ -48,8 +43,8 @@ class LruCache : public Cache {
         std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
             supplier) override;
 
-    void Put(const std::shared_ptr<CacheKey>& key,
-             const std::shared_ptr<CacheValue>& value) override;
+    Status Put(const std::shared_ptr<CacheKey>& key,
+               const std::shared_ptr<CacheValue>& value) override;
 
     void Invalidate(const std::shared_ptr<CacheKey>& key) override;
 
@@ -62,24 +57,10 @@ class LruCache : public Cache {
     int64_t GetMaxWeight() const;
 
  private:
-    using LruEntry = std::pair<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>>;
-    using LruList = std::list<LruEntry>;
-    using LruMap = std::unordered_map<std::shared_ptr<CacheKey>, LruList::iterator, CacheKeyHash,
-                                      CacheKeyEqual>;
+    using InnerCache = GenericLruCache<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>,
+                                       CacheKeyHash, CacheKeyEqual>;
 
-    std::optional<std::shared_ptr<CacheValue>> FindAndPromote(const std::shared_ptr<CacheKey>& key);
-    void Insert(const std::shared_ptr<CacheKey>& key, const std::shared_ptr<CacheValue>& value);
-    void RemoveEntry(LruList::iterator list_it);
-
-    void EvictIfNeeded();
-
-    static int64_t GetWeight(const std::shared_ptr<CacheValue>& value);
-
-    int64_t max_weight_;
-    int64_t current_weight_;
-    LruList lru_list_;
-    LruMap lru_map_;
-    mutable std::shared_mutex mutex_;
+    InnerCache inner_cache_;
 };
 
 }  // namespace paimon

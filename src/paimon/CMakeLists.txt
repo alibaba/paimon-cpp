@@ -478,6 +478,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/uuid_test.cpp
                     common/utils/decimal_utils_test.cpp
                     common/utils/threadsafe_queue_test.cpp
+                    common/utils/generic_lru_cache_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static

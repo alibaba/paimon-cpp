@@ -428,6 +428,8 @@ struct CoreOptions::Impl {
     std::map<int32_t, std::string> file_compression_per_level;
     int64_t lookup_cache_max_memory = 256 * 1024 * 1024;
     double lookup_cache_high_prio_pool_ratio = 0.25;
+    int64_t lookup_cache_file_retention_ms = 1 * 3600 * 1000;  // 1 hour
+    int64_t lookup_cache_max_disk_size = INT64_MAX;
 };
 
 // Parse configurations from a map and return a populated CoreOptions object
@@ -733,6 +735,20 @@ Result<CoreOptions> CoreOptions::FromMap(
             "The high priority pool ratio should in the range [0, 1), while input is {}",
             impl->lookup_cache_high_prio_pool_ratio));
     }
+
+    // Parse lookup.cache-file-retention
+    std::string lookup_cache_file_retention_str;
+    PAIMON_RETURN_NOT_OK(
+        parser.ParseString(Options::LOOKUP_CACHE_FILE_RETENTION, &lookup_cache_file_retention_str));
+    if (!lookup_cache_file_retention_str.empty()) {
+        PAIMON_ASSIGN_OR_RAISE(impl->lookup_cache_file_retention_ms,
+                               TimeDuration::Parse(lookup_cache_file_retention_str));
+    }
+
+    // Parse lookup.cache-max-disk-size
+    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::LOOKUP_CACHE_MAX_DISK_SIZE,
+                                                &impl->lookup_cache_max_disk_size));
+
     return options;
 }
 
@@ -1215,6 +1231,14 @@ int64_t CoreOptions::GetLookupCacheMaxMemory() const {
 
 double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
     return impl_->lookup_cache_high_prio_pool_ratio;
+}
+
+int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {
+    return impl_->lookup_cache_file_retention_ms;
+}
+
+int64_t CoreOptions::GetLookupCacheMaxDiskSize() const {
+    return impl_->lookup_cache_max_disk_size;
 }
 
 }  // namespace paimon
