@@ -88,11 +88,11 @@ class LookupFile {
     }
 
     Status Close() {
-        PAIMON_RETURN_NOT_OK(reader_->Close());
         closed_ = true;
         if (callback_) {
             callback_();
         }
+        PAIMON_RETURN_NOT_OK(reader_->Close());
         return fs_->Delete(local_file_, /*recursive=*/false);
     }
 

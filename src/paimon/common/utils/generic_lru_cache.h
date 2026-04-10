@@ -263,10 +263,10 @@ class GenericLruCache {
 
     /// Remove an entry from the cache and invoke the removal callback.
     void RemoveEntry(typename EntryList::iterator list_it, RemovalCause cause) {
+        lru_map_.erase(list_it->key);
         K key = std::move(list_it->key);
         V value = std::move(list_it->value);
         current_weight_ -= list_it->weight;
-        lru_map_.erase(key);
         lru_list_.erase(list_it);
         InvokeCallback(key, value, cause);
     }
