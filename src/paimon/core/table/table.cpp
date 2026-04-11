@@ -41,8 +41,7 @@ Result<std::shared_ptr<Table>> Table::Create(const std::shared_ptr<FileSystem>& 
     }
 
     auto schema = std::static_pointer_cast<Schema>(*latest_schema);
-    return std::make_shared<Table>(schema, identifier.GetDatabaseName(),
-                                   identifier.GetTableName());
+    return std::make_shared<Table>(schema, identifier.GetDatabaseName(), identifier.GetTableName());
 }
 
 }  // namespace paimon
