@@ -52,9 +52,9 @@ TEST(LookupFileTest, TestSimple) {
 
     std::map<std::string, std::string> kvs = {{"aa", "aa1"}, {"bb", "bb1"}};
     auto lookup_file = std::make_shared<LookupFile>(
-        fs, local_file, /*level=*/3, /*schema_id=*/1,
+        fs, local_file, /*file_size_bytes=*/0, /*level=*/3, /*schema_id=*/1,
         /*ser_version=*/"v1", std::make_unique<FakeLookupStoreReader>(kvs, pool),
-        /*file_size_bytes=*/0, /*callback=*/nullptr);
+        /*callback=*/nullptr);
     ASSERT_EQ(lookup_file->LocalFile(), local_file);
     ASSERT_EQ(lookup_file->Level(), 3);
     ASSERT_EQ(lookup_file->SchemaId(), 1);
@@ -135,10 +135,9 @@ TEST(LookupFileTest, TestLookupFileCacheLifecycle) {
         LookupFile::Callback callback = [&call_back_files, name = name]() {
             call_back_files.push_back(name);
         };
-        return std::make_shared<LookupFile>(fs, path, /*level=*/1, /*schema_id=*/0,
-                                            /*ser_version=*/"v1",
-                                            std::make_unique<FakeLookupStoreReader>(), size,
-                                            std::move(callback));
+        return std::make_shared<LookupFile>(
+            fs, path, size, /*level=*/1, /*schema_id=*/0,
+            /*ser_version=*/"v1", std::make_unique<FakeLookupStoreReader>(), std::move(callback));
     };
 
     // Create a cache: max_weight = 300 bytes, no expiration

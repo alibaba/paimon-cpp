@@ -243,7 +243,7 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
     ASSERT_TRUE(file_status_list.empty());
     ASSERT_TRUE(levels->drop_file_callbacks_.empty());
-    // TODO(lisizhuo.lsz): test lookuplevels close
+    ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 0);
 }
 
 TEST_F(LookupLevelsTest, TestMultiFiles) {

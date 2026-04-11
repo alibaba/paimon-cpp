@@ -243,6 +243,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
+    core/mergetree/lookup_file.cpp
     core/mergetree/lookup_levels.cpp
     core/mergetree/lookup/remote_lookup_file_manager.cpp
     core/migrate/file_meta_utils.cpp

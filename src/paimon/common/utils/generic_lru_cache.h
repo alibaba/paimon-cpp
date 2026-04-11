@@ -29,6 +29,7 @@
 
 #include "fmt/format.h"
 #include "paimon/result.h"
+#include "paimon/traits.h"
 
 namespace paimon {
 /// A generic LRU cache with support for weight-based eviction, time-based expiration,
@@ -220,19 +221,11 @@ class GenericLruCache {
         current_weight_ += weight;
     }
 
-    /// Trait to detect smart pointer types (shared_ptr, unique_ptr).
-    template <typename T>
-    struct is_smart_ptr : std::false_type {};
-    template <typename T>
-    struct is_smart_ptr<std::shared_ptr<T>> : std::true_type {};
-    template <typename T, typename D>
-    struct is_smart_ptr<std::unique_ptr<T, D>> : std::true_type {};
-
     /// Compare two values for equality. For pointers, compares the underlying
     /// pointer first, then dereferences and compares the pointed-to objects.
     /// For other types, uses operator==.
     static bool ValuesEqual(const V& lhs, const V& rhs) {
-        if constexpr (is_smart_ptr<V>::value) {
+        if constexpr (is_pointer<V>::value) {
             if (lhs == rhs) {
                 return true;
             }

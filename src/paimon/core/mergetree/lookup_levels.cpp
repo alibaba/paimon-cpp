@@ -240,8 +240,8 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
     std::string file_name = file->file_name;
     auto callback = [this, file_name = file_name]() { own_cached_files_.erase(file_name); };
 
-    return std::make_shared<LookupFile>(fs_, kv_file_path, file->level, schema_id, file_ser_version,
-                                        std::move(reader), file_size, std::move(callback));
+    return std::make_shared<LookupFile>(fs_, kv_file_path, file_size, file->level, schema_id,
+                                        file_ser_version, std::move(reader), std::move(callback));
 }
 
 template <typename T>
