@@ -30,14 +30,15 @@ Result<std::shared_ptr<Table>> Table::Create(const std::shared_ptr<FileSystem>& 
                                              const Identifier& identifier) {
     PAIMON_ASSIGN_OR_RAISE(bool exist, file_system->Exists(table_path));
     if (!exist) {
-        return Status::NotExist(fmt::format("{} not exist", table_path));
+        return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
     }
 
     SchemaManager schema_manager(file_system, table_path);
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            schema_manager.Latest());
     if (!latest_schema) {
-        return Status::NotExist(fmt::format("load table schema for {} failed", table_path));
+        return Status::NotExist(
+            fmt::format("load table schema for {} failed", identifier.ToString()));
     }
 
     auto schema = std::static_pointer_cast<Schema>(*latest_schema);
