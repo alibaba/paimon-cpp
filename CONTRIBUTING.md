@@ -31,7 +31,7 @@ If you find a bug or want to request a feature, please open an [issue](https://g
 1. **Fork** the repository and create a feature branch from `main`.
 2. Make your changes following the [Code Style Guide](docs/code-style.md).
 3. Add or update tests for the functionality you changed.
-4. Ensure all checks pass (see [Linting](#linting) and [Building & Testing](#building--testing) below).
+4. Ensure all checks pass.
 5. Open a pull request against `main`. Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
 
 ### PR Checklist

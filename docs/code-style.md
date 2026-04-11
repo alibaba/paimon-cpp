@@ -16,7 +16,7 @@
 
 # Paimon C++ Code Style Guide
 
-This document defines the coding conventions for the paimon-cpp project. All pull requests are expected to follow these rules. Automated tooling (clang-format, clang-tidy, cpplint, pre-commit) enforces many of them — see [Tooling](#tooling) for setup instructions.
+This document defines the coding conventions for the paimon-cpp project. All pull requests are expected to follow these rules. Automated tooling (clang-format, clang-tidy, cpplint, pre-commit) enforces many of them.
 
 ---
 
@@ -131,7 +131,6 @@ All fallible functions return `Status` (no value) or `Result<T>` (with value). *
 |-------|---------|
 | `PAIMON_RETURN_NOT_OK(status)` | Propagate a `Status` error |
 | `PAIMON_ASSIGN_OR_RAISE(lhs, rexpr)` | Extract value from `Result<T>`, return on error |
-| `PAIMON_RETURN_IF(cond, status)` | Return error if condition is true |
 | `PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow_status)` | Bridge Apache Arrow `Status` |
 | `PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(lhs, rexpr)` | Bridge Apache Arrow `Result` |
 
