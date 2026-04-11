@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/catalog/identifier.h"
 #include "paimon/result.h"
 #include "paimon/schema/schema.h"
 #include "paimon/status.h"
@@ -32,6 +33,10 @@ namespace paimon {
 /// A table provides basic abstraction for table type.
 class PAIMON_EXPORT Table {
  public:
+    static Result<std::shared_ptr<Table>> Create(const std::shared_ptr<FileSystem>& file_system,
+                                                 const std::string& table_path,
+                                                 const Identifier& identifier);
+
     Table(const std::shared_ptr<Schema>& schema, const std::string& database,
           const std::string& table_name)
         : schema_(schema), database_(database), table_name_(table_name) {}

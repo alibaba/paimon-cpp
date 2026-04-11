@@ -280,6 +280,7 @@ set(PAIMON_CORE_SRCS
     core/stats/simple_stats_converter.cpp
     core/stats/simple_stats.cpp
     core/stats/simple_stats_evolution.cpp
+    core/table/table.cpp
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp

@@ -22,8 +22,8 @@
 #include <vector>
 
 #include "paimon/catalog/catalog.h"
+#include "paimon/catalog/table.h"
 #include "paimon/core/schema/schema_manager.h"
-#include "paimon/core/table/table.h"
 #include "paimon/logging.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
