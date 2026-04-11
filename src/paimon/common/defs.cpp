@@ -23,6 +23,8 @@ const char Options::FIELDS_PREFIX[] = "fields";
 const char Options::AGG_FUNCTION[] = "aggregate-function";
 const char Options::DEFAULT_AGG_FUNCTION[] = "default-aggregate-function";
 const char Options::IGNORE_RETRACT[] = "ignore-retract";
+const char Options::DISTINCT[] = "distinct";
+const char Options::LIST_AGG_DELIMITER[] = "list-agg-delimiter";
 const char Options::SEQUENCE_GROUP[] = "sequence-group";
 
 const char Options::BUCKET[] = "bucket";

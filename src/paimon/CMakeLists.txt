@@ -574,6 +574,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/field_ignore_retract_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_non_null_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_value_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_listagg_agg_test.cpp
                     core/mergetree/compact/aggregate/field_min_max_agg_test.cpp
                     core/mergetree/compact/aggregate/field_primary_key_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp

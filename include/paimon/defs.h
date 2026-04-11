@@ -79,6 +79,10 @@ struct PAIMON_EXPORT Options {
     static const char DEFAULT_AGG_FUNCTION[];
     /// IGNORE_RETRACT is "ignore-retract"
     static const char IGNORE_RETRACT[];
+    /// DISTINCT is "distinct"
+    static const char DISTINCT[];
+    /// LIST_AGG_DELIMITER is "list-agg-delimiter"
+    static const char LIST_AGG_DELIMITER[];
     /// SEQUENCE_GROUP is "sequence-group"
     static const char SEQUENCE_GROUP[];
     /// @}

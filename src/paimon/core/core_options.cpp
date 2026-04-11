@@ -1004,6 +1004,24 @@ Result<bool> CoreOptions::FieldAggIgnoreRetract(const std::string& field_name) c
     return field_agg_ignore_retract;
 }
 
+Result<std::string> CoreOptions::FieldListAggDelimiter(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::string delimiter = ",";
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::LIST_AGG_DELIMITER);
+    PAIMON_RETURN_NOT_OK(parser.ParseString(key, &delimiter));
+    return delimiter;
+}
+
+Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    bool distinct = false;
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::DISTINCT);
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(key, &distinct));
+    return distinct;
+}
+
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }
