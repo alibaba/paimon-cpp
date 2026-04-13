@@ -21,20 +21,10 @@
 #include <vector>
 
 #include "paimon/core/bucket/bucket_function.h"
-#include "paimon/defs.h"
 #include "paimon/result.h"
+#include "paimon/utils/bucket_function_type.h"
 
 namespace paimon {
-
-/// Describes a field's type information needed for Hive hashing.
-struct HiveFieldInfo {
-    FieldType type;
-    int32_t precision = 0;  // Used for DECIMAL type
-    int32_t scale = 0;      // Used for DECIMAL type
-
-    explicit HiveFieldInfo(FieldType t) : type(t) {}
-    HiveFieldInfo(FieldType t, int32_t p, int32_t s) : type(t), precision(p), scale(s) {}
-};
 
 /// Hive-compatible bucket function.
 /// This implements the same bucket assignment logic as Hive, using Hive's hash functions

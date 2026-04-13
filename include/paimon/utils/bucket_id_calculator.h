@@ -17,10 +17,12 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "paimon/utils/bucket_function_type.h"
 #include "paimon/visibility.h"
 
 struct ArrowSchema;
@@ -36,27 +38,51 @@ class MemoryPool;
 /// hash-based distribution to ensure even data distribution across buckets.
 class PAIMON_EXPORT BucketIdCalculator {
  public:
-    /// Create `BucketIdCalculator` with custom memory pool.
+    /// Create `BucketIdCalculator` with default bucket function.
     /// @param is_pk_table Whether this is for a primary key table.
     /// @param num_buckets Number of buckets.
-    /// @param pool Memory pool for memory allocation.
+    /// @param pool Memory pool for memory allocation. If nullptr, uses default pool.
     static Result<std::unique_ptr<BucketIdCalculator>> Create(
-        bool is_pk_table, int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool);
+        bool is_pk_table, int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool = nullptr);
 
-    /// Create `BucketIdCalculator` with default memory pool.
-    /// @param is_pk_table Whether this is for a primary key table.
-    /// @param num_buckets Number of buckets.
-    static Result<std::unique_ptr<BucketIdCalculator>> Create(bool is_pk_table,
-                                                              int32_t num_buckets);
-
-    /// Create `BucketIdCalculator` with a custom bucket function and memory pool.
+    /// Create `BucketIdCalculator` with a custom bucket function.
     /// @param is_pk_table Whether this is for a primary key table.
     /// @param num_buckets Number of buckets.
     /// @param bucket_function The bucket function to use for bucket assignment.
-    /// @param pool Memory pool for memory allocation.
+    /// @param pool Memory pool for memory allocation. If nullptr, uses default pool.
     static Result<std::unique_ptr<BucketIdCalculator>> Create(
         bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
-        const std::shared_ptr<MemoryPool>& pool);
+        const std::shared_ptr<MemoryPool>& pool = nullptr);
+
+    /// Create `BucketIdCalculator` with a bucket function type.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param type The bucket function type. Must be BucketFunctionType::DEFAULT.
+    /// @param pool Memory pool for memory allocation. If nullptr, uses default pool.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, BucketFunctionType type,
+        const std::shared_ptr<MemoryPool>& pool = nullptr);
+
+    /// Create `BucketIdCalculator` with MOD bucket function type.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param type The bucket function type. Must be BucketFunctionType::MOD.
+    /// @param bucket_key_type The type of the single bucket key field. Must be INT or BIGINT.
+    /// @param pool Memory pool for memory allocation. If nullptr, uses default pool.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, BucketFunctionType type, FieldType bucket_key_type,
+        const std::shared_ptr<MemoryPool>& pool = nullptr);
+
+    /// Create `BucketIdCalculator` with HIVE bucket function type.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param type The bucket function type. Must be BucketFunctionType::HIVE.
+    /// @param field_infos The detailed type info of all fields in the bucket key row.
+    /// @param pool Memory pool for memory allocation. If nullptr, uses default pool.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, BucketFunctionType type,
+        const std::vector<HiveFieldInfo>& field_infos,
+        const std::shared_ptr<MemoryPool>& pool = nullptr);
 
     /// Calculate bucket ids for the given bucket keys.
     /// @param bucket_keys Arrow struct array containing the bucket key values.

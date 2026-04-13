@@ -35,6 +35,7 @@
 #include "paimon/core/bucket/mod_bucket_function.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/utils/bucket_function_type.h"
 
 namespace paimon::test {
 class BucketIdCalculatorTest : public ::testing::Test {
@@ -365,5 +366,128 @@ TEST_F(BucketIdCalculatorTest, TestWithDefaultBucketFunctionExplicit) {
                          CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, bucket_schema,
                                             "[[10], [-1], [50], [-13], [0]]"));
     ASSERT_EQ(result_default, result_explicit);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithBucketFunctionTypeDefault) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[10], [-1], [50], [-13], [0]]";
+
+    // Calculate with BucketFunctionType::DEFAULT
+    ASSERT_OK_AND_ASSIGN(auto calc_typed,
+                         BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                    BucketFunctionType::DEFAULT));
+
+    // Calculate with the original default Create (no type)
+    ASSERT_OK_AND_ASSIGN(auto calc_default,
+                         BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10));
+
+    auto bucket_array1 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array1;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array1, &c_array1).ok());
+    ::ArrowSchema c_schema1;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema1).ok());
+    std::vector<int32_t> result_typed(bucket_array1->length());
+    ASSERT_OK(calc_typed->CalculateBucketIds(&c_array1, &c_schema1, result_typed.data()));
+
+    auto bucket_array2 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array2;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array2, &c_array2).ok());
+    ::ArrowSchema c_schema2;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema2).ok());
+    std::vector<int32_t> result_default(bucket_array2->length());
+    ASSERT_OK(calc_default->CalculateBucketIds(&c_array2, &c_schema2, result_default.data()));
+
+    ASSERT_EQ(result_default, result_typed);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithBucketFunctionTypeMod) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[10], [-1], [50], [-13], [0]]";
+
+    // Calculate with BucketFunctionType::MOD
+    ASSERT_OK_AND_ASSIGN(auto calc_typed,
+                         BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                    BucketFunctionType::MOD, FieldType::INT));
+
+    // Calculate with explicit ModBucketFunction
+    ASSERT_OK_AND_ASSIGN(auto mod_func, ModBucketFunction::Create(FieldType::INT));
+    ASSERT_OK_AND_ASSIGN(std::vector<int32_t> result_explicit,
+                         CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                            std::move(mod_func), bucket_schema, data_str));
+
+    auto bucket_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_array).ok());
+    ::ArrowSchema c_schema;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema).ok());
+    std::vector<int32_t> result_typed(bucket_array->length());
+    ASSERT_OK(calc_typed->CalculateBucketIds(&c_array, &c_schema, result_typed.data()));
+
+    ASSERT_EQ(result_explicit, result_typed);
+    // Verify expected values (Java Math.floorMod semantics)
+    std::vector<int32_t> expected = {0, 9, 0, 7, 0};
+    ASSERT_EQ(expected, result_typed);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithBucketFunctionTypeHive) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[42], [0], [100]]";
+
+    std::vector<HiveFieldInfo> field_infos = {HiveFieldInfo(FieldType::INT)};
+
+    // Calculate with BucketFunctionType::HIVE
+    ASSERT_OK_AND_ASSIGN(auto calc_typed,
+                         BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/5,
+                                                    BucketFunctionType::HIVE, field_infos));
+
+    auto bucket_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_array).ok());
+    ::ArrowSchema c_schema;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema).ok());
+    std::vector<int32_t> result(bucket_array->length());
+    ASSERT_OK(calc_typed->CalculateBucketIds(&c_array, &c_schema, result.data()));
+
+    // Verify all bucket ids are in valid range
+    for (auto bucket_id : result) {
+        ASSERT_GE(bucket_id, 0);
+        ASSERT_LT(bucket_id, 5);
+    }
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithBucketFunctionTypeErrors) {
+    {
+        // MOD type without bucket_key_type should fail
+        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                       BucketFunctionType::MOD, GetDefaultPool()),
+                            "MOD bucket function type requires a bucket_key_type parameter");
+    }
+    {
+        // HIVE type without field_infos should fail
+        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                       BucketFunctionType::HIVE, GetDefaultPool()),
+                            "HIVE bucket function type requires a field_infos parameter");
+    }
+    {
+        // bucket_key_type with non-MOD type should fail
+        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                       BucketFunctionType::DEFAULT, FieldType::INT),
+                            "bucket_key_type parameter is only valid for MOD bucket function type");
+    }
+    {
+        // field_infos with non-HIVE type should fail
+        std::vector<HiveFieldInfo> field_infos = {HiveFieldInfo(FieldType::INT)};
+        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                       BucketFunctionType::DEFAULT, field_infos),
+                            "field_infos parameter is only valid for HIVE bucket function type");
+    }
 }
 }  // namespace paimon::test
