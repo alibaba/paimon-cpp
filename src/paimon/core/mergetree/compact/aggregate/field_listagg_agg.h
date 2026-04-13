@@ -45,6 +45,10 @@ class FieldListaggAgg : public FieldAggregator {
         }
         PAIMON_ASSIGN_OR_RAISE(std::string delimiter, options.FieldListAggDelimiter(field_name));
         PAIMON_ASSIGN_OR_RAISE(bool distinct, options.FieldCollectAggDistinct(field_name));
+        if (distinct && delimiter.empty()) {
+            return Status::Invalid(
+                fmt::format("invalid empty delimiter for {} when distinct is enabled", NAME));
+        }
         return std::unique_ptr<FieldListaggAgg>(
             new FieldListaggAgg(field_type, std::move(delimiter), distinct));
     }
@@ -97,15 +101,17 @@ class FieldListaggAgg : public FieldAggregator {
         }
 
         // Start with the full accumulator, then append delimiter + new distinct tokens from input
-        std::string result(acc_str);
+        std::string result;
+        result.reserve(acc_str.size() + in_str.size());
+        result.append(acc_str);
         remaining = in_str;
         while (true) {
             size_t pos = remaining.find(delimiter_);
             std::string_view token =
                 (pos == std::string_view::npos) ? remaining : remaining.substr(0, pos);
             if (!token.empty() && seen.insert(token).second) {
-                result += delimiter_;
-                result += token;
+                result.append(delimiter_);
+                result.append(token);
             }
             if (pos == std::string_view::npos) {
                 break;

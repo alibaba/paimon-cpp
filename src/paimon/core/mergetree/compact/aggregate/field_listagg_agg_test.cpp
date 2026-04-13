@@ -31,7 +31,10 @@ namespace paimon::test {
 
 static CoreOptions CreateOptions(const std::map<std::string, std::string>& opts = {}) {
     auto result = CoreOptions::FromMap(opts);
-    assert(result.ok());
+    if (!result.ok()) {
+        ADD_FAILURE() << result.status().ToString();
+        return CoreOptions();
+    }
     return std::move(result.value());
 }
 
