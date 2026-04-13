@@ -136,7 +136,8 @@ class RemoteLookupFileManagerTest : public testing::Test {
     }
 
     Result<std::unique_ptr<LookupLevels<PositionedKeyValue>>> CreateLookupLevels(
-        const std::string& table_path, const std::shared_ptr<Levels>& levels) const {
+        const std::string& table_path, const std::shared_ptr<Levels>& levels,
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager) const {
         auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
@@ -155,20 +156,20 @@ class RemoteLookupFileManagerTest : public testing::Test {
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
             std::move(io_manager), path_factory, table_schema, levels,
-            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory, pool_);
+            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory,
+            remote_lookup_file_manager, pool_);
     }
 
-    Result<std::unique_ptr<RemoteLookupFileManager<PositionedKeyValue>>>
-    CreateRemoteLookupFileManager(const std::string& table_path, CoreOptions& core_options,
-                                  LookupLevels<PositionedKeyValue>* lookup_levels) const {
+    Result<std::shared_ptr<RemoteLookupFileManager>> CreateRemoteLookupFileManager(
+        const std::string& table_path, CoreOptions& core_options) const {
         PAIMON_ASSIGN_OR_RAISE(auto path_factory,
                                CreateFileStorePathFactory(table_path, core_options));
         PAIMON_ASSIGN_OR_RAISE(auto data_path_factory,
                                path_factory->CreateDataFilePathFactory(BinaryRow::EmptyRow(),
                                                                        /*bucket=*/0));
 
-        return std::make_unique<RemoteLookupFileManager<PositionedKeyValue>>(
-            /*level_threshold=*/1, data_path_factory, fs_, pool_, lookup_levels);
+        return std::make_shared<RemoteLookupFileManager>(
+            /*level_threshold=*/1, data_path_factory, fs_, pool_);
     }
 
  private:
@@ -196,25 +197,25 @@ TEST_F(RemoteLookupFileManagerTest, GenRemoteLookupFileSimple) {
     std::vector<std::shared_ptr<DataFileMeta>> files = {file1, file0};
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
                          Levels::Create(key_comparator, files, /*num_levels=*/3));
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
-
     // level_threshold=1 means files at level >= 1 will be processed
-    ASSERT_OK_AND_ASSIGN(
-        auto manager, CreateRemoteLookupFileManager(table_path, core_options, lookup_levels.get()));
+    ASSERT_OK_AND_ASSIGN(auto manager, CreateRemoteLookupFileManager(table_path, core_options));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels, manager));
 
     // level0 < level_threshold and will not produce lookup file
-    ASSERT_OK_AND_ASSIGN(auto result_file, manager->GenRemoteLookupFile(file0));
+    ASSERT_OK_AND_ASSIGN(auto result_file,
+                         manager->GenRemoteLookupFile(file0, lookup_levels.get()));
     ASSERT_TRUE(result_file->extra_files.empty());
 
     // First call: file has no .lookup extra file, so GenRemoteLookupFile should do the upload
-    ASSERT_OK_AND_ASSIGN(result_file, manager->GenRemoteLookupFile(file1));
+    ASSERT_OK_AND_ASSIGN(result_file, manager->GenRemoteLookupFile(file1, lookup_levels.get()));
     // After upload, the result should have an extra file ending with .lookup
     ASSERT_EQ(result_file->extra_files.size(), 1);
     ASSERT_TRUE(StringUtils::EndsWith(result_file->extra_files[0].value(), ".lookup"));
 
     // Second call with the result_file (which already has .lookup extra file):
     // GenRemoteLookupFile should short-circuit and return the same file
-    ASSERT_OK_AND_ASSIGN(auto short_circuit_result, manager->GenRemoteLookupFile(result_file));
+    ASSERT_OK_AND_ASSIGN(auto short_circuit_result,
+                         manager->GenRemoteLookupFile(result_file, lookup_levels.get()));
     ASSERT_EQ(*short_circuit_result, *result_file);
     ASSERT_OK(lookup_levels->Close());
 }
@@ -231,10 +232,8 @@ TEST_F(RemoteLookupFileManagerTest, TryToDownloadReturnsFalseOnFailure) {
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0};
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
                          Levels::Create(key_comparator, files, /*num_levels=*/3));
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
-
-    ASSERT_OK_AND_ASSIGN(
-        auto manager, CreateRemoteLookupFileManager(table_path, core_options, lookup_levels.get()));
+    ASSERT_OK_AND_ASSIGN(auto manager, CreateRemoteLookupFileManager(table_path, core_options));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels, manager));
 
     bool download_result = manager->TryToDownload(file0, "non-exist-remote_sst.lookup",
                                                   dir_->Str() + "/local_sst.lookup");
@@ -256,10 +255,8 @@ TEST_F(RemoteLookupFileManagerTest, TryToDownloadLargeFileAcrossMultipleBuffers)
     std::vector<std::shared_ptr<DataFileMeta>> files = {file0};
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
                          Levels::Create(key_comparator, files, /*num_levels=*/3));
-    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels));
-
-    ASSERT_OK_AND_ASSIGN(
-        auto manager, CreateRemoteLookupFileManager(table_path, core_options, lookup_levels.get()));
+    ASSERT_OK_AND_ASSIGN(auto manager, CreateRemoteLookupFileManager(table_path, core_options));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels, manager));
 
     // Prepare a 2.3MB file (2.3 * 1024 * 1024 bytes) to test multi-buffer copy.
     // file_size is 1MB, so this requires 3 iterations: 1MB + 1MB + 0.3MB.

@@ -20,33 +20,32 @@
 #include "paimon/core/mergetree/lookup/file_position.h"
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
 namespace paimon {
-template <typename T>
-RemoteLookupFileManager<T>::RemoteLookupFileManager(
+
+RemoteLookupFileManager::RemoteLookupFileManager(
     int32_t level_threshold, const std::shared_ptr<DataFilePathFactory>& path_factory,
-    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<MemoryPool>& pool,
-    LookupLevels<T>* lookup_levels)
+    const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<MemoryPool>& pool)
     : level_threshold_(level_threshold),
       pool_(pool),
       path_factory_(path_factory),
-      file_system_(file_system),
-      lookup_levels_(lookup_levels) {
-    lookup_levels_->SetRemoteLookupFileManager(this);
-}
+      file_system_(file_system) {}
 
 template <typename T>
-Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager<T>::GenRemoteLookupFile(
-    const std::shared_ptr<DataFileMeta>& file) {
+Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager::GenRemoteLookupFile(
+    const std::shared_ptr<DataFileMeta>& file, LookupLevels<T>* lookup_levels) const {
+    if (!lookup_levels) {
+        return Status::Invalid("lookup_levels must not be null in GenRemoteLookupFile");
+    }
     if (file->level < level_threshold_) {
         return file;
     }
 
-    if (lookup_levels_->RemoteSst(file).has_value()) {
+    if (lookup_levels->RemoteSst(file).has_value()) {
         // ignore existed
         return file;
     }
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<LookupFile> lookup_file,
-                           lookup_levels_->CreateLookupFile(file));
+                           lookup_levels->CreateLookupFile(file));
     std::string local_file_path = lookup_file->LocalFile();
 
     // Get the file size from the local file system
@@ -54,7 +53,7 @@ Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager<T>::GenRemoteLooku
                            file_system_->GetFileStatus(local_file_path));
     auto length = static_cast<int64_t>(local_file_status->GetLen());
 
-    std::string remote_sst_name = lookup_levels_->NewRemoteSst(file, length);
+    std::string remote_sst_name = lookup_levels->NewRemoteSst(file, length);
     std::string remote_sst_path = RemoteSstPath(file, remote_sst_name);
 
     // Upload local lookup file to remote storage
@@ -65,17 +64,16 @@ Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager<T>::GenRemoteLooku
 
     PAIMON_RETURN_NOT_OK(CopyFromInputToOutput(std::move(input_stream), std::move(output_stream)));
 
-    lookup_levels_->AddLocalFile(file, lookup_file);
+    lookup_levels->AddLocalFile(file, lookup_file);
 
     std::vector<std::optional<std::string>> new_extra_files(file->extra_files);
     new_extra_files.push_back(remote_sst_name);
     return file->CopyWithExtraFiles(new_extra_files);
 }
 
-template <typename T>
-bool RemoteLookupFileManager<T>::TryToDownload(const std::shared_ptr<DataFileMeta>& data_file,
-                                               const std::string& remote_sst_file,
-                                               const std::string& local_file) const {
+bool RemoteLookupFileManager::TryToDownload(const std::shared_ptr<DataFileMeta>& data_file,
+                                            const std::string& remote_sst_file,
+                                            const std::string& local_file) const {
     std::string remote_path = RemoteSstPath(data_file, remote_sst_file);
 
     auto status = CopyRemoteToLocal(remote_path, local_file);
@@ -86,17 +84,15 @@ bool RemoteLookupFileManager<T>::TryToDownload(const std::shared_ptr<DataFileMet
     return true;
 }
 
-template <typename T>
-std::string RemoteLookupFileManager<T>::RemoteSstPath(const std::shared_ptr<DataFileMeta>& file,
-                                                      const std::string& remote_sst_name) const {
+std::string RemoteLookupFileManager::RemoteSstPath(const std::shared_ptr<DataFileMeta>& file,
+                                                   const std::string& remote_sst_name) const {
     std::string data_file_path = path_factory_->ToPath(file);
     std::string parent_dir = PathUtil::GetParentDirPath(data_file_path);
     return PathUtil::JoinPath(parent_dir, remote_sst_name);
 }
 
-template <typename T>
-Status RemoteLookupFileManager<T>::CopyRemoteToLocal(const std::string& remote_path,
-                                                     const std::string& local_path) const {
+Status RemoteLookupFileManager::CopyRemoteToLocal(const std::string& remote_path,
+                                                  const std::string& local_path) const {
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<InputStream> input_stream,
                            file_system_->Open(remote_path));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<OutputStream> output_stream,
@@ -104,8 +100,7 @@ Status RemoteLookupFileManager<T>::CopyRemoteToLocal(const std::string& remote_p
     return CopyFromInputToOutput(std::move(input_stream), std::move(output_stream));
 }
 
-template <typename T>
-Status RemoteLookupFileManager<T>::CopyFromInputToOutput(
+Status RemoteLookupFileManager::CopyFromInputToOutput(
     std::unique_ptr<InputStream>&& input_stream,
     std::unique_ptr<OutputStream>&& output_stream) const {
     auto buffer = std::make_shared<Bytes>(kBufferSize, pool_.get());
@@ -136,8 +131,16 @@ Status RemoteLookupFileManager<T>::CopyFromInputToOutput(
     PAIMON_RETURN_NOT_OK(input_stream->Close());
     return Status::OK();
 }
-template class RemoteLookupFileManager<KeyValue>;
-template class RemoteLookupFileManager<FilePosition>;
-template class RemoteLookupFileManager<PositionedKeyValue>;
-template class RemoteLookupFileManager<bool>;
+template Result<std::shared_ptr<DataFileMeta>>
+RemoteLookupFileManager::GenRemoteLookupFile<KeyValue>(const std::shared_ptr<DataFileMeta>&,
+                                                       LookupLevels<KeyValue>*) const;
+template Result<std::shared_ptr<DataFileMeta>>
+RemoteLookupFileManager::GenRemoteLookupFile<FilePosition>(const std::shared_ptr<DataFileMeta>&,
+                                                           LookupLevels<FilePosition>*) const;
+template Result<std::shared_ptr<DataFileMeta>>
+RemoteLookupFileManager::GenRemoteLookupFile<PositionedKeyValue>(
+    const std::shared_ptr<DataFileMeta>&, LookupLevels<PositionedKeyValue>*) const;
+template Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager::GenRemoteLookupFile<bool>(
+    const std::shared_ptr<DataFileMeta>&, LookupLevels<bool>*) const;
+
 }  // namespace paimon

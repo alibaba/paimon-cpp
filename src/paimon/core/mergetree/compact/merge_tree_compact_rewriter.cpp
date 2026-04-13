@@ -40,8 +40,8 @@ MergeTreeCompactRewriter::MergeTreeCompactRewriter(
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool,
-    const std::shared_ptr<CancellationController>& cancellation_controller)
+    const std::shared_ptr<CancellationController>& cancellation_controller,
+    const std::shared_ptr<MemoryPool>& pool)
     : options_(options),
       merge_file_split_read_(std::move(merge_file_split_read)),
       pool_(pool),
@@ -62,8 +62,9 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     int32_t bucket, const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     DeletionVector::Factory dv_factory,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
-    const std::shared_ptr<CancellationController>& cancellation_controller) {
+    const CoreOptions& options,
+    const std::shared_ptr<CancellationController>& cancellation_controller,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
@@ -98,7 +99,7 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     return std::unique_ptr<MergeTreeCompactRewriter>(new MergeTreeCompactRewriter(
         partition, bucket, table_schema->Id(), trimmed_primary_keys, options, data_schema,
         write_schema, std::move(dv_factory), path_factory_cache, std::move(merge_file_split_read),
-        merge_function_wrapper_factory, pool, cancellation_controller));
+        merge_function_wrapper_factory, cancellation_controller, pool));
 }
 
 Result<CompactResult> MergeTreeCompactRewriter::Upgrade(int32_t output_level,

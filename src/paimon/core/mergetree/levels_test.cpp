@@ -231,6 +231,13 @@ TEST_F(LevelsTest, TestUpdateDropFileCallback) {
     std::set<std::string> dropped_set(callback.dropped_files.begin(), callback.dropped_files.end());
     ASSERT_TRUE(dropped_set.count(input_files[0]->file_name));
     ASSERT_TRUE(dropped_set.count(input_files[2]->file_name));
+
+    // Remove callback
+    ASSERT_EQ(levels->drop_file_callbacks_.size(), 1);
+    levels->RemoveDropFileCallback(nullptr);
+    ASSERT_EQ(levels->drop_file_callbacks_.size(), 1);
+    levels->RemoveDropFileCallback(&callback);
+    ASSERT_TRUE(levels->drop_file_callbacks_.empty());
 }
 
 TEST_F(LevelsTest, TestUpdateDropFileCallbackExcludesUpgradeFiles) {

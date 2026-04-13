@@ -34,18 +34,18 @@ LookupMergeTreeCompactRewriter<T>::LookupMergeTreeCompactRewriter(
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
     std::unique_ptr<MergeFileSplitRead>&& merge_file_split_read,
     MergeFunctionWrapperFactory merge_function_wrapper_factory,
-    const std::shared_ptr<MemoryPool>& pool,
     const std::shared_ptr<CancellationController>& cancellation_controller,
-    std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager)
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
+    const std::shared_ptr<MemoryPool>& pool)
     : ChangelogMergeTreeRewriter(
           max_level, /*force_drop_delete=*/dv_maintainer != nullptr, partition, bucket, schema_id,
           trimmed_primary_keys, options, data_schema, write_schema,
           DeletionVector::CreateFactory(dv_maintainer), path_factory_cache,
-          std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool,
-          cancellation_controller),
+          std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
+          cancellation_controller, pool),
       lookup_levels_(std::move(lookup_levels)),
       dv_maintainer_(dv_maintainer),
-      remote_lookup_file_manager_(std::move(remote_lookup_file_manager)) {}
+      remote_lookup_file_manager_(remote_lookup_file_manager) {}
 
 template <typename T>
 Result<std::unique_ptr<LookupMergeTreeCompactRewriter<T>>>
@@ -55,9 +55,10 @@ LookupMergeTreeCompactRewriter<T>::Create(
     MergeFunctionWrapperFactory merge_function_wrapper_factory, int32_t bucket,
     const BinaryRow& partition, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool,
+    const CoreOptions& options,
     const std::shared_ptr<CancellationController>& cancellation_controller,
-    std::unique_ptr<RemoteLookupFileManager<T>>&& remote_lookup_file_manager) {
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_primary_keys,
                            table_schema->TrimmedPrimaryKeys());
     auto data_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
@@ -88,8 +89,8 @@ LookupMergeTreeCompactRewriter<T>::Create(
     return std::unique_ptr<LookupMergeTreeCompactRewriter>(new LookupMergeTreeCompactRewriter(
         std::move(lookup_levels), dv_maintainer, max_level, partition, bucket, table_schema->Id(),
         trimmed_primary_keys, options, data_schema, write_schema, path_factory_cache,
-        std::move(merge_file_split_read), std::move(merge_function_wrapper_factory), pool,
-        cancellation_controller, std::move(remote_lookup_file_manager)));
+        std::move(merge_file_split_read), std::move(merge_function_wrapper_factory),
+        cancellation_controller, remote_lookup_file_manager, pool));
 }
 
 template <typename T>
@@ -182,8 +183,9 @@ LookupMergeTreeCompactRewriter<T>::NotifyRewriteCompactAfter(
     std::vector<std::shared_ptr<DataFileMeta>> result;
     result.reserve(files.size());
     for (const auto& file : files) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFileMeta> new_meta,
-                               remote_lookup_file_manager_->GenRemoteLookupFile(file));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<DataFileMeta> new_meta,
+            remote_lookup_file_manager_->GenRemoteLookupFile(file, lookup_levels_.get()));
         result.push_back(std::move(new_meta));
     }
     return result;
