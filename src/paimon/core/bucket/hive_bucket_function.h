@@ -60,7 +60,7 @@ class HiveBucketFunction : public BucketFunction {
     int32_t Bucket(const BinaryRow& row, int32_t num_buckets) const override;
 
  private:
-    explicit HiveBucketFunction(std::vector<HiveFieldInfo> field_infos);
+    explicit HiveBucketFunction(const std::vector<HiveFieldInfo>& field_infos);
 
     /// Compute the Hive hash for a single field value.
     int32_t ComputeHash(const BinaryRow& row, int32_t field_index) const;

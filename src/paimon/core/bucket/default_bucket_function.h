@@ -25,7 +25,6 @@
 namespace paimon {
 
 /// Default bucket function that uses the hash code of the row to determine the bucket.
-/// This is consistent with the logic in BucketIdCalculator.
 class DefaultBucketFunction : public BucketFunction {
  public:
     int32_t Bucket(const BinaryRow& row, int32_t num_buckets) const override {

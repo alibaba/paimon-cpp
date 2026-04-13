@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "paimon/core/bucket/bucket_function_type.h"
+#include "paimon/core/options/bucket_function_type.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"

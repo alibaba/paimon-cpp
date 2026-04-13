@@ -16,29 +16,23 @@
 
 #include "paimon/core/bucket/mod_bucket_function.h"
 
+#include <cassert>
+
 #include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/status.h"
 
 namespace paimon {
 
 namespace {
 
-/// Equivalent to Java's Math.floorMod(int, int).
+/// Equivalent to Java's Math.floorMod semantics.
 /// The result always has the same sign as the divisor (y), or is zero.
-inline int32_t FloorMod(int32_t x, int32_t y) {
-    int32_t mod = x % y;
-    // If the signs of mod and y differ and mod is not zero, adjust.
-    if ((mod ^ y) < 0 && mod != 0) {
-        mod += y;
-    }
-    return mod;
-}
-
-/// Equivalent to Java's Math.floorMod(long, int).
-/// The result always has the same sign as the divisor (y), or is zero.
-inline int32_t FloorMod(int64_t x, int32_t y) {
-    int64_t mod = x % static_cast<int64_t>(y);
+/// Works for both int32_t and int64_t as T.
+template <typename T>
+inline int32_t FloorMod(T x, int32_t y) {
+    auto mod = static_cast<int64_t>(x) % static_cast<int64_t>(y);
     // If the signs of mod and y differ and mod is not zero, adjust.
     if ((mod ^ static_cast<int64_t>(y)) < 0 && mod != 0) {
         mod += y;
@@ -55,7 +49,7 @@ Result<std::unique_ptr<ModBucketFunction>> ModBucketFunction::Create(FieldType b
     if (bucket_key_type != FieldType::INT && bucket_key_type != FieldType::BIGINT) {
         return Status::Invalid(
             fmt::format("ModBucketFunction only supports INT or BIGINT bucket key type, but got {}",
-                        static_cast<int>(bucket_key_type)));
+                        FieldTypeUtils::FieldTypeToString(bucket_key_type)));
     }
     return std::unique_ptr<ModBucketFunction>(new ModBucketFunction(bucket_key_type));
 }
@@ -68,6 +62,7 @@ int32_t ModBucketFunction::Bucket(const BinaryRow& row, int32_t num_buckets) con
             return FloorMod(row.GetLong(0), num_buckets);
         default:
             // This should never happen since Create() validates the type.
+            assert(false);
             return 0;
     }
 }

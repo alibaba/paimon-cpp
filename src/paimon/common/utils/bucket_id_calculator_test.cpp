@@ -75,9 +75,9 @@ class BucketIdCalculatorTest : public ::testing::Test {
         ::ArrowSchema c_bucket_schema;
         EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_bucket_schema).ok());
         std::vector<int32_t> bucket_ids(bucket_array->length());
-        EXPECT_OK_AND_ASSIGN(
-            auto bucket_id_cal,
-            BucketIdCalculator::Create(is_pk_table, num_buckets, std::move(bucket_function)));
+        EXPECT_OK_AND_ASSIGN(auto bucket_id_cal, BucketIdCalculator::Create(
+                                                     is_pk_table, num_buckets,
+                                                     std::move(bucket_function), GetDefaultPool()));
         PAIMON_RETURN_NOT_OK(bucket_id_cal->CalculateBucketIds(
             /*bucket_keys=*/&c_bucket_array, /*bucket_schema=*/&c_bucket_schema,
             /*bucket_ids=*/bucket_ids.data()));

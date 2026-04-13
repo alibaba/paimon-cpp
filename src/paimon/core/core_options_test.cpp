@@ -21,7 +21,7 @@
 
 #include "gtest/gtest.h"
 #include "paimon/common/fs/resolving_file_system.h"
-#include "paimon/core/bucket/bucket_function_type.h"
+#include "paimon/core/options/bucket_function_type.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
 #include "paimon/format/file_format.h"

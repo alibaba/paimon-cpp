@@ -273,11 +273,6 @@ Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
         new BucketIdCalculator(num_buckets, std::move(bucket_function), pool));
 }
 
-Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
-    bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function) {
-    return Create(is_pk_table, num_buckets, std::move(bucket_function), GetDefaultPool());
-}
-
 Status BucketIdCalculator::CalculateBucketIds(ArrowArray* bucket_keys, ArrowSchema* bucket_schema,
                                               int32_t* bucket_ids) const {
     ScopeGuard guard([bucket_keys, bucket_schema]() {

@@ -58,13 +58,6 @@ class PAIMON_EXPORT BucketIdCalculator {
         bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
         const std::shared_ptr<MemoryPool>& pool);
 
-    /// Create `BucketIdCalculator` with a custom bucket function and default memory pool.
-    /// @param is_pk_table Whether this is for a primary key table.
-    /// @param num_buckets Number of buckets.
-    /// @param bucket_function The bucket function to use for bucket assignment.
-    static Result<std::unique_ptr<BucketIdCalculator>> Create(
-        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function);
-
     /// Calculate bucket ids for the given bucket keys.
     /// @param bucket_keys Arrow struct array containing the bucket key values.
     /// @param bucket_schema Arrow schema describing the structure of bucket_keys.

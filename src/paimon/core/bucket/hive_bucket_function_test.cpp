@@ -21,111 +21,87 @@
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/core/bucket/hive_hasher.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
 
-namespace {
+class HiveBucketFunctionTest : public ::testing::Test {
+ protected:
+    /// Helper to create a BinaryRow with INT, STRING, BINARY, DECIMAL(10,4) fields.
+    /// Matches the Java test: toBinaryRow(rowType, 7, "hello", {1,2,3}, Decimal("12.3400", 10, 4))
+    BinaryRow CreateMixedRow(int32_t int_val, const std::string& str_val,
+                             const std::vector<char>& binary_val, int64_t decimal_unscaled,
+                             int32_t decimal_precision, int32_t decimal_scale) {
+        auto pool = GetDefaultPool();
+        BinaryRow row(4);
+        BinaryRowWriter writer(&row, 0, pool.get());
 
-/// Helper to create a BinaryRow with INT, STRING, BINARY, DECIMAL(10,4) fields.
-/// Matches the Java test: toBinaryRow(rowType, 7, "hello", {1,2,3}, Decimal("12.3400", 10, 4))
-BinaryRow CreateMixedRow(int32_t int_val, const std::string& str_val,
-                         const std::vector<char>& binary_val, int64_t decimal_unscaled,
-                         int32_t decimal_precision, int32_t decimal_scale) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(4);
-    BinaryRowWriter writer(&row, 0, pool.get());
+        // Field 0: INT
+        writer.WriteInt(0, int_val);
 
-    // Field 0: INT
-    writer.WriteInt(0, int_val);
+        // Field 1: STRING
+        writer.WriteStringView(1, std::string_view(str_val));
 
-    // Field 1: STRING
-    writer.WriteStringView(1, std::string_view(str_val));
+        // Field 2: BINARY
+        writer.WriteStringView(2, std::string_view(binary_val.data(), binary_val.size()));
 
-    // Field 2: BINARY
-    writer.WriteStringView(2, std::string_view(binary_val.data(), binary_val.size()));
+        // Field 3: DECIMAL (compact, precision <= 18)
+        writer.WriteDecimal(
+            3, Decimal::FromUnscaledLong(decimal_unscaled, decimal_precision, decimal_scale),
+            decimal_precision);
 
-    // Field 3: DECIMAL (compact, precision <= 18)
-    writer.WriteDecimal(
-        3, Decimal::FromUnscaledLong(decimal_unscaled, decimal_precision, decimal_scale),
-        decimal_precision);
-
-    writer.Complete();
-    return row;
-}
-
-/// Helper to create a BinaryRow with all null fields.
-BinaryRow CreateNullRow(int32_t num_fields) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(num_fields);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    for (int32_t i = 0; i < num_fields; i++) {
-        writer.SetNullAt(i);
+        writer.Complete();
+        return row;
     }
-    writer.Complete();
-    return row;
-}
 
-BinaryRow CreateIntRow(int32_t value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteInt(0, value);
-    writer.Complete();
-    return row;
-}
+    /// Helper to create a BinaryRow with all null fields.
+    BinaryRow CreateNullRow(int32_t num_fields) {
+        auto pool = GetDefaultPool();
+        BinaryRow row(num_fields);
+        BinaryRowWriter writer(&row, 0, pool.get());
+        for (int32_t i = 0; i < num_fields; i++) {
+            writer.SetNullAt(i);
+        }
+        writer.Complete();
+        return row;
+    }
 
-BinaryRow CreateBooleanRow(bool value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteBoolean(0, value);
-    writer.Complete();
-    return row;
-}
+    BinaryRow CreateIntRow(int32_t value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
 
-BinaryRow CreateLongRow(int64_t value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteLong(0, value);
-    writer.Complete();
-    return row;
-}
+    BinaryRow CreateBooleanRow(bool value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
 
-BinaryRow CreateFloatRow(float value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteFloat(0, value);
-    writer.Complete();
-    return row;
-}
+    BinaryRow CreateLongRow(int64_t value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
 
-BinaryRow CreateDoubleRow(double value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteDouble(0, value);
-    writer.Complete();
-    return row;
-}
+    BinaryRow CreateFloatRow(float value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
 
-BinaryRow CreateStringRow(const std::string& value) {
-    auto pool = GetDefaultPool();
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool.get());
-    writer.WriteStringView(0, std::string_view(value));
-    writer.Complete();
-    return row;
-}
+    BinaryRow CreateDoubleRow(double value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
 
-}  // namespace
+    BinaryRow CreateStringRow(const std::string& value) {
+        auto pool = GetDefaultPool();
+        return BinaryRowGenerator::GenerateRow({value}, pool.get());
+    }
+};
 
 /// Test matching Java: testHiveBucketFunction
 /// RowType: INT, STRING, BYTES, DECIMAL(10,4)
 /// Values: 7, "hello", {1,2,3}, Decimal("12.3400", 10, 4)
-TEST(HiveBucketFunctionTest, TestHiveBucketFunction) {
+TEST_F(HiveBucketFunctionTest, TestHiveBucketFunction) {
     std::vector<HiveFieldInfo> field_infos = {
         HiveFieldInfo(FieldType::INT),
         HiveFieldInfo(FieldType::STRING),
@@ -152,7 +128,7 @@ TEST(HiveBucketFunctionTest, TestHiveBucketFunction) {
 }
 
 /// Test matching Java: testHiveBucketFunctionWithNulls
-TEST(HiveBucketFunctionTest, TestHiveBucketFunctionWithNulls) {
+TEST_F(HiveBucketFunctionTest, TestHiveBucketFunctionWithNulls) {
     std::vector<FieldType> field_types = {FieldType::INT, FieldType::STRING};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -163,22 +139,22 @@ TEST(HiveBucketFunctionTest, TestHiveBucketFunctionWithNulls) {
 }
 
 /// Test unsupported type returns error on Create
-TEST(HiveBucketFunctionTest, TestUnsupportedType) {
+TEST_F(HiveBucketFunctionTest, TestUnsupportedType) {
     // TIMESTAMP type should fail
     std::vector<FieldType> field_types = {FieldType::TIMESTAMP};
     auto result = HiveBucketFunction::Create(field_types);
-    ASSERT_NOK(result.status());
+    ASSERT_NOK_WITH_MSG(result.status(), "Unsupported type");
 }
 
 /// Test empty field types returns error
-TEST(HiveBucketFunctionTest, TestEmptyFieldTypes) {
+TEST_F(HiveBucketFunctionTest, TestEmptyFieldTypes) {
     std::vector<FieldType> field_types = {};
     auto result = HiveBucketFunction::Create(field_types);
-    ASSERT_NOK(result.status());
+    ASSERT_NOK_WITH_MSG(result.status(), "at least one field");
 }
 
 /// Test single INT field
-TEST(HiveBucketFunctionTest, TestSingleIntField) {
+TEST_F(HiveBucketFunctionTest, TestSingleIntField) {
     std::vector<FieldType> field_types = {FieldType::INT};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -189,7 +165,7 @@ TEST(HiveBucketFunctionTest, TestSingleIntField) {
 }
 
 /// Test BOOLEAN field
-TEST(HiveBucketFunctionTest, TestBooleanField) {
+TEST_F(HiveBucketFunctionTest, TestBooleanField) {
     std::vector<FieldType> field_types = {FieldType::BOOLEAN};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -200,7 +176,7 @@ TEST(HiveBucketFunctionTest, TestBooleanField) {
 }
 
 /// Test BIGINT field
-TEST(HiveBucketFunctionTest, TestBigintField) {
+TEST_F(HiveBucketFunctionTest, TestBigintField) {
     std::vector<FieldType> field_types = {FieldType::BIGINT};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -210,7 +186,7 @@ TEST(HiveBucketFunctionTest, TestBigintField) {
 }
 
 /// Test FLOAT field with -0.0f
-TEST(HiveBucketFunctionTest, TestFloatNegativeZero) {
+TEST_F(HiveBucketFunctionTest, TestFloatNegativeZero) {
     std::vector<FieldType> field_types = {FieldType::FLOAT};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -219,7 +195,7 @@ TEST(HiveBucketFunctionTest, TestFloatNegativeZero) {
 }
 
 /// Test DOUBLE field with -0.0
-TEST(HiveBucketFunctionTest, TestDoubleNegativeZero) {
+TEST_F(HiveBucketFunctionTest, TestDoubleNegativeZero) {
     std::vector<FieldType> field_types = {FieldType::DOUBLE};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -228,7 +204,7 @@ TEST(HiveBucketFunctionTest, TestDoubleNegativeZero) {
 }
 
 /// Test STRING field
-TEST(HiveBucketFunctionTest, TestStringField) {
+TEST_F(HiveBucketFunctionTest, TestStringField) {
     std::vector<FieldType> field_types = {FieldType::STRING};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 
@@ -238,7 +214,7 @@ TEST(HiveBucketFunctionTest, TestStringField) {
 }
 
 /// Test different num_buckets produce valid results
-TEST(HiveBucketFunctionTest, TestDifferentNumBuckets) {
+TEST_F(HiveBucketFunctionTest, TestDifferentNumBuckets) {
     std::vector<FieldType> field_types = {FieldType::INT};
     ASSERT_OK_AND_ASSIGN(auto func, HiveBucketFunction::Create(field_types));
 

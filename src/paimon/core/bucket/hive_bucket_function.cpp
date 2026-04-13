@@ -16,12 +16,14 @@
 
 #include "paimon/core/bucket/hive_bucket_function.h"
 
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <limits>
 
 #include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/core/bucket/hive_hasher.h"
 #include "paimon/status.h"
 
@@ -29,12 +31,12 @@ namespace paimon {
 
 namespace {
 
-constexpr int32_t SEED = 0;
+static constexpr int32_t SEED = 0;
 
 }  // namespace
 
-HiveBucketFunction::HiveBucketFunction(std::vector<HiveFieldInfo> field_infos)
-    : field_infos_(std::move(field_infos)) {}
+HiveBucketFunction::HiveBucketFunction(const std::vector<HiveFieldInfo>& field_infos)
+    : field_infos_(field_infos) {}
 
 Result<std::unique_ptr<HiveBucketFunction>> HiveBucketFunction::Create(
     const std::vector<FieldType>& field_types) {
@@ -67,7 +69,7 @@ Result<std::unique_ptr<HiveBucketFunction>> HiveBucketFunction::Create(
                 break;
             default:
                 return Status::Invalid(fmt::format("Unsupported type as Hive bucket key type: {}",
-                                                   static_cast<int>(info.type)));
+                                                   FieldTypeUtils::FieldTypeToString(info.type)));
         }
     }
     return std::unique_ptr<HiveBucketFunction>(new HiveBucketFunction(field_infos));
@@ -124,8 +126,8 @@ int32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_inde
             return HiveHasher::HashBytes(sv.data(), static_cast<int32_t>(sv.size()));
         }
         case FieldType::BINARY: {
-            auto bytes = row.GetBinary(field_index);
-            return HiveHasher::HashBytes(bytes->data(), static_cast<int32_t>(bytes->size()));
+            std::string_view sv = row.GetStringView(field_index);
+            return HiveHasher::HashBytes(sv.data(), static_cast<int32_t>(sv.size()));
         }
         case FieldType::DECIMAL: {
             Decimal decimal = row.GetDecimal(field_index, info.precision, info.scale);
@@ -133,6 +135,7 @@ int32_t HiveBucketFunction::ComputeHash(const BinaryRow& row, int32_t field_inde
         }
         default:
             // This should never happen since Create() validates the types.
+            assert(false);
             return 0;
     }
 }
