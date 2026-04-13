@@ -45,4 +45,8 @@ Result<std::shared_ptr<Table>> Table::Create(const std::shared_ptr<FileSystem>& 
     return std::make_shared<Table>(schema, identifier.GetDatabaseName(), identifier.GetTableName());
 }
 
+std::string Table::FullName() const {
+    return database_ == Identifier::kUnknownDatabase ? table_name_ : database_ + "." + table_name_;
+}
+
 }  // namespace paimon

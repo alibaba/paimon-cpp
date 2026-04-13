@@ -55,10 +55,7 @@ class PAIMON_EXPORT Table {
     }
 
     /// Full name of the table, default is database.tableName.
-    std::string FullName() const {
-        return database_ == Identifier::kUnknownDatabase ? table_name_
-                                                         : database_ + "." + table_name_;
-    }
+    std::string FullName() const;
 
     /// UUID of the table, metastore can provide the true UUID of this table, default is the full
     /// name.

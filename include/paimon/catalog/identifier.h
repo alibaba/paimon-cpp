@@ -17,7 +17,6 @@
 #pragma once
 
 #include <string>
-#include <string_view>
 
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
@@ -27,7 +26,7 @@ namespace paimon {
 /// An identifier for a table containing database and table name.
 class PAIMON_EXPORT Identifier {
  public:
-    static constexpr std::string_view kUnknownDatabase = "unknown";
+    static const char kUnknownDatabase[];
 
     explicit Identifier(const std::string& table);
     Identifier(const std::string& database, const std::string& table);
