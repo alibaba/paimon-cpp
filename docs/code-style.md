@@ -1,5 +1,5 @@
 <!---
-  Copyright 2024-present Alibaba Inc.
+  Copyright 2026-present Alibaba Inc.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -38,16 +38,6 @@ Formatting is based on **Google C++ Style** with the following overrides (define
 | `IndentWidth` | 4 |
 | `AccessModifierOffset` | -3 |
 | `AllowShortFunctionsOnASingleLine` | Empty |
-
-Run `clang-format` before committing (or let pre-commit do it for you):
-
-```bash
-# Format a single file
-clang-format -i src/paimon/core/my_file.cpp
-
-# Check all files (dry-run)
-python build_support/run_clang_format.py --source_dir src include --clang_format_binary clang-format check
-```
 
 ---
 
@@ -134,7 +124,7 @@ All fallible functions return `Status` (no value) or `Result<T>` (with value). *
 | `PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow_status)` | Bridge Apache Arrow `Status` |
 | `PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(lhs, rexpr)` | Bridge Apache Arrow `Result` |
 
-### `PAIMON_ASSIGN_OR_RAISE` — Always Use Explicit Types
+### `PAIMON_ASSIGN_OR_RAISE` and `PAIMON_ASSIGN_OR_RAISE_FROM_ARROW` — Always Use Explicit Types
 
 ```cpp
 // ✅ Good — explicit type
@@ -164,7 +154,6 @@ class TableScan {
  public:
     static Result<std::unique_ptr<TableScan>> Create(std::unique_ptr<ScanContext> context);
     ~TableScan() = default;
-    PAIMON_DISALLOW_COPY_AND_ASSIGN(TableScan);
 
  private:
     explicit TableScan(std::unique_ptr<ScanContext> context);
@@ -178,7 +167,7 @@ class TableScan {
 
 ### Utility Classes
 
-Static-only utility classes delete their constructors:
+Static-only utility classes delete their constructors and deconstructors:
 
 ```cpp
 class StringUtils {
@@ -190,11 +179,6 @@ class StringUtils {
     // ...
 };
 ```
-
-### Copy / Move
-
-- **Disable copy** with `PAIMON_DISALLOW_COPY_AND_ASSIGN(ClassName)`.
-- **Default move** with `PAIMON_DEFAULT_MOVE_AND_ASSIGN(ClassName)`.
 
 ### Interface Classes
 
@@ -405,28 +389,20 @@ Static analysis is configured in `.clang-tidy`. Key enabled check groups:
 - `modernize-*` — C++ modernization suggestions
 - `clang-analyzer-*` — Clang static analyzer
 
-Run clang-tidy:
-
-```bash
-python build_support/run_clang_tidy.py --source_dir src include
-```
-
 ### Building & Testing
 
 ```bash
 # Configure (from project root)
 mkdir -p build && cd build
 cmake ../ \
-    -DPAIMON_COMPILER_ROOT=/usr/ \
     -DCMAKE_BUILD_TYPE=debug \
-    -DPAIMON_BUILD_TESTS=ON \
-    -DPAIMON_USE_GCC=ON
+    -DPAIMON_BUILD_TESTS=ON
 
 # Build
 make -j$(nproc)
 
 # Run a specific test suite
-./release/paimon-core-test --gtest_filter="CoreOptionsTest*"
+./debug/paimon-core-test --gtest_filter="CoreOptionsTest*"
 ```
 
 ---

@@ -18,7 +18,7 @@ set -e
 
 cd $(dirname "$0")/../
 mkdir -p build && cd build
-cmake ../ -DPAIMON_COMPILER_ROOT=/usr/ -DCMAKE_BUILD_TYPE=Debug -DPAIMON_BUILD_TESTS=ON -DPAIMON_USE_ASAN=ON -DPAIMON_USE_GCC=ON -DPAIMON_GENERATE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake ../ -DCMAKE_BUILD_TYPE=Debug -DPAIMON_BUILD_TESTS=ON -DPAIMON_USE_ASAN=ON -DPAIMON_GENERATE_COVERAGE=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 make -j
 make test
 lcov --capture --directory src/paimon --directory test --output-file coverage.info
