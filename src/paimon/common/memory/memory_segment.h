@@ -49,6 +49,9 @@ class PAIMON_EXPORT MemorySegment {
     MemorySegment& operator=(const MemorySegment& other) = default;
 
     bool operator==(const MemorySegment& other) const {
+        if (this == &other) {
+            return true;
+        }
         if (heap_memory_ == other.heap_memory_) {
             return true;
         }

@@ -433,6 +433,8 @@ struct CoreOptions::Impl {
 };
 
 struct CoreOptionsParser {
+    CoreOptionsParser() = delete;
+    ~CoreOptionsParser() = delete;
     // Parse basic table options: bucket, partition, file sizes, batch sizes, file system, etc.
     static Status ParseBasicOptions(
         const ConfigParser& parser, CoreOptions::Impl* impl,

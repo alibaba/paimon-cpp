@@ -66,6 +66,9 @@ class CacheValue {
     }
 
     bool operator==(const CacheValue& other) const {
+        if (this == &other) {
+            return true;
+        }
         return segment_ == other.segment_;
     }
 

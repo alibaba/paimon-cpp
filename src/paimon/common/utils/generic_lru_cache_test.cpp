@@ -279,9 +279,8 @@ TEST_F(GenericLruCacheTest, PutWeightExceedsMaxReturnsInvalid) {
     };
     StringStringCache cache(options);
 
-    auto status = cache.Put("key1", "this_is_too_long");
-    ASSERT_FALSE(status.ok());
-    ASSERT_TRUE(status.IsInvalid());
+    ASSERT_NOK_WITH_MSG(cache.Put("key1", "this_is_too_long"),
+                        "Entry weight 16 exceeds cache max weight 5, entry will not be cached");
     ASSERT_EQ(cache.Size(), 0);
 }
 

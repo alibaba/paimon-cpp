@@ -58,6 +58,9 @@ class LookupFile {
     }
 
     bool operator==(const LookupFile& other) const {
+        if (this == &other) {
+            return true;
+        }
         return local_file_ == other.local_file_;
     }
 
