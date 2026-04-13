@@ -33,6 +33,12 @@ namespace paimon {
 /// A table provides basic abstraction for table type.
 class PAIMON_EXPORT Table {
  public:
+    /// Creates a table by loading the latest schema from the specified table path.
+    ///
+    /// @param file_system File system used to access the table directory and schema files.
+    /// @param table_path Root path of the table in the file system.
+    /// @param identifier Logical table identifier used for naming and error messages.
+    /// @return A table initialized with the latest available schema.
     static Result<std::shared_ptr<Table>> Create(const std::shared_ptr<FileSystem>& file_system,
                                                  const std::string& table_path,
                                                  const Identifier& identifier);
@@ -45,12 +51,13 @@ class PAIMON_EXPORT Table {
 
     /// A name to identify this table.
     std::string Name() const {
-        return database_ + "." + table_name_;
+        return table_name_;
     }
 
     /// Full name of the table, default is database.tableName.
     std::string FullName() const {
-        return Name();
+        return database_ == Identifier::kUnknownDatabase ? table_name_
+                                                         : database_ + "." + table_name_;
     }
 
     /// UUID of the table, metastore can provide the true UUID of this table, default is the full

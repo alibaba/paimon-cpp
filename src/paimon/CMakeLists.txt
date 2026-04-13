@@ -638,6 +638,7 @@ if(PAIMON_BUILD_TESTS)
                     core/stats/simple_stats_evolution_test.cpp
                     core/stats/simple_stats_collector_test.cpp
                     core/stats/simple_stats_test.cpp
+                    core/table/table_test.cpp
                     core/table/sink/commit_message_test.cpp
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
