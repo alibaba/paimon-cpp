@@ -155,7 +155,8 @@ class LookupLevelsTest : public testing::Test {
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
             std::move(io_manager), path_factory, table_schema, levels,
-            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory, pool_);
+            /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory,
+            /*remote_lookup_file_manager=*/nullptr, pool_);
     }
 
  private:
@@ -225,11 +226,14 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
     ASSERT_EQ(file_status_list.size(), 2);
+    ASSERT_EQ(levels->drop_file_callbacks_.size(), 1);
+
     // test close will rm local lookup file
     ASSERT_OK(lookup_levels->Close());
     file_status_list.clear();
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
     ASSERT_TRUE(file_status_list.empty());
+    ASSERT_TRUE(levels->drop_file_callbacks_.empty());
     // TODO(lisizhuo.lsz): test lookuplevels close
 }
 

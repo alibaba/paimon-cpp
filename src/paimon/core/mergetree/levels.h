@@ -61,6 +61,8 @@ class Levels {
 
     void AddDropFileCallback(DropFileCallback* callback);
 
+    void RemoveDropFileCallback(DropFileCallback* callback);
+
     Status AddLevel0File(const std::shared_ptr<DataFileMeta>& file);
 
     /// @return the highest non-empty level or -1 if all levels empty.

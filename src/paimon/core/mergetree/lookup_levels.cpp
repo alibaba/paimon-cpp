@@ -38,6 +38,7 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
     const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
                            table_schema->TrimmedPrimaryKeyFields());
@@ -77,7 +78,7 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
         fs, partition, bucket, options, schema_manager, io_manager, std::move(key_comparator),
         data_file_path_factory, std::move(split_read), table_schema, partition_schema, pk_schema,
         levels, dv_factory, processor_factory, std::move(key_serializer), serializer_factory,
-        lookup_store_factory, pool));
+        lookup_store_factory, remote_lookup_file_manager, pool));
 }
 template <typename T>
 Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalRow>& key,
@@ -131,6 +132,7 @@ LookupLevels<T>::LookupLevels(
     std::unique_ptr<RowCompactedSerializer>&& key_serializer,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
     const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       fs_(fs),
@@ -150,7 +152,8 @@ LookupLevels<T>::LookupLevels(
       processor_factory_(processor_factory),
       key_serializer_(std::move(key_serializer)),
       serializer_factory_(serializer_factory),
-      lookup_store_factory_(lookup_store_factory) {
+      lookup_store_factory_(lookup_store_factory),
+      remote_lookup_file_manager_(remote_lookup_file_manager) {
     if constexpr (std::is_same_v<T, FilePosition>) {
         // if T is FilePosition, only read key fields to create sst file is enough
         value_schema_ = key_schema_;
@@ -159,6 +162,11 @@ LookupLevels<T>::LookupLevels(
     }
     read_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema_);
     levels_->AddDropFileCallback(this);
+}
+
+template <typename T>
+LookupLevels<T>::~LookupLevels() {
+    [[maybe_unused]] auto status = Close();
 }
 
 template <typename T>
@@ -385,6 +393,14 @@ Result<std::shared_ptr<PersistProcessor<T>>> LookupLevels<T>::GetOrCreateProcess
         processor_factory_->Create(ser_version, serializer_factory_, file_schema, pool_));
     schema_id_and_ser_version_to_processors_[key] = processor;
     return processor;
+}
+
+template <typename T>
+Status LookupLevels<T>::Close() {
+    // TODO(xinyu.lxy): invalid cache
+    levels_->RemoveDropFileCallback(this);
+    lookup_file_cache_.clear();
+    return Status::OK();
 }
 
 template class LookupLevels<KeyValue>;
