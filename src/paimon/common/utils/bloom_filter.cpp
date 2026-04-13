@@ -56,7 +56,7 @@ BloomFilter::BloomFilter(int64_t expected_entries, int32_t byte_length)
 }
 
 Status BloomFilter::AddHash(int32_t hash1) {
-    int32_t hash2 = hash1 >> 16;
+    auto hash2 = static_cast<int32_t>(static_cast<uint32_t>(hash1) >> 16);
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
         int32_t combined_hash = hash1 + (i * hash2);
@@ -71,7 +71,7 @@ Status BloomFilter::AddHash(int32_t hash1) {
 }
 
 bool BloomFilter::TestHash(int32_t hash1) const {
-    int32_t hash2 = hash1 >> 16;
+    auto hash2 = static_cast<int32_t>(static_cast<uint32_t>(hash1) >> 16);
 
     for (int32_t i = 1; i <= num_hash_functions_; i++) {
         int32_t combined_hash = hash1 + (i * hash2);
