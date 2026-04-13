@@ -44,7 +44,7 @@
     "name" : "col2",
     "type" : {
       "type" : "MAP",
-      "key" : "INT",
+      "key" : "INT NOT NULL",
       "value" : "INT"
     }
   } ],
