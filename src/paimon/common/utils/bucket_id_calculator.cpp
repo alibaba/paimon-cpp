@@ -240,12 +240,6 @@ static Result<WriteFunction> WriteBucketRow(int32_t col_id,
 }
 }  // namespace
 
-namespace {
-std::shared_ptr<MemoryPool> GetPoolOrDefault(const std::shared_ptr<MemoryPool>& pool) {
-    return pool ? pool : GetDefaultPool();
-}
-}  // namespace
-
 BucketIdCalculator::BucketIdCalculator(int32_t num_buckets,
                                        std::unique_ptr<BucketFunction> bucket_function,
                                        const std::shared_ptr<MemoryPool>& pool)
@@ -273,42 +267,19 @@ Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
         return Status::Invalid("Append table not support PostponeBucketMode");
     }
     return std::unique_ptr<BucketIdCalculator>(
-        new BucketIdCalculator(num_buckets, std::move(bucket_function), GetPoolOrDefault(pool)));
+        new BucketIdCalculator(num_buckets, std::move(bucket_function), pool));
 }
 
-Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
-    bool is_pk_table, int32_t num_buckets, BucketFunctionType type,
+Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::CreateMod(
+    bool is_pk_table, int32_t num_buckets, FieldType bucket_key_type,
     const std::shared_ptr<MemoryPool>& pool) {
-    switch (type) {
-        case BucketFunctionType::DEFAULT:
-            return Create(is_pk_table, num_buckets, std::make_unique<DefaultBucketFunction>(),
-                          pool);
-        case BucketFunctionType::MOD:
-            return Status::Invalid("MOD bucket function type requires a bucket_key_type parameter");
-        case BucketFunctionType::HIVE:
-            return Status::Invalid("HIVE bucket function type requires a field_infos parameter");
-        default:
-            return Status::Invalid("Unknown bucket function type");
-    }
-}
-
-Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
-    bool is_pk_table, int32_t num_buckets, BucketFunctionType type, FieldType bucket_key_type,
-    const std::shared_ptr<MemoryPool>& pool) {
-    if (type != BucketFunctionType::MOD) {
-        return Status::Invalid(
-            "bucket_key_type parameter is only valid for MOD bucket function type");
-    }
     PAIMON_ASSIGN_OR_RAISE(auto mod_func, ModBucketFunction::Create(bucket_key_type));
     return Create(is_pk_table, num_buckets, std::move(mod_func), pool);
 }
 
-Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
-    bool is_pk_table, int32_t num_buckets, BucketFunctionType type,
-    const std::vector<HiveFieldInfo>& field_infos, const std::shared_ptr<MemoryPool>& pool) {
-    if (type != BucketFunctionType::HIVE) {
-        return Status::Invalid("field_infos parameter is only valid for HIVE bucket function type");
-    }
+Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::CreateHive(
+    bool is_pk_table, int32_t num_buckets, const std::vector<HiveFieldInfo>& field_infos,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(auto hive_func, HiveBucketFunction::Create(field_infos));
     return Create(is_pk_table, num_buckets, std::move(hive_func), pool);
 }
