@@ -171,11 +171,15 @@ and `Arrow DataTypes <https://arrow.apache.org/docs/format/Columnar.html#data-ty
 
    * - ``MAP<kt, vt>``
      - Map
-     - Data type of an associative array that maps keys (including NULL) to values (including NULL). A map cannot contain duplicate keys; each key can map to at most one value.
+     - Data type of an associative array that maps keys to values (including NULL). A map cannot contain duplicate keys; each key can map to at most one value.
 
        There is no restriction of element types; it is the responsibility of the user to ensure uniqueness.
 
        The type can be declared using ``MAP<kt, vt>`` where kt is the data type of the key elements and vt is the data type of the value elements.
+
+       **Note:** In C++ Paimon, map keys must be explicitly marked as ``NOT NULL``.
+       Apache Arrow does not support nullable map keys. If the key type is not
+       marked as ``NOT NULL`` in the schema, parsing will fail with an error.
 
    * - ``MULTISET<t>``
      - Not Supported
