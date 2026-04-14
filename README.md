@@ -143,7 +143,7 @@ $ make
 ## Contributing
 
 Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!
-Before contributing, you are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
+Before contributing, please read the [Contributing Guide](CONTRIBUTING.md) and the [Code Style Guide](docs/code-style.md). You are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
 
 If you have suggestions, feedback, want to report a bug or request a feature, please open an [issue](https://github.com/alibaba/paimon-cpp/issues/new).
 Pull requests are also very welcome!
