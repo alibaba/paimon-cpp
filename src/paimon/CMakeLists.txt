@@ -282,6 +282,7 @@ set(PAIMON_CORE_SRCS
     core/stats/simple_stats_converter.cpp
     core/stats/simple_stats.cpp
     core/stats/simple_stats_evolution.cpp
+    core/table/table.cpp
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
@@ -642,6 +643,7 @@ if(PAIMON_BUILD_TESTS)
                     core/stats/simple_stats_evolution_test.cpp
                     core/stats/simple_stats_collector_test.cpp
                     core/stats/simple_stats_test.cpp
+                    core/table/table_test.cpp
                     core/table/sink/commit_message_test.cpp
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
