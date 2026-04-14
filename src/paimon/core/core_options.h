@@ -175,8 +175,6 @@ class PAIMON_EXPORT CoreOptions {
  private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
-
-    friend struct CoreOptionsParser;
 };
 
 }  // namespace paimon
