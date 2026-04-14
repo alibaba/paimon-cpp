@@ -84,6 +84,36 @@ DataField represents a column of the table.
 3. ``type``: data type, very similar to SQL type string.
 4. ``description``: string.
 
+Limitations
+-----------
+
+MAP Key Must Be NOT NULL
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Apache Arrow does not support nullable map keys. When defining a ``MAP`` type in the schema,
+the key must be explicitly marked as ``NOT NULL``. If the key is not marked as ``NOT NULL``,
+schema parsing will fail with an error.
+
+For example, the following is **valid**:
+
+.. code-block:: json
+
+   {
+     "type": "MAP",
+     "key": "TINYINT NOT NULL",
+     "value": "SMALLINT"
+   }
+
+The following is **invalid** and will be rejected:
+
+.. code-block:: json
+
+   {
+     "type": "MAP",
+     "key": "TINYINT",
+     "value": "SMALLINT"
+   }
+
 Update Schema
 -------------
 
