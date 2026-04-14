@@ -657,10 +657,14 @@ Result<std::shared_ptr<arrow::Field>> DataTypeJsonParser::ParseMapType(
     // MapType. This is a limitation of Apache Arrow, which does not allow null keys in its
     // MapType. As a result, we validate `nullable = false` for the map key.
     if (key->nullable()) {
-        return Status::Invalid(
-            "Map key must be explicitly marked as NOT NULL in the schema for paimon-cpp as "
-            "Apache Arrow does not support nullable map keys. "
-            "Please add 'NOT NULL' to the key type definition.");
+        return Status::Invalid(fmt::format(
+            "Map field '{}' has a nullable key (parsed key field '{}', nullable={}). "
+            "Map keys must be explicitly marked as NOT NULL in the schema for paimon-cpp "
+            "because Apache Arrow does not support nullable map keys. "
+            "Please add 'NOT NULL' to the key type definition.",
+            name,
+            key->name(),
+            key->nullable()));
     }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> value,
                            ParseType("value", type_json_value["value"]));
