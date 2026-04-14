@@ -46,9 +46,11 @@ class PageFilteredRowGroupReader {
     /// @param column_indices Leaf column indices to read
     /// @param arrow_schema The target Arrow schema for output columns
     /// @param pool Memory pool
-    /// @return RecordBatch containing only rows matching the RowRanges
+    /// @param cache_options Cache options for PreBuffer
     /// @param pre_buffered If true, assumes PreBuffer was already called externally
     ///        and only waits via WhenBuffered (no redundant PreBuffer).
+    /// @param page_ranges If non-empty, wait via WhenBufferedRanges instead of WhenBuffered
+    /// @return RecordBatch containing only rows matching the RowRanges
     static Result<std::shared_ptr<arrow::RecordBatch>> ReadFilteredRowGroup(
         ::parquet::ParquetFileReader* parquet_reader,
         int32_t row_group_index,
@@ -57,7 +59,18 @@ class PageFilteredRowGroupReader {
         const std::shared_ptr<arrow::Schema>& arrow_schema,
         ::arrow::MemoryPool* pool,
         const ::arrow::io::CacheOptions& cache_options = ::arrow::io::CacheOptions::Defaults(),
-        bool pre_buffered = false);
+        bool pre_buffered = false,
+        const std::vector<::arrow::io::ReadRange>& page_ranges = {});
+
+    /// Compute the byte ranges of pages that overlap with the given RowRanges.
+    /// Uses OffsetIndex to determine per-page file offsets and sizes.
+    /// Includes dictionary pages unconditionally.
+    /// Falls back to entire column chunk range if OffsetIndex is unavailable.
+    static std::vector<::arrow::io::ReadRange> ComputePageRanges(
+        ::parquet::ParquetFileReader* parquet_reader,
+        int32_t row_group_index,
+        const RowRanges& row_ranges,
+        const std::vector<int32_t>& column_indices);
 
  private:
     /// Create a data_page_filter callback for a column based on RowRanges + OffsetIndex.

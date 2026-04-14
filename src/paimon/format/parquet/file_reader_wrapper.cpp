@@ -81,15 +81,14 @@ FileReaderWrapper::FileReaderWrapper(
       num_rows_(num_rows) {}
 
 void FileReaderWrapper::WaitForPendingPreBuffer() {
-    if (!prebuffered_row_groups_.empty() && file_reader_) {
+    if (!prebuffered_ranges_.empty() && file_reader_) {
         // Wait for all outstanding PreBuffer async reads to complete before destruction.
         // Without this, JindoSDK async pread callbacks may fire after the underlying
         // buffers and memory pool are freed, causing use-after-free crashes.
-        auto status = file_reader_->parquet_reader()->WhenBuffered(
-            prebuffered_row_groups_, prebuffered_columns_).status();
+        auto status = file_reader_->parquet_reader()->WhenBufferedRanges(
+            prebuffered_ranges_).status();
         (void)status;  // Best-effort; ignore errors during cleanup
-        prebuffered_row_groups_.clear();
-        prebuffered_columns_.clear();
+        prebuffered_ranges_.clear();
     }
 }
 
@@ -184,7 +183,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
                 file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges,
                 meta.column_indices, meta.read_schema, pool_, meta.cache_options,
-                /*pre_buffered=*/true));
+                /*pre_buffered=*/true, meta.page_ranges));
         pending_filtered_reads_.erase(pending_it);
 
         // If batch exceeds batch_size_, store and return first slice
@@ -305,10 +304,14 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
                 read_schema = arrow::schema(fields);
             }
 
+            // Compute page-level byte ranges for this row group
+            auto page_ranges = PageFilteredRowGroupReader::ComputePageRanges(
+                file_reader_->parquet_reader(), rg_idx, range_it->second, column_indices);
+
             // Store metadata for lazy on-demand reading instead of eager pre-read
             pending_filtered_reads_[pos] = PageFilteredRowGroupMeta{
                 rg_idx, range_it->second, column_indices, read_schema,
-                file_reader_->properties().cache_options()};
+                file_reader_->properties().cache_options(), std::move(page_ranges)};
         } else {
             fully_matched_row_groups.push_back(rg_idx);
         }
@@ -328,22 +331,38 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
             fully_matched_row_groups, column_indices, &batch_reader));
     }
 
-    // Single PreBuffer for ALL target row groups (both page-filtered and fully-matched).
-    // This replaces the cache created by GetRecordBatchReader, but includes all ranges,
-    // ensuring parallel I/O across all files/row groups.
+    // Collect all byte ranges for a single PreBufferRanges call.
+    // Page-filtered RGs: only matching page ranges (from ComputePageRanges).
+    // Fully-matched RGs: entire column chunk ranges.
     {
-        std::vector<int> all_rg_vec;
-        all_rg_vec.reserve(target_row_group_indices.size());
-        for (int32_t rg_idx : target_row_group_indices) {
-            all_rg_vec.push_back(rg_idx);
+        std::vector<::arrow::io::ReadRange> all_ranges;
+
+        // Page-filtered row groups: add their page-level ranges
+        for (const auto& [pos, meta] : pending_filtered_reads_) {
+            all_ranges.insert(all_ranges.end(),
+                              meta.page_ranges.begin(), meta.page_ranges.end());
         }
-        std::vector<int> col_vec(column_indices.begin(), column_indices.end());
+
+        // Fully-matched row groups: add entire column chunk ranges
+        auto file_metadata = file_reader_->parquet_reader()->metadata();
+        for (int32_t rg_idx : fully_matched_row_groups) {
+            auto rg_metadata = file_metadata->RowGroup(rg_idx);
+            for (int32_t col_idx : column_indices) {
+                auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+                int64_t offset = col_chunk->dictionary_page_offset() > 0
+                    ? col_chunk->dictionary_page_offset()
+                    : col_chunk->data_page_offset();
+                int64_t size = col_chunk->total_compressed_size() +
+                    (col_chunk->data_page_offset() - offset);
+                all_ranges.push_back({offset, size});
+            }
+        }
+
         const auto& cache_opts = file_reader_->properties().cache_options();
         ::arrow::io::IOContext io_ctx(pool_);
-        file_reader_->parquet_reader()->PreBuffer(all_rg_vec, col_vec, io_ctx, cache_opts);
+        file_reader_->parquet_reader()->PreBufferRanges(all_ranges, io_ctx, cache_opts);
         // Track for cleanup on destruction
-        prebuffered_row_groups_ = all_rg_vec;
-        prebuffered_columns_ = col_vec;
+        prebuffered_ranges_ = std::move(all_ranges);
     }
     target_row_groups_ = target_row_groups;
     target_column_indices_ = column_indices;

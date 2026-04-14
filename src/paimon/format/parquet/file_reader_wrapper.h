@@ -174,15 +174,15 @@ class FileReaderWrapper {
         std::vector<int32_t> column_indices;
         std::shared_ptr<arrow::Schema> read_schema;
         ::arrow::io::CacheOptions cache_options;
+        std::vector<::arrow::io::ReadRange> page_ranges;
     };
     std::map<uint64_t, PageFilteredRowGroupMeta> pending_filtered_reads_;
 
     // Set of target_row_groups_ indices that use page-filtered reading
     std::set<uint64_t> page_filtered_indices_;
 
-    // Track pre-buffered row groups/columns so we can wait on destruction
-    std::vector<int> prebuffered_row_groups_;
-    std::vector<int> prebuffered_columns_;
+    // Track pre-buffered ranges so we can wait on destruction
+    std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
 
     /// Wait for all pending PreBuffer operations to complete.
     void WaitForPendingPreBuffer();

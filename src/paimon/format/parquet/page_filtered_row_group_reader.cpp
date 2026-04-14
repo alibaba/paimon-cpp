@@ -210,7 +210,8 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     const std::shared_ptr<arrow::Schema>& arrow_schema,
     ::arrow::MemoryPool* pool,
     const ::arrow::io::CacheOptions& cache_options,
-    bool pre_buffered) {
+    bool pre_buffered,
+    const std::vector<::arrow::io::ReadRange>& page_ranges) {
     if (row_ranges.IsEmpty()) {
         std::vector<std::shared_ptr<arrow::Array>> empty_columns;
         return arrow::RecordBatch::Make(arrow_schema, 0, std::move(empty_columns));
@@ -230,8 +231,14 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
             ::arrow::io::IOContext io_ctx(pool);
             parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
         }
-        PAIMON_RETURN_NOT_OK_FROM_ARROW(
-            parquet_reader->WhenBuffered(rg_vec, col_vec).status());
+        if (!page_ranges.empty()) {
+            // Page-level PreBuffer: wait on specific page byte ranges
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                parquet_reader->WhenBufferedRanges(page_ranges).status());
+        } else {
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(
+                parquet_reader->WhenBuffered(rg_vec, col_vec).status());
+        }
     }
     auto t_prebuf_end = std::chrono::steady_clock::now();
 
@@ -299,6 +306,78 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     }
 
     return arrow::RecordBatch::Make(arrow_schema, expected_rows, std::move(arrays));
+}
+
+std::vector<::arrow::io::ReadRange>
+PageFilteredRowGroupReader::ComputePageRanges(
+    ::parquet::ParquetFileReader* parquet_reader,
+    int32_t row_group_index,
+    const RowRanges& row_ranges,
+    const std::vector<int32_t>& column_indices) {
+    std::vector<::arrow::io::ReadRange> ranges;
+    auto file_metadata = parquet_reader->metadata();
+    auto rg_metadata = file_metadata->RowGroup(row_group_index);
+    int64_t row_group_row_count = rg_metadata->num_rows();
+
+    auto page_index_reader = parquet_reader->GetPageIndexReader();
+    std::shared_ptr<::parquet::RowGroupPageIndexReader> rg_page_index_reader;
+    if (page_index_reader) {
+        rg_page_index_reader = page_index_reader->RowGroup(row_group_index);
+    }
+
+    for (int32_t col_idx : column_indices) {
+        auto col_chunk = rg_metadata->ColumnChunk(col_idx);
+        int64_t data_page_offset = col_chunk->data_page_offset();
+        int64_t total_compressed_size = col_chunk->total_compressed_size();
+        int64_t chunk_end = data_page_offset + total_compressed_size;
+
+        // Dictionary page: always include if present
+        if (col_chunk->has_dictionary_page()) {
+            int64_t dict_offset = col_chunk->dictionary_page_offset();
+            int64_t dict_size = data_page_offset - dict_offset;
+            if (dict_size > 0) {
+                ranges.push_back({dict_offset, dict_size});
+            }
+        }
+
+        // Try to get OffsetIndex for page-level ranges
+        std::shared_ptr<::parquet::OffsetIndex> offset_index;
+        if (rg_page_index_reader) {
+            offset_index = rg_page_index_reader->GetOffsetIndex(col_idx);
+        }
+
+        if (!offset_index) {
+            // No OffsetIndex: fall back to entire column chunk
+            ranges.push_back({data_page_offset, total_compressed_size});
+            continue;
+        }
+
+        const auto& page_locations = offset_index->page_locations();
+        int32_t num_pages = static_cast<int32_t>(page_locations.size());
+
+        for (int32_t page_idx = 0; page_idx < num_pages; ++page_idx) {
+            int64_t first_row = page_locations[page_idx].first_row_index;
+            int64_t last_row = (page_idx + 1 < num_pages)
+                ? page_locations[page_idx + 1].first_row_index - 1
+                : row_group_row_count - 1;
+
+            if (!row_ranges.IsOverlapping(first_row, last_row)) {
+                continue;  // Page doesn't overlap with target rows
+            }
+
+            // Compute page byte range
+            int64_t page_offset = page_locations[page_idx].offset;
+            int64_t page_size;
+            if (page_idx + 1 < num_pages) {
+                page_size = page_locations[page_idx + 1].offset - page_offset;
+            } else {
+                page_size = chunk_end - page_offset;
+            }
+            ranges.push_back({page_offset, page_size});
+        }
+    }
+
+    return ranges;
 }
 
 }  // namespace paimon::parquet
