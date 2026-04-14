@@ -47,7 +47,7 @@ TEST(DataTypeJsonParserTest, ParseTypeMapTypeSuccess) {
     const std::string name = "map_field";
     const char* json = R"({
         "type": "MAP",
-        "key": "STRING",
+        "key": "STRING NOT NULL",
         "value": "INT"
     })";
     rapidjson::Document doc;

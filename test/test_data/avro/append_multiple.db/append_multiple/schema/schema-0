@@ -93,7 +93,7 @@
             "name": "f0",
             "type": {
               "type": "MAP",
-              "key": "STRING",
+              "key": "STRING NOT NULL",
               "value": "INT"
             }
           },
