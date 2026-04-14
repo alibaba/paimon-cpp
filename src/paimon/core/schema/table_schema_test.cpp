@@ -1259,7 +1259,7 @@ TEST_F(TableSchemaTest, MapKeyMustBeNotNull) {
         "timeMillis" : 1721614341162
     })";
     ASSERT_NOK_WITH_MSG(TableSchema::CreateFromJson(table_schema_str),
-                        "Map key must be explicitly marked as NOT NULL");
+                        "Map field 'f0' has a nullable key.");
 }
 
 TEST_F(TableSchemaTest, CrossPartitionUpdate) {
