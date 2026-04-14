@@ -27,7 +27,7 @@ namespace paimon {
 /// The Footer for BTree file.
 class BTreeFileFooter {
  public:
-    static Result<std::shared_ptr<BTreeFileFooter>> Read(MemorySliceInput& input);
+    static Result<std::shared_ptr<BTreeFileFooter>> Read(MemorySliceInput* input);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer,
                              MemorySliceOutput& output);
@@ -66,7 +66,7 @@ class BTreeFileFooter {
     }
 
  public:
-    static constexpr int32_t MAGIC_NUMBER = 0x50425449;
+    static constexpr int32_t kMagicNumber = 0x50425449;
     static constexpr int32_t CURRENT_VERSION = 1;
     static constexpr int32_t ENCODED_LENGTH = 52;
 

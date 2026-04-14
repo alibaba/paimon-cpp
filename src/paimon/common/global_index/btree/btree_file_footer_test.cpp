@@ -46,9 +46,7 @@ TEST_F(BTreeFileFooterTest, ReadWriteRoundTrip) {
     EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
 
     auto input = serialized.ToInput();
-    auto deserialized = BTreeFileFooter::Read(input);
-    ASSERT_OK(deserialized.status());
-    auto deserialized_footer = deserialized.value();
+    ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
     auto bf_handle = deserialized_footer->GetBloomFilterHandle();
     ASSERT_NE(bf_handle, nullptr);
@@ -78,9 +76,7 @@ TEST_F(BTreeFileFooterTest, ReadWriteWithNullBloomFilter) {
     EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
 
     auto input = serialized.ToInput();
-    auto deserialized = BTreeFileFooter::Read(input);
-    ASSERT_OK(deserialized.status());
-    auto deserialized_footer = deserialized.value();
+    ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
     EXPECT_EQ(deserialized_footer->GetBloomFilterHandle(), nullptr);
 
@@ -106,9 +102,7 @@ TEST_F(BTreeFileFooterTest, ReadWriteWithNullNullBitmap) {
     EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
 
     auto input = serialized.ToInput();
-    auto deserialized = BTreeFileFooter::Read(input);
-    ASSERT_OK(deserialized.status());
-    auto deserialized_footer = deserialized.value();
+    ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
     auto bf_handle = deserialized_footer->GetBloomFilterHandle();
     ASSERT_NE(bf_handle, nullptr);
@@ -133,9 +127,7 @@ TEST_F(BTreeFileFooterTest, ReadWriteWithAllNullHandles) {
     EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
 
     auto input = serialized.ToInput();
-    auto deserialized = BTreeFileFooter::Read(input);
-    ASSERT_OK(deserialized.status());
-    auto deserialized_footer = deserialized.value();
+    ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
     EXPECT_EQ(deserialized_footer->GetBloomFilterHandle(), nullptr);
 
@@ -145,17 +137,6 @@ TEST_F(BTreeFileFooterTest, ReadWriteWithAllNullHandles) {
     EXPECT_EQ(ib_handle->Size(), 80);
 
     EXPECT_EQ(deserialized_footer->GetNullBitmapHandle(), nullptr);
-}
-
-TEST_F(BTreeFileFooterTest, MagicNumberVerification) {
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
-    auto footer = std::make_shared<BTreeFileFooter>(nullptr, index_block_handle, nullptr);
-
-    auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-
-    auto input = serialized.ToInput();
-    auto deserialized = BTreeFileFooter::Read(input);
-    ASSERT_OK(deserialized.status());
 }
 
 TEST_F(BTreeFileFooterTest, InvalidMagicNumber) {
@@ -171,27 +152,14 @@ TEST_F(BTreeFileFooterTest, InvalidMagicNumber) {
     output.WriteValue(static_cast<int64_t>(0));
     output.WriteValue(static_cast<int32_t>(0));
 
+    output.WriteValue(static_cast<int32_t>(1));      // version
     output.WriteValue(static_cast<int32_t>(12345));  // Invalid magic number
 
     auto serialized = output.ToSlice();
     auto input = serialized.ToInput();
 
-    auto deserialized = BTreeFileFooter::Read(input);
-    EXPECT_FALSE(deserialized.ok());
-    EXPECT_TRUE(deserialized.status().IsIOError());
-}
-
-TEST_F(BTreeFileFooterTest, EncodedLength) {
-    EXPECT_EQ(BTreeFileFooter::ENCODED_LENGTH, 52);
-
-    auto bloom_filter_handle = std::make_shared<BloomFilterHandle>(100, 50, 1000);
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
-    auto null_bitmap_handle = std::make_shared<BlockHandle>(300, 40);
-    auto footer = std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle,
-                                                    null_bitmap_handle);
-
-    auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-    EXPECT_EQ(serialized.Length(), 52);
+    auto deserialized = BTreeFileFooter::Read(&input);
+    ASSERT_NOK_WITH_MSG(deserialized, "not a btree index file");
 }
 
 }  // namespace paimon::test

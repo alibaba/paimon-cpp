@@ -60,7 +60,7 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeNormalKeys) {
     EXPECT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), "last_key_data");
 
     // Verify has_nulls
-    EXPECT_TRUE(deserialized->HasNulls());
+    ASSERT_TRUE(deserialized->HasNulls());
 }
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeEmptyKeys) {
@@ -76,14 +76,14 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeEmptyKeys) {
     ASSERT_NE(deserialized, nullptr);
 
     // Verify keys are null
-    EXPECT_EQ(deserialized->FirstKey(), nullptr);
-    EXPECT_EQ(deserialized->LastKey(), nullptr);
+    ASSERT_EQ(deserialized->FirstKey(), nullptr);
+    ASSERT_EQ(deserialized->LastKey(), nullptr);
 
     // Verify has_nulls
-    EXPECT_TRUE(deserialized->HasNulls());
+    ASSERT_TRUE(deserialized->HasNulls());
 
     // Verify OnlyNulls
-    EXPECT_TRUE(deserialized->OnlyNulls());
+    ASSERT_TRUE(deserialized->OnlyNulls());
 }
 
 TEST_F(BTreeIndexMetaTest, HasNullsAndOnlyNulls) {

@@ -34,8 +34,8 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
  public:
     BTreeGlobalIndexWriter(const std::string& field_name, ::ArrowSchema* arrow_schema,
                            const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size = 4096,
-                           int64_t expected_entries = 100000);
+                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size,
+                           int64_t expected_entries);
 
     ~BTreeGlobalIndexWriter() override = default;
 
@@ -67,9 +67,9 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     std::shared_ptr<MemoryPool> pool_;
     int32_t block_size_;
 
-    // SST file writer
-    std::unique_ptr<SstFileWriter> sst_writer_;
+    // SST file writer (declared after pool_ to ensure correct destruction order)
     std::shared_ptr<OutputStream> output_stream_;
+    std::unique_ptr<SstFileWriter> sst_writer_;
     std::string file_name_;
 
     // Track first and last keys for index meta

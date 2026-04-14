@@ -25,6 +25,7 @@
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/memory/bytes.h"
 
@@ -57,7 +58,7 @@ BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
     if (arrow_schema) {
         auto schema_result = arrow::ImportSchema(arrow_schema);
         if (schema_result.ok()) {
-            auto schema = schema_result.ValueOrDie();
+            auto schema = *schema_result;
             if (schema->num_fields() > 0) {
                 arrow_type_ = schema->field(0)->type();
             }
@@ -76,11 +77,8 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     }
 
     // Import Arrow array with the correct type
-    auto import_result = arrow::ImportArray(arrow_array, arrow_type_);
-    if (!import_result.ok()) {
-        return Status::Invalid("Failed to import array: " + import_result.status().ToString());
-    }
-    auto array = import_result.ValueOrDie();
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
+                                      arrow::ImportArray(arrow_array, arrow_type_));
 
     // Initialize SST writer on first batch
     if (!sst_writer_) {
@@ -178,17 +176,32 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
             case arrow::Type::DATE32: {
                 auto date_array = std::static_pointer_cast<arrow::Date32Array>(array);
                 int32_t value = date_array->Value(i);
-                // Store as 4-byte little-endian
+                // Store as 4-byte int32 to match Java's writeInt for DATE type
                 key_bytes = std::make_shared<Bytes>(sizeof(int32_t), pool_.get());
                 memcpy(key_bytes->data(), &value, sizeof(int32_t));
                 break;
             }
             case arrow::Type::TIMESTAMP: {
                 auto ts_array = std::static_pointer_cast<arrow::TimestampArray>(array);
-                int64_t value = ts_array->Value(i);
-                // Store as 8-byte little-endian
-                key_bytes = std::make_shared<Bytes>(sizeof(int64_t), pool_.get());
-                memcpy(key_bytes->data(), &value, sizeof(int64_t));
+                auto ts_type = std::static_pointer_cast<arrow::TimestampType>(array->type());
+                int32_t precision = DateTimeUtils::GetPrecisionFromType(ts_type);
+                auto time_type = DateTimeUtils::GetTimeTypeFromArrowType(ts_type);
+                int64_t raw_value = ts_array->Value(i);
+                auto [milli, nano] = DateTimeUtils::TimestampConverter(
+                    raw_value, time_type, DateTimeUtils::TimeType::MILLISECOND,
+                    DateTimeUtils::TimeType::NANOSECOND);
+                if (Timestamp::IsCompact(precision)) {
+                    // compact: writeLong(millisecond) — 8 bytes
+                    key_bytes = std::make_shared<Bytes>(sizeof(int64_t), pool_.get());
+                    memcpy(key_bytes->data(), &milli, sizeof(int64_t));
+                } else {
+                    // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
+                    MemorySliceOutput ts_out(13, pool_.get());
+                    ts_out.WriteValue(milli);
+                    ts_out.WriteVarLenInt(static_cast<int32_t>(nano));
+                    auto slice = ts_out.ToSlice();
+                    key_bytes = slice.GetHeapMemory();
+                }
                 break;
             }
             default:
@@ -225,7 +238,7 @@ Status BTreeGlobalIndexWriter::WriteKeyValue(std::shared_ptr<Bytes> key,
 std::shared_ptr<Bytes> BTreeGlobalIndexWriter::SerializeRowIds(
     const std::vector<int64_t>& row_ids) {
     // Format: [num_row_ids (VarLenLong)][row_id1 (VarLenLong)][row_id2]...
-    // Use VarLenLong for row IDs to match Java's DataOutputStream.writeVarLong
+    // Use VarLenLong for row IDs to match Java's MemorySliceOutput.writeVarLenLong
     int32_t estimated_size = 10 + row_ids.size() * 10;  // Conservative estimate
     auto output = std::make_shared<MemorySliceOutput>(estimated_size, pool_.get());
 
@@ -285,18 +298,22 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     // Flush any remaining data in the data block writer
     PAIMON_RETURN_NOT_OK(sst_writer_->Flush());
 
-    // Write index block
-    PAIMON_ASSIGN_OR_RAISE(auto index_block_handle, sst_writer_->WriteIndexBlock());
+    // Write null bitmap first (matches Java write order: null bitmap → bloom filter → index block)
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockHandle> null_bitmap_handle,
+                           WriteNullBitmap(output_stream_));
 
     // Write bloom filter
-    PAIMON_ASSIGN_OR_RAISE(auto bloom_filter_handle, sst_writer_->WriteBloomFilter());
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BloomFilterHandle> bloom_filter_handle,
+                           sst_writer_->WriteBloomFilter());
 
-    // Write null bitmap
-    PAIMON_ASSIGN_OR_RAISE(auto null_bitmap_handle, WriteNullBitmap(output_stream_));
+    // Write index block
+    PAIMON_ASSIGN_OR_RAISE(BlockHandle index_block_handle, sst_writer_->WriteIndexBlock());
 
     // Write BTree file footer
-    auto footer = std::make_shared<BTreeFileFooter>(
-        bloom_filter_handle, std::make_shared<BlockHandle>(index_block_handle), null_bitmap_handle);
+    auto index_block_handle_ptr =
+        std::make_shared<BlockHandle>(index_block_handle.Offset(), index_block_handle.Size());
+    auto footer = std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle_ptr,
+                                                    null_bitmap_handle);
     auto footer_slice = BTreeFileFooter::Write(footer, pool_.get());
     auto footer_bytes = footer_slice.CopyBytes(pool_.get());
     PAIMON_RETURN_NOT_OK(output_stream_->Write(footer_bytes->data(), footer_bytes->size()));

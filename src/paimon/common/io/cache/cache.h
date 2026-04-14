@@ -49,22 +49,9 @@ class PAIMON_EXPORT Cache {
     virtual size_t Size() const = 0;
 };
 
-class PAIMON_EXPORT NoCache : public Cache {
- public:
-    Result<std::shared_ptr<CacheValue>> Get(
-        const std::shared_ptr<CacheKey>& key,
-        std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
-            supplier) override;
-    void Put(const std::shared_ptr<CacheKey>& key,
-             const std::shared_ptr<CacheValue>& value) override;
-    void Invalidate(const std::shared_ptr<CacheKey>& key) override;
-    void InvalidateAll() override;
-    size_t Size() const override;
-};
-
 class CacheValue {
  public:
-    explicit CacheValue(const MemorySegment& segment, CacheCallback callback = nullptr)
+    explicit CacheValue(const MemorySegment& segment, CacheCallback callback)
         : segment_(segment), callback_(std::move(callback)) {}
 
     const MemorySegment& GetSegment() const {

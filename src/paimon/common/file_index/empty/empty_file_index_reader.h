@@ -67,14 +67,14 @@ class EmptyFileIndexReader : public FileIndexReader {
     }
 
     Result<std::shared_ptr<FileIndexResult>> VisitNotEqual(const Literal& literal) override {
-        // Empty file has no data, so all records are not equal to any value
-        return FileIndexResult::Remain();
+        // Empty file has no data, so nothing to return
+        return FileIndexResult::Skip();
     }
 
     Result<std::shared_ptr<FileIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override {
-        // Empty file has no data, so all records are not in any set
-        return FileIndexResult::Remain();
+        // Empty file has no data, so nothing to return
+        return FileIndexResult::Skip();
     }
 
     Result<std::shared_ptr<FileIndexResult>> VisitBetween(const Literal& from,

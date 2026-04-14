@@ -21,7 +21,7 @@
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
 namespace paimon {
 
-const char BTreeGlobalIndexerFactory::IDENTIFIER[] = "btree";
+const char BTreeGlobalIndexerFactory::IDENTIFIER[] = "btree-global";
 
 Result<std::unique_ptr<GlobalIndexer>> BTreeGlobalIndexerFactory::Create(
     const std::map<std::string, std::string>& options) const {

@@ -62,7 +62,8 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
         const std::shared_ptr<RoaringNavigableMap64>& null_bitmap, const MemorySlice& min_key,
         const MemorySlice& max_key, bool has_min_key, const std::vector<GlobalIndexIOMeta>& files,
         const std::shared_ptr<MemoryPool>& pool,
-        std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator);
+        std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator,
+        int32_t ts_precision);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
 
@@ -135,6 +136,7 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     std::vector<GlobalIndexIOMeta> files_;
     std::shared_ptr<MemoryPool> pool_;
     std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator_;
+    int32_t ts_precision_;
 };
 
 }  // namespace paimon

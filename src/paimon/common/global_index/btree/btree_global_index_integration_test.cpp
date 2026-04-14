@@ -123,8 +123,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer =
-        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
+                                                           pool_, 4096, 100000);
 
     // Create an Arrow array with int values
     // Row IDs: 0->1, 1->2, 2->3, 3->2, 4->1, 5->4, 6->5, 7->5, 8->5
@@ -190,7 +190,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
 
     // Create the BTree global index writer
     auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", c_schema.get(),
-                                                           file_writer, pool_);
+                                                           file_writer, pool_, 4096, 100000);
 
     // Create an Arrow array with string values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(
@@ -245,8 +245,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadWithNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer =
-        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
+                                                           pool_, 4096, 100000);
 
     // Create an Arrow array with null values
     // Row IDs: 0->1, 1->null, 2->3, 3->null, 4->5
@@ -309,8 +309,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadRangeQuery) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer =
-        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
+                                                           pool_, 4096, 100000);
 
     // Create an Arrow array with int values
     auto array =
@@ -372,8 +372,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadInQuery) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer =
-        std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer, pool_);
+    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
+                                                           pool_, 4096, 100000);
 
     // Create an Arrow array with int values
     auto array =

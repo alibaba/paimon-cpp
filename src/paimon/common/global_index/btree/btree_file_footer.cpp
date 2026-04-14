@@ -16,24 +16,28 @@
 
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 
+#include <fmt/format.h>
+
 namespace paimon {
 
-Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput& input) {
+Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput* input) {
     // read version and verify magic number
-    PAIMON_RETURN_NOT_OK(input.SetPosition(ENCODED_LENGTH - 8));
+    PAIMON_RETURN_NOT_OK(input->SetPosition(ENCODED_LENGTH - 8));
 
-    int32_t version = input.ReadInt();
-    int32_t magic_number = input.ReadInt();
-    if (magic_number != MAGIC_NUMBER) {
-        return Status::IOError("File is not a btree index file (bad magic number)");
+    int32_t version = input->ReadInt();
+    int32_t magic_number = input->ReadInt();
+    if (magic_number != kMagicNumber) {
+        return Status::Invalid(
+            fmt::format("File is not a btree index file (expected magic number {:#x}, got {:#x})",
+                        kMagicNumber, magic_number));
     }
 
-    PAIMON_RETURN_NOT_OK(input.SetPosition(0));
+    PAIMON_RETURN_NOT_OK(input->SetPosition(0));
 
     // read bloom filter and index handles
-    auto offset = input.ReadLong();
-    auto size = input.ReadInt();
-    auto expected_entries = input.ReadLong();
+    auto offset = input->ReadLong();
+    auto size = input->ReadInt();
+    auto expected_entries = input->ReadLong();
     std::shared_ptr<BloomFilterHandle> bloom_filter_handle =
         std::make_shared<BloomFilterHandle>(offset, size, expected_entries);
     if (bloom_filter_handle->Offset() == 0 && bloom_filter_handle->Size() == 0 &&
@@ -41,12 +45,12 @@ Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput&
         bloom_filter_handle = nullptr;
     }
 
-    offset = input.ReadLong();
-    size = input.ReadInt();
+    offset = input->ReadLong();
+    size = input->ReadInt();
     std::shared_ptr<BlockHandle> index_block_handle = std::make_shared<BlockHandle>(offset, size);
 
-    offset = input.ReadLong();
-    size = input.ReadInt();
+    offset = input->ReadLong();
+    size = input->ReadInt();
     std::shared_ptr<BlockHandle> null_bitmap_handle = std::make_shared<BlockHandle>(offset, size);
     if (null_bitmap_handle->Offset() == 0 && null_bitmap_handle->Size() == 0) {
         null_bitmap_handle = nullptr;
@@ -91,7 +95,7 @@ MemorySlice BTreeFileFooter::Write(const std::shared_ptr<BTreeFileFooter>& foote
 
     // write version and magic number
     output.WriteValue(footer->GetVersion());
-    output.WriteValue(MAGIC_NUMBER);
+    output.WriteValue(kMagicNumber);
 
     return output.ToSlice();
 }

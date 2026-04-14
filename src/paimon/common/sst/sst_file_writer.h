@@ -49,8 +49,6 @@ class PAIMON_EXPORT SstFileWriter {
 
     Status Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value);
 
-    Status Write(const MemorySlice& slice);
-
     Status Flush();
 
     Result<BlockHandle> WriteIndexBlock();

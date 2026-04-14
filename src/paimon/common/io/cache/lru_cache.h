@@ -39,7 +39,7 @@ namespace paimon {
 /// capacity is measured in bytes (sum of MemorySegment sizes)
 /// when an entry is evicted, its CacheCallback is invoked to notify the upper layer
 /// @note Thread-safe: all public methods are protected by mutex (read-write lock).
-class LruCache : public Cache {
+class PAIMON_EXPORT LruCache : public Cache {
  public:
     explicit LruCache(int64_t max_weight);
 

@@ -34,7 +34,7 @@ std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_pt
     if (last_key_len) {
         last_key = input.ReadSlice(last_key_len).CopyBytes(pool);
     }
-    auto has_nulls = input.ReadByte() == 1;
+    auto has_nulls = static_cast<int8_t>(input.ReadByte()) == 1;
     return std::make_shared<BTreeIndexMeta>(first_key, last_key, has_nulls);
 }
 
@@ -43,7 +43,7 @@ std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) const
     // has_nulls(1)
     int32_t first_key_size = first_key_ ? first_key_->size() : 0;
     int32_t last_key_size = last_key_ ? last_key_->size() : 0;
-    int32_t total_size = 4 + first_key_size + 4 + last_key_size + 1;
+    int32_t total_size = Size();
 
     MemorySliceOutput output(total_size, pool);
 
@@ -62,8 +62,7 @@ std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) const
     // Write has_nulls
     output.WriteValue(static_cast<int8_t>(has_nulls_ ? 1 : 0));
 
-    auto slice = output.ToSlice();
-    return slice.CopyBytes(pool);
+    return output.ToSlice().GetHeapMemory();
 }
 
 }  // namespace paimon

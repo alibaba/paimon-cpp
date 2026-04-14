@@ -36,11 +36,11 @@ class BTreeIndexMeta {
                    bool has_nulls)
         : first_key_(first_key), last_key_(last_key), has_nulls_(has_nulls) {}
 
-    std::shared_ptr<Bytes> FirstKey() const {
+    const std::shared_ptr<Bytes>& FirstKey() const {
         return first_key_;
     }
 
-    std::shared_ptr<Bytes> LastKey() const {
+    const std::shared_ptr<Bytes>& LastKey() const {
         return last_key_;
     }
 

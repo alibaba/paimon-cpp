@@ -50,11 +50,6 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
     return Status::OK();
 }
 
-Status SstFileWriter::Write(const MemorySlice& slice) {
-    auto data = slice.ReadStringView();
-    return WriteBytes(data.data(), data.size());
-}
-
 Status SstFileWriter::Flush() {
     if (data_block_writer_->Size() == 0) {
         return Status::OK();

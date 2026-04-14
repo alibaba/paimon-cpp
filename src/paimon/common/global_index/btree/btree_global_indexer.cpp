@@ -15,6 +15,7 @@
  */
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
 
+#include <cstring>
 #include <memory>
 #include <string>
 
@@ -24,11 +25,15 @@
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
+#include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/options/memory_size.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/roaring_navigable_map64.h"
+#include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
 #include "paimon/file_index/bitmap_index_result.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
@@ -38,51 +43,43 @@
 namespace paimon {
 
 // Helper function to get cache size from options with default value
-static int64_t GetBTreeIndexCacheSize(const std::map<std::string, std::string>& options) {
-    auto it = options.find(Options::BTREE_INDEX_CACHE_SIZE);
-    if (it != options.end()) {
-        auto result = MemorySize::ParseBytes(it->second);
-        if (result.ok()) {
-            return result.value();
-        }
+static Result<int64_t> GetBTreeIndexCacheSize(const std::map<std::string, std::string>& options) {
+    auto str_result =
+        OptionsUtils::GetValueFromMap<std::string>(options, Options::BTREE_INDEX_CACHE_SIZE);
+    if (!str_result.ok()) {
+        return 128 * 1024 * 1024;
     }
-    // Default: 128 MB
-    return 128 * 1024 * 1024;
+    return MemorySize::ParseBytes(str_result.value());
 }
 
 // Helper function to get high priority pool ratio from options with default value
-static double GetBTreeIndexHighPriorityPoolRatio(
+static Result<double> GetBTreeIndexHighPriorityPoolRatio(
     const std::map<std::string, std::string>& options) {
-    auto it = options.find(Options::BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO);
-    if (it != options.end()) {
-        try {
-            return std::stod(it->second);
-        } catch (...) {
-            // Ignore parsing errors, use default
-        }
-    }
-    // Default: 0.1
-    return 0.1;
+    return OptionsUtils::GetValueFromMap<double>(
+        options, Options::BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO, 0.1);
 }
 
 Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
     const std::shared_ptr<MemoryPool>& pool) const {
-    return std::make_shared<BTreeGlobalIndexWriter>(field_name, arrow_schema, file_writer, pool);
+    return std::make_shared<BTreeGlobalIndexWriter>(field_name, arrow_schema, file_writer, pool,
+                                                    4096, 100000);
 }
 
 // Forward declarations for helper functions
-static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPool* pool);
+static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPool* pool,
+                                                int32_t ts_precision);
 
 // Create a comparator function based on field type
 // Keys are stored in binary format to match Java's DataOutputStream format
 static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComparator(
-    FieldType field_type) {
+    FieldType field_type, const std::shared_ptr<arrow::DataType>& arrow_type) {
     // For numeric types, compare as binary values in little-endian format
     // to match Java's DataOutputStream.writeInt/writeLong format
     switch (field_type) {
         case FieldType::INT:
+        case FieldType::DATE:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
                 if (a.Length() < static_cast<int32_t>(sizeof(int32_t)) ||
                     b.Length() < static_cast<int32_t>(sizeof(int32_t))) {
@@ -101,8 +98,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
                 return 0;
             };
         case FieldType::BIGINT:
-        case FieldType::DATE:
-        case FieldType::TIMESTAMP:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
                 if (a.Length() < static_cast<int32_t>(sizeof(int64_t)) ||
                     b.Length() < static_cast<int32_t>(sizeof(int64_t))) {
@@ -120,6 +115,40 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
                 if (a_val > b_val) return 1;
                 return 0;
             };
+        case FieldType::TIMESTAMP: {
+            int32_t precision = Timestamp::MILLIS_PRECISION;
+            if (arrow_type->id() == arrow::Type::TIMESTAMP) {
+                auto ts_type = std::static_pointer_cast<arrow::TimestampType>(arrow_type);
+                precision = DateTimeUtils::GetPrecisionFromType(ts_type);
+            }
+            if (Timestamp::IsCompact(precision)) {
+                // compact: compare as int64 (millisecond only)
+                return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
+                    int64_t a_val = a.ReadLong(0);
+                    int64_t b_val = b.ReadLong(0);
+                    if (a_val < b_val) return -1;
+                    if (a_val > b_val) return 1;
+                    return 0;
+                };
+            } else {
+                // non-compact: compare millisecond first, then nanoOfMillisecond
+                return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
+                    auto a_input = a.ToInput();
+                    auto b_input = b.ToInput();
+                    int64_t a_milli = a_input.ReadLong();
+                    int64_t b_milli = b_input.ReadLong();
+                    if (a_milli < b_milli) return -1;
+                    if (a_milli > b_milli) return 1;
+                    auto a_nano = a_input.ReadVarLenInt();
+                    auto b_nano = b_input.ReadVarLenInt();
+                    if (a_nano.ok() && b_nano.ok()) {
+                        if (a_nano.value() < b_nano.value()) return -1;
+                        if (a_nano.value() > b_nano.value()) return 1;
+                    }
+                    return 0;
+                };
+            }
+        }
         case FieldType::SMALLINT:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
                 if (a.Length() < static_cast<int32_t>(sizeof(int16_t)) ||
@@ -242,7 +271,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
                            FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
 
     // Create comparator based on field type
-    auto comparator = CreateComparator(field_type);
+    auto comparator = CreateComparator(field_type, arrow_type);
 
     // Wrap the comparator to return Result<int32_t>
     MemorySlice::SliceComparator result_comparator =
@@ -251,8 +280,9 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     };
 
     // Read BTree file footer first
-    int64_t cache_size = GetBTreeIndexCacheSize(options_);
-    double high_priority_pool_ratio = GetBTreeIndexHighPriorityPoolRatio(options_);
+    PAIMON_ASSIGN_OR_RAISE(int64_t cache_size, GetBTreeIndexCacheSize(options_));
+    PAIMON_ASSIGN_OR_RAISE(double high_priority_pool_ratio,
+                           GetBTreeIndexHighPriorityPoolRatio(options_));
     auto cache_manager = std::make_shared<CacheManager>(cache_size, high_priority_pool_ratio);
     auto block_cache = std::make_shared<BlockCache>(meta.file_path, in, cache_manager, pool);
     PAIMON_ASSIGN_OR_RAISE(MemorySegment segment,
@@ -262,7 +292,7 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     auto footer_slice = MemorySlice::Wrap(segment);
     auto footer_input = footer_slice.ToInput();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BTreeFileFooter> footer,
-                           BTreeFileFooter::Read(footer_input));
+                           BTreeFileFooter::Read(&footer_input));
 
     // Create SST file reader with footer information
     PAIMON_ASSIGN_OR_RAISE(
@@ -288,9 +318,16 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
         max_key_slice = MemorySlice::Wrap(index_meta->LastKey());
     }
 
+    // Get timestamp precision if applicable
+    int32_t ts_precision = Timestamp::MILLIS_PRECISION;
+    if (arrow_type->id() == arrow::Type::TIMESTAMP) {
+        auto ts_type = std::static_pointer_cast<arrow::TimestampType>(arrow_type);
+        ts_precision = DateTimeUtils::GetPrecisionFromType(ts_type);
+    }
+
     return std::make_shared<BTreeGlobalIndexReader>(sst_file_reader, null_bitmap, min_key_slice,
                                                     max_key_slice, has_min_key, files, pool,
-                                                    comparator);
+                                                    comparator, ts_precision);
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexer::ToGlobalIndexResult(
@@ -337,12 +374,10 @@ Result<std::shared_ptr<RoaringNavigableMap64>> BTreeGlobalIndexer::ReadNullBitma
     // Calculate CRC32C checksum
     uint32_t crc_value = CRC32C::calculate(null_bitmap_view.data(), null_bitmap_view.size());
 
-    // Read expected CRC value (stored as uint32_t in little-endian)
-    uint32_t expected_crc_value = 0;
-    for (int i = 0; i < 4; ++i) {
-        expected_crc_value |= static_cast<uint32_t>(static_cast<uint8_t>(slice_input.ReadByte()))
-                              << (i * 8);
-    }
+    // Read expected CRC value (stored as native uint32_t)
+    auto crc_slice = slice_input.ReadSlice(sizeof(uint32_t));
+    uint32_t expected_crc_value;
+    std::memcpy(&expected_crc_value, crc_slice.ReadStringView().data(), sizeof(expected_crc_value));
 
     // Verify CRC checksum
     if (crc_value != expected_crc_value) {
@@ -352,17 +387,10 @@ Result<std::shared_ptr<RoaringNavigableMap64>> BTreeGlobalIndexer::ReadNullBitma
     }
 
     // Deserialize null bitmap
-    try {
-        std::vector<uint8_t> data(
-            reinterpret_cast<const uint8_t*>(null_bitmap_view.data()),
-            reinterpret_cast<const uint8_t*>(null_bitmap_view.data()) + null_bitmap_view.size());
-        null_bitmap->Deserialize(data);
-    } catch (const std::exception& e) {
-        return Status::Invalid(
-            "Fail to deserialize null bitmap but crc check passed, "
-            "this means the serialization/deserialization algorithms not match: " +
-            std::string(e.what()));
-    }
+    std::vector<uint8_t> data(
+        reinterpret_cast<const uint8_t*>(null_bitmap_view.data()),
+        reinterpret_cast<const uint8_t*>(null_bitmap_view.data()) + null_bitmap_view.size());
+    null_bitmap->Deserialize(data);
 
     return null_bitmap;
 }
@@ -372,7 +400,7 @@ BTreeGlobalIndexReader::BTreeGlobalIndexReader(
     const std::shared_ptr<RoaringNavigableMap64>& null_bitmap, const MemorySlice& min_key,
     const MemorySlice& max_key, bool has_min_key, const std::vector<GlobalIndexIOMeta>& files,
     const std::shared_ptr<MemoryPool>& pool,
-    std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator)
+    std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator, int32_t ts_precision)
     : sst_file_reader_(sst_file_reader),
       null_bitmap_(null_bitmap),
       min_key_(min_key),
@@ -380,7 +408,8 @@ BTreeGlobalIndexReader::BTreeGlobalIndexReader(
       has_min_key_(has_min_key),
       files_(files),
       pool_(pool),
-      comparator_(std::move(comparator)) {}
+      comparator_(std::move(comparator)),
+      ts_precision_(ts_precision) {}
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNotNull() {
     return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
@@ -397,7 +426,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNull()
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWith(
     const Literal& prefix) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &prefix]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto prefix_slice, LiteralToMemorySlice(prefix, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto prefix_slice,
+                               LiteralToMemorySlice(prefix, pool_.get(), ts_precision_));
 
         auto prefix_type = prefix.GetType();
 
@@ -497,7 +527,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessThan(
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                RangeQuery(min_key_, literal_slice, true, false));
         return result.GetBitmap();
@@ -507,7 +538,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessThan
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitGreaterOrEqual(
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                RangeQuery(literal_slice, max_key_, true, true));
         return result.GetBitmap();
@@ -518,7 +550,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotEqual
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result, AllNonNullRows());
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 equal_result,
                                RangeQuery(literal_slice, literal_slice, true, true));
         result.AndNot(equal_result);
@@ -529,7 +562,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotEqual
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessOrEqual(
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                RangeQuery(min_key_, literal_slice, true, true));
         return result.GetBitmap();
@@ -539,7 +573,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessOrEq
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEqual(
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                RangeQuery(literal_slice, literal_slice, true, true));
         return result.GetBitmap();
@@ -549,7 +584,8 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEqual(
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitGreaterThan(
     const Literal& literal) {
     return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
+        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
         PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
                                RangeQuery(literal_slice, max_key_, false, true));
         return result.GetBitmap();
@@ -558,17 +594,18 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitGreaterT
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIn(
     const std::vector<Literal>& literals) {
-    return std::make_shared<BitmapGlobalIndexResult>([this,
-                                                      &literals]() -> Result<RoaringBitmap64> {
-        RoaringNavigableMap64 result;
-        for (const auto& literal : literals) {
-            PAIMON_ASSIGN_OR_RAISE(auto literal_slice, LiteralToMemorySlice(literal, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 literal_result,
-                                   RangeQuery(literal_slice, literal_slice, true, true));
-            result.Or(literal_result);
-        }
-        return result.GetBitmap();
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [this, &literals]() -> Result<RoaringBitmap64> {
+            RoaringNavigableMap64 result;
+            for (const auto& literal : literals) {
+                PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
+                                       LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
+                PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 literal_result,
+                                       RangeQuery(literal_slice, literal_slice, true, true));
+                result.Or(literal_result);
+            }
+            return result.GetBitmap();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotIn(
@@ -592,29 +629,31 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotIn(
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitBetween(const Literal& from,
                                                                                 const Literal& to) {
-    return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &from, &to]() -> Result<RoaringBitmap64> {
-            PAIMON_ASSIGN_OR_RAISE(auto from_slice, LiteralToMemorySlice(from, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
-                                   RangeQuery(from_slice, to_slice, true, true));
-            return result.GetBitmap();
-        });
+    return std::make_shared<BitmapGlobalIndexResult>([this, &from,
+                                                      &to]() -> Result<RoaringBitmap64> {
+        PAIMON_ASSIGN_OR_RAISE(auto from_slice,
+                               LiteralToMemorySlice(from, pool_.get(), ts_precision_));
+        PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get(), ts_precision_));
+        PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 result,
+                               RangeQuery(from_slice, to_slice, true, true));
+        return result.GetBitmap();
+    });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotBetween(
     const Literal& from, const Literal& to) {
-    return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &from, &to]() -> Result<RoaringBitmap64> {
-            PAIMON_ASSIGN_OR_RAISE(auto from_slice, LiteralToMemorySlice(from, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 lower_result,
-                                   RangeQuery(min_key_, from_slice, true, false));
-            PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 upper_result,
-                                   RangeQuery(to_slice, max_key_, false, true));
-            lower_result.Or(upper_result);
-            return lower_result.GetBitmap();
-        });
+    return std::make_shared<BitmapGlobalIndexResult>([this, &from,
+                                                      &to]() -> Result<RoaringBitmap64> {
+        PAIMON_ASSIGN_OR_RAISE(auto from_slice,
+                               LiteralToMemorySlice(from, pool_.get(), ts_precision_));
+        PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get(), ts_precision_));
+        PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 lower_result,
+                               RangeQuery(min_key_, from_slice, true, false));
+        PAIMON_ASSIGN_OR_RAISE(RoaringNavigableMap64 upper_result,
+                               RangeQuery(to_slice, max_key_, false, true));
+        lower_result.Or(upper_result);
+        return lower_result.GetBitmap();
+    });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitAnd(
@@ -730,13 +769,15 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(const MemorySli
             }
         }
 
+        // Compare key with bounds using the comparator
+        if (!comparator_) {
+            return Status::Invalid("Comparator is not set for BTreeGlobalIndexReader");
+        }
+
         // Iterate through entries in the data block
         while (data_iterator->HasNext()) {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> entry, data_iterator->Next());
-
-            // Compare key with bounds using the comparator
-            const auto& comparator = comparator_;
-            int cmp_lower = comparator ? comparator(entry->key, lower_bound) : 0;
+            int cmp_lower = comparator_(entry->key, lower_bound);
 
             // Check lower bound
             if (!lower_inclusive && cmp_lower == 0) {
@@ -744,7 +785,7 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::RangeQuery(const MemorySli
             }
 
             // Check upper bound
-            int cmp_upper = comparator ? comparator(entry->key, upper_bound) : 0;
+            int cmp_upper = comparator_(entry->key, upper_bound);
 
             if (cmp_upper > 0 || (!upper_inclusive && cmp_upper == 0)) {
                 return result;
@@ -797,7 +838,8 @@ Result<RoaringNavigableMap64> BTreeGlobalIndexReader::AllNonNullRows() {
 }
 
 // Helper function to convert Literal to MemorySlice
-static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPool* pool) {
+static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPool* pool,
+                                                int32_t ts_precision) {
     if (literal.IsNull()) {
         return Status::Invalid("Cannot convert null literal to MemorySlice for btree index query");
     }
@@ -806,158 +848,98 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
 
     // Handle string/binary types
     if (type == FieldType::STRING || type == FieldType::BINARY) {
-        try {
-            auto str_value = literal.GetValue<std::string>();
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert string/binary literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto str_value = literal.GetValue<std::string>();
+        auto bytes = std::make_shared<Bytes>(str_value, pool);
+        return MemorySlice::Wrap(bytes);
     }
 
     // Handle integer types
     if (type == FieldType::BIGINT) {
-        try {
-            auto value = literal.GetValue<int64_t>();
-            auto bytes = std::make_shared<Bytes>(8, pool);
-            bytes->data()[0] = static_cast<char>(value & 0xFF);
-            bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
-            bytes->data()[2] = static_cast<char>((value >> 16) & 0xFF);
-            bytes->data()[3] = static_cast<char>((value >> 24) & 0xFF);
-            bytes->data()[4] = static_cast<char>((value >> 32) & 0xFF);
-            bytes->data()[5] = static_cast<char>((value >> 40) & 0xFF);
-            bytes->data()[6] = static_cast<char>((value >> 48) & 0xFF);
-            bytes->data()[7] = static_cast<char>((value >> 56) & 0xFF);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert bigint literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<int64_t>();
+        auto bytes = std::make_shared<Bytes>(8, pool);
+        memcpy(bytes->data(), &value, sizeof(int64_t));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::INT) {
-        try {
-            auto value = literal.GetValue<int32_t>();
-            auto bytes = std::make_shared<Bytes>(4, pool);
-            bytes->data()[0] = static_cast<char>(value & 0xFF);
-            bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
-            bytes->data()[2] = static_cast<char>((value >> 16) & 0xFF);
-            bytes->data()[3] = static_cast<char>((value >> 24) & 0xFF);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert int literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<int32_t>();
+        auto bytes = std::make_shared<Bytes>(4, pool);
+        memcpy(bytes->data(), &value, sizeof(int32_t));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::TINYINT) {
-        try {
-            auto value = literal.GetValue<int8_t>();
-            auto bytes = std::make_shared<Bytes>(1, pool);
-            bytes->data()[0] = static_cast<char>(value);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert tinyint literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<int8_t>();
+        auto bytes = std::make_shared<Bytes>(1, pool);
+        bytes->data()[0] = static_cast<char>(value);
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::SMALLINT) {
-        try {
-            auto value = literal.GetValue<int16_t>();
-            auto bytes = std::make_shared<Bytes>(2, pool);
-            bytes->data()[0] = static_cast<char>(value & 0xFF);
-            bytes->data()[1] = static_cast<char>((value >> 8) & 0xFF);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert smallint literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<int16_t>();
+        auto bytes = std::make_shared<Bytes>(2, pool);
+        memcpy(bytes->data(), &value, sizeof(int16_t));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::BOOLEAN) {
-        try {
-            bool value = literal.GetValue<bool>();
-            // Convert to string "1" or "0" to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = value ? "1" : "0";
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert boolean literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        bool value = literal.GetValue<bool>();
+        auto bytes = std::make_shared<Bytes>(1, pool);
+        bytes->data()[0] = value ? 1 : 0;
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::FLOAT) {
-        try {
-            auto value = literal.GetValue<float>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert float literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<float>();
+        auto bytes = std::make_shared<Bytes>(sizeof(float), pool);
+        memcpy(bytes->data(), &value, sizeof(float));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::DOUBLE) {
-        try {
-            auto value = literal.GetValue<double>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert double literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        auto value = literal.GetValue<double>();
+        auto bytes = std::make_shared<Bytes>(sizeof(double), pool);
+        memcpy(bytes->data(), &value, sizeof(double));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::DATE) {
-        try {
-            auto value = literal.GetValue<int32_t>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert date literal to MemorySlice: " +
-                                   std::string(e.what()));
-        }
+        // DATE is stored as int32_t to match Java's writeInt
+        auto value = literal.GetValue<int32_t>();
+        auto bytes = std::make_shared<Bytes>(sizeof(int32_t), pool);
+        memcpy(bytes->data(), &value, sizeof(int32_t));
+        return MemorySlice::Wrap(bytes);
     }
 
     if (type == FieldType::TIMESTAMP) {
-        try {
-            auto value = literal.GetValue<int64_t>();
-            // Convert to string to match the format used in BTreeGlobalIndexWriter
-            std::string str_value = std::to_string(value);
-            auto bytes = std::make_shared<Bytes>(str_value, pool);
+        auto ts = literal.GetValue<Timestamp>();
+        if (Timestamp::IsCompact(ts_precision)) {
+            // compact: writeLong(millisecond)
+            int64_t value = ts.GetMillisecond();
+            auto bytes = std::make_shared<Bytes>(sizeof(int64_t), pool);
+            memcpy(bytes->data(), &value, sizeof(int64_t));
             return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert timestamp literal to MemorySlice: " +
-                                   std::string(e.what()));
+        } else {
+            // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
+            MemorySliceOutput ts_out(13, pool);
+            ts_out.WriteValue(ts.GetMillisecond());
+            ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond());
+            return ts_out.ToSlice();
         }
     }
 
     if (type == FieldType::DECIMAL) {
-        try {
-            auto decimal_value = literal.GetValue<Decimal>();
-            auto bytes = std::make_shared<Bytes>(16, pool);
-            uint64_t high_bits = decimal_value.HighBits();
-            uint64_t low_bits = decimal_value.LowBits();
-            for (int i = 0; i < 8; ++i) {
-                bytes->data()[i] = static_cast<char>((high_bits >> (56 - i * 8)) & 0xFF);
-            }
-            for (int i = 0; i < 8; ++i) {
-                bytes->data()[8 + i] = static_cast<char>((low_bits >> (56 - i * 8)) & 0xFF);
-            }
-            return MemorySlice::Wrap(bytes);
-        } catch (const std::exception& e) {
-            return Status::Invalid("Failed to convert decimal literal to MemorySlice: " +
-                                   std::string(e.what()));
+        auto decimal_value = literal.GetValue<Decimal>();
+        auto bytes = std::make_shared<Bytes>(16, pool);
+        uint64_t high_bits = decimal_value.HighBits();
+        uint64_t low_bits = decimal_value.LowBits();
+        for (int i = 0; i < 8; ++i) {
+            bytes->data()[i] = static_cast<char>((high_bits >> (56 - i * 8)) & 0xFF);
         }
+        for (int i = 0; i < 8; ++i) {
+            bytes->data()[8 + i] = static_cast<char>((low_bits >> (56 - i * 8)) & 0xFF);
+        }
+        return MemorySlice::Wrap(bytes);
     }
 
     return Status::NotImplemented("Literal type " + FieldTypeUtils::FieldTypeToString(type) +
