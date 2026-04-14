@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,14 +40,14 @@ class FieldListaggAgg : public FieldAggregator {
         const std::string& field_name) {
         if (field_type->id() != arrow::Type::type::STRING) {
             return Status::Invalid(
-                fmt::format("invalid field type {} for {}, supposed to be string",
-                            field_type->ToString(), NAME));
+                fmt::format("invalid field type {} for field '{}' of {}, supposed to be string",
+                            field_type->ToString(), field_name, NAME));
         }
         PAIMON_ASSIGN_OR_RAISE(std::string delimiter, options.FieldListAggDelimiter(field_name));
         PAIMON_ASSIGN_OR_RAISE(bool distinct, options.FieldCollectAggDistinct(field_name));
-        if (distinct && delimiter.empty()) {
-            return Status::Invalid(
-                fmt::format("invalid empty delimiter for {} when distinct is enabled", NAME));
+        // When delimiter is empty, fall back to whitespace split
+        if (delimiter.empty()) {
+            delimiter = " ";
         }
         return std::unique_ptr<FieldListaggAgg>(
             new FieldListaggAgg(field_type, std::move(delimiter), distinct));
@@ -83,7 +83,7 @@ class FieldListaggAgg : public FieldAggregator {
     }
 
  private:
-    std::string AggDistinctImpl(std::string_view acc_str, std::string_view in_str) {
+    std::string AggDistinctImpl(std::string_view acc_str, std::string_view in_str) const {
         // Split accumulator tokens into a set for dedup
         std::unordered_set<std::string_view> seen;
         std::string_view remaining = acc_str;

@@ -79,7 +79,8 @@ struct PAIMON_EXPORT Options {
     static const char DEFAULT_AGG_FUNCTION[];
     /// IGNORE_RETRACT is "ignore-retract"
     static const char IGNORE_RETRACT[];
-    /// DISTINCT is "distinct"
+    /// "distinct" - Distinct option for aggregate functions like listagg. Default value is false.
+    /// Example: fields.f.distinct=true to deduplicate values during aggregation.
     static const char DISTINCT[];
     /// LIST_AGG_DELIMITER is "list-agg-delimiter"
     static const char LIST_AGG_DELIMITER[];

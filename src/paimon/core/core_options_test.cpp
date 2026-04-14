@@ -82,6 +82,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(std::nullopt, core_options.GetFieldsDefaultFunc());
     ASSERT_EQ(std::nullopt, core_options.GetFieldAggFunc("f0").value());
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
+    ASSERT_EQ(",", core_options.FieldListAggDelimiter("f1").value());
+    ASSERT_FALSE(core_options.FieldCollectAggDistinct("f1").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
     ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -167,6 +169,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::FIELDS_DEFAULT_AGG_FUNC, "sum"},
         {"fields.f0.aggregate-function", "min"},
         {"fields.f1.ignore-retract", "true"},
+        {"fields.f2.list-agg-delimiter", " | "},
+        {"fields.f2.distinct", "true"},
         {Options::DELETION_VECTORS_ENABLED, "true"},
         {Options::DELETION_VECTOR_BITMAP64, "true"},
         {Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE, "4MB"},
@@ -265,6 +269,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ("min", core_options.GetFieldAggFunc("f0").value().value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
+    ASSERT_EQ(" | ", core_options.FieldListAggDelimiter("f2").value());
+    ASSERT_TRUE(core_options.FieldCollectAggDistinct("f2").value());
     ASSERT_TRUE(core_options.DeletionVectorsEnabled());
     ASSERT_TRUE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
