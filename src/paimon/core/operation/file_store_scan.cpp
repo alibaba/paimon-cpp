@@ -16,7 +16,6 @@
 
 #include "paimon/core/operation/file_store_scan.h"
 
-#include <chrono>
 #include <cstddef>
 #include <future>
 #include <list>
@@ -126,24 +125,15 @@ Result<std::vector<PartitionEntry>> FileStoreScan::ReadPartitionEntries() const 
 
 Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() const {
     Duration duration;
-    auto t_scan_start = std::chrono::steady_clock::now();
     std::optional<Snapshot> snapshot;
     std::vector<ManifestFileMeta> all_manifest_file_metas;
     std::vector<ManifestFileMeta> filtered_manifest_file_metas;
     PAIMON_RETURN_NOT_OK(
         ReadManifests(&snapshot, &all_manifest_file_metas, &filtered_manifest_file_metas));
-    auto t_manifests = std::chrono::steady_clock::now();
-    fprintf(stderr, "[TRACE] CreatePlan::ReadManifests: %ld ms, all=%zu, filtered=%zu\n",
-            std::chrono::duration_cast<std::chrono::milliseconds>(t_manifests - t_scan_start).count(),
-            all_manifest_file_metas.size(), filtered_manifest_file_metas.size());
     filtered_manifest_file_metas = PostFilterManifests(std::move(filtered_manifest_file_metas));
 
     std::vector<ManifestEntry> manifest_entries;
     PAIMON_RETURN_NOT_OK(ReadManifestEntries(filtered_manifest_file_metas, &manifest_entries));
-    auto t_entries = std::chrono::steady_clock::now();
-    fprintf(stderr, "[TRACE] CreatePlan::ReadManifestEntries: %ld ms, entries=%zu\n",
-            std::chrono::duration_cast<std::chrono::milliseconds>(t_entries - t_manifests).count(),
-            manifest_entries.size());
     PAIMON_ASSIGN_OR_RAISE(manifest_entries,
                            PostFilterManifestEntries(std::move(manifest_entries)));
 

@@ -17,7 +17,6 @@
 #include "paimon/format/parquet/page_filtered_row_group_reader.h"
 
 #include <algorithm>
-#include <chrono>
 
 #include "arrow/array.h"
 #include "arrow/builder.h"
@@ -223,7 +222,6 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     // When pre_buffered=true, PreBuffer was already called in PrepareForReading() covering
     // all row groups in parallel. We only need to wait. Calling PreBuffer again would create
     // a new cached_source_, discarding the parallel I/O already in progress.
-    auto t_prebuf_start = std::chrono::steady_clock::now();
     {
         std::vector<int> rg_vec = {row_group_index};
         std::vector<int> col_vec(column_indices.begin(), column_indices.end());
@@ -240,7 +238,6 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
                 parquet_reader->WhenBuffered(rg_vec, col_vec).status());
         }
     }
-    auto t_prebuf_end = std::chrono::steady_clock::now();
 
     // Open row group and page index once, share across all columns
     auto row_group_reader = parquet_reader->RowGroup(row_group_index);
@@ -248,13 +245,7 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     int64_t row_group_row_count = rg_metadata->num_rows();
     auto page_index_reader = parquet_reader->GetPageIndexReader();
 
-    fprintf(stderr, "[TRACE] PageFilteredRead: rg=%d, rg_rows=%lld, filtered_rows=%lld, cols=%zu, prebuf=%ld ms\n",
-            row_group_index, (long long)row_group_row_count, (long long)expected_rows,
-            column_indices.size(),
-            std::chrono::duration_cast<std::chrono::milliseconds>(t_prebuf_end - t_prebuf_start).count());
-
     // Read each column with page filtering
-    auto t_col_start = std::chrono::steady_clock::now();
     std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
     columns.reserve(column_indices.size());
 
@@ -275,10 +266,6 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
 
         columns.push_back(std::move(chunked_array));
     }
-
-    auto t_col_end = std::chrono::steady_clock::now();
-    fprintf(stderr, "[TRACE] PageFilteredRead: columns read %ld ms\n",
-            std::chrono::duration_cast<std::chrono::milliseconds>(t_col_end - t_col_start).count());
 
     // Build Table from ChunkedArrays, then combine chunks and extract a single RecordBatch
     auto table = arrow::Table::Make(arrow_schema, columns, expected_rows);
