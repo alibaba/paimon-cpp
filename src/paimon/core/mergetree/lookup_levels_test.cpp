@@ -16,6 +16,9 @@
 
 #include "paimon/core/mergetree/lookup_levels.h"
 
+#include <chrono>
+#include <thread>
+
 #include "arrow/api.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
@@ -136,7 +139,8 @@ class LookupLevelsTest : public testing::Test {
     }
 
     Result<std::unique_ptr<LookupLevels<PositionedKeyValue>>> CreateLookupLevels(
-        const std::string& table_path, const std::shared_ptr<Levels>& levels) const {
+        const std::string& table_path, const std::shared_ptr<Levels>& levels,
+        std::shared_ptr<LookupFile::LookupFileCache> lookup_file_cache = nullptr) const {
         auto schema_manager = std::make_shared<SchemaManager>(fs_, table_path);
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
@@ -152,10 +156,15 @@ class LookupLevelsTest : public testing::Test {
             LookupStoreFactory::Create(key_comparator,
                                        std::make_shared<CacheManager>(1024 * 1024, 0.0), options));
         PAIMON_ASSIGN_OR_RAISE(auto path_factory, CreateFileStorePathFactory(table_path, options));
+        if (!lookup_file_cache) {
+            lookup_file_cache = LookupFile::CreateLookupFileCache(
+                options.GetLookupCacheFileRetentionMs(), options.GetLookupCacheMaxDiskSize());
+        }
         return LookupLevels<PositionedKeyValue>::Create(
             fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
             std::move(io_manager), path_factory, table_schema, levels,
             /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory,
+            lookup_file_cache,
             /*remote_lookup_file_manager=*/nullptr, pool_);
     }
 
@@ -218,7 +227,7 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
                                                /*start_level=*/1));
     ASSERT_FALSE(positioned_kv);
 
-    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
+    ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 2);
     ASSERT_EQ(lookup_levels->schema_id_and_ser_version_to_processors_.size(), 1);
     ASSERT_EQ(lookup_levels->GetLevels()->NonEmptyHighestLevel(), 2);
 
@@ -234,7 +243,7 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
     ASSERT_TRUE(file_status_list.empty());
     ASSERT_TRUE(levels->drop_file_callbacks_.empty());
-    // TODO(lisizhuo.lsz): test lookuplevels close
+    ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 0);
 }
 
 TEST_F(LookupLevelsTest, TestMultiFiles) {
@@ -543,9 +552,9 @@ TEST_F(LookupLevelsTest, TestDropFileCallbackOnUpdate) {
     ASSERT_TRUE(positioned_kv);
 
     // Both files should be cached now.
-    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 2);
-    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file0->file_name));
-    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+    ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 2);
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_->GetIfPresent(file0->file_name).has_value());
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_->GetIfPresent(file1->file_name).has_value());
 
     // Update: remove file0 from level1, add a new file to level1.
     ASSERT_OK_AND_ASSIGN(auto new_file, NewFiles(/*level=*/1, /*last_sequence_number=*/4,
@@ -553,10 +562,10 @@ TEST_F(LookupLevelsTest, TestDropFileCallbackOnUpdate) {
     ASSERT_OK(levels->Update(/*before=*/{file0}, /*after=*/{new_file}));
 
     // file0 was dropped, so its cache entry should be invalidated.
-    ASSERT_EQ(lookup_levels->lookup_file_cache_.size(), 1);
-    ASSERT_FALSE(lookup_levels->lookup_file_cache_.count(file0->file_name));
+    ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 1);
+    ASSERT_FALSE(lookup_levels->lookup_file_cache_->GetIfPresent(file0->file_name).has_value());
     // file1 was not dropped, so its cache entry should still exist.
-    ASSERT_TRUE(lookup_levels->lookup_file_cache_.count(file1->file_name));
+    ASSERT_TRUE(lookup_levels->lookup_file_cache_->GetIfPresent(file1->file_name).has_value());
 }
 
 TEST_F(LookupLevelsTest, TestRemoteSst) {
@@ -644,4 +653,280 @@ TEST_F(LookupLevelsTest, TestRemoteSst) {
     ASSERT_OK(lookup_levels->Close());
 }
 
+TEST_F(LookupLevelsTest, TestLookupFileCacheIntegration) {
+    // This single test covers multiple cache scenarios:
+    // 1. Cache is populated on first lookup (cache miss -> create -> put)
+    // 2. Subsequent lookups hit the cache (no new files created)
+    // 3. Two LookupLevels instances share the same global cache
+    // 4. Close() invalidates only own_cached_files_ from the shared cache
+    // 5. NotifyDropFile triggers cache invalidation and file deletion
+    // 6. Local lookup files are deleted when evicted from cache
+
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    // Create two data files at different levels
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11], [2, 22]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/2, table_path,
+                                              core_options, "[[3, 33], [4, 44]]"));
+
+    // Create a shared global cache
+    auto shared_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/-1,
+                                                          /*max_disk_size=*/INT64_MAX);
+    ASSERT_EQ(shared_cache->Size(), 0);
+
+    // --- Scenario 1: First lookup populates the cache ---
+    // Instance 1: uses file0 and file1
+    std::vector<std::shared_ptr<DataFileMeta>> files1 = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels1,
+                         Levels::Create(key_comparator, files1, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels1,
+                         CreateLookupLevels(table_path, levels1, shared_cache));
+
+    // Lookup key=1 -> triggers cache miss, creates lookup file for file0
+    ASSERT_OK_AND_ASSIGN(
+        auto result, lookup_levels1->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                            /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 11);
+    ASSERT_EQ(shared_cache->Size(), 1);
+
+    // Lookup key=3 -> triggers cache miss, creates lookup file for file1
+    ASSERT_OK_AND_ASSIGN(
+        result, lookup_levels1->Lookup(BinaryRowGenerator::GenerateRowPtr({3}, pool_.get()),
+                                       /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 33);
+    ASSERT_EQ(shared_cache->Size(), 2);
+
+    // --- Scenario 2: Subsequent lookup hits the cache (no new file created) ---
+    ASSERT_OK_AND_ASSIGN(
+        result, lookup_levels1->Lookup(BinaryRowGenerator::GenerateRowPtr({2}, pool_.get()),
+                                       /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 22);
+    // Cache size should not increase (file0 was already cached)
+    ASSERT_EQ(shared_cache->Size(), 2);
+
+    // --- Scenario 3: Two LookupLevels share the same cache ---
+    // Create a second data file set that has no overlap with lookup_levels1.
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/1, /*last_sequence_number=*/4, table_path,
+                                              core_options, "[[5, 55], [6, 66]]"));
+    std::vector<std::shared_ptr<DataFileMeta>> files2 = {file2};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels2,
+                         Levels::Create(key_comparator, files2, /*num_levels=*/3));
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels2,
+                         CreateLookupLevels(table_path, levels2, shared_cache));
+
+    // Lookup key=5 in instance 2 -> cache miss, creates lookup file for file2
+    ASSERT_OK_AND_ASSIGN(
+        result, lookup_levels2->Lookup(BinaryRowGenerator::GenerateRowPtr({5}, pool_.get()),
+                                       /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 55);
+    ASSERT_EQ(shared_cache->Size(), 3);  // file0, file1, file2
+
+    // Collect local file paths for later verification
+    std::vector<std::unique_ptr<BasicFileStatus>> tmp_files;
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &tmp_files));
+    ASSERT_EQ(tmp_files.size(), 3);
+
+    // --- Scenario 4: Close instance 1 invalidates only its own files ---
+    // Instance 1 owns file0 and file1 in the cache
+    ASSERT_OK(lookup_levels1->Close());
+    // file0 and file1 should be evicted (only owned by instance 1)
+    ASSERT_FALSE(shared_cache->GetIfPresent(file0->file_name).has_value());
+    ASSERT_FALSE(shared_cache->GetIfPresent(file1->file_name).has_value());
+    // file2 should still be in cache (owned by instance 2, not invalidated)
+    ASSERT_TRUE(shared_cache->GetIfPresent(file2->file_name).has_value());
+    ASSERT_EQ(shared_cache->Size(), 1);
+
+    // --- Scenario 5: Close instance 2 cleans up remaining files ---
+    ASSERT_OK(lookup_levels2->Close());
+    ASSERT_EQ(shared_cache->Size(), 0);
+
+    // All local lookup files should be deleted
+    tmp_files.clear();
+    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &tmp_files));
+    ASSERT_TRUE(tmp_files.empty());
+}
+
+TEST_F(LookupLevelsTest, TestCacheEvictionBySmallMaxDiskSize) {
+    // Verify that when max_disk_size is small enough to hold only 2 lookup files,
+    // adding a 3rd triggers weight-based (SIZE) eviction of the LRU entry.
+    // After eviction, subsequent lookups on the evicted file still work by
+    // re-creating the lookup file on demand.
+
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    // Create 3 data files at level 1.
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11], [2, 22]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/1, /*last_sequence_number=*/2, table_path,
+                                              core_options, "[[3, 33], [4, 44]]"));
+    ASSERT_OK_AND_ASSIGN(auto file2, NewFiles(/*level=*/1, /*last_sequence_number=*/4, table_path,
+                                              core_options, "[[5, 55], [6, 66]]"));
+
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1, file2};
+
+    // Phase 1: Probe with unlimited cache to measure per-file weights.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> probe_levels_obj,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+    auto unlimited_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/-1,
+                                                             /*max_disk_size=*/INT64_MAX);
+    ASSERT_OK_AND_ASSIGN(auto probe_levels,
+                         CreateLookupLevels(table_path, probe_levels_obj, unlimited_cache));
+
+    // Trigger lookups to populate cache for all 3 files.
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         probe_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                              /*start_level=*/1));
+    ASSERT_TRUE(result);
+    int64_t weight_after_file0 = unlimited_cache->GetCurrentWeight();
+
+    ASSERT_OK_AND_ASSIGN(result,
+                         probe_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({3}, pool_.get()),
+                                              /*start_level=*/1));
+    ASSERT_TRUE(result);
+    int64_t weight_after_file1 = unlimited_cache->GetCurrentWeight();
+
+    ASSERT_OK_AND_ASSIGN(result,
+                         probe_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({5}, pool_.get()),
+                                              /*start_level=*/1));
+    ASSERT_TRUE(result);
+    int64_t weight_after_file2 = unlimited_cache->GetCurrentWeight();
+
+    ASSERT_EQ(unlimited_cache->Size(), 3);
+    int64_t file0_weight = weight_after_file0;
+    int64_t file1_weight = weight_after_file1 - weight_after_file0;
+    int64_t file2_weight = weight_after_file2 - weight_after_file1;
+    ASSERT_GT(file0_weight, 0);
+    ASSERT_GT(file1_weight, 0);
+    ASSERT_GT(file2_weight, 0);
+
+    // Set max_disk_size to exactly hold file0 + file1 but not file2.
+    int64_t max_disk_for_two = file0_weight + file1_weight + file2_weight - 1;
+    ASSERT_OK(probe_levels->Close());
+
+    // Phase 2: Create a new LookupLevels with the constrained cache.
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels2,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+    auto small_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/-1,
+                                                         /*max_disk_size=*/max_disk_for_two);
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels, CreateLookupLevels(table_path, levels2, small_cache));
+
+    // Lookup file0: fits in cache.
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 11);
+    ASSERT_EQ(small_cache->Size(), 1);
+
+    // Lookup file1: still fits (file0 + file1 <= max).
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({3}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 33);
+    ASSERT_EQ(small_cache->Size(), 2);
+    ASSERT_TRUE(small_cache->GetIfPresent(file0->file_name).has_value());
+    ASSERT_TRUE(small_cache->GetIfPresent(file1->file_name).has_value());
+
+    // Lookup file2: total weight exceeds max, should evict file0 (LRU).
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({5}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 55);
+
+    // file0 should have been evicted (LRU).
+    ASSERT_FALSE(small_cache->GetIfPresent(file0->file_name).has_value());
+    ASSERT_TRUE(small_cache->GetIfPresent(file1->file_name).has_value());
+    ASSERT_TRUE(small_cache->GetIfPresent(file2->file_name).has_value());
+
+    // Lookup key=1 again (file0 was evicted): should re-create the lookup file.
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 11);
+
+    // file0 is back in cache; file1 should now be evicted (it was LRU).
+    ASSERT_TRUE(small_cache->GetIfPresent(file0->file_name).has_value());
+    ASSERT_FALSE(small_cache->GetIfPresent(file1->file_name).has_value());
+    ASSERT_TRUE(small_cache->GetIfPresent(file2->file_name).has_value());
+
+    ASSERT_OK(lookup_levels->Close());
+}
+
+TEST_F(LookupLevelsTest, TestCacheEvictionByExpiration) {
+    // Verify that when expire_after_access_ms is very short, cached lookup files
+    // expire and are evicted. Subsequent lookups re-create the files.
+
+    std::map<std::string, std::string> options = {};
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_OK_AND_ASSIGN(auto table_path, CreateTable(options));
+    ASSERT_OK_AND_ASSIGN(auto key_comparator, CreateKeyComparator());
+
+    ASSERT_OK_AND_ASSIGN(auto file0, NewFiles(/*level=*/1, /*last_sequence_number=*/0, table_path,
+                                              core_options, "[[1, 11], [2, 22]]"));
+    ASSERT_OK_AND_ASSIGN(auto file1, NewFiles(/*level=*/2, /*last_sequence_number=*/2, table_path,
+                                              core_options, "[[3, 33], [4, 44]]"));
+
+    std::vector<std::shared_ptr<DataFileMeta>> files = {file0, file1};
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
+                         Levels::Create(key_comparator, files, /*num_levels=*/3));
+
+    // Create a cache with a very short expiration (50ms).
+    auto expiring_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/50,
+                                                            /*max_disk_size=*/INT64_MAX);
+    ASSERT_OK_AND_ASSIGN(auto lookup_levels,
+                         CreateLookupLevels(table_path, levels, expiring_cache));
+
+    // Lookup to populate cache.
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 11);
+
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({3}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 33);
+    ASSERT_EQ(expiring_cache->Size(), 2);
+
+    // Wait for entries to expire.
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+
+    // Entries should be expired now. GetIfPresent triggers expiration check.
+    ASSERT_FALSE(expiring_cache->GetIfPresent(file0->file_name).has_value());
+    ASSERT_FALSE(expiring_cache->GetIfPresent(file1->file_name).has_value());
+    ASSERT_EQ(expiring_cache->Size(), 0);
+
+    // Lookups should still work by re-creating the lookup files.
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({1}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 11);
+    ASSERT_EQ(expiring_cache->Size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(result,
+                         lookup_levels->Lookup(BinaryRowGenerator::GenerateRowPtr({3}, pool_.get()),
+                                               /*start_level=*/1));
+    ASSERT_TRUE(result);
+    ASSERT_EQ(result.value().key_value.value->GetInt(1), 33);
+    ASSERT_EQ(expiring_cache->Size(), 2);
+
+    ASSERT_OK(lookup_levels->Close());
+}
 }  // namespace paimon::test

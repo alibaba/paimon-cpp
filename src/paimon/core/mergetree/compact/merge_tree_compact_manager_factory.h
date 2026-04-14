@@ -27,6 +27,7 @@
 #include "paimon/core/mergetree/compact/compact_rewriter.h"
 #include "paimon/core/mergetree/compact/compact_strategy.h"
 #include "paimon/core/mergetree/lookup/remote_lookup_file_manager.h"
+#include "paimon/core/mergetree/lookup_file.h"
 #include "paimon/core/operation/metrics/compaction_metrics.h"
 #include "paimon/result.h"
 namespace arrow {
@@ -88,9 +89,13 @@ class MergeTreeCompactManagerFactory {
         const BinaryRow& partition, int32_t bucket,
         const std::shared_ptr<CompactStrategy>& compact_strategy,
         const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) const;
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
 
-    void Close() {}
+    void Close() {
+        if (lookup_file_cache_) {
+            lookup_file_cache_->InvalidateAll();
+        }
+    }
 
  private:
     std::shared_ptr<CompactionMetrics::Reporter> CreateCompactionMetricsReporter(
@@ -99,7 +104,7 @@ class MergeTreeCompactManagerFactory {
     Result<std::shared_ptr<CompactRewriter>> CreateRewriter(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-        const std::shared_ptr<CancellationController>& cancellation_controller) const;
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriter(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
@@ -139,6 +144,7 @@ class MergeTreeCompactManagerFactory {
     std::shared_ptr<CacheManager> cache_manager_;
     std::shared_ptr<FileStorePathFactory> file_store_path_factory_;
     std::string root_path_;
+    std::shared_ptr<LookupFile::LookupFileCache> lookup_file_cache_;
 };
 
 }  // namespace paimon
