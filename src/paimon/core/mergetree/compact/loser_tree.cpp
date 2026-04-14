@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 
 namespace paimon {
 LoserTree::LoserTree(std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers,
@@ -36,12 +37,20 @@ LoserTree::LoserTree(std::vector<std::unique_ptr<KeyValueRecordReader>>&& reader
 
 Status LoserTree::InitializeIfNeeded() {
     if (!initialized_) {
+        auto t_init_start = std::chrono::steady_clock::now();
         std::fill(tree_.begin(), tree_.end(), -1);
         for (int32_t i = size_ - 1; i >= 0; i--) {
+            auto t_leaf_start = std::chrono::steady_clock::now();
             PAIMON_RETURN_NOT_OK(leaves_[i].AdvanceIfAvailable());
+            auto t_leaf_end = std::chrono::steady_clock::now();
+            fprintf(stderr, "[TRACE] LoserTree::Init leaf[%d]: %ld ms\n",
+                    i, std::chrono::duration_cast<std::chrono::milliseconds>(t_leaf_end - t_leaf_start).count());
             Adjust(i);
         }
         initialized_ = true;
+        auto t_init_end = std::chrono::steady_clock::now();
+        fprintf(stderr, "[TRACE] LoserTree::Init total: %ld ms, leaves=%d\n",
+                std::chrono::duration_cast<std::chrono::milliseconds>(t_init_end - t_init_start).count(), size_);
     }
     return Status::OK();
 }

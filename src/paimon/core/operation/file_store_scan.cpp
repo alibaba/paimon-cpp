@@ -16,6 +16,7 @@
 
 #include "paimon/core/operation/file_store_scan.h"
 
+#include <chrono>
 #include <cstddef>
 #include <future>
 #include <list>
@@ -125,15 +126,24 @@ Result<std::vector<PartitionEntry>> FileStoreScan::ReadPartitionEntries() const 
 
 Result<std::shared_ptr<FileStoreScan::RawPlan>> FileStoreScan::CreatePlan() const {
     Duration duration;
+    auto t_scan_start = std::chrono::steady_clock::now();
     std::optional<Snapshot> snapshot;
     std::vector<ManifestFileMeta> all_manifest_file_metas;
     std::vector<ManifestFileMeta> filtered_manifest_file_metas;
     PAIMON_RETURN_NOT_OK(
         ReadManifests(&snapshot, &all_manifest_file_metas, &filtered_manifest_file_metas));
+    auto t_manifests = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] CreatePlan::ReadManifests: %ld ms, all=%zu, filtered=%zu\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_manifests - t_scan_start).count(),
+            all_manifest_file_metas.size(), filtered_manifest_file_metas.size());
     filtered_manifest_file_metas = PostFilterManifests(std::move(filtered_manifest_file_metas));
 
     std::vector<ManifestEntry> manifest_entries;
     PAIMON_RETURN_NOT_OK(ReadManifestEntries(filtered_manifest_file_metas, &manifest_entries));
+    auto t_entries = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] CreatePlan::ReadManifestEntries: %ld ms, entries=%zu\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_entries - t_manifests).count(),
+            manifest_entries.size());
     PAIMON_ASSIGN_OR_RAISE(manifest_entries,
                            PostFilterManifestEntries(std::move(manifest_entries)));
 
@@ -282,9 +292,17 @@ Result<bool> FileStoreScan::FilterManifestFileMeta(const ManifestFileMeta& manif
         if (only_read_real_buckets_ && max_bucket.value() < 0) {
             return false;
         }
-        if (bucket_filter_ && (bucket_filter_.value() < min_bucket.value() ||
-                               bucket_filter_.value() > max_bucket.value())) {
-            return false;
+        if (bucket_filter_) {
+            bool any_in_range = false;
+            for (int32_t b : bucket_filter_.value()) {
+                if (b >= min_bucket.value() && b <= max_bucket.value()) {
+                    any_in_range = true;
+                    break;
+                }
+            }
+            if (!any_in_range) {
+                return false;
+            }
         }
     }
     // filter by partition filter
@@ -311,7 +329,7 @@ Status FileStoreScan::ReadManifestFileMeta(const ManifestFileMeta& manifest,
         if (only_read_real_buckets_ && entry.Bucket() < 0) {
             return false;
         }
-        if (bucket_filter_ != std::nullopt && entry.Bucket() != bucket_filter_.value()) {
+        if (bucket_filter_ && bucket_filter_->find(entry.Bucket()) == bucket_filter_->end()) {
             return false;
         }
         if (level_filter_ != nullptr && !level_filter_(entry.Level())) {
@@ -365,7 +383,9 @@ Status FileStoreScan::SplitAndSetFilter(const std::vector<std::string>& partitio
             predicates_ = predicate;
         }
     }
-    bucket_filter_ = scan_filters->GetBucketFilter();
+    if (scan_filters->GetBucketFilter()) {
+        bucket_filter_ = std::set<int32_t>{scan_filters->GetBucketFilter().value()};
+    }
     if (!scan_filters->GetPartitionFilters().empty()) {
         PAIMON_ASSIGN_OR_RAISE(
             partition_filter_,

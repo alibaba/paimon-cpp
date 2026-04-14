@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <cstddef>
 #include <map>
 #include <optional>
@@ -200,16 +201,26 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::ApplyIndexAndDvReaderIf
 Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     const std::shared_ptr<DataSplitImpl>& data_split,
     const std::shared_ptr<DataFilePathFactory>& data_file_path_factory) {
+    auto t_merge_start = std::chrono::steady_clock::now();
     auto deletion_file_map = AbstractSplitRead::CreateDeletionFileMap(*data_split);
     std::vector<std::vector<SortedRun>> sections =
         IntervalPartition(data_split->DataFiles(), interval_partition_comparator_).Partition();
+    auto t_partition = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] CreateMergeReader: IntervalPartition %ld ms, sections=%zu, files=%zu\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_partition - t_merge_start).count(),
+            sections.size(), data_split->DataFiles().size());
     std::vector<std::unique_ptr<BatchReader>> batch_readers;
     batch_readers.reserve(sections.size());
     // no overlap through multiple sections
-    for (const auto& section : sections) {
+    for (size_t si = 0; si < sections.size(); si++) {
+        auto t_sec_start = std::chrono::steady_clock::now();
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> projection_reader,
-                               CreateReaderForSection(section, data_split->Partition(),
+                               CreateReaderForSection(sections[si], data_split->Partition(),
                                                       deletion_file_map, data_file_path_factory));
+        auto t_sec_end = std::chrono::steady_clock::now();
+        fprintf(stderr, "[TRACE] CreateMergeReader: section[%zu] %ld ms, runs=%zu\n",
+                si, std::chrono::duration_cast<std::chrono::milliseconds>(t_sec_end - t_sec_start).count(),
+                sections[si].size());
         batch_readers.push_back(std::move(projection_reader));
     }
     auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
@@ -410,11 +421,16 @@ Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeRead
     // with overlap in one section
     std::vector<std::unique_ptr<KeyValueRecordReader>> record_readers;
     record_readers.reserve(section.size());
-    for (const auto& run : section) {
+    for (size_t ri = 0; ri < section.size(); ri++) {
+        auto t_run_start = std::chrono::steady_clock::now();
         // no overlap in a run
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader> run_reader,
-                               CreateReaderForRun(partition, run, deletion_file_map, predicate,
+                               CreateReaderForRun(partition, section[ri], deletion_file_map, predicate,
                                                   data_file_path_factory));
+        auto t_run_end = std::chrono::steady_clock::now();
+        fprintf(stderr, "[TRACE] CreateSortMergeReader: run[%zu] %ld ms, files=%zu\n",
+                ri, std::chrono::duration_cast<std::chrono::milliseconds>(t_run_end - t_run_start).count(),
+                section[ri].Files().size());
         record_readers.emplace_back(std::move(run_reader));
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,

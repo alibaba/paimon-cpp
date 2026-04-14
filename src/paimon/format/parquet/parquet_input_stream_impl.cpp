@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/parquet_input_stream_impl.h"
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -39,7 +40,18 @@ ParquetInputStreamImpl::ParquetInputStreamImpl(
     : input_stream_(input_stream), pool_(pool), file_size_(file_size) {}
 
 ParquetInputStreamImpl::~ParquetInputStreamImpl() {
+    WaitForPendingAsyncReads();
     [[maybe_unused]] auto status = DoClose();
+}
+
+void ParquetInputStreamImpl::WaitForPendingAsyncReads() {
+    std::lock_guard<std::mutex> lock(pending_futures_mutex_);
+    for (auto& fut : pending_futures_) {
+        if (!fut.is_finished()) {
+            (void)fut.result();  // Block until complete
+        }
+    }
+    pending_futures_.clear();
 }
 
 arrow::Status ParquetInputStreamImpl::Seek(int64_t position) {
@@ -102,6 +114,15 @@ arrow::Future<std::shared_ptr<arrow::Buffer>> ParquetInputStreamImpl::ReadAsync(
                                      fut.MarkFinished(ToArrowStatus(callback_status));
                                  }
                              });
+    {
+        std::lock_guard<std::mutex> lock(pending_futures_mutex_);
+        // Prune completed futures to avoid unbounded growth
+        pending_futures_.erase(
+            std::remove_if(pending_futures_.begin(), pending_futures_.end(),
+                           [](const auto& f) { return f.is_finished(); }),
+            pending_futures_.end());
+        pending_futures_.push_back(fut);
+    }
     return fut;
 }
 

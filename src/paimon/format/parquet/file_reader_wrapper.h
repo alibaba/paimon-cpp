@@ -18,25 +18,33 @@
 
 #include <cstdint>
 #include <limits>
+#include <map>
 #include <memory>
 #include <set>
 #include <utility>
 #include <vector>
 
 #include "arrow/array.h"
+#include "arrow/io/caching.h"
 #include "arrow/compute/api.h"
 #include "arrow/dataset/file_parquet.h"
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "arrow/type_fwd.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/format/parquet/row_ranges.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "parquet/arrow/reader.h"
+#include "parquet/page_index.h"
 
 namespace arrow {
 class Schema;
 }  // namespace arrow
+
+namespace paimon {
+class Predicate;
+}  // namespace paimon
 
 namespace paimon::parquet {
 
@@ -44,8 +52,12 @@ namespace paimon::parquet {
 // methods GetPreviousBatchFirstRowNumber and GetNextRowToRead.
 class FileReaderWrapper {
  public:
+    ~FileReaderWrapper();
+
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
-        std::unique_ptr<::parquet::arrow::FileReader>&& reader);
+        std::unique_ptr<::parquet::arrow::FileReader>&& reader,
+        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(),
+        int64_t batch_size = 0);
 
     Status SeekToRow(uint64_t row_number);
 
@@ -100,10 +112,32 @@ class FileReaderWrapper {
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
         const std::vector<int32_t>& src_row_groups) const;
 
+    /// Set per-row-group RowRanges for page-level filtering.
+    /// Only partially matched row groups should have entries.
+    void SetRowGroupRowRanges(const std::map<int32_t, RowRanges>& ranges) {
+        row_group_row_ranges_ = ranges;
+    }
+
+    /// Get the page index reader for the file.
+    /// Returns nullptr if page index is not available.
+    std::shared_ptr<::parquet::PageIndexReader> GetPageIndexReader();
+
+    /// Calculate filtered row ranges for a row group based on predicate.
+    /// @param row_group_index The row group index.
+    /// @param predicate The predicate to evaluate.
+    /// @param column_name_to_index Map from column name to column index.
+    /// @return RowRanges that may contain matching rows.
+    Result<RowRanges> CalculateFilteredRowRanges(
+        int32_t row_group_index,
+        const std::shared_ptr<Predicate>& predicate,
+        const std::map<std::string, int32_t>& column_name_to_index);
+
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows);
+                      uint64_t num_rows,
+                      ::arrow::MemoryPool* pool,
+                      int64_t batch_size);
 
     Result<std::set<int32_t>> ReadRangesToRowGroupIds(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;
@@ -117,11 +151,41 @@ class FileReaderWrapper {
     std::vector<std::pair<uint64_t, uint64_t>> target_row_groups_;
     std::vector<int32_t> target_column_indices_;
 
+    ::arrow::MemoryPool* pool_;
+    int64_t batch_size_;  // 0 means no limit
+
     const uint64_t num_rows_;
     uint64_t next_row_to_read_ = std::numeric_limits<uint64_t>::max();
     uint64_t previous_first_row_ = std::numeric_limits<uint64_t>::max();
     uint64_t current_row_group_idx_ = 0;
     bool reader_initialized_ = false;
+
+    // Batched consumption of page-filtered RecordBatch (when batch exceeds batch_size_)
+    std::shared_ptr<arrow::RecordBatch> current_filtered_batch_;
+    int64_t filtered_batch_offset_ = 0;
+
+    // Page-level filtering state
+    std::map<int32_t, RowRanges> row_group_row_ranges_;
+
+    // Metadata for lazy on-demand reading of page-filtered row groups
+    struct PageFilteredRowGroupMeta {
+        int32_t rg_index;
+        RowRanges row_ranges;
+        std::vector<int32_t> column_indices;
+        std::shared_ptr<arrow::Schema> read_schema;
+        ::arrow::io::CacheOptions cache_options;
+    };
+    std::map<uint64_t, PageFilteredRowGroupMeta> pending_filtered_reads_;
+
+    // Set of target_row_groups_ indices that use page-filtered reading
+    std::set<uint64_t> page_filtered_indices_;
+
+    // Track pre-buffered row groups/columns so we can wait on destruction
+    std::vector<int> prebuffered_row_groups_;
+    std::vector<int> prebuffered_columns_;
+
+    /// Wait for all pending PreBuffer operations to complete.
+    void WaitForPendingPreBuffer();
 };
 
 }  // namespace paimon::parquet

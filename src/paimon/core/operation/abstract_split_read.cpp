@@ -76,7 +76,8 @@ Result<std::vector<std::unique_ptr<BatchReader>>> AbstractSplitRead::CreateRawFi
 
     std::vector<std::unique_ptr<BatchReader>> raw_file_readers;
     raw_file_readers.reserve(data_files.size());
-    for (const auto& file : data_files) {
+    for (size_t file_idx = 0; file_idx < data_files.size(); ++file_idx) {
+        const auto& file = data_files[file_idx];
         auto data_file_path = data_file_path_factory->ToPath(file);
         PAIMON_ASSIGN_OR_RAISE(std::string data_file_identifier, file->FileFormat());
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReaderBuilder> reader_builder,

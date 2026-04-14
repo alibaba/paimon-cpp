@@ -16,6 +16,8 @@
 
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_min_heap.h"
 
+#include <chrono>
+
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
 #include "paimon/status.h"
 
@@ -38,7 +40,10 @@ SortMergeReaderWithMinHeap::SortMergeReaderWithMinHeap(
 }
 
 Result<std::unique_ptr<SortMergeReader::Iterator>> SortMergeReaderWithMinHeap::NextBatch() {
-    for (auto* reader : next_batch_readers_) {
+    auto t_nb_start = std::chrono::steady_clock::now();
+    for (size_t i = 0; i < next_batch_readers_.size(); i++) {
+        auto* reader = next_batch_readers_[i];
+        auto t_r_start = std::chrono::steady_clock::now();
         while (true) {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader::Iterator> iterator,
                                    reader->NextBatch());
@@ -53,8 +58,15 @@ Result<std::unique_ptr<SortMergeReader::Iterator>> SortMergeReaderWithMinHeap::N
                 break;
             }
         }
+        auto t_r_end = std::chrono::steady_clock::now();
+        fprintf(stderr, "[TRACE] SortMergeReader::NextBatch reader[%zu]: %ld ms\n",
+                i, std::chrono::duration_cast<std::chrono::milliseconds>(t_r_end - t_r_start).count());
     }
     next_batch_readers_.clear();
+    auto t_nb_end = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] SortMergeReader::NextBatch total: %ld ms, heap_size=%zu\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_nb_end - t_nb_start).count(),
+            min_heap_.size());
     if (min_heap_.empty()) {
         return std::unique_ptr<SortMergeReader::Iterator>();
     }

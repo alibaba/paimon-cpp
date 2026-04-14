@@ -126,6 +126,7 @@ else()
            OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
            OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wall")
+        set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-unused-variable")
     else()
         message(FATAL_ERROR "${UNKNOWN_COMPILER_MESSAGE}")
     endif()

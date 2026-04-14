@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 
+#include <chrono>
 #include <cstddef>
 #include <unordered_map>
 
@@ -64,12 +65,14 @@ ParquetFileBatchReader::ParquetFileBatchReader(
       input_stream_(std::move(input_stream)),
       reader_(std::move(reader)),
       read_ranges_(reader_->GetAllRowGroupRanges()),
-      metrics_(std::make_shared<MetricsImpl>()) {}
+      metrics_(std::make_shared<MetricsImpl>()),
+      logger_(Logger::GetLogger("ParquetFileBatchReader")) {}
 
 Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     std::shared_ptr<arrow::io::RandomAccessFile>&& input_stream,
     const std::shared_ptr<arrow::MemoryPool>& pool,
     const std::map<std::string, std::string>& options, int32_t batch_size) {
+    auto t_create_start = std::chrono::steady_clock::now();
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
                            CreateReaderProperties(pool, options));
@@ -83,15 +86,23 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
                                         ->properties(arrow_reader_properties)
                                         ->Build(&file_reader));
+    auto t_build = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] ParquetFileBatchReader::Create build: %ld ms\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_build - t_create_start).count());
 
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
-                           FileReaderWrapper::Create(std::move(file_reader)));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<FileReaderWrapper> reader,
+        FileReaderWrapper::Create(std::move(file_reader), pool.get(),
+                                  static_cast<int64_t>(batch_size)));
     auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
         new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
                            parquet_file_batch_reader->GetFileSchema());
     PAIMON_RETURN_NOT_OK(parquet_file_batch_reader->SetReadSchema(
         file_schema.get(), /*predicate=*/nullptr, /*selection_bitmap=*/std::nullopt));
+    auto t_create_end = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] ParquetFileBatchReader::Create total: %ld ms\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_create_end - t_create_start).count());
     return parquet_file_batch_reader;
 }
 
@@ -111,6 +122,7 @@ Result<std::unique_ptr<::ArrowSchema>> ParquetFileBatchReader::GetFileSchema() c
 Status ParquetFileBatchReader::SetReadSchema(
     ::ArrowSchema* schema, const std::shared_ptr<Predicate>& predicate,
     const std::optional<RoaringBitmap32>& selection_bitmap) {
+    auto t_srs_start = std::chrono::steady_clock::now();
     if (!schema) {
         return Status::Invalid("SetReadSchema failed: read schema cannot be nullptr");
     }
@@ -137,10 +149,44 @@ Status ParquetFileBatchReader::SetReadSchema(
         }
     }
 
+    // Build column name to index map for page-level filtering.
+    // For leaf columns, indices[0] is the correct leaf column index in Parquet.
+    // For nested types (struct/list/map), FlattenSchema produces multiple leaf indices,
+    // but predicate pushdown only targets leaf columns with simple types, so indices[0]
+    // is always the correct single leaf index for predicate evaluation.
+    std::map<std::string, int32_t> column_name_to_index;
+    for (const auto& [name, indices] : field_index_map) {
+        if (!indices.empty()) {
+            column_name_to_index[name] = indices[0];
+        }
+    }
+
     std::vector<int32_t> row_groups = arrow::internal::Iota(reader_->GetNumberOfRowGroups());
     if (predicate) {
+        int32_t total_row_groups = static_cast<int32_t>(row_groups.size());
         PAIMON_ASSIGN_OR_RAISE(row_groups,
                                FilterRowGroupsByPredicate(predicate, file_schema, row_groups));
+        fprintf(stderr, "[TRACE] RowGroupFilter: %d/%d rg remain after predicate\n",
+                static_cast<int>(row_groups.size()), total_row_groups);
+
+        // Apply page-level filtering if enabled
+        PAIMON_ASSIGN_OR_RAISE(
+            bool enable_page_index_filter,
+            OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
+                                                DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
+        if (enable_page_index_filter && !row_groups.empty()) {
+            int32_t before_page_filter = static_cast<int32_t>(row_groups.size());
+            PAIMON_ASSIGN_OR_RAISE(auto page_filter_result, FilterRowGroupsByPageIndex(
+                                                   predicate, column_name_to_index, row_groups));
+            row_groups = std::move(page_filter_result.first);
+            reader_->SetRowGroupRowRanges(page_filter_result.second);
+            fprintf(stderr, "[TRACE] PageIndexFilter: %d/%d rg remain, %d partially matched\n",
+                    static_cast<int>(row_groups.size()), before_page_filter,
+                    static_cast<int>(page_filter_result.second.size()));
+        } else {
+            fprintf(stderr, "[TRACE] PageIndexFilter: skipped (enabled=%d, rg=%zu)\n",
+                    enable_page_index_filter, row_groups.size());
+        }
     }
     if (selection_bitmap) {
         PAIMON_ASSIGN_OR_RAISE(row_groups,
@@ -153,7 +199,21 @@ Status ParquetFileBatchReader::SetReadSchema(
 
     PAIMON_ASSIGN_OR_RAISE(std::set<int32_t> ordered_row_groups,
                            reader_->FilterRowGroupsByReadRanges(read_ranges_, read_row_groups_));
-    return reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+
+    // When predicate or selection is applied, prepare eagerly so PreBuffer I/O
+    // starts immediately. All file readers are created before consumption begins,
+    // so eager preparation allows I/O for multiple files to overlap.
+    Status ret;
+    if (predicate || selection_bitmap) {
+        ret = reader_->PrepareForReading(ordered_row_groups, read_column_indices_);
+    } else {
+        ret = reader_->PrepareForReadingLazy(ordered_row_groups, read_column_indices_);
+    }
+    auto t_srs_end = std::chrono::steady_clock::now();
+    fprintf(stderr, "[TRACE] ParquetFileBatchReader::SetReadSchema: %ld ms, rg=%zu, predicate=%s\n",
+            std::chrono::duration_cast<std::chrono::milliseconds>(t_srs_end - t_srs_start).count(),
+            row_groups.size(), predicate ? "yes" : "no");
+    return ret;
 }
 
 Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByPredicate(
@@ -218,6 +278,57 @@ Result<std::vector<int32_t>> ParquetFileBatchReader::FilterRowGroupsByBitmap(
         }
     }
     return target_row_groups;
+}
+
+// Uses page-level column index statistics to filter row groups and store per-row-group
+// RowRanges for true page-level skipping. A row group is excluded if ALL its pages are
+// determined to not match the predicate. For partially matched row groups, RowRanges
+// are stored for page-level filtering during reading.
+Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
+ParquetFileBatchReader::FilterRowGroupsByPageIndex(
+    const std::shared_ptr<Predicate>& predicate,
+    const std::map<std::string, int32_t>& column_name_to_index,
+    const std::vector<int32_t>& src_row_groups) {
+    std::map<int32_t, RowRanges> rg_row_ranges;
+
+    if (!predicate) {
+        return std::make_pair(src_row_groups, rg_row_ranges);
+    }
+
+    auto page_index_reader = reader_->GetPageIndexReader();
+    if (!page_index_reader) {
+        PAIMON_LOG_DEBUG(logger_,
+                         "Page index not available in file, skipping page-level filtering (%s)",
+                         PARQUET_WRITE_ENABLE_PAGE_INDEX);
+        return std::make_pair(src_row_groups, rg_row_ranges);
+    }
+
+    auto file_metadata = reader_->GetFileReader()->parquet_reader()->metadata();
+
+    std::vector<int32_t> target_row_groups;
+    target_row_groups.reserve(src_row_groups.size());
+
+    for (int32_t row_group_idx : src_row_groups) {
+        auto result =
+            reader_->CalculateFilteredRowRanges(row_group_idx, predicate, column_name_to_index);
+
+        if (!result.ok()) {
+            target_row_groups.push_back(row_group_idx);
+            continue;
+        }
+
+        const auto& row_ranges = result.value();
+        if (!row_ranges.IsEmpty()) {
+            target_row_groups.push_back(row_group_idx);
+
+            int64_t rg_row_count = file_metadata->RowGroup(row_group_idx)->num_rows();
+            if (row_ranges.RowCount() < rg_row_count) {
+                rg_row_ranges[row_group_idx] = row_ranges;
+            }
+        }
+    }
+
+    return std::make_pair(std::move(target_row_groups), std::move(rg_row_ranges));
 }
 
 Result<BatchReader::ReadBatch> ParquetFileBatchReader::NextBatch() {

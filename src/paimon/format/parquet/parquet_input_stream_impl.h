@@ -18,6 +18,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
+#include <vector>
 
 #include "arrow/api.h"
 #include "arrow/io/interfaces.h"
@@ -54,10 +56,18 @@ class ParquetInputStreamImpl : public arrow::io::RandomAccessFile {
 
  private:
     arrow::Status DoClose();
+    void WaitForPendingAsyncReads();
+
     std::shared_ptr<::paimon::InputStream> input_stream_;
     std::shared_ptr<arrow::MemoryPool> pool_;
     uint64_t file_size_;
     bool closed_ = false;
+
+    // Track outstanding async reads to ensure they complete before destruction.
+    // Without this, JindoSDK bthread callbacks may fire after the pool is freed,
+    // causing use-after-free in arrow::PoolBuffer::~PoolBuffer().
+    std::mutex pending_futures_mutex_;
+    std::vector<arrow::Future<std::shared_ptr<arrow::Buffer>>> pending_futures_;
 };
 
 }  // namespace paimon::parquet

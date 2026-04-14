@@ -242,6 +242,7 @@ set(PAIMON_CORE_SRCS
     core/operation/append_only_file_store_write.cpp
     core/operation/commit_context.cpp
     core/operation/expire_snapshots.cpp
+    core/operation/bucket_select_converter.cpp
     core/operation/file_store_commit.cpp
     core/operation/file_store_commit_impl.cpp
     core/operation/file_store_scan.cpp
