@@ -106,19 +106,13 @@ Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitAnd(
     }
 
     // Start with the first child
-    auto result = children[0];
-    if (!result.ok()) {
-        return result.status();
-    }
-    auto current = std::move(result).value();
+    PAIMON_RETURN_NOT_OK(children[0]);
+    auto current = children[0].value();
 
     // AND with remaining children
     for (size_t i = 1; i < children.size(); ++i) {
-        auto child_status = children[i];
-        if (!child_status.ok()) {
-            return child_status.status();
-        }
-        auto child = std::move(child_status).value();
+        PAIMON_RETURN_NOT_OK(children[i]);
+        auto child = children[i].value();
         PAIMON_ASSIGN_OR_RAISE(current, current->And(child));
     }
 
@@ -132,19 +126,13 @@ Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitOr(
     }
 
     // Start with the first child
-    auto result = children[0];
-    if (!result.ok()) {
-        return result.status();
-    }
-    auto current = std::move(result).value();
+    PAIMON_RETURN_NOT_OK(children[0]);
+    auto current = children[0].value();
 
     // OR with remaining children
     for (size_t i = 1; i < children.size(); ++i) {
-        auto child_status = children[i];
-        if (!child_status.ok()) {
-            return child_status.status();
-        }
-        auto child = std::move(child_status).value();
+        PAIMON_RETURN_NOT_OK(children[i]);
+        auto child = children[i].value();
         PAIMON_ASSIGN_OR_RAISE(current, current->Or(child));
     }
 

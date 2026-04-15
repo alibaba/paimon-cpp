@@ -439,9 +439,6 @@ struct PAIMON_EXPORT Options {
     /// "btree-index.records-per-range" - The expected number of records per BTree Index File.
     /// Default value is 1000000.
     static const char BTREE_INDEX_RECORDS_PER_RANGE[];
-    /// "btree-index.build.max-parallelism" - The max parallelism of Flink/Spark for building
-    /// BTreeIndex. Default value is 4096.
-    static const char BTREE_INDEX_BUILD_MAX_PARALLELISM[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

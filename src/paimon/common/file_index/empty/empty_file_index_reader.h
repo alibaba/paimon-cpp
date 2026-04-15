@@ -66,17 +66,6 @@ class EmptyFileIndexReader : public FileIndexReader {
         return FileIndexResult::Skip();
     }
 
-    Result<std::shared_ptr<FileIndexResult>> VisitNotEqual(const Literal& literal) override {
-        // Empty file has no data, so nothing to return
-        return FileIndexResult::Skip();
-    }
-
-    Result<std::shared_ptr<FileIndexResult>> VisitNotIn(
-        const std::vector<Literal>& literals) override {
-        // Empty file has no data, so nothing to return
-        return FileIndexResult::Skip();
-    }
-
     Result<std::shared_ptr<FileIndexResult>> VisitBetween(const Literal& from,
                                                           const Literal& to) override {
         return FileIndexResult::Skip();
@@ -84,17 +73,7 @@ class EmptyFileIndexReader : public FileIndexReader {
 
     Result<std::shared_ptr<FileIndexResult>> VisitNotBetween(const Literal& from,
                                                              const Literal& to) override {
-        return FileIndexResult::Skip();
-    }
-
-    Result<std::shared_ptr<FileIndexResult>> VisitAnd(
-        const std::vector<Result<std::shared_ptr<FileIndexResult>>>& children) override {
-        return FileIndexResult::Skip();
-    }
-
-    Result<std::shared_ptr<FileIndexResult>> VisitOr(
-        const std::vector<Result<std::shared_ptr<FileIndexResult>>>& children) override {
-        return FileIndexResult::Skip();
+        return FileIndexResult::Remain();
     }
 };
 

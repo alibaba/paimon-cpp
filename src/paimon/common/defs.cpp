@@ -125,6 +125,5 @@ const char Options::BTREE_INDEX_BLOCK_SIZE[] = "btree-index.block-size";
 const char Options::BTREE_INDEX_CACHE_SIZE[] = "btree-index.cache-size";
 const char Options::BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO[] = "btree-index.high-priority-pool-ratio";
 const char Options::BTREE_INDEX_RECORDS_PER_RANGE[] = "btree-index.records-per-range";
-const char Options::BTREE_INDEX_BUILD_MAX_PARALLELISM[] = "btree-index.build.max-parallelism";
 
 }  // namespace paimon
