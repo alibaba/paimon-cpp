@@ -1239,6 +1239,29 @@ TEST_F(TableSchemaTest, SetFieldIdNestedListInStruct) {
     }
 }
 
+TEST_F(TableSchemaTest, MapKeyMustBeNotNull) {
+    std::string table_schema_str = R"({
+        "version" : 3,
+        "id" : 0,
+        "fields" : [ {
+                "id" : 0,
+                "name" : "f0",
+                "type" : {
+                    "type": "MAP",
+                    "key": "TINYINT",
+                    "value": "SMALLINT"
+                }
+        } ],
+        "highestFieldId" : 0,
+        "partitionKeys" : [],
+        "primaryKeys" : [],
+        "options" : {},
+        "timeMillis" : 1721614341162
+    })";
+    ASSERT_NOK_WITH_MSG(TableSchema::CreateFromJson(table_schema_str),
+                        "Map field 'f0' has a nullable key.");
+}
+
 TEST_F(TableSchemaTest, CrossPartitionUpdate) {
     arrow::FieldVector fields = {
         arrow::field("f0", arrow::boolean()), arrow::field("f1", arrow::int8()),

@@ -25,17 +25,16 @@
 namespace paimon {
 
 /// Manager to manage remote files for lookup.
-template <typename T>
 class RemoteLookupFileManager {
  public:
     RemoteLookupFileManager(int32_t level_threshold,
                             const std::shared_ptr<DataFilePathFactory>& path_factory,
                             const std::shared_ptr<FileSystem>& file_system,
-                            const std::shared_ptr<MemoryPool>& pool,
-                            LookupLevels<T>* lookup_levels);
+                            const std::shared_ptr<MemoryPool>& pool);
 
+    template <typename T>
     Result<std::shared_ptr<DataFileMeta>> GenRemoteLookupFile(
-        const std::shared_ptr<DataFileMeta>& file);
+        const std::shared_ptr<DataFileMeta>& file, LookupLevels<T>* lookup_levels) const;
 
     bool TryToDownload(const std::shared_ptr<DataFileMeta>& data_file,
                        const std::string& remote_sst_file, const std::string& local_file) const;
@@ -56,7 +55,6 @@ class RemoteLookupFileManager {
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<DataFilePathFactory> path_factory_;
     std::shared_ptr<FileSystem> file_system_;
-    LookupLevels<T>* lookup_levels_;
 };
 
 }  // namespace paimon

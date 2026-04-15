@@ -96,6 +96,12 @@ void Levels::AddDropFileCallback(DropFileCallback* callback) {
     drop_file_callbacks_.push_back(callback);
 }
 
+void Levels::RemoveDropFileCallback(DropFileCallback* callback) {
+    drop_file_callbacks_.erase(
+        std::remove(drop_file_callbacks_.begin(), drop_file_callbacks_.end(), callback),
+        drop_file_callbacks_.end());
+}
+
 Status Levels::AddLevel0File(const std::shared_ptr<DataFileMeta>& file) {
     if (file->level != 0) {
         return Status::Invalid("must add level0 file in AddLevel0File");

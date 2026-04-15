@@ -38,6 +38,8 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
     const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+    const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
     const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> pk_fields,
                            table_schema->TrimmedPrimaryKeyFields());
@@ -77,7 +79,7 @@ Result<std::unique_ptr<LookupLevels<T>>> LookupLevels<T>::Create(
         fs, partition, bucket, options, schema_manager, io_manager, std::move(key_comparator),
         data_file_path_factory, std::move(split_read), table_schema, partition_schema, pk_schema,
         levels, dv_factory, processor_factory, std::move(key_serializer), serializer_factory,
-        lookup_store_factory, pool));
+        lookup_store_factory, lookup_file_cache, remote_lookup_file_manager, pool));
 }
 template <typename T>
 Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalRow>& key,
@@ -131,6 +133,8 @@ LookupLevels<T>::LookupLevels(
     std::unique_ptr<RowCompactedSerializer>&& key_serializer,
     const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
     const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+    const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
+    const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
     const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       fs_(fs),
@@ -150,7 +154,9 @@ LookupLevels<T>::LookupLevels(
       processor_factory_(processor_factory),
       key_serializer_(std::move(key_serializer)),
       serializer_factory_(serializer_factory),
-      lookup_store_factory_(lookup_store_factory) {
+      lookup_store_factory_(lookup_store_factory),
+      lookup_file_cache_(lookup_file_cache),
+      remote_lookup_file_manager_(remote_lookup_file_manager) {
     if constexpr (std::is_same_v<T, FilePosition>) {
         // if T is FilePosition, only read key fields to create sst file is enough
         value_schema_ = key_schema_;
@@ -162,20 +168,31 @@ LookupLevels<T>::LookupLevels(
 }
 
 template <typename T>
+LookupLevels<T>::~LookupLevels() {
+    [[maybe_unused]] auto status = Close();
+}
+
+template <typename T>
 void LookupLevels<T>::NotifyDropFile(const std::string& file) {
-    lookup_file_cache_.erase(file);
+    lookup_file_cache_->Invalidate(file);
 }
 
 template <typename T>
 Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalRow>& key,
                                                  const std::shared_ptr<DataFileMeta>& file) {
-    auto iter = lookup_file_cache_.find(file->file_name);
+    auto cached = lookup_file_cache_->GetIfPresent(file->file_name);
     std::shared_ptr<LookupFile> lookup_file;
-    if (iter == lookup_file_cache_.end()) {
-        PAIMON_ASSIGN_OR_RAISE(lookup_file, CreateLookupFile(file));
-        AddLocalFile(file, lookup_file);
+    bool new_created = false;
+    if (cached.has_value()) {
+        lookup_file = cached.value();
     } else {
-        lookup_file = iter->second;
+        PAIMON_ASSIGN_OR_RAISE(lookup_file, CreateLookupFile(file));
+        new_created = true;
+    }
+
+    // Ensure newly created lookup files are always added to cache, even on lookup error
+    if (new_created) {
+        PAIMON_RETURN_NOT_OK(AddLocalFile(file, lookup_file));
     }
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> key_bytes,
@@ -192,6 +209,7 @@ Result<std::optional<T>> LookupLevels<T>::Lookup(const std::shared_ptr<InternalR
         T result, processor->ReadFromDisk(key, lookup_file->Level(), value_bytes, file->file_name));
     return std::optional<T>(std::move(result));
 }
+
 template <typename T>
 Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
     const std::shared_ptr<DataFileMeta>& file) {
@@ -211,10 +229,19 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
         PAIMON_RETURN_NOT_OK(CreateSstFileFromDataFile(file, kv_file_path));
     }
 
+    // Get file size for cache weight calculation
+    PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(kv_file_path));
+    int64_t file_size = file_status->GetLen();
+
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<LookupStoreReader> reader,
                            lookup_store_factory_->CreateReader(fs_, kv_file_path, pool_));
-    return std::make_shared<LookupFile>(fs_, kv_file_path, file->level, schema_id, file_ser_version,
-                                        std::move(reader));
+
+    // Callback to remove from own_cached_files_ when evicted from global cache
+    std::string file_name = file->file_name;
+    auto callback = [this, file_name = file_name]() { own_cached_files_.erase(file_name); };
+
+    return std::make_shared<LookupFile>(fs_, kv_file_path, file_size, file->level, schema_id,
+                                        file_ser_version, std::move(reader), std::move(callback));
 }
 
 template <typename T>
@@ -263,9 +290,10 @@ std::string LookupLevels<T>::NewRemoteSst(const std::shared_ptr<DataFileMeta>& f
 }
 
 template <typename T>
-void LookupLevels<T>::AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
-                                   const std::shared_ptr<LookupFile>& lookup_file) {
-    lookup_file_cache_[file->file_name] = lookup_file;
+Status LookupLevels<T>::AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
+                                     const std::shared_ptr<LookupFile>& lookup_file) {
+    own_cached_files_.insert(file->file_name);
+    return lookup_file_cache_->Put(file->file_name, lookup_file);
 }
 
 template <typename T>
@@ -385,6 +413,20 @@ Result<std::shared_ptr<PersistProcessor<T>>> LookupLevels<T>::GetOrCreateProcess
         processor_factory_->Create(ser_version, serializer_factory_, file_schema, pool_));
     schema_id_and_ser_version_to_processors_[key] = processor;
     return processor;
+}
+
+template <typename T>
+Status LookupLevels<T>::Close() {
+    levels_->RemoveDropFileCallback(this);
+    // Move own_cached_files_ to a local copy before iterating.
+    // Invalidate triggers LookupFile::Close() -> callback -> own_cached_files_.erase(),
+    // which would invalidate iterators if we iterated over own_cached_files_ directly.
+    auto cached_files_copy = std::move(own_cached_files_);
+    own_cached_files_.clear();
+    for (const auto& cached_file : cached_files_copy) {
+        lookup_file_cache_->Invalidate(cached_file);
+    }
+    return Status::OK();
 }
 
 template class LookupLevels<KeyValue>;

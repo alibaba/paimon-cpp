@@ -27,6 +27,7 @@
 #include "paimon/core/mergetree/compact/compact_rewriter.h"
 #include "paimon/core/mergetree/compact/compact_strategy.h"
 #include "paimon/core/mergetree/lookup/remote_lookup_file_manager.h"
+#include "paimon/core/mergetree/lookup_file.h"
 #include "paimon/core/operation/metrics/compaction_metrics.h"
 #include "paimon/result.h"
 namespace arrow {
@@ -88,9 +89,13 @@ class MergeTreeCompactManagerFactory {
         const BinaryRow& partition, int32_t bucket,
         const std::shared_ptr<CompactStrategy>& compact_strategy,
         const std::shared_ptr<Executor>& compact_executor, const std::shared_ptr<Levels>& levels,
-        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) const;
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
 
-    void Close() {}
+    void Close() {
+        if (lookup_file_cache_) {
+            lookup_file_cache_->InvalidateAll();
+        }
+    }
 
  private:
     std::shared_ptr<CompactionMetrics::Reporter> CreateCompactionMetricsReporter(
@@ -99,7 +104,7 @@ class MergeTreeCompactManagerFactory {
     Result<std::shared_ptr<CompactRewriter>> CreateRewriter(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer,
-        const std::shared_ptr<CancellationController>& cancellation_controller) const;
+        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriter(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
@@ -113,28 +118,20 @@ class MergeTreeCompactManagerFactory {
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
         const LookupStrategy& lookup_strategy,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const std::shared_ptr<CancellationController>& cancellation_controller) const;
+        const std::shared_ptr<CancellationController>& cancellation_controller,
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager) const;
 
     Result<std::shared_ptr<CompactRewriter>> CreateLookupRewriterWithoutDeletionVector(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<Levels>& levels,
         const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t max_level,
         const LookupStrategy& lookup_strategy,
         const std::shared_ptr<FileStorePathFactoryCache>& path_factory_cache,
-        const std::shared_ptr<CancellationController>& cancellation_controller) const;
+        const std::shared_ptr<CancellationController>& cancellation_controller,
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager) const;
 
-    template <typename T>
-    Result<std::unique_ptr<RemoteLookupFileManager<T>>> CreateRemoteLookupFileManager(
-        const BinaryRow& partition, int32_t bucket, LookupLevels<T>* lookup_levels) const {
-        if (options_.LookupRemoteFileEnabled()) {
-            PAIMON_ASSIGN_OR_RAISE(
-                std::shared_ptr<DataFilePathFactory> data_path_factory,
-                file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
-            return std::make_unique<RemoteLookupFileManager<T>>(
-                options_.GetLookupRemoteLevelThreshold(), data_path_factory,
-                options_.GetFileSystem(), pool_, lookup_levels);
-        }
-        return std::unique_ptr<RemoteLookupFileManager<T>>();
-    }
+    Result<std::shared_ptr<RemoteLookupFileManager>> CreateRemoteLookupFileManager(
+        const BinaryRow& partition, int32_t bucket) const;
+
     CoreOptions options_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<FieldsComparator> key_comparator_;
@@ -147,6 +144,7 @@ class MergeTreeCompactManagerFactory {
     std::shared_ptr<CacheManager> cache_manager_;
     std::shared_ptr<FileStorePathFactory> file_store_path_factory_;
     std::string root_path_;
+    std::shared_ptr<LookupFile::LookupFileCache> lookup_file_cache_;
 };
 
 }  // namespace paimon

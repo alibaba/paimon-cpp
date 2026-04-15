@@ -16,6 +16,8 @@
 
 #pragma once
 #include <algorithm>
+#include <set>
+#include <string>
 
 #include "paimon/common/data/serializer/row_compacted_serializer.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
@@ -29,8 +31,6 @@
 #include "paimon/result.h"
 
 namespace paimon {
-
-template <typename T>
 class RemoteLookupFileManager;
 
 /// Remote sst file with serVersion.
@@ -53,6 +53,8 @@ class LookupLevels : public Levels::DropFileCallback {
         const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
         const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
         const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+        const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
+        const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
         const std::shared_ptr<MemoryPool>& pool);
 
     const std::shared_ptr<Levels>& GetLevels() const {
@@ -70,24 +72,18 @@ class LookupLevels : public Levels::DropFileCallback {
 
     void NotifyDropFile(const std::string& file) override;
 
-    void SetRemoteLookupFileManager(RemoteLookupFileManager<T>* manager) {
-        remote_lookup_file_manager_ = manager;
-    }
-
     std::optional<RemoteSstFile> RemoteSst(const std::shared_ptr<DataFileMeta>& file) const;
 
     std::string NewRemoteSst(const std::shared_ptr<DataFileMeta>& file, int64_t length) const;
 
     Result<std::shared_ptr<LookupFile>> CreateLookupFile(const std::shared_ptr<DataFileMeta>& file);
 
-    void AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
-                      const std::shared_ptr<LookupFile>& lookup_file);
+    Status AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
+                        const std::shared_ptr<LookupFile>& lookup_file);
 
-    Status Close() {
-        // TODO(xinyu.lxy): invalid cache
-        lookup_file_cache_.clear();
-        return Status::OK();
-    }
+    ~LookupLevels() override;
+
+    Status Close();
 
  private:
     LookupLevels(const std::shared_ptr<FileSystem>& fs, const BinaryRow& partition, int32_t bucket,
@@ -104,6 +100,8 @@ class LookupLevels : public Levels::DropFileCallback {
                  std::unique_ptr<RowCompactedSerializer>&& key_serializer,
                  const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
                  const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+                 const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
+                 const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
                  const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::optional<T>> Lookup(const std::shared_ptr<InternalRow>& key,
@@ -146,10 +144,11 @@ class LookupLevels : public Levels::DropFileCallback {
     std::shared_ptr<LookupSerializerFactory> serializer_factory_;
     std::shared_ptr<LookupStoreFactory> lookup_store_factory_;
 
-    std::map<std::string, std::shared_ptr<LookupFile>> lookup_file_cache_;
+    std::shared_ptr<LookupFile::LookupFileCache> lookup_file_cache_;
+    std::set<std::string> own_cached_files_;
     std::map<std::pair<int64_t, std::string>, std::shared_ptr<PersistProcessor<T>>>
         schema_id_and_ser_version_to_processors_;
 
-    RemoteLookupFileManager<T>* remote_lookup_file_manager_ = nullptr;
+    std::shared_ptr<RemoteLookupFileManager> remote_lookup_file_manager_;
 };
 }  // namespace paimon

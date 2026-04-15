@@ -26,6 +26,12 @@ TEST(IdentifierTest, ConstructorAndGetters) {
     EXPECT_EQ(id.GetTableName(), "test_table");
 }
 
+TEST(IdentifierTest, SingleArgumentConstructorUsesUnknownDatabase) {
+    Identifier id("test_table");
+    EXPECT_EQ(id.GetDatabaseName(), Identifier::kUnknownDatabase);
+    EXPECT_EQ(id.GetTableName(), "test_table");
+}
+
 TEST(IdentifierTest, EqualityOperator) {
     Identifier id1("db1", "table1");
     Identifier id2("db1", "table1");
@@ -38,6 +44,12 @@ TEST(IdentifierTest, EqualityOperator) {
 TEST(IdentifierTest, ToString) {
     Identifier id("my_db", "my_table");
     EXPECT_EQ(id.ToString(), "Identifier{database='my_db', table='my_table'}");
+}
+
+TEST(IdentifierTest, EmptyDatabaseRemainsEmpty) {
+    Identifier id("", "my_table");
+    EXPECT_EQ(id.GetDatabaseName(), "");
+    EXPECT_EQ(id.GetTableName(), "my_table");
 }
 
 }  // namespace paimon::test

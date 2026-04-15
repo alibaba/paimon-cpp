@@ -244,6 +244,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/merge_tree_writer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
+    core/mergetree/lookup_file.cpp
     core/mergetree/lookup_levels.cpp
     core/mergetree/lookup/remote_lookup_file_manager.cpp
     core/migrate/file_meta_utils.cpp
@@ -281,6 +282,7 @@ set(PAIMON_CORE_SRCS
     core/stats/simple_stats_converter.cpp
     core/stats/simple_stats.cpp
     core/stats/simple_stats_evolution.cpp
+    core/table/table.cpp
     core/table/sink/commit_message.cpp
     core/table/sink/commit_message_impl.cpp
     core/table/sink/commit_message_serializer.cpp
@@ -486,6 +488,7 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/uuid_test.cpp
                     common/utils/decimal_utils_test.cpp
                     common/utils/threadsafe_queue_test.cpp
+                    common/utils/generic_lru_cache_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
@@ -645,6 +648,7 @@ if(PAIMON_BUILD_TESTS)
                     core/stats/simple_stats_evolution_test.cpp
                     core/stats/simple_stats_collector_test.cpp
                     core/stats/simple_stats_test.cpp
+                    core/table/table_test.cpp
                     core/table/sink/commit_message_test.cpp
                     core/table/sink/commit_message_impl_test.cpp
                     core/table/source/fallback_data_split_test.cpp
