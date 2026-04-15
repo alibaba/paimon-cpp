@@ -30,6 +30,7 @@ Parquet, thereby improving write throughput.
 
   Not supported in the current scope:
     - Changelog
+    - Indexes
 
 Bucketing Modes
 ---------------
@@ -118,7 +119,7 @@ produce a correct ``Snapshot``, which commonly includes (but is not limited to):
 
 .. note::
 
-   Current C++ scope supports Append and PK tables. Changelog is out of 
+   Current C++ scope supports Append and PK tables. Changelog is out of
    scope and should not be emitted in ``CommitMessage`` until
    explicitly supported.
 

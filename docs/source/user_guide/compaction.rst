@@ -55,7 +55,7 @@ Full Compaction
 ~~~~~~~~~~~~~~~
 Full compaction rewrites all eligible files in the bucket. During full
 compaction:
- 
+
 - Files whose size is already at or above ``compaction.file-size`` (and have no
   associated deletion vectors) are skipped to avoid unnecessary rewrites.
 - When deletion vectors are enabled, all files are always eligible for
@@ -65,7 +65,7 @@ compaction:
 - Without deletion vectors, full compaction only proceeds when the number of
   small files exceeds the number of large files and the total file count is at
   least 3.
- 
+
 After compaction, if the last output file is still smaller than
 ``compaction.file-size``, it is placed back into the compaction queue for future
 merging.
@@ -89,7 +89,7 @@ Append-Only Table Compaction Options
      - The minimum number of files to trigger an auto compaction for
        append-only tables.
 
-     
+
 Primary Key Table Compaction
 ----------------------------
 Primary key tables use an LSM tree (log-structured merge-tree) for file storage.
