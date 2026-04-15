@@ -12,8 +12,8 @@
 .. See the License for the specific language governing permissions and
 .. limitations under the License.
 
-Read and Data Evolution
-===============================================
+Read
+====
 Paimon by functionality can be divided into two layers:
 
 - Control Plane: Responsible for accessing and managing Meta (snapshot, manifest, etc.), including:
@@ -25,7 +25,7 @@ Paimon by functionality can be divided into two layers:
   - Readers for various file formats
   - Coordinated reading of file collections
 
-The control plane and data plane interact primarily via DataSplit (the query plan). Java currently supports a standard
+The control plane and data plane interact primarily via DataSplit (the query plan). C++ Paimon currently supports a standard
 DataSplit protocol which includes the necessary meta information to access data files. With DataSplit, a high-performance
 data access path can be integrated.
 
@@ -39,10 +39,9 @@ across the two language ecosystems.
 
 
 Schema Evolution
-================
-
-Scope and Compatibility
 -----------------------
+Scope and Compatibility
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 C++ Paimon supports all evolution kinds available in Java Paimon for non-nested types:
 
@@ -62,12 +61,12 @@ C++ Paimon supports all evolution kinds available in Java Paimon for non-nested 
     - Other operations are supported (consistent with Java Paimon).
 
 Per-File Schema via Field IDs
------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In DataSplit, each file may have a completely different data schema. Paimon uses field IDs to uniquely identify fields.
 
 Overflow Behavior Disclaimer
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Overflow behavior is undefined for C++ and Java Paimon. Results in overflow scenarios may:
 
@@ -79,8 +78,7 @@ C++ Paimon does not guarantee identical results to Java Paimon in overflow scena
 return values between implementations.
 
 Type Change Support Matrix
---------------------------
-
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 The table below indicates support for changing a column type from ``source`` to ``target``. Refer to the numbered notes below the table
 for caveats.
 
@@ -292,7 +290,7 @@ for caveats.
     - Example input: ``1111111111111111111111111111111111111.15``, Java returns: ``1111111111111111111111111111111111111.2``, C++ returns: ``null``
 
 Implementation Guidance
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 - Use DataSplit as the sole interface between control and data planes. Treat it as the canonical query plan contract.
 - Resolve field types and IDs per file; prefer inline data file metadata, fallback to table schema files when necessary.
