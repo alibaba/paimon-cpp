@@ -20,6 +20,11 @@
 
 namespace paimon {
 
+const char Identifier::kUnknownDatabase[] = "unknown";
+
+Identifier::Identifier(const std::string& table)
+    : Identifier(std::string(kUnknownDatabase), table) {}
+
 Identifier::Identifier(const std::string& database, const std::string& table)
     : database_(database), table_(table) {}
 

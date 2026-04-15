@@ -64,7 +64,7 @@ Result<std::shared_ptr<DataFileMeta>> RemoteLookupFileManager::GenRemoteLookupFi
 
     PAIMON_RETURN_NOT_OK(CopyFromInputToOutput(std::move(input_stream), std::move(output_stream)));
 
-    lookup_levels->AddLocalFile(file, lookup_file);
+    PAIMON_RETURN_NOT_OK(lookup_levels->AddLocalFile(file, lookup_file));
 
     std::vector<std::optional<std::string>> new_extra_files(file->extra_files);
     new_extra_files.push_back(remote_sst_name);

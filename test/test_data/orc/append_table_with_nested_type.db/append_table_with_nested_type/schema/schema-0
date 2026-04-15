@@ -64,7 +64,7 @@
     "type" : {
       "type" : "MAP",
       "key" : {
-        "type" : "ROW",
+        "type" : "ROW NOT NULL",
         "fields" : [ {
           "id" : 13,
           "name" : "sub1",

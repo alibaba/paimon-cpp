@@ -16,6 +16,8 @@
 
 #pragma once
 #include <algorithm>
+#include <set>
+#include <string>
 
 #include "paimon/common/data/serializer/row_compacted_serializer.h"
 #include "paimon/core/io/key_value_data_file_record_reader.h"
@@ -51,6 +53,7 @@ class LookupLevels : public Levels::DropFileCallback {
         const std::shared_ptr<typename PersistProcessor<T>::Factory>& processor_factory,
         const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
         const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+        const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
         const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
         const std::shared_ptr<MemoryPool>& pool);
 
@@ -75,8 +78,8 @@ class LookupLevels : public Levels::DropFileCallback {
 
     Result<std::shared_ptr<LookupFile>> CreateLookupFile(const std::shared_ptr<DataFileMeta>& file);
 
-    void AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
-                      const std::shared_ptr<LookupFile>& lookup_file);
+    Status AddLocalFile(const std::shared_ptr<DataFileMeta>& file,
+                        const std::shared_ptr<LookupFile>& lookup_file);
 
     ~LookupLevels() override;
 
@@ -97,6 +100,7 @@ class LookupLevels : public Levels::DropFileCallback {
                  std::unique_ptr<RowCompactedSerializer>&& key_serializer,
                  const std::shared_ptr<LookupSerializerFactory>& serializer_factory,
                  const std::shared_ptr<LookupStoreFactory>& lookup_store_factory,
+                 const std::shared_ptr<LookupFile::LookupFileCache>& lookup_file_cache,
                  const std::shared_ptr<RemoteLookupFileManager>& remote_lookup_file_manager,
                  const std::shared_ptr<MemoryPool>& pool);
 
@@ -140,7 +144,8 @@ class LookupLevels : public Levels::DropFileCallback {
     std::shared_ptr<LookupSerializerFactory> serializer_factory_;
     std::shared_ptr<LookupStoreFactory> lookup_store_factory_;
 
-    std::map<std::string, std::shared_ptr<LookupFile>> lookup_file_cache_;
+    std::shared_ptr<LookupFile::LookupFileCache> lookup_file_cache_;
+    std::set<std::string> own_cached_files_;
     std::map<std::pair<int64_t, std::string>, std::shared_ptr<PersistProcessor<T>>>
         schema_id_and_ser_version_to_processors_;
 

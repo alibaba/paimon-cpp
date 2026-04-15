@@ -39,8 +39,8 @@ class Cache {
         std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
             supplier) = 0;
 
-    virtual void Put(const std::shared_ptr<CacheKey>& key,
-                     const std::shared_ptr<CacheValue>& value) = 0;
+    virtual Status Put(const std::shared_ptr<CacheKey>& key,
+                       const std::shared_ptr<CacheValue>& value) = 0;
 
     virtual void Invalidate(const std::shared_ptr<CacheKey>& key) = 0;
 
@@ -63,6 +63,13 @@ class CacheValue {
         if (callback_) {
             callback_(key);
         }
+    }
+
+    bool operator==(const CacheValue& other) const {
+        if (this == &other) {
+            return true;
+        }
+        return segment_ == other.segment_;
     }
 
  private:
