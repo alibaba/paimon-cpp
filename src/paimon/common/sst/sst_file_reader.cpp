@@ -16,16 +16,17 @@
 #include "paimon/common/sst/sst_file_reader.h"
 
 #include "fmt/format.h"
+#include "paimon/common/lookup/sort/sort_lookup_store_footer.h"
 #include "paimon/common/sst/sst_file_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/murmurhash_utils.h"
 namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
-    const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& in,
-    const BlockHandle& index_block_handle,
+    const std::shared_ptr<InputStream>& in, const BlockHandle& index_block_handle,
     const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager) {
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
 
@@ -61,6 +62,24 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
                            BlockReader::Create(MemorySlice::Wrap(block_data), comparator));
     return std::shared_ptr<SstFileReader>(
         new SstFileReader(pool, block_cache, bloom_filter, reader, comparator));
+}
+
+Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateFromStream(
+    const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
+    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
+    PAIMON_RETURN_NOT_OK(
+        in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
+    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool.get());
+    PAIMON_RETURN_NOT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
+    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
+    auto footer_slice = MemorySlice::Wrap(footer_segment);
+    auto footer_input = footer_slice.ToInput();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortLookupStoreFooter> read_footer,
+                           SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
+    return SstFileReader::Create(in, read_footer->GetIndexBlockHandle(),
+                                 read_footer->GetBloomFilterHandle(), std::move(comparator),
+                                 cache_manager, pool);
 }
 
 SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,

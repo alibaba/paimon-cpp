@@ -144,19 +144,8 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     // test read
     ASSERT_OK_AND_ASSIGN(in, fs_->Open(index_path));
-    ASSERT_OK_AND_ASSIGN(uint64_t file_len, in->Length());
-    ASSERT_OK(in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
-    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
-    ASSERT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
-    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
-    auto footer_slice = MemorySlice::Wrap(footer_segment);
-    auto footer_input = footer_slice.ToInput();
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortLookupStoreFooter> read_footer,
-                         SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
-    ASSERT_OK_AND_ASSIGN(
-        auto reader,
-        SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
-                              read_footer->GetBloomFilterHandle(), comparator_, cache_manager_));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         SstFileReader::CreateFromStream(in, comparator_, cache_manager_, pool_));
 
     // not exist key
     std::string k0 = "k0";
@@ -188,22 +177,9 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     std::string file = GetDataDir() + "/sst/" + param.file_path;
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
 
-    // read footer
-    ASSERT_OK_AND_ASSIGN(uint64_t file_len, in->Length());
-    ASSERT_OK(in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
-    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
-    ASSERT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
-    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
-    auto footer_slice = MemorySlice::Wrap(footer_segment);
-    auto footer_input = footer_slice.ToInput();
-    ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortLookupStoreFooter> read_footer,
-                         SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
-
     // test read
-    ASSERT_OK_AND_ASSIGN(
-        auto reader,
-        SstFileReader::Create(pool_, in, read_footer->GetIndexBlockHandle(),
-                              read_footer->GetBloomFilterHandle(), comparator_, cache_manager_));
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         SstFileReader::CreateFromStream(in, comparator_, cache_manager_, pool_));
     // not exist key
     std::string k0 = "10000";
     ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
@@ -294,25 +270,8 @@ TEST_F(SstFileIOTest, TestIOException) {
         CHECK_HOOK_STATUS(in_result.status(), i);
         std::shared_ptr<InputStream> in = std::move(in_result).value();
 
-        auto file_len_result = in->Length();
-        CHECK_HOOK_STATUS(file_len_result.status(), i);
-        uint64_t file_len = file_len_result.value();
-
-        CHECK_HOOK_STATUS(
-            in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET), i);
-        auto footer_bytes =
-            Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool_.get());
-        auto read_result = in->Read(footer_bytes->data(), footer_bytes->size());
-        CHECK_HOOK_STATUS(read_result.status(), i);
-        auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
-        auto footer_slice = MemorySlice::Wrap(footer_segment);
-        auto footer_input = footer_slice.ToInput();
-        auto read_footer_result = SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input);
-        CHECK_HOOK_STATUS(read_footer_result.status(), i);
-
-        auto reader_result = SstFileReader::Create(
-            pool_, in, read_footer_result.value()->GetIndexBlockHandle(),
-            read_footer_result.value()->GetBloomFilterHandle(), comparator_, cache_manager_);
+        auto reader_result =
+            SstFileReader::CreateFromStream(in, comparator_, cache_manager_, pool_);
         CHECK_HOOK_STATUS(reader_result.status(), i);
         std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
 

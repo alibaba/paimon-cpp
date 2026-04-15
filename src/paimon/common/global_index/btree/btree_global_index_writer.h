@@ -71,13 +71,13 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
  private:
     std::string field_name_;
     std::shared_ptr<arrow::DataType> arrow_type_;
-    std::shared_ptr<GlobalIndexFileWriter> file_writer_;
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<GlobalIndexFileWriter> file_writer_;
     int32_t block_size_;
 
     // SST file writer (declared after pool_ to ensure correct destruction order)
-    std::shared_ptr<OutputStream> output_stream_;
     std::unique_ptr<SstFileWriter> sst_writer_;
+    std::shared_ptr<OutputStream> output_stream_;
     std::string file_name_;
 
     // Track first and last keys for index meta

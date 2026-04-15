@@ -40,11 +40,18 @@ class SstFileIterator;
 class PAIMON_EXPORT SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<MemoryPool>& pool, const std::shared_ptr<InputStream>& input,
-        const BlockHandle& index_block_handle,
+        const std::shared_ptr<InputStream>& input, const BlockHandle& index_block_handle,
         const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-        MemorySlice::SliceComparator comparator,
-        const std::shared_ptr<CacheManager>& cache_manager);
+        MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    /// Create an SstFileReader by reading the SortLookupStoreFooter from the given InputStream.
+    /// This method encapsulates the common pattern of reading the footer, parsing it, and
+    /// creating the reader, which avoids code duplication across callers.
+    static Result<std::shared_ptr<SstFileReader>> CreateFromStream(
+        const std::shared_ptr<InputStream>& input, MemorySlice::SliceComparator comparator,
+        const std::shared_ptr<CacheManager>& cache_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 

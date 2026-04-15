@@ -197,8 +197,6 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteWithNulls) {
     const auto& meta = metas[0];
     EXPECT_FALSE(meta.file_path.empty());
     EXPECT_GT(meta.file_size, 0);
-
-    // Verify that metadata contains null bitmap info (has_nulls should be true)
     EXPECT_NE(meta.metadata, nullptr);
 
     // Release the ArrowArray
