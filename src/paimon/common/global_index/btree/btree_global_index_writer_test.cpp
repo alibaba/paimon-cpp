@@ -90,8 +90,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteIntData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
-                                                           pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
+                                                    4096, 100000));
 
     // Create an Arrow array with int values
     auto array =
@@ -131,8 +132,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteStringData) {
     auto c_schema = CreateArrowSchema(arrow::utf8(), "string_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("string_field", c_schema.get(),
-                                                           file_writer, pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("string_field", c_schema.get(), file_writer,
+                                                        pool_, 4096, 100000));
 
     // Create an Arrow array with string values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(
@@ -171,8 +173,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteWithNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
-                                                           pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
+                                                    4096, 100000));
 
     // Create an Arrow array with null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, null, 3, null, 5]")
@@ -213,8 +216,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteMultipleBatches) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
-                                                           pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
+                                                    4096, 100000));
 
     // Create first batch
     auto array1 =
@@ -260,8 +264,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteEmptyData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
-                                                           pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
+                                                    4096, 100000));
 
     // Finish without adding any data
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
@@ -279,8 +284,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteAllNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("int_field", c_schema.get(), file_writer,
-                                                           pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
+                                                    4096, 100000));
 
     // Create an Arrow array with all null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[null, null, null]")
@@ -317,8 +323,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteDoubleData) {
     auto c_schema = CreateArrowSchema(arrow::float64(), "double_field");
 
     // Create the BTree global index writer
-    auto writer = std::make_shared<BTreeGlobalIndexWriter>("double_field", c_schema.get(),
-                                                           file_writer, pool_, 4096, 100000);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("double_field", c_schema.get(), file_writer,
+                                                        pool_, 4096, 100000));
 
     // Create an Arrow array with double values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::float64(), "[1.5, 2.5, 3.5, 1.5]")

@@ -31,40 +31,48 @@
 
 namespace paimon {
 
-BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
+Result<std::shared_ptr<BTreeGlobalIndexWriter>> BTreeGlobalIndexWriter::Create(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-    const std::shared_ptr<MemoryPool>& pool, int32_t block_size, int64_t expected_entries)
-    : field_name_(field_name),
-      file_writer_(file_writer),
-      pool_(pool),
-      block_size_(block_size),
-      null_bitmap_(std::make_shared<RoaringNavigableMap64>()),
-      has_nulls_(false),
-      current_row_id_(0),
-      bloom_filter_(BloomFilter::Create(expected_entries, 0.01)) {
-    // Allocate memory for bloom filter and set memory segment
-    if (bloom_filter_) {
-        int64_t bloom_filter_size = bloom_filter_->ByteLength();
-        auto bloom_filter_segment =
-            MemorySegment::AllocateHeapMemory(bloom_filter_size, pool.get());
-        auto status = bloom_filter_->SetMemorySegment(bloom_filter_segment);
-        if (!status.ok()) {
-            // Failed to set memory segment for bloom filter
+    const std::shared_ptr<MemoryPool>& pool, int32_t block_size, int64_t expected_entries) {
+    // Create and initialize bloom filter
+    auto bloom_filter = BloomFilter::Create(expected_entries, 0.01);
+    if (!bloom_filter) {
+        return Status::Invalid("Failed to create bloom filter");
+    }
+
+    int64_t bloom_filter_size = bloom_filter->ByteLength();
+    auto bloom_filter_segment = MemorySegment::AllocateHeapMemory(bloom_filter_size, pool.get());
+    PAIMON_RETURN_NOT_OK(bloom_filter->SetMemorySegment(bloom_filter_segment));
+
+    // Import schema to get the field type
+    std::shared_ptr<arrow::DataType> arrow_type;
+    if (arrow_schema) {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Schema> schema,
+                                          arrow::ImportSchema(arrow_schema));
+        if (schema->num_fields() > 0) {
+            arrow_type = schema->field(0)->type();
         }
     }
 
-    // Import schema to get the field type
-    if (arrow_schema) {
-        auto schema_result = arrow::ImportSchema(arrow_schema);
-        if (schema_result.ok()) {
-            auto schema = *schema_result;
-            if (schema->num_fields() > 0) {
-                arrow_type_ = schema->field(0)->type();
-            }
-        }
-    }
+    return std::shared_ptr<BTreeGlobalIndexWriter>(new BTreeGlobalIndexWriter(
+        field_name, std::move(arrow_type), file_writer, pool, block_size, std::move(bloom_filter)));
 }
+
+BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
+    const std::string& field_name, std::shared_ptr<arrow::DataType> arrow_type,
+    const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+    const std::shared_ptr<MemoryPool>& pool, int32_t block_size,
+    std::shared_ptr<BloomFilter> bloom_filter)
+    : field_name_(field_name),
+      arrow_type_(std::move(arrow_type)),
+      file_writer_(file_writer),
+      pool_(pool),
+      block_size_(block_size),
+      null_bitmap_(std::make_shared<RoaringBitmap64>()),
+      has_nulls_(false),
+      current_row_id_(0),
+      bloom_filter_(std::move(bloom_filter)) {}
 
 Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
     if (!arrow_array) {
@@ -269,8 +277,8 @@ Result<std::shared_ptr<BlockHandle>> BTreeGlobalIndexWriter::WriteNullBitmap(
     }
 
     // Serialize null bitmap
-    std::vector<uint8_t> bitmap_data = null_bitmap_->Serialize();
-    if (bitmap_data.empty()) {
+    auto bitmap_bytes = null_bitmap_->Serialize(pool_.get());
+    if (!bitmap_bytes || bitmap_bytes->size() == 0) {
         return std::shared_ptr<BlockHandle>(nullptr);
     }
 
@@ -278,15 +286,13 @@ Result<std::shared_ptr<BlockHandle>> BTreeGlobalIndexWriter::WriteNullBitmap(
     PAIMON_ASSIGN_OR_RAISE(int64_t offset, out->GetPos());
 
     // Write bitmap data
-    PAIMON_RETURN_NOT_OK(
-        out->Write(reinterpret_cast<const char*>(bitmap_data.data()), bitmap_data.size()));
+    PAIMON_RETURN_NOT_OK(out->Write(bitmap_bytes->data(), bitmap_bytes->size()));
 
     // Calculate and write CRC32C
-    uint32_t crc =
-        CRC32C::calculate(reinterpret_cast<const char*>(bitmap_data.data()), bitmap_data.size());
+    uint32_t crc = CRC32C::calculate(bitmap_bytes->data(), bitmap_bytes->size());
     PAIMON_RETURN_NOT_OK(out->Write(reinterpret_cast<const char*>(&crc), sizeof(crc)));
 
-    return std::make_shared<BlockHandle>(offset, bitmap_data.size());
+    return std::make_shared<BlockHandle>(offset, bitmap_bytes->size());
 }
 
 Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {

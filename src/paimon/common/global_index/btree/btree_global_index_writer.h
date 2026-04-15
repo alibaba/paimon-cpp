@@ -22,9 +22,9 @@
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/sst/sst_file_writer.h"
-#include "paimon/common/utils/roaring_navigable_map64.h"
 #include "paimon/global_index/global_index_writer.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
+#include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon {
 
@@ -32,10 +32,12 @@ namespace paimon {
 /// This writer builds an SST file where each key maps to a list of row IDs.
 class BTreeGlobalIndexWriter : public GlobalIndexWriter {
  public:
-    BTreeGlobalIndexWriter(const std::string& field_name, ::ArrowSchema* arrow_schema,
-                           const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size,
-                           int64_t expected_entries);
+    /// Factory method that may fail during initialization (e.g., bloom filter setup,
+    /// Arrow schema import). Use this instead of the constructor.
+    static Result<std::shared_ptr<BTreeGlobalIndexWriter>> Create(
+        const std::string& field_name, ::ArrowSchema* arrow_schema,
+        const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+        const std::shared_ptr<MemoryPool>& pool, int32_t block_size, int64_t expected_entries);
 
     ~BTreeGlobalIndexWriter() override = default;
 
@@ -47,6 +49,12 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
+    BTreeGlobalIndexWriter(const std::string& field_name,
+                           std::shared_ptr<arrow::DataType> arrow_type,
+                           const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size,
+                           std::shared_ptr<BloomFilter> bloom_filter);
+
     // Helper method to write a key-value pair to the SST file
     Status WriteKeyValue(std::shared_ptr<Bytes> key, const std::vector<int64_t>& row_ids);
 
@@ -77,7 +85,7 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     std::shared_ptr<Bytes> last_key_;
 
     // Null bitmap tracking
-    std::shared_ptr<RoaringNavigableMap64> null_bitmap_;
+    std::shared_ptr<RoaringBitmap64> null_bitmap_;
     bool has_nulls_;
 
     // Current row ID counter
