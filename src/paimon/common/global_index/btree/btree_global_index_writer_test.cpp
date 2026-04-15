@@ -20,6 +20,7 @@
 #include <arrow/ipc/json_simple.h>
 #include <gtest/gtest.h>
 
+#include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
 #include "paimon/memory/memory_pool.h"
@@ -63,6 +64,7 @@ class BTreeGlobalIndexWriterTest : public ::testing::Test {
         test_dir_ = UniqueTestDirectory::Create("local");
         fs_ = test_dir_->GetFileSystem();
         base_path_ = test_dir_->Str();
+        compression_factory_ = BlockCompressionFactory::Create(BlockCompressionType::NONE).value();
     }
 
     void TearDown() override {}
@@ -77,6 +79,7 @@ class BTreeGlobalIndexWriterTest : public ::testing::Test {
     }
 
     std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<BlockCompressionFactory> compression_factory_;
     std::unique_ptr<UniqueTestDirectory> test_dir_;
     std::shared_ptr<FileSystem> fs_;
     std::string base_path_;
@@ -90,9 +93,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteIntData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(
-        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
-                                                    4096, 100000));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
+                                                        compression_factory_, pool_, 4096));
 
     // Create an Arrow array with int values
     auto array =
@@ -134,7 +137,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteStringData) {
     // Create the BTree global index writer
     ASSERT_OK_AND_ASSIGN(auto writer,
                          BTreeGlobalIndexWriter::Create("string_field", c_schema.get(), file_writer,
-                                                        pool_, 4096, 100000));
+                                                        compression_factory_, pool_, 4096));
 
     // Create an Arrow array with string values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(
@@ -173,9 +176,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteWithNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(
-        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
-                                                    4096, 100000));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
+                                                        compression_factory_, pool_, 4096));
 
     // Create an Arrow array with null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, null, 3, null, 5]")
@@ -214,9 +217,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteMultipleBatches) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(
-        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
-                                                    4096, 100000));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
+                                                        compression_factory_, pool_, 4096));
 
     // Create first batch
     auto array1 =
@@ -262,9 +265,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteEmptyData) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(
-        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
-                                                    4096, 100000));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
+                                                        compression_factory_, pool_, 4096));
 
     // Finish without adding any data
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
@@ -282,9 +285,9 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteAllNulls) {
     auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
 
     // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(
-        auto writer, BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer, pool_,
-                                                    4096, 100000));
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
+                                                        compression_factory_, pool_, 4096));
 
     // Create an Arrow array with all null values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[null, null, null]")
@@ -323,7 +326,7 @@ TEST_F(BTreeGlobalIndexWriterTest, WriteDoubleData) {
     // Create the BTree global index writer
     ASSERT_OK_AND_ASSIGN(auto writer,
                          BTreeGlobalIndexWriter::Create("double_field", c_schema.get(), file_writer,
-                                                        pool_, 4096, 100000));
+                                                        compression_factory_, pool_, 4096));
 
     // Create an Arrow array with double values
     auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::float64(), "[1.5, 2.5, 3.5, 1.5]")

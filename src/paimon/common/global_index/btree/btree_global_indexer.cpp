@@ -20,6 +20,7 @@
 #include <string>
 
 #include "arrow/c/bridge.h"
+#include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
@@ -32,6 +33,7 @@
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/core/options/compress_options.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
 #include "paimon/file_index/bitmap_index_result.h"
@@ -62,9 +64,27 @@ Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
     const std::shared_ptr<MemoryPool>& pool) const {
-    PAIMON_ASSIGN_OR_RAISE(
-        auto writer,
-        BTreeGlobalIndexWriter::Create(field_name, arrow_schema, file_writer, pool, 4096, 100000));
+    // Read block size from options (default: 64 KB)
+    auto block_size_str_result =
+        OptionsUtils::GetValueFromMap<std::string>(options_, Options::BTREE_INDEX_BLOCK_SIZE);
+    int32_t block_size = 64 * 1024;  // default 64 KB
+    if (block_size_str_result.ok()) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t parsed_size,
+                               MemorySize::ParseBytes(block_size_str_result.value()));
+        block_size = static_cast<int32_t>(parsed_size);
+    }
+    // Read compression options
+    auto compress_str = OptionsUtils::GetValueFromMap<std::string>(
+        options_, Options::BTREE_INDEX_COMPRESSION, "none");
+    auto compress_level =
+        OptionsUtils::GetValueFromMap<int32_t>(options_, Options::BTREE_INDEX_COMPRESSION_LEVEL, 1);
+    CompressOptions compress_options{compress_str.value(), compress_level.value()};
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<paimon::BlockCompressionFactory> compression_factory,
+                           BlockCompressionFactory::Create(compress_options));
+
+    PAIMON_ASSIGN_OR_RAISE(auto writer,
+                           BTreeGlobalIndexWriter::Create(field_name, arrow_schema, file_writer,
+                                                          compression_factory, pool, block_size));
     return writer;
 }
 

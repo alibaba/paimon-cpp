@@ -32,12 +32,13 @@ namespace paimon {
 /// This writer builds an SST file where each key maps to a list of row IDs.
 class BTreeGlobalIndexWriter : public GlobalIndexWriter {
  public:
-    /// Factory method that may fail during initialization (e.g., bloom filter setup,
+    /// Factory method that may fail during initialization (e.g.,
     /// Arrow schema import). Use this instead of the constructor.
     static Result<std::shared_ptr<BTreeGlobalIndexWriter>> Create(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
         const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-        const std::shared_ptr<MemoryPool>& pool, int32_t block_size, int64_t expected_entries);
+        const std::shared_ptr<paimon::BlockCompressionFactory>& compression_factory,
+        const std::shared_ptr<MemoryPool>& pool, int32_t block_size);
 
     ~BTreeGlobalIndexWriter() override = default;
 
@@ -49,11 +50,11 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
-    BTreeGlobalIndexWriter(const std::string& field_name,
-                           std::shared_ptr<arrow::DataType> arrow_type,
-                           const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-                           const std::shared_ptr<MemoryPool>& pool, int32_t block_size,
-                           std::shared_ptr<BloomFilter> bloom_filter);
+    BTreeGlobalIndexWriter(
+        const std::string& field_name, std::shared_ptr<arrow::DataType> arrow_type,
+        const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+        const std::shared_ptr<paimon::BlockCompressionFactory>& compression_factory,
+        const std::shared_ptr<MemoryPool>& pool, int32_t block_size);
 
     // Helper method to write a key-value pair to the SST file
     Status WriteKeyValue(std::shared_ptr<Bytes> key, const std::vector<int64_t>& row_ids);
@@ -90,9 +91,6 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
 
     // Current row ID counter
     int64_t current_row_id_;
-
-    // Bloom filter for the SST file
-    std::shared_ptr<BloomFilter> bloom_filter_;
 };
 
 }  // namespace paimon

@@ -177,9 +177,9 @@ TEST_F(BTreeGlobalIndexerTest, CreateIndexer) {
     std::map<std::string, std::string> options;
     BTreeGlobalIndexer indexer(options);
 
-    // CreateWriter should return NotImplemented
+    // CreateWriter with nullptr file_writer should fail
     auto writer_result = indexer.CreateWriter("test_field", nullptr, nullptr, pool_);
-    EXPECT_TRUE(writer_result.ok());
+    EXPECT_FALSE(writer_result.ok());
 }
 
 // Test RangeQuery boundary conditions conceptually
