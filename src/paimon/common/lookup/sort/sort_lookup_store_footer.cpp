@@ -33,6 +33,9 @@ Result<std::unique_ptr<SortLookupStoreFooter>> SortLookupStoreFooter::ReadSortLo
     auto index_size = input->ReadInt();
     BlockHandle index_block_handle(index_offset, index_size);
 
+    // skip padding
+    input->SetPosition(ENCODED_LENGTH - 4);
+
     auto magic = input->ReadInt();
     if (magic != MAGIC_NUMBER) {
         return Status::IOError(

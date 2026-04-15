@@ -294,9 +294,8 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     // Create SST file reader with footer information
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<SstFileReader> sst_file_reader,
-        SstFileReader::Create(in, *footer->GetIndexBlockHandle(),
-                              footer->GetBloomFilterHandle(), result_comparator, cache_manager,
-                              pool));
+        SstFileReader::Create(in, *footer->GetIndexBlockHandle(), footer->GetBloomFilterHandle(),
+                              result_comparator, cache_manager, pool));
 
     // prepare null_bitmap
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RoaringBitmap64> null_bitmap,
