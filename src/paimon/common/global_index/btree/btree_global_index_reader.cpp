@@ -494,6 +494,11 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const MemorySlice& lo
 
     bool first_block = true;
 
+    // Compare key with bounds using the comparator
+    if (!comparator_) {
+        return Status::Invalid("Comparator is not set for BTreeGlobalIndexReader");
+    }
+
     while (index_iterator->HasNext()) {
         // Get the next data block
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockIterator> data_iterator,
@@ -511,11 +516,6 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const MemorySlice& lo
             if (!data_iterator->HasNext()) {
                 continue;
             }
-        }
-
-        // Compare key with bounds using the comparator
-        if (!comparator_) {
-            return Status::Invalid("Comparator is not set for BTreeGlobalIndexReader");
         }
 
         // Iterate through entries in the data block
