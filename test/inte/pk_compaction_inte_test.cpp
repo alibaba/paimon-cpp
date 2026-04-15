@@ -2973,6 +2973,113 @@ TEST_P(PkCompactionInteTest, TestLookupCompatibility) {
     }
 }
 
+TEST_F(PkCompactionInteTest, PkDvAndAggWithIOException) {
+    // f4 is a large padding field to inflate the initial file size for DV strategy.
+    arrow::FieldVector fields = {
+        arrow::field("f0", arrow::int32()),    // value field (min agg)
+        arrow::field("f1", arrow::utf8()),     // PK (schema index 1, pk index 1)
+        arrow::field("f2", arrow::int32()),    // PK (schema index 2, pk index 0)
+        arrow::field("f3", arrow::float64()),  // value field (min agg)
+        arrow::field("f4", arrow::utf8())};    // padding value field (min agg)
+    std::vector<std::string> primary_keys = {"f2", "f1"};
+    std::vector<std::string> partition_keys = {};
+
+    std::map<std::string, std::string> options = {{Options::FILE_FORMAT, "parquet"},
+                                                  {Options::BUCKET, "1"},
+                                                  {Options::FILE_SYSTEM, "local"},
+                                                  {Options::MERGE_ENGINE, "aggregation"},
+                                                  {Options::FIELDS_DEFAULT_AGG_FUNC, "min"},
+                                                  {Options::DELETION_VECTORS_ENABLED, "true"},
+                                                  {Options::LOOKUP_REMOTE_FILE_ENABLED, "true"},
+                                                  {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "1"}};
+
+    auto data_type = arrow::struct_(fields);
+    int64_t commit_id = 0;
+
+    bool run_complete = false;
+    auto io_hook = IOHook::GetInstance();
+    for (size_t i = 0; i < 800; i += RandomNumber(1, 23)) {
+        dir_ = UniqueTestDirectory::Create("local");
+        std::string table_path = TablePath();
+        CreateTable(fields, partition_keys, primary_keys, options);
+
+        // A long padding string (~2KB) to inflate the initial file size.
+        std::string padding(2048, 'X');
+
+        // Step 1: Write initial data with large padding (creates a big level-0 file).
+        // Dave and Eve are NOT overwritten by later batches.
+        {
+            // clang-format off
+        std::string json_data = R"([
+[100, "Alice", 3, 1.5, ")" + padding + R"("],
+[200, "Bob",   5, 2.5, ")" + padding + R"("],
+[300, "Carol", 1, 3.5, ")" + padding + R"("],
+[400, "Dave",  4, 4.5, ")" + padding + R"("],
+[500, "Eve",   2, 5.5, ")" + padding + R"("]
+])";
+            // clang-format on
+            auto array =
+                arrow::ipc::internal::json::ArrayFromJSON(data_type, json_data).ValueOrDie();
+            ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+        }
+
+        // Step 2: Full compact → upgrades level-0 file to max level.
+        ASSERT_OK_AND_ASSIGN(
+            auto upgrade_msgs,
+            CompactAndCommit(table_path, {}, 0, /*full_compaction=*/true, commit_id++));
+        ASSERT_TRUE(HasExtraLookupFiles(upgrade_msgs));
+        // Step 3: Write batch2 with overlapping keys (first new level-0 file).
+        {
+            auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [50,  "Alice", 3, 0.5, "a1"],
+            [300, "Bob",   5, 3.5, "b1"]
+        ])")
+                             .ValueOrDie();
+            ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+        }
+
+        // Step 4: Write batch3 with overlapping keys (second new level-0 file).
+        {
+            auto array = arrow::ipc::internal::json::ArrayFromJSON(data_type, R"([
+            [80,  "Alice", 3, 1.0, "a2"],
+            [150, "Carol", 1, 1.5, "c1"]
+        ])")
+                             .ValueOrDie();
+            ASSERT_OK(WriteAndCommit(table_path, {}, 0, array, commit_id++));
+        }
+        // Step 5: Non-full compact → two level-0 files merge, lookup against max-level produces DV.
+        ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
+        auto dv_compact_msgs =
+            CompactAndCommit(table_path, {}, 0, /*full_compaction=*/false, commit_id++);
+        CHECK_HOOK_STATUS(dv_compact_msgs.status(), i);
+        io_hook->Clear();
+
+        // Step 6: Assert DV index files are present.
+        ASSERT_TRUE(HasDeletionVectorIndexFiles(dv_compact_msgs.value()))
+            << "Non-full compact should produce DV index files";
+        ASSERT_TRUE(HasExtraLookupFiles(dv_compact_msgs.value()));
+
+        // Step 7: ScanAndVerify after DV compact.
+        {
+            std::map<std::pair<std::string, int32_t>, std::string> expected_data;
+            // clang-format off
+        expected_data[std::make_pair("", 0)] = R"([
+[0, 500, "Eve",   2, 5.5, ")" + padding + R"("],
+[0, 400, "Dave",  4, 4.5, ")" + padding + R"("],
+[0, 150, "Carol", 1, 1.5, ")" + padding + R"("],
+[0, 50,  "Alice", 3, 0.5, ")" + padding + R"("],
+[0, 200, "Bob",   5, 2.5, ")" + padding + R"("]
+])";
+            // clang-format on
+            ScanAndVerify(table_path, fields, expected_data);
+        }
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
+}
+
 std::vector<std::string> GetTestValuesForCompactionInteTest() {
     std::vector<std::string> values;
     values.emplace_back("parquet");
