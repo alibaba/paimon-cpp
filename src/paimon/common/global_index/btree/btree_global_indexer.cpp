@@ -78,16 +78,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
         case FieldType::INT:
         case FieldType::DATE:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < static_cast<int32_t>(sizeof(int32_t)) ||
-                    b.Length() < static_cast<int32_t>(sizeof(int32_t))) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 int32_t a_val = a.ReadInt(0);
                 int32_t b_val = b.ReadInt(0);
                 if (a_val < b_val) return -1;
@@ -96,16 +86,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
             };
         case FieldType::BIGINT:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < static_cast<int32_t>(sizeof(int64_t)) ||
-                    b.Length() < static_cast<int32_t>(sizeof(int64_t))) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 int64_t a_val = a.ReadLong(0);
                 int64_t b_val = b.ReadLong(0);
                 if (a_val < b_val) return -1;
@@ -148,16 +128,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
         }
         case FieldType::SMALLINT:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < static_cast<int32_t>(sizeof(int16_t)) ||
-                    b.Length() < static_cast<int32_t>(sizeof(int16_t))) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 int16_t a_val = a.ReadShort(0);
                 int16_t b_val = b.ReadShort(0);
                 if (a_val < b_val) return -1;
@@ -166,15 +136,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
             };
         case FieldType::TINYINT:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < 1 || b.Length() < 1) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 int8_t a_val = a.ReadByte(0);
                 int8_t b_val = b.ReadByte(0);
                 if (a_val < b_val) return -1;
@@ -183,16 +144,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
             };
         case FieldType::FLOAT:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < static_cast<int32_t>(sizeof(float)) ||
-                    b.Length() < static_cast<int32_t>(sizeof(float))) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 // Read float from bytes (little-endian)
                 float a_val, b_val;
                 std::memcpy(&a_val, a.ReadStringView().data(), sizeof(float));
@@ -203,16 +154,6 @@ static std::function<int32_t(const MemorySlice&, const MemorySlice&)> CreateComp
             };
         case FieldType::DOUBLE:
             return [](const MemorySlice& a, const MemorySlice& b) -> int32_t {
-                if (a.Length() < static_cast<int32_t>(sizeof(double)) ||
-                    b.Length() < static_cast<int32_t>(sizeof(double))) {
-                    size_t min_len =
-                        std::min(static_cast<size_t>(a.Length()), static_cast<size_t>(b.Length()));
-                    int cmp = memcmp(a.ReadStringView().data(), b.ReadStringView().data(), min_len);
-                    if (cmp != 0) return cmp < 0 ? -1 : 1;
-                    if (a.Length() < b.Length()) return -1;
-                    if (a.Length() > b.Length()) return 1;
-                    return 0;
-                }
                 // Read double from bytes (little-endian)
                 double a_val, b_val;
                 std::memcpy(&a_val, a.ReadStringView().data(), sizeof(double));
