@@ -55,7 +55,7 @@ class DataDefine {
         return std::holds_alternative<NullType>(value);
     }
 
-    /// always make sure value is T type
+    // @warning Always make sure value is T type
     template <typename T>
     inline static T GetVariantValue(const VariantType& value) {
         const T* ptr = std::get_if<T>(&value);
@@ -67,6 +67,20 @@ class DataDefine {
     template <typename T>
     inline static const T* GetVariantPtr(const VariantType& value) {
         return std::get_if<T>(&value);
+    }
+
+    // @warning Always make sure value is string_view or std::shared_ptr<Bytes> or BinaryString
+    inline static std::string_view GetStringView(const VariantType& value) {
+        if (auto* view_ptr = GetVariantPtr<std::string_view>(value)) {
+            return *view_ptr;
+        } else if (auto* bytes_ptr = GetVariantPtr<std::shared_ptr<Bytes>>(value)) {
+            const auto& bytes = *bytes_ptr;
+            return std::string_view(bytes->data(), bytes->size());
+        } else if (auto* binary_string_ptr = GetVariantPtr<BinaryString>(value)) {
+            return binary_string_ptr->GetStringView();
+        }
+        assert(false);
+        return {};
     }
 
     static std::string VariantValueToString(const VariantType& value) {
@@ -116,18 +130,12 @@ class DataDefine {
             case arrow::Type::type::DOUBLE:
                 return Literal(GetVariantValue<double>(value));
             case arrow::Type::type::STRING: {
-                auto binary_string_ptr = GetVariantPtr<BinaryString>(value);
-                if (binary_string_ptr == nullptr) {
-                    return Status::Invalid(
-                        "VariantValueToLiteral failed, cannot get BinaryString from VariantType, "
-                        "input value maybe string view");
-                }
-                auto str = binary_string_ptr->ToString();
-                return Literal(FieldType::STRING, str.data(), str.size());
+                auto view = GetStringView(value);
+                return Literal(FieldType::STRING, view.data(), view.size());
             }
             case arrow::Type::type::BINARY: {
-                auto bytes = GetVariantValue<std::shared_ptr<Bytes>>(value);
-                return Literal(FieldType::BINARY, bytes->data(), bytes->size());
+                auto view = GetStringView(value);
+                return Literal(FieldType::BINARY, view.data(), view.size());
             }
             case arrow::Type::type::TIMESTAMP:
                 return Literal(GetVariantValue<Timestamp>(value));

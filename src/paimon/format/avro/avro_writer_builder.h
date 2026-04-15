@@ -78,7 +78,7 @@ class AvroWriterBuilder : public WriterBuilder {
             return ::avro::Codec::ZSTD_CODEC;
         } else if (file_compression == "snappy") {
             return ::avro::Codec::SNAPPY_CODEC;
-        } else if (file_compression == "null") {
+        } else if (file_compression == "null" || file_compression == "none") {
             return ::avro::Codec::NULL_CODEC;
         } else if (file_compression == "deflate") {
             return ::avro::Codec::DEFLATE_CODEC;

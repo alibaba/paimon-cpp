@@ -161,9 +161,10 @@ class MergeFileSplitReadTest : public ::testing::Test,
             /*key_stats=*/
             BinaryRowGenerator::GenerateStats({100, 200}, {100, 200}, {0, 0}, pool_.get()),
             /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({100, 200, 0, 0, "max", "number", 140.4, false},
-                                              {100, 200, 0, 0, "max", "number", 140.4, false},
-                                              {0, 0, 0, 0, 0, 0, 0, 0}, pool_.get()),
+            BinaryRowGenerator::GenerateStats(
+                {100, 200, 0, 0, std::string("max"), std::string("number"), 140.4, false},
+                {100, 200, 0, 0, std::string("max"), std::string("number"), 140.4, false},
+                {0, 0, 0, 0, 0, 0, 0, 0}, pool_.get()),
             /*min_sequence_number=*/8, /*max_sequence_number=*/8, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1735230606999ll, 0),
@@ -284,9 +285,9 @@ class MergeFileSplitReadTest : public ::testing::Test,
             /*max_key=*/BinaryRowGenerator::GenerateRow({1, 1}, pool_.get()),
             /*key_stats=*/BinaryRowGenerator::GenerateStats({0, 0}, {1, 1}, {0, 0}, pool_.get()),
             /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({0, 0, 2.0, false, "apple"},
-                                              {1, 1, 2.0, true, "banana"}, {0, 0, 2, 0, 1},
-                                              pool_.get()),
+            BinaryRowGenerator::GenerateStats({0, 0, 2.0, false, std::string("apple")},
+                                              {1, 1, 2.0, true, std::string("banana")},
+                                              {0, 0, 2, 0, 1}, pool_.get()),
             /*min_sequence_number=*/0, /*max_sequence_number=*/2, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1736793059256ll, 0),
@@ -302,9 +303,9 @@ class MergeFileSplitReadTest : public ::testing::Test,
             /*max_key=*/BinaryRowGenerator::GenerateRow({2, 2}, pool_.get()),
             /*key_stats=*/BinaryRowGenerator::GenerateStats({0, 0}, {2, 2}, {0, 0}, pool_.get()),
             /*value_stats=*/
-            BinaryRowGenerator::GenerateStats({0, 0, 100.0, false, "new_apple"},
-                                              {2, 2, 144.4, true, "orange"}, {0, 0, 0, 0, 3},
-                                              pool_.get()),
+            BinaryRowGenerator::GenerateStats({0, 0, 100.0, false, std::string("new_apple")},
+                                              {2, 2, 144.4, true, std::string("orange")},
+                                              {0, 0, 0, 0, 3}, pool_.get()),
             /*min_sequence_number=*/3, /*max_sequence_number=*/7, /*schema_id=*/0,
             /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
             /*creation_time=*/Timestamp(1736793059526ll, 0),
@@ -340,10 +341,10 @@ class MergeFileSplitReadTest : public ::testing::Test,
             std::shared_ptr<FileStorePathFactory> path_factory,
             FileStorePathFactory::Create(
                 internal_context->GetPath(), arrow_schema, table_schema->PartitionKeys(),
-                core_options.GetPartitionDefaultName(),
-                core_options.GetWriteFileFormat()->Identifier(), core_options.DataFilePrefix(),
-                core_options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, core_options.IndexFileInDataFileDir(), pool_));
+                core_options.GetPartitionDefaultName(), core_options.GetFileFormat()->Identifier(),
+                core_options.DataFilePrefix(), core_options.LegacyPartitionNameEnabled(),
+                external_paths, global_index_external_path, core_options.IndexFileInDataFileDir(),
+                pool_));
         PAIMON_ASSIGN_OR_RAISE(auto split_read,
                                MergeFileSplitRead::Create(path_factory, std::move(internal_context),
                                                           pool_, executor_));
@@ -386,11 +387,10 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
     std::shared_ptr<arrow::Schema> value_schema;
     std::shared_ptr<arrow::Schema> read_schema;
     std::shared_ptr<FieldsComparator> key_comparator;
-    std::shared_ptr<FieldsComparator> interval_partition_comparator;
     std::shared_ptr<FieldsComparator> sequence_fields_comparator;
     ASSERT_OK(MergeFileSplitRead::GenerateKeyValueReadSchema(
         *table_schema, options, raw_read_schema, &value_schema, &read_schema, &key_comparator,
-        &interval_partition_comparator, &sequence_fields_comparator));
+        &sequence_fields_comparator));
 
     // check result
     std::vector<DataField> expected_value_fields = {
@@ -410,6 +410,7 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
         EXPECT_EQ(result_fields[i], expected_fields[i]);
         EXPECT_OK_AND_ASSIGN(std::string result_str, result_fields[i].ToJsonString());
         EXPECT_OK_AND_ASSIGN(std::string expected_str, expected_fields[i].ToJsonString());
+        EXPECT_EQ(result_str, expected_str);
     }
     ASSERT_TRUE(value_schema->Equals(*expected_value_schema));
 
@@ -430,8 +431,6 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema) {
     std::vector<int32_t> expected_sort_key_fields = {0, 1};
     ASSERT_EQ(key_comparator->sort_fields_, expected_sort_key_fields);
     ASSERT_EQ(key_comparator->is_ascending_order_, true);
-    ASSERT_EQ(interval_partition_comparator->sort_fields_, expected_sort_key_fields);
-    ASSERT_EQ(interval_partition_comparator->is_ascending_order_, true);
 
     std::vector<int32_t> expected_sort_seq_fields = {5, 2};
     ASSERT_EQ(sequence_fields_comparator->sort_fields_, expected_sort_seq_fields);
@@ -460,11 +459,10 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema1) {
     std::shared_ptr<arrow::Schema> value_schema;
     std::shared_ptr<arrow::Schema> read_schema;
     std::shared_ptr<FieldsComparator> key_comparator;
-    std::shared_ptr<FieldsComparator> interval_partition_comparator;
     std::shared_ptr<FieldsComparator> sequence_fields_comparator;
     ASSERT_OK(MergeFileSplitRead::GenerateKeyValueReadSchema(
         *table_schema, options, raw_read_schema, &value_schema, &read_schema, &key_comparator,
-        &interval_partition_comparator, &sequence_fields_comparator));
+        &sequence_fields_comparator));
 
     // check result
     std::vector<DataField> expected_value_fields = {
@@ -492,10 +490,57 @@ TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema1) {
     std::vector<int32_t> expected_sort_key_fields = {0, 1};
     ASSERT_EQ(key_comparator->sort_fields_, expected_sort_key_fields);
     ASSERT_EQ(key_comparator->is_ascending_order_, true);
-    ASSERT_EQ(interval_partition_comparator->sort_fields_, expected_sort_key_fields);
-    ASSERT_EQ(interval_partition_comparator->is_ascending_order_, true);
 
     ASSERT_FALSE(sequence_fields_comparator);
+}
+
+// test GenerateKeyValueReadSchema with compaction mode that raw_read_schema equals table_schema
+TEST_F(MergeFileSplitReadTest, TestGenerateKeyValueReadSchema2) {
+    std::string table_path =
+        paimon::test::GetDataDir() + "parquet/pk_table_with_mor.db/pk_table_with_mor";
+    auto schema_manager = std::make_unique<SchemaManager>(fs_, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager->ReadSchema(/*schema_id=*/0));
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::SEQUENCE_FIELD, "s0,s1"},
+                                               {Options::MERGE_ENGINE, "deduplicate"},
+                                               {Options::SORT_ENGINE, "min-heap"},
+                                               {Options::IGNORE_DELETE, "true"}}));
+    auto raw_read_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    ASSERT_TRUE(raw_read_schema);
+
+    std::shared_ptr<arrow::Schema> value_schema;
+    std::shared_ptr<arrow::Schema> read_schema;
+    std::shared_ptr<FieldsComparator> key_comparator;
+    std::shared_ptr<FieldsComparator> sequence_fields_comparator;
+    ASSERT_OK(MergeFileSplitRead::GenerateKeyValueReadSchema(
+        *table_schema, options, raw_read_schema, &value_schema, &read_schema, &key_comparator,
+        &sequence_fields_comparator));
+
+    // check result
+    auto expected_value_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    ASSERT_OK_AND_ASSIGN(auto result_fields,
+                         DataField::ConvertArrowSchemaToDataFields(value_schema));
+    ASSERT_OK_AND_ASSIGN(auto expected_fields,
+                         DataField::ConvertArrowSchemaToDataFields(expected_value_schema));
+    for (size_t i = 0; i < expected_fields.size(); i++) {
+        EXPECT_EQ(result_fields[i], expected_fields[i]);
+        EXPECT_OK_AND_ASSIGN(std::string result_str, result_fields[i].ToJsonString());
+        EXPECT_OK_AND_ASSIGN(std::string expected_str, expected_fields[i].ToJsonString());
+        EXPECT_EQ(result_str, expected_str);
+    }
+    ASSERT_TRUE(value_schema->Equals(*expected_value_schema));
+
+    auto expected_read_schema =
+        SpecialFields::CompleteSequenceAndValueKindField(expected_value_schema);
+    ASSERT_TRUE(read_schema->Equals(*expected_read_schema));
+
+    std::vector<int32_t> expected_sort_key_fields = {0, 1};
+    ASSERT_EQ(key_comparator->sort_fields_, expected_sort_key_fields);
+    ASSERT_EQ(key_comparator->is_ascending_order_, true);
+
+    std::vector<int32_t> expected_sort_seq_fields = {4, 5};
+    ASSERT_EQ(sequence_fields_comparator->sort_fields_, expected_sort_seq_fields);
+    ASSERT_EQ(sequence_fields_comparator->is_ascending_order_, true);
 }
 
 // test no predicate
@@ -1173,13 +1218,15 @@ TEST_P(MergeFileSplitReadTest, Test09VersionWithoutInlineFieldId) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
     auto meta1 = std::make_shared<DataFileMeta>(
         "data-00e3ed53-16ba-4537-9264-b7dc03fefc65-0.orc", /*file_size=*/803, /*row_count=*/1,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Tony", 0}, {"Tony", 0}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Tony"), 0}, {std::string("Tony"), 0},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Tony", 10, 0, 14.1}, {"Tony", 10, 0, 14.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Tony"), 10, 0, 14.1},
+                                          {std::string("Tony"), 10, 0, 14.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/5, /*max_sequence_number=*/5, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(0ll, 0),
@@ -1189,13 +1236,15 @@ TEST_P(MergeFileSplitReadTest, Test09VersionWithoutInlineFieldId) {
         /*write_cols=*/std::nullopt);
     auto meta2 = std::make_shared<DataFileMeta>(
         "data-6871b960-edd9-40fc-9859-aaca9ea205cf-0.orc", /*file_size=*/887, /*row_count=*/5,
-        /*min_key=*/BinaryRowGenerator::GenerateRow({"Alex", 0}, pool_.get()),
-        /*max_key=*/BinaryRowGenerator::GenerateRow({"Tony", 0}, pool_.get()),
+        /*min_key=*/BinaryRowGenerator::GenerateRow({std::string("Alex"), 0}, pool_.get()),
+        /*max_key=*/BinaryRowGenerator::GenerateRow({std::string("Tony"), 0}, pool_.get()),
         /*key_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 0}, {"Tony", 0}, {0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 0}, {std::string("Tony"), 0},
+                                          {0, 0}, pool_.get()),
         /*value_stats=*/
-        BinaryRowGenerator::GenerateStats({"Alex", 10, 0, 12.1}, {"Tony", 10, 0, 17.1},
-                                          {0, 0, 0, 0}, pool_.get()),
+        BinaryRowGenerator::GenerateStats({std::string("Alex"), 10, 0, 12.1},
+                                          {std::string("Tony"), 10, 0, 17.1}, {0, 0, 0, 0},
+                                          pool_.get()),
         /*min_sequence_number=*/0, /*max_sequence_number=*/4, /*schema_id=*/0,
         /*level=*/0, /*extra_files=*/std::vector<std::optional<std::string>>(),
         /*creation_time=*/Timestamp(0ll, 0),

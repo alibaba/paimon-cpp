@@ -39,6 +39,7 @@ template <RoleMask Mask>
 struct RoleSet<Mask> {
     static constexpr RoleMask Value = Mask;
     static constexpr bool Has(BuildExtension e) noexcept { return (Mask & static_cast<uint8_t>(e)) != 0; }
+    // TODO: follow extension naming convention: extension.build.build_with_xxx
     static std::string_view Name() noexcept
     {
         static std::string Name = []() -> auto {

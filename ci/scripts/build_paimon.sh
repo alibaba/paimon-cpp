@@ -22,15 +22,37 @@ check_clang_tidy=${3:-false}
 build_type=${4:-Debug}
 build_dir=${1}/build
 
+# Display ccache status if available
+if command -v ccache &> /dev/null; then
+    echo "=== ccache found: $(ccache --version | head -1) ==="
+    ccache -p | grep -E "cache_dir|max_size|compression" || true
+    ccache -z  # Reset statistics for this build
+else
+    echo "=== ccache not found, compiling without cache acceleration ==="
+fi
+
 mkdir ${build_dir}
 pushd ${build_dir}
+
+ENABLE_LUMINA="ON"
+ENABLE_LANCE="ON"
+if [[ "${CC:-}" == *"gcc-8"* ]] || [[ "${CXX:-}" == *"g++-8"* ]]; then
+    ENABLE_LUMINA="OFF" # Lumina is only supported on GCC 9 or higher.
+    ENABLE_LANCE="OFF"
+    # Lance's prebuilt binaries can only be compiled on Ubuntu 22.04 and above
+    # which requires a higher version of glibc,
+    # but Ubuntu 22.04 and above no longer ships with gcc-8 by default.
+    # Consider supporting Lance from source compilation in the future
+fi
 
 CMAKE_ARGS=(
     "-G Ninja"
     "-DCMAKE_BUILD_TYPE=${build_type}"
     "-DPAIMON_BUILD_TESTS=ON"
-    "-DPAIMON_ENABLE_LANCE=ON"
+    "-DPAIMON_ENABLE_LANCE=${ENABLE_LANCE}"
     "-DPAIMON_ENABLE_JINDO=ON"
+    "-DPAIMON_ENABLE_LUMINA=${ENABLE_LUMINA}"
+    "-DPAIMON_ENABLE_LUCENE=ON"
 )
 
 if [[ "${enable_sanitizer}" == "true" ]]; then
@@ -46,6 +68,12 @@ ctest --output-on-failure -j $(nproc)
 
 if [[ "${check_clang_tidy}" == "true" ]]; then
     cmake --build . --target check-clang-tidy
+fi
+
+# Print ccache statistics after build
+if command -v ccache &> /dev/null; then
+    echo "=== ccache statistics after build ==="
+    ccache -s
 fi
 
 popd

@@ -32,7 +32,10 @@ class NoopCompactManager : public CompactManager {
     NoopCompactManager() = default;
     ~NoopCompactManager() override = default;
 
-    void AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {}
+    Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {
+        (void)file;
+        return Status::OK();
+    }
 
     std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const override {
         static std::vector<std::shared_ptr<DataFileMeta>> empty;
@@ -56,8 +59,11 @@ class NoopCompactManager : public CompactManager {
         return std::optional<std::shared_ptr<CompactResult>>();
     }
 
-    /// Cancel currently running compaction task.
-    void CancelCompaction() override {}
+    /// Request cancellation for currently running compaction task.
+    void RequestCancelCompaction() override {}
+
+    /// Wait until the current compaction task exits.
+    void WaitForCompactionToExit() override {}
 
     /// Check if a compaction is in progress, or if a compaction result remains to be fetched, or if
     /// a compaction should be triggered later.

@@ -653,13 +653,17 @@ Result<std::shared_ptr<arrow::Field>> DataTypeJsonParser::ParseMapType(
 
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> key,
                            ParseType("key", type_json_value["key"]));
-
     // NOTE: Unlike Java Paimon, this C++ implementation does not support nullable keys in
     // MapType. This is a limitation of Apache Arrow, which does not allow null keys in its
-    // MapType. As a result, we explicitly set `nullable = false` for the map key, regardless of
-    // the original schema. Please be aware of this behavioral difference when migrating or
-    // interoperating with Java Paimon.
-    key = key->WithNullable(false);
+    // MapType. As a result, we validate `nullable = false` for the map key.
+    if (key->nullable()) {
+        return Status::Invalid(fmt::format(
+            "Map field '{}' has a nullable key."
+            "Map keys must be explicitly marked as NOT NULL in the schema for paimon-cpp "
+            "because Apache Arrow does not support nullable map keys. "
+            "Please add 'NOT NULL' to the key type definition.",
+            name));
+    }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> value,
                            ParseType("value", type_json_value["value"]));
     return arrow::field(name, std::make_shared<arrow::MapType>(key, value), nullable);

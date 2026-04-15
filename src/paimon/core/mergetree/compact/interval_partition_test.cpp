@@ -45,7 +45,7 @@ class IntervalPartitionTest : public testing::Test {
     void SetUp() override {
         ASSERT_OK_AND_ASSIGN(comparator_, FieldsComparator::Create(
                                               {DataField(0, arrow::field("test", arrow::int32()))},
-                                              /*is_ascending_order=*/true, /*use_view=*/false));
+                                              /*is_ascending_order=*/true));
         pool_ = GetDefaultPool();
     }
 

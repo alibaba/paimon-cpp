@@ -20,8 +20,12 @@
 #include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
 namespace paimon {
-/// [4 byte(keyArray size in bytes)] + [Key BinaryArray] + [Value BinaryArray].
-/// `BinaryMap` are influenced by Apache Spark UnsafeMapData
+/// A binary implementation of `InternalMap` which is backed by a single `MemorySegment`.
+/// Binary layout: [4 byte(keyArray size in bytes)] + [Key BinaryArray] + [Value BinaryArray].
+/// `BinaryMap` is influenced by Apache Spark UnsafeMapData.
+///
+/// @note: Unlike the Java implementation where data may span multiple MemorySegments,
+/// in this C++ implementation all data resides within a single MemorySegment.
 class BinaryMap : public BinarySection, public InternalMap {
  public:
     BinaryMap() = default;
@@ -37,44 +41,40 @@ class BinaryMap : public BinarySection, public InternalMap {
         return values_;
     }
 
-    void PointTo(const std::vector<MemorySegment>& segments, int32_t offset,
-                 int32_t size_in_bytes) override {
+    void PointTo(const MemorySegment& segment, int32_t offset, int32_t size_in_bytes) override {
         // Read the numBytes of key array from the first 4 bytes.
-        auto key_array_bytes = MemorySegmentUtils::GetValue<int32_t>(segments, offset);
+        auto key_array_bytes = MemorySegmentUtils::GetValue<int32_t>({segment}, offset);
         assert(key_array_bytes >= 0);
         int32_t value_array_bytes = size_in_bytes - key_array_bytes - kHeaderSize;
         assert(value_array_bytes >= 0);
 
         assert(keys_);
-        keys_->PointTo(segments, offset + kHeaderSize, key_array_bytes);
+        keys_->PointTo(segment, offset + kHeaderSize, key_array_bytes);
         assert(values_);
-        values_->PointTo(segments, offset + kHeaderSize + key_array_bytes, value_array_bytes);
+        values_->PointTo(segment, offset + kHeaderSize + key_array_bytes, value_array_bytes);
 
         assert(keys_->Size() == values_->Size());
 
-        segments_ = segments;
+        segment_ = segment;
         offset_ = offset;
         size_in_bytes_ = size_in_bytes;
     }
 
-    static Result<std::shared_ptr<BinaryMap>> ValueOf(const BinaryArray& key,
-                                                      const BinaryArray& value, MemoryPool* pool) {
-        if (key.GetSegments().size() != 1 || value.GetSegments().size() != 1) {
-            return Status::Invalid("In BinaryMap ValueOf, key and value must have single segment");
-        }
+    static std::shared_ptr<BinaryMap> ValueOf(const BinaryArray& key, const BinaryArray& value,
+                                              MemoryPool* pool) {
         auto bytes = std::make_shared<Bytes>(
             kHeaderSize + key.GetSizeInBytes() + value.GetSizeInBytes(), pool);
         MemorySegment segment = MemorySegment::Wrap(bytes);
         segment.PutValue<int32_t>(0, key.GetSizeInBytes());
-        const auto& key_segment = key.GetSegments()[0];
+        const auto& key_segment = key.GetSegment();
         key_segment.CopyTo(key.GetOffset(), &segment, /*target_offset=*/kHeaderSize,
                            key.GetSizeInBytes());
-        const auto& value_segment = value.GetSegments()[0];
+        const auto& value_segment = value.GetSegment();
         value_segment.CopyTo(value.GetOffset(), &segment,
                              /*target_offset=*/kHeaderSize + key.GetSizeInBytes(),
                              value.GetSizeInBytes());
         auto binary_map = std::make_shared<BinaryMap>();
-        binary_map->PointTo({segment}, /*offset=*/0, bytes->size());
+        binary_map->PointTo(segment, /*offset=*/0, bytes->size());
         return binary_map;
     }
 

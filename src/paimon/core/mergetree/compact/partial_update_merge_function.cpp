@@ -209,10 +209,9 @@ PartialUpdateMergeFunction::CreateFieldSeqComparator(
             }
             sort_fields.push_back(field_idx);
         }
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<FieldsComparator> cmp,
-            FieldsComparator::Create(value_data_fields, sort_fields,
-                                     /*is_ascending_order=*/true, /*use_view=*/true));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> cmp,
+                               FieldsComparator::Create(value_data_fields, sort_fields,
+                                                        /*is_ascending_order=*/true));
         field_seq_group_comparator_map[seq_group] = cmp;
         field_seq_comparators[i] = cmp;
     }

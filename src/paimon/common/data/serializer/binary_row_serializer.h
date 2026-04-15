@@ -58,8 +58,6 @@ class BinaryRowSerializer {
 
  private:
     Status SerializeWithoutLength(const BinaryRow& record, MemorySegmentOutputStream* target) const;
-    Status SerializeWithoutLengthSlow(const BinaryRow& record,
-                                      MemorySegmentOutputStream* target) const;
 
     int32_t num_fields_;
     int32_t fixed_length_part_size_;

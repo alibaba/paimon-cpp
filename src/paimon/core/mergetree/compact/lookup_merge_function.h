@@ -37,41 +37,71 @@ class LookupMergeFunction : public MergeFunction {
 
     void Reset() override {
         candidates_.clear();
+        current_key_ = nullptr;
+        contain_level0_ = false;
     }
 
     Status Add(KeyValue&& kv) override {
+        current_key_ = kv.key;
+        if (kv.level == 0) {
+            contain_level0_ = true;
+        }
         candidates_.emplace_back(std::move(kv));
         return Status::OK();
     }
 
+    bool ContainLevel0() const {
+        return contain_level0_;
+    }
+
+    const std::shared_ptr<InternalRow>& GetKey() const {
+        return current_key_;
+    }
+
     Result<std::optional<KeyValue>> GetResult() override {
-        // 1. Find the latest high level record
-        bool has_high_level = false;
-        std::vector<KeyValue> target_candidates;
-        target_candidates.reserve(candidates_.size());
-        for (int32_t i = static_cast<int32_t>(candidates_.size()) - 1; i >= 0; i--) {
-            if (candidates_[i].level > 0) {
-                if (has_high_level) {
-                    continue;
-                } else {
-                    has_high_level = true;
-                }
-            }
-            target_candidates.emplace_back(std::move(candidates_[i]));
-        }
-        // 2. Do the merge for inputs
         merge_function_->Reset();
-        // step 1 visits candidates_ from end to begin, therefore elements in target_candidates need
-        // to be reversely accessed
-        for (int32_t i = static_cast<int32_t>(target_candidates.size()) - 1; i >= 0; i--) {
-            PAIMON_RETURN_NOT_OK(merge_function_->Add(std::move(target_candidates[i])));
+        std::optional<int32_t> high_level_idx = PickHighLevelIdx();
+        for (int32_t i = 0; i < static_cast<int32_t>(candidates_.size()); ++i) {
+            // records that has not been stored on the disk yet, such as the data in the write
+            // buffer being at level -1
+            if (candidates_[i].level <= 0 || i == high_level_idx.value()) {
+                PAIMON_RETURN_NOT_OK(merge_function_->Add(std::move(candidates_[i])));
+            }
         }
-        candidates_.clear();
         return merge_function_->GetResult();
+    }
+
+    void InsertInto(std::optional<KeyValue>&& high_level,
+                    std::function<bool(const KeyValue& o1, const KeyValue& o2)> cmp_function) {
+        if (!high_level) {
+            return;
+        }
+        candidates_.push_back(std::move(high_level.value()));
+        std::sort(candidates_.begin(), candidates_.end(), cmp_function);
+    }
+
+    std::optional<int32_t> PickHighLevelIdx() const {
+        std::optional<int32_t> high_level_idx;
+        for (int32_t i = 0; i < static_cast<int32_t>(candidates_.size()); i++) {
+            const auto& kv = candidates_[i];
+            // records that has not been stored on the disk yet, such as the data in the write
+            // buffer being at level -1
+            if (kv.level <= 0) {
+                continue;
+            }
+            // For high-level comparison logic (not involving Level 0), only the value of the
+            // minimum Level should be selected
+            if (!high_level_idx || kv.level < candidates_[high_level_idx.value()].level) {
+                high_level_idx = i;
+            }
+        }
+        return high_level_idx;
     }
 
  private:
     std::unique_ptr<MergeFunction> merge_function_;
     std::vector<KeyValue> candidates_;
+    std::shared_ptr<InternalRow> current_key_;
+    bool contain_level0_ = false;
 };
 }  // namespace paimon

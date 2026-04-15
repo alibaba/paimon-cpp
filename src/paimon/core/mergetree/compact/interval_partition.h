@@ -24,8 +24,6 @@
 #include "paimon/core/utils/fields_comparator.h"
 
 namespace paimon {
-class FieldsComparator;
-struct DataFileMeta;
 
 /// Algorithm to partition several data files into the minimum number of `SortedRun`s.
 class IntervalPartition {

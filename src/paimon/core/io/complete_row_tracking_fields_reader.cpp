@@ -86,7 +86,8 @@ CompleteRowTrackingFieldsBatchReader::NextBatchWithBitmap() {
     std::string row_id_field_name = SpecialFields::RowId().Name();
     if (read_schema_->GetFieldIndex(row_id_field_name) != -1) {
         row_id_array = src_struct_array->GetFieldByName(row_id_field_name);
-        uint64_t previous_batch_first_row_number = reader_->GetPreviousBatchFirstRowNumber();
+        PAIMON_ASSIGN_OR_RAISE(uint64_t previous_batch_first_row_number,
+                               reader_->GetPreviousBatchFirstRowNumber());
         auto row_id_convert_func = [previous_batch_first_row_number,
                                     this](int32_t idx_in_array) -> Result<int64_t> {
             if (first_row_id_ == std::nullopt) {

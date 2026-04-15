@@ -25,7 +25,7 @@
 
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
-#include "paimon/common/predicate/predicate_utils.h"
+#include "paimon/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/schema/table_schema.h"

@@ -16,6 +16,8 @@
 
 #include "paimon/core/append/bucketed_append_compact_manager.h"
 
+#include <cassert>
+
 #include "paimon/common/executor/future.h"
 
 namespace paimon {
@@ -25,7 +27,8 @@ BucketedAppendCompactManager::BucketedAppendCompactManager(
     const std::vector<std::shared_ptr<DataFileMeta>>& restored,
     const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer, int32_t min_file_num,
     int64_t target_file_size, int64_t compaction_file_size, bool force_rewrite_all_files,
-    CompactRewriter rewriter, const std::shared_ptr<CompactionMetrics::Reporter>& reporter)
+    CompactRewriter rewriter, const std::shared_ptr<CompactionMetrics::Reporter>& reporter,
+    const std::shared_ptr<CancellationController>& cancellation_controller)
     : executor_(executor),
       dv_maintainer_(dv_maintainer),
       min_file_num_(min_file_num),
@@ -38,10 +41,16 @@ BucketedAppendCompactManager::BucketedAppendCompactManager(
           [](const std::shared_ptr<DataFileMeta>& lhs, const std::shared_ptr<DataFileMeta>& rhs) {
               return lhs->min_sequence_number > rhs->min_sequence_number;
           }),
+      cancellation_controller_(cancellation_controller),
       logger_(Logger::GetLogger("BucketedAppendCompactManager")) {
+    assert(cancellation_controller_ != nullptr);
     for (const auto& file : restored) {
         to_compact_.push(file);
     }
+}
+
+void BucketedAppendCompactManager::RequestCancelCompaction() {
+    cancellation_controller_->Cancel();
 }
 
 Status BucketedAppendCompactManager::TriggerCompaction(bool full_compaction) {
@@ -71,6 +80,7 @@ Status BucketedAppendCompactManager::TriggerFullCompaction() {
         compacting.push_back(to_compact_.top());
         to_compact_.pop();
     }
+    cancellation_controller_->Reset();
     auto compact_task = std::make_shared<FullCompactTask>(reporter_, dv_maintainer_, compacting,
                                                           compaction_file_size_,
                                                           force_rewrite_all_files_, rewriter_);
@@ -87,6 +97,7 @@ void BucketedAppendCompactManager::TriggerCompactionWithBestEffort() {
     }
     std::optional<std::vector<std::shared_ptr<DataFileMeta>>> picked = PickCompactBefore();
     if (picked) {
+        cancellation_controller_->Reset();
         compacting_ = picked.value();
         auto compact_task = std::make_shared<AutoCompactTask>(reporter_, dv_maintainer_,
                                                               compacting_.value(), rewriter_);

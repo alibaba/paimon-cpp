@@ -101,6 +101,8 @@ class TableSchema : public Schema, public Jsonizable<TableSchema> {
 
     Result<std::vector<DataField>> GetFields(const std::vector<std::string>& field_names) const;
     Result<std::vector<std::string>> TrimmedPrimaryKeys() const;
+    Result<std::vector<DataField>> TrimmedPrimaryKeyFields() const;
+    Result<std::shared_ptr<arrow::Schema>> TrimmedPrimaryKeySchema() const;
 
     std::optional<std::string> Comment() const override {
         return comment_;

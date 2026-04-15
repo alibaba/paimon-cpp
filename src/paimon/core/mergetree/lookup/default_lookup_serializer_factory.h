@@ -15,8 +15,8 @@
  */
 
 #pragma once
-
 #include "paimon/common/data/serializer/row_compacted_serializer.h"
+#include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/core/mergetree/lookup/lookup_serializer_factory.h"
 namespace paimon {
 /// A `LookupSerializerFactory` using `RowCompactedSerializer`.
@@ -48,10 +48,12 @@ class DefaultLookupSerializerFactory : public LookupSerializerFactory {
                 "file_ser_version {} mismatch DefaultLookupSerializerFactory version {}",
                 file_ser_version, Version()));
         }
-        if (!file_schema->Equals(current_schema)) {
-            // TODO(xinyu.lxy): support EqualsIgnoreNullable
+        if (!ArrowUtils::EqualsIgnoreNullable(arrow::struct_(file_schema->fields()),
+                                              arrow::struct_(current_schema->fields()))) {
             return Status::Invalid(
-                "current_schema and file_schema must be equal in DefaultLookupSerializerFactory");
+                fmt::format("current_schema {} must be equal with file_schema {} in "
+                            "DefaultLookupSerializerFactory",
+                            current_schema->ToString(), file_schema->ToString()));
         }
         PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RowCompactedSerializer> serializer,
                                RowCompactedSerializer::Create(current_schema, pool));

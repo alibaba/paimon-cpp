@@ -21,8 +21,11 @@
 #include <string>
 #include <vector>
 
+#include "paimon/file_index/bitmap_index_result.h"
 #include "paimon/file_index/file_index_reader.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/global_index_reader.h"
+#include "paimon/utils/roaring_bitmap64.h"
 
 namespace paimon {
 ///  A `GlobalIndexReader` wrapper for `FileIndexReader`.
@@ -130,6 +133,32 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
         const std::shared_ptr<FullTextSearch>& full_text_search) override {
         std::shared_ptr<FileIndexResult> remain = FileIndexResult::Remain();
         return transform_(remain);
+    }
+
+    /// Converts a `FileIndexResult` to a `GlobalIndexResult` by mapping 32-bit row IDs
+    /// to 64-bit global row IDs.
+    static Result<std::shared_ptr<GlobalIndexResult>> ToGlobalIndexResult(
+        int64_t range_end, const std::shared_ptr<FileIndexResult>& result) {
+        if (auto remain = std::dynamic_pointer_cast<Remain>(result)) {
+            return std::make_shared<BitmapGlobalIndexResult>(
+                [range_end]() -> Result<RoaringBitmap64> {
+                    RoaringBitmap64 bitmap;
+                    bitmap.AddRange(0, range_end + 1);
+                    return bitmap;
+                });
+        } else if (auto skip = std::dynamic_pointer_cast<Skip>(result)) {
+            return std::make_shared<BitmapGlobalIndexResult>(
+                []() -> Result<RoaringBitmap64> { return RoaringBitmap64(); });
+        } else if (auto bitmap_result = std::dynamic_pointer_cast<BitmapIndexResult>(result)) {
+            return std::make_shared<BitmapGlobalIndexResult>(
+                [bitmap_result]() -> Result<RoaringBitmap64> {
+                    PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* bitmap,
+                                           bitmap_result->GetBitmap());
+                    return RoaringBitmap64(*bitmap);
+                });
+        }
+        return Status::Invalid(
+            "invalid FileIndexResult, supposed to be Remain or Skip or BitmapIndexResult");
     }
 
  private:

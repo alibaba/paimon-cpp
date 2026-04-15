@@ -243,7 +243,7 @@ PostponeBucketWriter::CreateRollingRowWriter() const {
         ::ArrowSchema arrow_schema;
         ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*write_schema_, &arrow_schema));
-        auto format = options_.GetWriteFileFormat();
+        auto format = options_.GetWriteFileFormat(/*level=*/0);
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<WriterBuilder> writer_builder,
             format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
@@ -253,8 +253,8 @@ PostponeBucketWriter::CreateRollingRowWriter() const {
             return Status::OK();
         };
         auto writer = std::make_unique<KeyValueDataFileWriter>(
-            options_.GetFileCompression(), converter, schema_id_, /*level=*/0, FileSource::Append(),
-            trimmed_primary_keys_, /*stats_extractor=*/nullptr, write_schema_,
+            options_.GetWriteFileCompression(0), converter, schema_id_, /*level=*/0,
+            FileSource::Append(), trimmed_primary_keys_, /*stats_extractor=*/nullptr, write_schema_,
             path_factory_->IsExternalPath(), pool_);
         PAIMON_RETURN_NOT_OK(
             writer->Init(options_.GetFileSystem(), path_factory_->NewPath(), writer_builder));

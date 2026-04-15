@@ -41,10 +41,15 @@ class LanceFileBatchReader : public FileBatchReader {
 
     Result<ReadBatch> NextBatch() override;
 
-    uint64_t GetPreviousBatchFirstRowNumber() const override {
-        // TODO(xinyu.lxy): support function
-        assert(false);
-        return -1;
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        if (!read_row_ids_.empty() && read_row_ids_.size() != num_rows_) {
+            // TODO(xinyu.lxy): support function
+            return Status::Invalid(
+                "Cannot call GetPreviousBatchFirstRowNumber in LanceFileBatchReader because, after "
+                "bitmap pushdown, rows in the array returned by NextBatch are no longer "
+                "contiguous.");
+        }
+        return previous_batch_first_row_num_;
     }
 
     Result<uint64_t> GetNumberOfRows() const override {
@@ -74,6 +79,9 @@ class LanceFileBatchReader : public FileBatchReader {
     int32_t batch_size_ = -1;
     int32_t batch_readahead_ = -1;
     uint64_t num_rows_ = 0;
+    // only validate when there is no bitmap pushdown
+    uint64_t previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
+    uint64_t last_batch_row_num_ = 0;
     mutable std::string error_message_;
     LanceFileReader* file_reader_ = nullptr;
     LanceReaderAdapter* stream_reader_ = nullptr;

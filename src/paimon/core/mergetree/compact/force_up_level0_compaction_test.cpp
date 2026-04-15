@@ -83,4 +83,33 @@ TEST_F(ForceUpLevel0CompactionTest, TestForceCompaction0) {
     ASSERT_TRUE(unit);
     ASSERT_EQ(unit.value().output_level, 2);
 }
+
+TEST_F(ForceUpLevel0CompactionTest, TestMaxCompactIntervalConfiguration) {
+    auto universal =
+        std::make_shared<UniversalCompaction>(/*max_size_amp=*/200, /*size_ratio=*/1,
+                                              /*num_run_compaction_trigger=*/5, nullptr, nullptr);
+
+    ForceUpLevel0Compaction radical(universal, /*max_compact_interval=*/std::nullopt);
+    ASSERT_EQ(radical.MaxCompactInterval(), std::nullopt);
+
+    ForceUpLevel0Compaction gentle(universal, /*max_compact_interval=*/10);
+    ASSERT_EQ(gentle.MaxCompactInterval(), 10);
+}
+
+TEST_F(ForceUpLevel0CompactionTest, TestGentleIntervalShouldForcePickAfterThreshold) {
+    auto universal =
+        std::make_shared<UniversalCompaction>(/*max_size_amp=*/200, /*size_ratio=*/1,
+                                              /*num_run_compaction_trigger=*/5, nullptr, nullptr);
+    ForceUpLevel0Compaction compaction(universal, /*max_compact_interval=*/2);
+    auto runs = CreateRunsWithLevelAndSize({0, 0}, {1, 1});
+
+    // First trigger only increases the counter in gentle mode.
+    ASSERT_OK_AND_ASSIGN(auto unit, compaction.Pick(/*num_levels=*/3, runs));
+    ASSERT_FALSE(unit);
+
+    // Second trigger reaches the threshold and forces a level-0 pick.
+    ASSERT_OK_AND_ASSIGN(unit, compaction.Pick(/*num_levels=*/3, runs));
+    ASSERT_TRUE(unit);
+    ASSERT_EQ(unit.value().output_level, 2);
+}
 }  // namespace paimon::test

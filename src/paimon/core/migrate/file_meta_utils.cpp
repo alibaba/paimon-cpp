@@ -124,7 +124,7 @@ Result<std::unique_ptr<CommitMessage>> FileMetaUtils::GenerateCommitMessage(
                            CoreOptions::FromMap(table_options, file_system));
 
     std::shared_ptr<FileSystem> fs = core_options.GetFileSystem();
-    std::shared_ptr<FileFormat> format = core_options.GetWriteFileFormat();
+    std::shared_ptr<FileFormat> format = core_options.GetFileFormat();
     assert(fs);
     assert(format);
     PAIMON_RETURN_NOT_OK(ValidateNonObjectPath(src_data_files));

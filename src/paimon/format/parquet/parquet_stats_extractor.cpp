@@ -25,6 +25,7 @@
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
@@ -32,7 +33,6 @@
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
 #include "paimon/format/column_stats.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
 #include "paimon/format/parquet/parquet_schema_util.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/bytes.h"
@@ -275,7 +275,7 @@ ParquetStatsExtractor::ExtractWithFileInfo(const std::shared_ptr<FileSystem>& fi
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_length, input_stream->Length());
     std::shared_ptr<arrow::MemoryPool> parquet_memory_pool = GetArrowPool(pool);
-    auto parquet_input_file = std::make_shared<ParquetInputStreamImpl>(
+    auto parquet_input_file = std::make_shared<ArrowInputStreamAdapter>(
         std::move(input_stream), parquet_memory_pool, file_length);
     ::parquet::ReaderProperties read_properties(parquet_memory_pool.get());
     read_properties.enable_buffered_stream();

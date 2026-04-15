@@ -63,6 +63,7 @@ class SchemaValidation {
     static Status ValidateFieldsPrefix(const TableSchema& schema, const CoreOptions& options);
     static Status ValidateSequenceField(const TableSchema& schema, const CoreOptions& options);
     static Status ValidateSequenceGroup(const TableSchema& schema, const CoreOptions& options);
+    static Status ValidateChangelogProducer(const CoreOptions& options);
     static Status ValidateForDeletionVectors(const CoreOptions& options);
 
     static Status ValidateRowTracking(const TableSchema& table_schema, const CoreOptions& options);

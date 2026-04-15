@@ -183,6 +183,7 @@ TEST(BinaryArrayTest, TestSetAndGet) {
     }
     // timestamp
     {
+        // not compact (precision > 3)
         std::vector<Timestamp> arr = {Timestamp(0, 0), Timestamp(12345, 1)};
         BinaryArray array;
         BinaryArrayWriter writer = BinaryArrayWriter(&array, arr.size(), 8, pool.get());
@@ -192,6 +193,18 @@ TEST(BinaryArrayTest, TestSetAndGet) {
         writer.Complete();
         ASSERT_EQ(arr[0], array.GetTimestamp(0, 9));
         ASSERT_EQ(arr[1], array.GetTimestamp(1, 9));
+    }
+    {
+        // compact (precision <= 3)
+        std::vector<Timestamp> arr = {Timestamp(0, 0), Timestamp(12345, 0)};
+        BinaryArray array;
+        BinaryArrayWriter writer = BinaryArrayWriter(&array, arr.size(), 8, pool.get());
+        for (size_t i = 0; i < arr.size(); i++) {
+            writer.WriteTimestamp(i, arr[i], 3);
+        }
+        writer.Complete();
+        ASSERT_EQ(arr[0], array.GetTimestamp(0, 3));
+        ASSERT_EQ(arr[1], array.GetTimestamp(1, 3));
     }
     // binary
     {
@@ -263,7 +276,7 @@ TEST(BinaryArrayTest, TestSetAndGet) {
     {
         auto key = BinaryArray::FromIntArray({1, 2, 3, 5}, pool.get());
         auto value = BinaryArray::FromLongArray({100ll, 200ll, 300ll, 500ll}, pool.get());
-        ASSERT_OK_AND_ASSIGN(auto map, BinaryMap::ValueOf(key, value, pool.get()));
+        auto map = BinaryMap::ValueOf(key, value, pool.get());
         BinaryArray array;
         BinaryArrayWriter writer =
             BinaryArrayWriter(&array, /*num_elements=*/1, /*element_size=*/8, pool.get());
@@ -377,6 +390,126 @@ TEST(BinaryArrayTest, TestReset) {
     }
     writer.Complete();
     ASSERT_EQ(arr, array.ToLongArray().value());
+}
+
+TEST(BinaryArrayTest, TestGetElementSize) {
+    ASSERT_EQ(sizeof(bool), BinaryArrayWriter::GetElementSize(arrow::Type::type::BOOL));
+    ASSERT_EQ(sizeof(int8_t), BinaryArrayWriter::GetElementSize(arrow::Type::type::INT8));
+    ASSERT_EQ(sizeof(int16_t), BinaryArrayWriter::GetElementSize(arrow::Type::type::INT16));
+    ASSERT_EQ(sizeof(int32_t), BinaryArrayWriter::GetElementSize(arrow::Type::type::INT32));
+    ASSERT_EQ(sizeof(int32_t), BinaryArrayWriter::GetElementSize(arrow::Type::type::DATE32));
+    ASSERT_EQ(sizeof(int64_t), BinaryArrayWriter::GetElementSize(arrow::Type::type::INT64));
+    ASSERT_EQ(sizeof(float), BinaryArrayWriter::GetElementSize(arrow::Type::type::FLOAT));
+    ASSERT_EQ(sizeof(double), BinaryArrayWriter::GetElementSize(arrow::Type::type::DOUBLE));
+    // default cases: variable-length types use 8 bytes (offset + length)
+    ASSERT_EQ(8, BinaryArrayWriter::GetElementSize(arrow::Type::type::STRING));
+    ASSERT_EQ(8, BinaryArrayWriter::GetElementSize(arrow::Type::type::BINARY));
+    ASSERT_EQ(8, BinaryArrayWriter::GetElementSize(arrow::Type::type::TIMESTAMP));
+    ASSERT_EQ(8, BinaryArrayWriter::GetElementSize(arrow::Type::type::DECIMAL128));
+}
+
+TEST(BinaryArrayTest, TestSetNullAtWithArrowType) {
+    auto pool = GetDefaultPool();
+
+    {
+        // BOOL
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(bool), pool.get());
+        writer.WriteBoolean(0, true);
+        writer.SetNullAt(1, arrow::Type::type::BOOL);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_TRUE(array.GetBoolean(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // INT8
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(int8_t), pool.get());
+        writer.WriteByte(0, 42);
+        writer.SetNullAt(1, arrow::Type::type::INT8);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ(42, array.GetByte(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // INT16
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(int16_t), pool.get());
+        writer.WriteShort(0, 1000);
+        writer.SetNullAt(1, arrow::Type::type::INT16);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ(1000, array.GetShort(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // INT32
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(int32_t), pool.get());
+        writer.WriteInt(0, 100000);
+        writer.SetNullAt(1, arrow::Type::type::INT32);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ(100000, array.GetInt(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // DATE32
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(int32_t), pool.get());
+        writer.WriteInt(0, 19000);
+        writer.SetNullAt(1, arrow::Type::type::DATE32);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ(19000, array.GetDate(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // INT64
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(int64_t), pool.get());
+        writer.WriteLong(0, 123456789L);
+        writer.SetNullAt(1, arrow::Type::type::INT64);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ(123456789L, array.GetLong(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // FLOAT
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(float), pool.get());
+        writer.WriteFloat(0, 3.14f);
+        writer.SetNullAt(1, arrow::Type::type::FLOAT);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_FLOAT_EQ(3.14f, array.GetFloat(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // DOUBLE
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, sizeof(double), pool.get());
+        writer.WriteDouble(0, 2.718);
+        writer.SetNullAt(1, arrow::Type::type::DOUBLE);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_DOUBLE_EQ(2.718, array.GetDouble(0));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
+    {
+        // STRING (default path, uses 8-byte null)
+        BinaryArray array;
+        BinaryArrayWriter writer(&array, 2, 8, pool.get());
+        writer.WriteString(0, BinaryString::FromString("hello", pool.get()));
+        writer.SetNullAt(1, arrow::Type::type::STRING);
+        writer.Complete();
+        ASSERT_FALSE(array.IsNullAt(0));
+        ASSERT_EQ("hello", std::string(array.GetStringView(0)));
+        ASSERT_TRUE(array.IsNullAt(1));
+    }
 }
 
 }  // namespace paimon::test

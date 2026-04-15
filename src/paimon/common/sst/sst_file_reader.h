@@ -40,51 +40,38 @@ class SstFileIterator;
 /// queries. Note that this class is NOT thread-safe.
 class SstFileReader {
  public:
-    static Result<std::shared_ptr<SstFileReader>> Create(const std::shared_ptr<MemoryPool>& pool,
-                                                         const std::shared_ptr<InputStream>& input,
-                                                         MemorySlice::SliceComparator comparator);
+    static Result<std::shared_ptr<SstFileReader>> Create(
+        const std::shared_ptr<InputStream>& input, MemorySlice::SliceComparator comparator,
+        const std::shared_ptr<CacheManager>& cache_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     std::unique_ptr<SstFileIterator> CreateIterator();
 
-    /**
-     * Lookup the specified key in the file.
-     *
-     * @param key serialized key
-     * @return corresponding serialized value, nullptr if not found.
-     */
+    /// Lookup the specified key in the file.
+    ///
+    /// @param key serialized key
+    /// @return corresponding serialized value, nullptr if not found.
     Result<std::shared_ptr<Bytes>> Lookup(const std::shared_ptr<Bytes>& key);
 
     Result<std::unique_ptr<BlockIterator>> GetNextBlock(
         std::unique_ptr<BlockIterator>& index_iterator);
 
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
-    Result<std::shared_ptr<BlockReader>> ReadBlock(std::shared_ptr<BlockHandle>&& handle,
-                                                   bool index);
-
-    /**
-     * @param handle The block handle.
-     * @param index Whether read the block as an index.
-     * @return The reader of the target block.
-     */
-    Result<std::shared_ptr<BlockReader>> ReadBlock(const std::shared_ptr<BlockHandle>& handle,
-                                                   bool index);
+    /// @param handle The block handle.
+    /// @param index Whether read the block as an index.
+    /// @return The reader of the target block.
+    Result<std::shared_ptr<BlockReader>> ReadBlock(const BlockHandle& handle, bool index);
 
     Status Close();
 
  private:
-    static Result<std::shared_ptr<paimon::MemorySegment>> DecompressBlock(
-        const std::shared_ptr<paimon::MemorySegment>& compressed_data,
-        const std::unique_ptr<BlockTrailer>& trailer, const std::shared_ptr<MemoryPool>& pool);
+    static Result<MemorySegment> DecompressBlock(const MemorySegment& compressed_data,
+                                                 const std::shared_ptr<BlockTrailer>& trailer,
+                                                 const std::shared_ptr<MemoryPool>& pool);
 
-    SstFileReader(const std::shared_ptr<MemoryPool>& pool,
-                  const std::shared_ptr<BlockCache>& block_cache,
+    SstFileReader(const std::shared_ptr<BlockCache>& block_cache,
                   const std::shared_ptr<BloomFilter>& bloom_filter,
-                  const std::shared_ptr<paimon::BlockReader>& index_block_reader,
-                  MemorySlice::SliceComparator comparator);
+                  const std::shared_ptr<BlockReader>& index_block_reader,
+                  MemorySlice::SliceComparator comparator, const std::shared_ptr<MemoryPool>& pool);
 
  private:
     std::shared_ptr<MemoryPool> pool_;
@@ -98,10 +85,8 @@ class SstFileIterator {
  public:
     SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
 
-    /**
-     * Seek to the position of the record whose key is exactly equal to or greater than the
-     * specified key.
-     */
+    /// Seek to the position of the record whose key is exactly equal to or greater than the
+    /// specified key.
     Status SeekTo(const std::shared_ptr<Bytes>& key);
 
  private:

@@ -63,6 +63,9 @@ const char Options::SORT_ENGINE[] = "sort-engine";
 const char Options::IGNORE_DELETE[] = "ignore-delete";
 const char Options::FIELDS_DEFAULT_AGG_FUNC[] = "fields.default-aggregate-function";
 const char Options::DELETION_VECTORS_ENABLED[] = "deletion-vectors.enabled";
+const char Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[] =
+    "deletion-vector.index-file.target-size";
+const char Options::DELETION_VECTOR_BITMAP64[] = "deletion-vectors.bitmap64";
 const char Options::CHANGELOG_PRODUCER[] = "changelog-producer";
 const char Options::FORCE_LOOKUP[] = "force-lookup";
 const char Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE[] =
@@ -95,7 +98,26 @@ const char Options::COMPACT_OFFPEAK_END_HOUR[] = "compaction.offpeak.end.hour";
 const char Options::COMPACTION_OFFPEAK_RATIO[] = "compaction.offpeak-ratio";
 const char Options::LOOKUP_CACHE_BLOOM_FILTER_ENABLED[] = "lookup.cache.bloom.filter.enabled";
 const char Options::LOOKUP_CACHE_BLOOM_FILTER_FPP[] = "lookup.cache.bloom.filter.fpp";
+const char Options::LOOKUP_REMOTE_FILE_ENABLED[] = "lookup.remote-file.enabled";
+const char Options::LOOKUP_REMOTE_LEVEL_THRESHOLD[] = "lookup.remote-file.level-threshold";
 const char Options::LOOKUP_CACHE_SPILL_COMPRESSION[] = "lookup.cache-spill-compression";
 const char Options::SPILL_COMPRESSION_ZSTD_LEVEL[] = "spill-compression.zstd-level";
 const char Options::CACHE_PAGE_SIZE[] = "cache-page-size";
+const char Options::FILE_FORMAT_PER_LEVEL[] = "file.format.per.level";
+const char Options::FILE_COMPRESSION_PER_LEVEL[] = "file.compression.per.level";
+const char Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[] =
+    "compaction.max-size-amplification-percent";
+const char Options::COMPACTION_SIZE_RATIO[] = "compaction.size-ratio";
+const char Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER[] = "num-sorted-run.compaction-trigger";
+const char Options::NUM_SORTED_RUNS_STOP_TRIGGER[] = "num-sorted-run.stop-trigger";
+const char Options::NUM_LEVELS[] = "num-levels";
+const char Options::COMPACTION_FORCE_UP_LEVEL_0[] = "compaction.force-up-level-0";
+const char Options::LOOKUP_WAIT[] = "lookup-wait";
+const char Options::LOOKUP_COMPACT[] = "lookup-compact";
+const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
+const char Options::LOOKUP_CACHE_MAX_MEMORY_SIZE[] = "lookup.cache-max-memory-size";
+const char Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[] = "lookup.cache.high-priority-pool-ratio";
+const char Options::LOOKUP_CACHE_FILE_RETENTION[] = "lookup.cache-file-retention";
+const char Options::LOOKUP_CACHE_MAX_DISK_SIZE[] = "lookup.cache-max-disk-size";
+
 }  // namespace paimon

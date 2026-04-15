@@ -70,8 +70,8 @@ Status LanceFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
                                       arrow::ImportSchema(read_schema));
     read_field_names_ = arrow_schema->field_names();
     assert(!read_field_names_.empty());
+    read_row_ids_.clear();
     if (selection_bitmap) {
-        read_row_ids_.clear();
         read_row_ids_.reserve(selection_bitmap.value().Cardinality());
         for (auto iter = selection_bitmap.value().Begin(); iter != selection_bitmap.value().End();
              ++iter) {
@@ -84,6 +84,8 @@ Status LanceFileBatchReader::SetReadSchema(::ArrowSchema* read_schema,
             release_stream_reader(stream_reader_, error_message_.data(), error_message_.size());
         PAIMON_RETURN_NOT_OK(LanceToPaimonStatus(err_code, error_message_));
         stream_reader_ = nullptr;
+        previous_batch_first_row_num_ = std::numeric_limits<uint64_t>::max();
+        last_batch_row_num_ = 0;
     }
     return Status::OK();
 }
@@ -102,6 +104,12 @@ Result<BatchReader::ReadBatch> LanceFileBatchReader::NextBatch() {
         PAIMON_RETURN_NOT_OK(LanceToPaimonStatus(err_code, error_message_));
         assert(stream_reader_);
     }
+    if (previous_batch_first_row_num_ == std::numeric_limits<uint64_t>::max()) {
+        // first read
+        previous_batch_first_row_num_ = 0;
+    } else {
+        previous_batch_first_row_num_ += last_batch_row_num_;
+    }
     auto c_array = std::make_unique<ArrowArray>();
     auto c_schema = std::make_unique<ArrowSchema>();
     bool is_eof = false;
@@ -111,6 +119,7 @@ Result<BatchReader::ReadBatch> LanceFileBatchReader::NextBatch() {
     if (is_eof) {
         return BatchReader::MakeEofBatch();
     }
+    last_batch_row_num_ = c_array->length;
     return std::make_pair(std::move(c_array), std::move(c_schema));
 }
 

@@ -38,13 +38,13 @@ namespace paimon {
 class MemoryPool;
 
 KeyValueDataFileRecordReader::KeyValueDataFileRecordReader(
-    std::unique_ptr<BatchReader>&& reader, int32_t key_arity,
+    std::unique_ptr<FileBatchReader>&& reader, const std::shared_ptr<arrow::Schema>& key_schema,
     const std::shared_ptr<arrow::Schema>& value_schema, int32_t level,
     const std::shared_ptr<MemoryPool>& pool)
-    : key_arity_(key_arity),
-      level_(level),
+    : level_(level),
       pool_(pool),
       reader_(std::move(reader)),
+      key_schema_(key_schema),
       value_schema_(value_schema),
       value_names_(value_schema_->field_names()) {}
 
@@ -80,10 +80,17 @@ Result<KeyValue> KeyValueDataFileRecordReader::Iterator::Next() {
     return KeyValue(row_kind, sequence_number, reader_->level_, std::move(key), std::move(value));
 }
 
+Result<std::pair<int64_t, KeyValue>> KeyValueDataFileRecordReader::Iterator::NextWithFilePos() {
+    PAIMON_ASSIGN_OR_RAISE(KeyValue kv, Next());
+    return std::make_pair(previous_batch_first_row_number_ + cursor_ - 1, std::move(kv));
+}
+
 Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordReader::NextBatch() {
     Reset();
     PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatchWithBitmap batch_with_bitmap,
                            reader_->NextBatchWithBitmap());
+    PAIMON_ASSIGN_OR_RAISE(int64_t previous_batch_first_row_number,
+                           reader_->GetPreviousBatchFirstRowNumber());
     if (BatchReader::IsEofBatch(batch_with_bitmap)) {
         // reader eof, just return
         return std::unique_ptr<KeyValueRecordReader::Iterator>();
@@ -110,11 +117,10 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
         return Status::Invalid("cannot cast VALUE_KIND column to int8 arrow array");
     }
     arrow::ArrayVector key_fields;
-    key_fields.reserve(key_arity_);
-    for (int32_t i = 0; i < key_arity_; i++) {
+    key_fields.reserve(key_schema_->num_fields());
+    for (const auto& key_field : key_schema_->fields()) {
         // skip special fields
-        key_fields.emplace_back(
-            data_batch->field(i + SpecialFields::KEY_VALUE_SPECIAL_FIELD_COUNT));
+        key_fields.emplace_back(data_batch->GetFieldByName(key_field->name()));
     }
     // e.g., file schema:    seq, kind, key1, key2, s1, s2, v1, v2
     // user raw read schema: key1, v1, s1
@@ -135,7 +141,8 @@ Result<std::unique_ptr<KeyValueRecordReader::Iterator>> KeyValueDataFileRecordRe
     key_ctx_ = std::make_shared<ColumnarBatchContext>(key_fields, pool_);
     value_ctx_ = std::make_shared<ColumnarBatchContext>(value_fields, pool_);
     ArrowUtils::TraverseArray(data_batch);
-    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(this);
+    return std::make_unique<KeyValueDataFileRecordReader::Iterator>(
+        this, previous_batch_first_row_number);
 }
 
 void KeyValueDataFileRecordReader::Reset() {

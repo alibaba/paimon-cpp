@@ -31,15 +31,13 @@ class BlockDecompressor {
     virtual ~BlockDecompressor() = default;
 
  public:
-    /**
-     * Decompress data read from src, and write the decompressed data to dst.
-     *
-     * @param src Compressed data to read from
-     * @param src_length The length of data which want to be decompressed
-     * @param dst The target to write decompressed data
-     * @param dst_length The max length of data
-     * @return Length of decompressed data
-     */
+    /// Decompress data read from src, and write the decompressed data to dst.
+    ///
+    /// @param src Compressed data to read from
+    /// @param src_length The length of data which want to be decompressed
+    /// @param dst The target to write decompressed data
+    /// @param dst_length The max length of data
+    /// @return Length of decompressed data
     virtual Result<int32_t> Decompress(const char* src, int32_t src_length, char* dst,
                                        int32_t dst_length) = 0;
 

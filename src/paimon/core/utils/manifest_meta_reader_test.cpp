@@ -37,7 +37,7 @@ TEST(ManifestMetaReaderTest, TestNoNeedCompleteNonExistField) {
                      arrow::struct_({field("sub1", arrow::int64()), field("sub2", arrow::float64()),
                                      field("sub3", arrow::boolean())})),
     };
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
         [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], [20, 20.1, true]],
         [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]],
@@ -62,7 +62,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldSimple) {
                      arrow::struct_({field("sub1", arrow::int64()), field("sub2", arrow::float64()),
                                      field("sub3", arrow::boolean())})),
     };
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
         [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], [20, 20.1, true]],
         [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]],
@@ -86,7 +86,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldSimple) {
                                        src_array, target_arrow_type, arrow_pool.get()));
 
     auto expected_array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({target_fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(target_fields), R"([
         [[1, 2, 3],    [["apple", 3], ["banana", 4]],          null, [10, 10.1, false, null]],
         [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], null, [20, 20.1, true, null]],
         [[6],          [["elephant", 7], ["fox", 8]],          null, [null, 30.1, true, null]],
@@ -106,7 +106,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldNested) {
         arrow::field("f1", arrow::map(arrow::struct_({field("a", arrow::int64()),
                                                       field("b", arrow::boolean())}),
                                       arrow::boolean()))};
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[null, [1, true], null], [[[1, true], true]]],
         [[[2, false], null], null],
         [[[2, false], [3, true], [4, null]], [[[1, true], true], [[5, false], null]]],
@@ -127,7 +127,7 @@ TEST(ManifestMetaReaderTest, TestCompleteNonExistFieldNested) {
                                        src_array, target_arrow_type, arrow_pool.get()));
 
     auto expected_array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({target_fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(target_fields), R"([
         [[null, [1, true, null], null], [[[1, true, null], true]]],
         [[[2, false, null], null], null],
         [[[2, false, null], [3, true, null], [4, null, null]], [[[1, true, null], true], [[5, false, null], null]]],
@@ -156,7 +156,7 @@ TEST(ManifestMetaReaderTest, TestCastInt32Type) {
         [[10, 11, 12], [["rabbit", null], ["tiger", 13]],      null,               70]
     ])";
     auto src_array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({src_fields}), array_json)
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(src_fields), array_json)
             .ValueOrDie();
 
     arrow::FieldVector target_fields = {

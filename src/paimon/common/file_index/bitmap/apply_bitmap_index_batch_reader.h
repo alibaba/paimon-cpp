@@ -25,7 +25,6 @@
 #include "arrow/c/helpers.h"
 #include "paimon/common/reader/reader_utils.h"
 #include "paimon/file_index/bitmap_index_result.h"
-#include "paimon/reader/batch_reader.h"
 #include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -34,7 +33,7 @@
 namespace paimon {
 class Metrics;
 
-class ApplyBitmapIndexBatchReader : public BatchReader {
+class ApplyBitmapIndexBatchReader : public FileBatchReader {
  public:
     ApplyBitmapIndexBatchReader(std::unique_ptr<FileBatchReader>&& reader, RoaringBitmap32&& bitmap)
         : reader_(std::move(reader)), bitmap_(std::move(bitmap)) {
@@ -72,10 +71,31 @@ class ApplyBitmapIndexBatchReader : public BatchReader {
         return reader_->GetReaderMetrics();
     }
 
+    Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override {
+        return reader_->GetFileSchema();
+    }
+
+    Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
+                         const std::optional<RoaringBitmap32>& selection_bitmap) override {
+        return Status::Invalid("ApplyBitmapIndexBatchReader does not support SetReadSchema");
+    }
+
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        return reader_->GetPreviousBatchFirstRowNumber();
+    }
+
+    Result<uint64_t> GetNumberOfRows() const override {
+        return reader_->GetNumberOfRows();
+    }
+
+    bool SupportPreciseBitmapSelection() const override {
+        return reader_->SupportPreciseBitmapSelection();
+    }
+
  private:
     Result<RoaringBitmap32> Filter(int32_t batch_size) const {
         RoaringBitmap32 is_valid;
-        int32_t start_pos = reader_->GetPreviousBatchFirstRowNumber();
+        PAIMON_ASSIGN_OR_RAISE(int32_t start_pos, reader_->GetPreviousBatchFirstRowNumber());
         int32_t length = batch_size;
         for (auto iter = bitmap_.EqualOrLarger(start_pos);
              iter != bitmap_.End() && *iter < start_pos + length; ++iter) {

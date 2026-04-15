@@ -95,7 +95,7 @@ Result<std::shared_ptr<DataFileMeta>> KeyValueDataFileWriter::GetResult() {
     } else {
         PAIMON_RETURN_NOT_OK(GenerateKeyStatsWithAllNull(&key_stats));
     }
-    // TODO(xinyu.lxy): do not support write value stats cols & first_row_id & write_cols for now
+    // TODO(xinyu.lxy): do not support write value stats cols for now
     std::optional<std::string> final_path;
     if (is_external_path_) {
         PAIMON_ASSIGN_OR_RAISE(Path external_path, PathUtil::ToPath(path_));

@@ -16,6 +16,9 @@
 
 # Paimon C++
 
+[![GitHub License](https://img.shields.io/github/license/alibaba/paimon-cpp?color=blue)](https://github.com/alibaba/paimon-cpp/blob/main/LICENSE)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/alibaba/paimon-cpp)
+
 Paimon C++ is a high-performance C++ implementation of [Apache Paimon](https://paimon.apache.org). Paimon C++ aims to provide a native, high-performance and extensible implementation that allows native engines to access the Paimon datalake format with maximum efficiency.
 
 ## What's in the Paimon C++ library
@@ -140,7 +143,7 @@ $ make
 ## Contributing
 
 Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!
-Before contributing, you are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
+Before contributing, please read the [Contributing Guide](CONTRIBUTING.md) and the [Code Style Guide](docs/code-style.md). You are encouraged to check out our [documentation](https://alibaba.github.io/paimon-cpp/).
 
 If you have suggestions, feedback, want to report a bug or request a feature, please open an [issue](https://github.com/alibaba/paimon-cpp/issues/new).
 Pull requests are also very welcome!

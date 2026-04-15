@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -32,12 +33,34 @@ namespace paimon {
 /// of these files do not overlap.
 class SortedRun {
  public:
+    static SortedRun Empty() {
+        return SortedRun({});
+    }
     static SortedRun FromSingle(const std::shared_ptr<DataFileMeta>& meta) {
         return SortedRun({meta});
     }
     static SortedRun FromSorted(const std::vector<std::shared_ptr<DataFileMeta>>& meta) {
         return SortedRun(meta);
     }
+    static Result<SortedRun> FromUnsorted(const std::vector<std::shared_ptr<DataFileMeta>>& meta,
+                                          const std::shared_ptr<FieldsComparator>& comparator) {
+        std::vector<std::shared_ptr<DataFileMeta>> unsorted = meta;
+        std::sort(unsorted.begin(), unsorted.end(),
+                  [comparator](const std::shared_ptr<DataFileMeta>& m1,
+                               const std::shared_ptr<DataFileMeta>& m2) {
+                      return comparator->CompareTo(m1->min_key, m2->min_key) < 0;
+                  });
+        SortedRun sorted_run(unsorted);
+        if (!sorted_run.IsValid(comparator)) {
+            return Status::Invalid("from unsorted validate failed");
+        }
+        return sorted_run;
+    }
+
+    bool IsEmpty() const {
+        return files_.empty();
+    }
+
     const std::vector<std::shared_ptr<DataFileMeta>>& Files() const& {
         return files_;
     }
@@ -57,6 +80,21 @@ class SortedRun {
             }
         }
         return true;
+    }
+
+    bool operator==(const SortedRun& other) const {
+        if (this == &other) {
+            return true;
+        }
+        if (files_.size() != other.Files().size()) {
+            return false;
+        }
+        for (size_t i = 0; i < files_.size(); i++) {
+            if (*files_[i] != *(other.Files()[i])) {
+                return false;
+            }
+        }
+        return total_size_ == other.TotalSize();
     }
 
     std::string ToString() const {

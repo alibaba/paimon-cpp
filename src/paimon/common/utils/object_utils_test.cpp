@@ -86,5 +86,28 @@ TEST(ObjectUtilsTest, TestCreateIdentifierToIndexMap) {
         ASSERT_EQ(expected_map, result_map);
     }
 }
+TEST(ObjectUtilsTest, TestMoveVector) {
+    struct Base {
+        virtual ~Base() = default;
+        virtual int32_t Value() const = 0;
+    };
 
+    struct Derived : Base {
+        explicit Derived(int32_t v) : val(v) {}
+        int32_t Value() const override {
+            return val;
+        }
+        int32_t val;
+    };
+    std::vector<std::unique_ptr<Derived>> derived_vec;
+    derived_vec.push_back(std::make_unique<Derived>(10));
+    derived_vec.push_back(std::make_unique<Derived>(20));
+    derived_vec.push_back(std::make_unique<Derived>(30));
+
+    auto base_vec = paimon::ObjectUtils::MoveVector<std::unique_ptr<Base>>(std::move(derived_vec));
+
+    ASSERT_EQ(base_vec[0]->Value(), 10);
+    ASSERT_EQ(base_vec[1]->Value(), 20);
+    ASSERT_EQ(base_vec[2]->Value(), 30);
+}
 }  // namespace paimon::test

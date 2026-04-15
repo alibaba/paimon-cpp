@@ -216,7 +216,7 @@ Result<std::string> FileStorePathFactory::BucketPath(const BinaryRow& partition,
 }
 
 Result<std::string> FileStorePathFactory::GetPartitionString(const BinaryRow& partition) const {
-    if (partition.GetSegments().size() == 0) {
+    if (partition.GetSizeInBytes() == 0) {
         return Status::Invalid("invalid binary row partition");
     }
     auto iter = row_to_str_cache_.find(partition);

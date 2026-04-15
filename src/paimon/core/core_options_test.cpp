@@ -33,7 +33,9 @@ namespace paimon::test {
 TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
     ASSERT_EQ(core_options.GetManifestFormat()->Identifier(), "avro");
-    ASSERT_EQ(core_options.GetWriteFileFormat()->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "parquet");
+    ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
     ASSERT_TRUE(core_options.GetFileSystem());
     ASSERT_EQ(-1, core_options.GetBucket());
     ASSERT_EQ(64 * 1024L, core_options.GetPageSize());
@@ -46,6 +48,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ("__DEFAULT_PARTITION__", core_options.GetPartitionDefaultName());
     ASSERT_EQ(std::nullopt, core_options.GetScanSnapshotId());
     ASSERT_EQ("zstd", core_options.GetFileCompression());
+    ASSERT_EQ("zstd", core_options.GetWriteFileCompression(0));
+    ASSERT_EQ("zstd", core_options.GetWriteFileCompression(3));
     ASSERT_EQ("zstd", core_options.GetManifestCompression());
     ASSERT_EQ(1, core_options.GetFileCompressionZstdLevel());
     ASSERT_EQ(StartupMode::LatestFull(), core_options.GetStartupMode());
@@ -74,12 +78,20 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_FALSE(core_options.WriteOnly());
     ASSERT_EQ(5, core_options.GetCompactionMinFileNum());
     ASSERT_FALSE(core_options.CompactionForceRewriteAllFiles());
+    ASSERT_FALSE(core_options.CompactionForceUpLevel0());
     ASSERT_EQ(std::nullopt, core_options.GetFieldsDefaultFunc());
     ASSERT_EQ(std::nullopt, core_options.GetFieldAggFunc("f0").value());
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
+    ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
+    ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::NONE, core_options.GetChangelogProducer());
     ASSERT_FALSE(core_options.NeedLookup());
+    ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
+    LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
+                                               /*produce_changelog=*/false,
+                                               /*deletion_vector=*/false, /*force_lookup=*/false};
+    ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
     ASSERT_TRUE(core_options.GetFieldsSequenceGroups().empty());
     ASSERT_FALSE(core_options.PartialUpdateRemoveRecordOnDelete());
     ASSERT_TRUE(core_options.GetPartialUpdateRemoveRecordOnSequenceGroup().empty());
@@ -108,6 +120,18 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ("zstd", core_options.GetLookupCompressOptions().compress);
     ASSERT_EQ(1, core_options.GetLookupCompressOptions().zstd_level);
     ASSERT_EQ(64 * 1024, core_options.GetCachePageSize());
+    ASSERT_EQ(200, core_options.GetCompactionMaxSizeAmplificationPercent());
+    ASSERT_EQ(1, core_options.GetCompactionSizeRatio());
+    ASSERT_EQ(5, core_options.GetNumSortedRunsCompactionTrigger());
+    ASSERT_EQ(8, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(LookupCompactMode::RADICAL, core_options.GetLookupCompactMode());
+    ASSERT_EQ(10, core_options.GetLookupCompactMaxInterval());
+    ASSERT_EQ(256 * 1024 * 1024, core_options.GetLookupCacheMaxMemory());
+    ASSERT_EQ(0.25, core_options.GetLookupCacheHighPrioPoolRatio());
+    ASSERT_EQ(1 * 3600 * 1000, core_options.GetLookupCacheFileRetentionMs());
+    ASSERT_EQ(INT64_MAX, core_options.GetLookupCacheMaxDiskSize());
+    ASSERT_FALSE(core_options.LookupRemoteFileEnabled());
+    ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), INT32_MIN);
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -146,6 +170,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {"fields.f0.aggregate-function", "min"},
         {"fields.f1.ignore-retract", "true"},
         {Options::DELETION_VECTORS_ENABLED, "true"},
+        {Options::DELETION_VECTOR_BITMAP64, "true"},
+        {Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE, "4MB"},
         {Options::CHANGELOG_PRODUCER, "full-compaction"},
         {Options::FORCE_LOOKUP, "true"},
         {"fields.g_1,g_3.sequence-group", "c,d"},
@@ -171,6 +197,13 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::WRITE_ONLY, "true"},
         {Options::COMPACTION_MIN_FILE_NUM, "10"},
         {Options::COMPACTION_FORCE_REWRITE_ALL_FILES, "true"},
+        {Options::COMPACTION_FORCE_UP_LEVEL_0, "true"},
+        {Options::COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT, "123"},
+        {Options::COMPACTION_SIZE_RATIO, "9"},
+        {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+        {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "17"},
+        {Options::LOOKUP_COMPACT, "gentle"},
+        {Options::LOOKUP_COMPACT_MAX_INTERVAL, "7"},
         {Options::COMPACTION_OPTIMIZATION_INTERVAL, "2s"},
         {Options::COMPACTION_TOTAL_SIZE_THRESHOLD, "5 GB"},
         {Options::COMPACTION_INCREMENTAL_SIZE_THRESHOLD, "12 kB"},
@@ -181,14 +214,24 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_BLOOM_FILTER_FPP, "0.5"},
         {Options::LOOKUP_CACHE_SPILL_COMPRESSION, "lz4"},
         {Options::SPILL_COMPRESSION_ZSTD_LEVEL, "2"},
-        {Options::CACHE_PAGE_SIZE, "6MB"}};
+        {Options::CACHE_PAGE_SIZE, "6MB"},
+        {Options::FILE_FORMAT_PER_LEVEL, "0:AVRO,3:parquet"},
+        {Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4,3:none"},
+        {Options::LOOKUP_CACHE_MAX_MEMORY_SIZE, "1MB"},
+        {Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "0.35"},
+        {Options::LOOKUP_CACHE_FILE_RETENTION, "30min"},
+        {Options::LOOKUP_CACHE_MAX_DISK_SIZE, "10GB"},
+        {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
+        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
     ASSERT_TRUE(fs);
 
-    auto format = core_options.GetWriteFileFormat();
-    ASSERT_EQ(format->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetFileFormat()->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetWriteFileFormat(0)->Identifier(), "avro");
+    ASSERT_EQ(core_options.GetWriteFileFormat(1)->Identifier(), "orc");
+    ASSERT_EQ(core_options.GetWriteFileFormat(3)->Identifier(), "parquet");
 
     auto manifest_format = core_options.GetManifestFormat();
     ASSERT_EQ(manifest_format->Identifier(), "avro");
@@ -227,8 +270,16 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.DeletionVectorsEnabled());
+    ASSERT_TRUE(core_options.DeletionVectorsBitmap64());
+    ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
     ASSERT_EQ(ChangelogProducer::FULL_COMPACTION, core_options.GetChangelogProducer());
     ASSERT_TRUE(core_options.NeedLookup());
+    ASSERT_TRUE(core_options.PrepareCommitWaitCompaction());
+    LookupStrategy expected_lookup_strategy = {/*is_first_row=*/false,
+                                               /*produce_changelog=*/false,
+                                               /*deletion_vector=*/true, /*force_lookup=*/true};
+    ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
+
     std::map<std::string, std::string> seq_grp;
     seq_grp["g_1,g_3"] = "c,d";
     ASSERT_EQ(core_options.GetFieldsSequenceGroups(), seq_grp);
@@ -242,6 +293,10 @@ TEST(CoreOptionsTest, TestFromMap) {
               std::optional<std::string>("FILE:///tmp/index"));
     ASSERT_EQ(core_options.GetExternalPathStrategy(), ExternalPathStrategy::ROUND_ROBIN);
     ASSERT_EQ("snappy", core_options.GetFileCompression());
+    ASSERT_EQ("lz4", core_options.GetWriteFileCompression(0));
+    ASSERT_EQ("snappy", core_options.GetWriteFileCompression(1));
+    ASSERT_EQ("none", core_options.GetWriteFileCompression(3));
+    ASSERT_EQ("snappy", core_options.GetWriteFileCompression(5));
     ASSERT_EQ("zlib", core_options.GetManifestCompression());
     ASSERT_EQ(2, core_options.GetFileCompressionZstdLevel());
     ASSERT_FALSE(core_options.EnableAdaptivePrefetchStrategy());
@@ -259,7 +314,14 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(375809637, core_options.GetCompactionFileSize(/*has_primary_key=*/false));
     ASSERT_TRUE(core_options.WriteOnly());
     ASSERT_EQ(10, core_options.GetCompactionMinFileNum());
+    ASSERT_EQ(123, core_options.GetCompactionMaxSizeAmplificationPercent());
+    ASSERT_EQ(9, core_options.GetCompactionSizeRatio());
+    ASSERT_EQ(11, core_options.GetNumSortedRunsCompactionTrigger());
+    ASSERT_EQ(17, core_options.GetNumSortedRunsStopTrigger());
+    ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
+    ASSERT_EQ(11, core_options.GetLookupCompactMaxInterval());
     ASSERT_TRUE(core_options.CompactionForceRewriteAllFiles());
+    ASSERT_TRUE(core_options.CompactionForceUpLevel0());
     ASSERT_EQ(2000, core_options.GetOptimizedCompactionInterval().value());
     ASSERT_EQ(5l * 1024 * 1024 * 1024, core_options.GetCompactionTotalSizeThreshold().value());
     ASSERT_EQ(12l * 1024, core_options.GetCompactionIncrementalSizeThreshold().value());
@@ -271,6 +333,12 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ("lz4", core_options.GetLookupCompressOptions().compress);
     ASSERT_EQ(2, core_options.GetLookupCompressOptions().zstd_level);
     ASSERT_EQ(6 * 1024 * 1024, core_options.GetCachePageSize());
+    ASSERT_EQ(1024 * 1024, core_options.GetLookupCacheMaxMemory());
+    ASSERT_EQ(0.35, core_options.GetLookupCacheHighPrioPoolRatio());
+    ASSERT_EQ(30 * 60 * 1000, core_options.GetLookupCacheFileRetentionMs());
+    ASSERT_EQ(10L * 1024 * 1024 * 1024, core_options.GetLookupCacheMaxDiskSize());
+    ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
+    ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -286,6 +354,111 @@ TEST(CoreOptionsTest, TestInvalidCase) {
                         "invalid merge engine: invalid");
     ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::CHANGELOG_PRODUCER, "invalid"}}),
                         "invalid changelog producer: invalid");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::LOOKUP_COMPACT, "invalid"}}),
+                        "invalid lookup mode: invalid");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::LOOKUP_COMPACT_MAX_INTERVAL, "invalid"}}),
+                        "Invalid Config [lookup-compact.max-interval: invalid]");
+    ASSERT_NOK_WITH_MSG(
+        CoreOptions::FromMap({{Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "1.1"}}),
+        "The high priority pool ratio should in the range [0, 1), while input is 1.1");
+}
+
+TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {
+    std::map<std::string, std::string> options = {
+        {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+        {Options::LOOKUP_COMPACT_MAX_INTERVAL, "13"},
+    };
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+    ASSERT_EQ(13, core_options.GetLookupCompactMaxInterval());
+}
+
+TEST(CoreOptionsTest, TestNumSortedRunsStopTriggerFloorAndDefault) {
+    {
+        std::map<std::string, std::string> options = {
+            {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_EQ(14, core_options.GetNumSortedRunsStopTrigger());
+    }
+
+    {
+        std::map<std::string, std::string> options = {
+            {Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER, "11"},
+            {Options::NUM_SORTED_RUNS_STOP_TRIGGER, "7"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_EQ(11, core_options.GetNumSortedRunsStopTrigger());
+    }
+}
+
+TEST(CoreOptionsTest, TestLookupStrategy) {
+    {
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
+        auto strategy = core_options.GetLookupStrategy();
+        ASSERT_FALSE(strategy.is_first_row);
+        ASSERT_FALSE(strategy.produce_changelog);
+        ASSERT_FALSE(strategy.deletion_vector);
+        ASSERT_FALSE(strategy.need_lookup);
+    }
+    {
+        std::map<std::string, std::string> options = {
+            {Options::MERGE_ENGINE, "first-row"},
+            {Options::CHANGELOG_PRODUCER, "lookup"},
+            {Options::DELETION_VECTORS_ENABLED, "true"},
+            {Options::FORCE_LOOKUP, "true"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        auto strategy = core_options.GetLookupStrategy();
+        ASSERT_TRUE(strategy.is_first_row);
+        ASSERT_TRUE(strategy.produce_changelog);
+        ASSERT_TRUE(strategy.deletion_vector);
+        ASSERT_TRUE(strategy.need_lookup);
+    }
+}
+
+TEST(CoreOptionsTest, TestPrepareCommitWaitCompaction) {
+    {
+        std::map<std::string, std::string> options = {
+            {Options::FORCE_LOOKUP, "true"},
+            {Options::LOOKUP_WAIT, "false"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_TRUE(core_options.NeedLookup());
+        ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
+    }
+
+    {
+        std::map<std::string, std::string> options = {
+            {Options::FORCE_LOOKUP, "true"},
+            {Options::LOOKUP_WAIT, "true"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_TRUE(core_options.NeedLookup());
+        ASSERT_TRUE(core_options.PrepareCommitWaitCompaction());
+    }
+
+    {
+        std::map<std::string, std::string> options = {
+            {Options::LOOKUP_WAIT, "true"},
+        };
+        ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
+        ASSERT_FALSE(core_options.NeedLookup());
+        ASSERT_FALSE(core_options.PrepareCommitWaitCompaction());
+    }
+}
+
+TEST(CoreOptionsTest, TestInvalidFileFormatPerLevel) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_FORMAT_PER_LEVEL, "0:AVRO:parquet"}}),
+                        "fail to parse key file.format.per.level, value 0:AVRO:parquet");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_FORMAT_PER_LEVEL, "aaa:avro"}}),
+                        "fail to parse level aaa from string to int in file.format.per.level");
+}
+
+TEST(CoreOptionsTest, TestInvalidFileCompressionPerLevel) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_COMPRESSION_PER_LEVEL, "0:lz4:zstd"}}),
+                        "fail to parse key file.compression.per.level, value 0:lz4:zstd");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::FILE_COMPRESSION_PER_LEVEL, "abc:lz4"}}),
+                        "fail to parse level abc from string to int in file.compression.per.level");
 }
 
 TEST(CoreOptionsTest, TestCreateExternalPath) {
@@ -395,6 +568,7 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
         {Options::MERGE_ENGINE, "first-ROW"},
         {Options::CHANGELOG_PRODUCER, "LOOKUP"},
         {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"},
+        {Options::LOOKUP_COMPACT, "GENTLE"},
         {Options::SCAN_MODE, "DEFAULT"},
     };
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
@@ -404,6 +578,7 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
     ASSERT_EQ(ChangelogProducer::LOOKUP, core_options.GetChangelogProducer());
     ASSERT_EQ(MergeEngine::FIRST_ROW, core_options.GetMergeEngine());
     ASSERT_EQ(SortEngine::MIN_HEAP, core_options.GetSortEngine());
+    ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
 }
 }  // namespace paimon::test

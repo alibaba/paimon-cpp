@@ -22,6 +22,7 @@
 #include <utility>
 
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
+#include "paimon/core/mergetree/compact/merge_tree_compact_manager_factory.h"
 #include "paimon/core/operation/abstract_file_store_write.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/logging.h"
@@ -37,13 +38,11 @@ class FieldsComparator;
 class FileStoreScan;
 class ScanFilter;
 class BinaryRow;
-class CoreOptions;
-class Executor;
 class FileStorePathFactory;
-class MemoryPool;
-class SchemaManager;
 class SnapshotManager;
+class SchemaManager;
 class TableSchema;
+class IOManager;
 struct KeyValue;
 template <typename T>
 class MergeFunctionWrapper;
@@ -57,6 +56,8 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<arrow::Schema>& schema,
         const std::shared_ptr<arrow::Schema>& partition_schema,
+        const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+        const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<FieldsComparator>& key_comparator,
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
@@ -64,9 +65,14 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
         bool ignore_num_bucket_check, const std::shared_ptr<Executor>& executor,
         const std::shared_ptr<MemoryPool>& pool);
 
+    Status Close() override;
+
  private:
-    Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> CreateWriter(
-        const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) override;
+    Result<std::shared_ptr<BatchWriter>> CreateWriter(
+        const BinaryRow& partition, int32_t bucket,
+        const std::vector<std::shared_ptr<DataFileMeta>>& restore_data_files,
+        int64_t restore_max_seq_number,
+        const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) override;
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
@@ -75,6 +81,7 @@ class KeyValueFileStoreWrite : public AbstractFileStoreWrite {
     std::shared_ptr<FieldsComparator> key_comparator_;
     std::shared_ptr<FieldsComparator> user_defined_seq_comparator_;
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
+    std::unique_ptr<MergeTreeCompactManagerFactory> compact_manager_factory_;
     std::unique_ptr<Logger> logger_;
 };
 

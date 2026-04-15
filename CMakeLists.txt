@@ -52,8 +52,8 @@ option(PAIMON_ENABLE_AVRO "Whether to enable avro file format" ON)
 option(PAIMON_ENABLE_ORC "Whether to enable orc file format" ON)
 option(PAIMON_ENABLE_LANCE "Whether to enable lance file format" OFF)
 option(PAIMON_ENABLE_JINDO "Whether to enable jindo file system" OFF)
-option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" ON)
-option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" ON)
+option(PAIMON_ENABLE_LUMINA "Whether to enable lumina vector index" OFF)
+option(PAIMON_ENABLE_LUCENE "Whether to enable lucene index" OFF)
 
 if(PAIMON_ENABLE_ORC)
     add_definitions(-DPAIMON_ENABLE_ORC)
@@ -186,6 +186,21 @@ if(UNIX)
                       ${BUILD_SUPPORT_DIR}/iwyu/iwyu.sh
                       all)
 endif(UNIX)
+
+# Setup ccache to accelerate compilation if available
+if(PAIMON_USE_CCACHE
+   AND NOT CMAKE_C_COMPILER_LAUNCHER
+   AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        message(STATUS "Found ccache: ${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    else()
+        message(STATUS "ccache not found, compiling without cache acceleration")
+    endif()
+endif()
 
 include(SetupCxxFlags)
 

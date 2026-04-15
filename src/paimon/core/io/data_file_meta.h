@@ -77,6 +77,10 @@ struct DataFileMeta {
 
     Result<std::shared_ptr<DataFileMeta>> Upgrade(int32_t new_level) const;
 
+    /// Create a copy of this DataFileMeta with the given extra files.
+    std::shared_ptr<DataFileMeta> CopyWithExtraFiles(
+        const std::vector<std::optional<std::string>>& new_extra_files) const;
+
     std::optional<int64_t> AddRowCount() const {
         return delete_row_count == std::nullopt ? std::optional<int64_t>()
                                                 : row_count - delete_row_count.value();
@@ -88,6 +92,7 @@ struct DataFileMeta {
     std::optional<std::string> ExternalPathDir() const;
 
     bool operator==(const DataFileMeta& other) const;
+    bool operator!=(const DataFileMeta& other) const;
     bool TEST_Equal(const DataFileMeta& other) const;
     std::string ToString() const;
 

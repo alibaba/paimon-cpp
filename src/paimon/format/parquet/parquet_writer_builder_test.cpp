@@ -207,6 +207,15 @@ TEST(ParquetWriterBuilderTest, TestPrepareWriterPropertiesFileCompression) {
         ASSERT_EQ(properties->default_column_properties().compression(),
                   arrow::Compression::BROTLI);
     }
+    {
+        std::map<std::string, std::string> options;
+        options[Options::FILE_FORMAT] = "parquet";
+        options[Options::MANIFEST_FORMAT] = "parquet";
+        ParquetWriterBuilder builder(schema, /*batch_size=*/1024, options);
+        ASSERT_OK_AND_ASSIGN(auto properties, builder.PrepareWriterProperties("None"));
+        ASSERT_EQ(properties->default_column_properties().compression(),
+                  arrow::Compression::UNCOMPRESSED);
+    }
 }
 
 TEST(ParquetWriterBuilderTest, TestInvalidWriterVersion) {

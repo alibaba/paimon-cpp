@@ -16,15 +16,33 @@
 
 #include "paimon/core/deletionvectors/deletion_vector.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <set>
+#include <vector>
 
 #include "gtest/gtest.h"
+#include "paimon/core/deletionvectors/bitmap64_deletion_vector.h"
 #include "paimon/core/deletionvectors/bitmap_deletion_vector.h"
+#include "paimon/io/byte_array_input_stream.h"
+#include "paimon/io/byte_order.h"
+#include "paimon/io/data_input_stream.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
+
+namespace {
+
+void AppendInt32BigEndian(std::vector<uint8_t>* bytes, int32_t value) {
+    bytes->push_back(static_cast<uint8_t>((value >> 24) & 0xFF));
+    bytes->push_back(static_cast<uint8_t>((value >> 16) & 0xFF));
+    bytes->push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
+    bytes->push_back(static_cast<uint8_t>(value & 0xFF));
+}
+
+}  // namespace
+
 TEST(DeletionVectorTest, TestSimple) {
     std::set<int32_t> to_deleted;
     for (int32_t i = 0; i < 10000; i++) {
@@ -86,4 +104,61 @@ TEST(DeletionVectorTest, TestCompatibleWithJava) {
     ASSERT_OK_AND_ASSIGN(auto serialized_dv, deletion_vector->SerializeToBytes(pool));
     ASSERT_EQ(*serialized_dv, *serialize_bytes);
 }
+
+TEST(DeletionVectorTest, ReadFromDataInputStreamLengthMismatch) {
+    std::vector<uint8_t> data;
+    AppendInt32BigEndian(&data, /*value=*/8);
+    AppendInt32BigEndian(&data, BitmapDeletionVector::MAGIC_NUMBER);
+
+    auto input_stream = std::make_shared<ByteArrayInputStream>(
+        reinterpret_cast<const char*>(data.data()), data.size());
+    DataInputStream in(input_stream);
+    auto pool = GetDefaultPool();
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, /*length=*/9, pool.get()), "Size not match");
+}
+
+TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidBitmapLength) {
+    std::vector<uint8_t> data;
+    AppendInt32BigEndian(&data, /*value=*/3);
+    AppendInt32BigEndian(&data, BitmapDeletionVector::MAGIC_NUMBER);
+
+    auto input_stream = std::make_shared<ByteArrayInputStream>(
+        reinterpret_cast<const char*>(data.data()), data.size());
+    DataInputStream in(input_stream);
+    auto pool = GetDefaultPool();
+
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()),
+                        "Invalid bitmap length");
+}
+
+TEST(DeletionVectorTest, ReadFromDataInputStreamBitmap64NotImplemented) {
+    std::vector<uint8_t> data;
+    AppendInt32BigEndian(&data, /*value=*/8);
+    // Trigger: EndianSwapValue(magic_number) == Bitmap64DeletionVector::MAGIC_NUMBER.
+    AppendInt32BigEndian(&data, EndianSwapValue(Bitmap64DeletionVector::MAGIC_NUMBER));
+
+    auto input_stream = std::make_shared<ByteArrayInputStream>(
+        reinterpret_cast<const char*>(data.data()), data.size());
+    DataInputStream in(input_stream);
+    auto pool = GetDefaultPool();
+
+    ASSERT_NOK_WITH_MSG(
+        DeletionVector::Read(&in, std::nullopt, pool.get()),
+        "NotImplemented: bitmap64 deletion vectors are not supported in this version");
+}
+
+TEST(DeletionVectorTest, ReadFromDataInputStreamInvalidMagicNumber) {
+    std::vector<uint8_t> data;
+    AppendInt32BigEndian(&data, /*value=*/8);
+    AppendInt32BigEndian(&data, /*value=*/123456789);
+
+    auto input_stream = std::make_shared<ByteArrayInputStream>(
+        reinterpret_cast<const char*>(data.data()), data.size());
+    DataInputStream in(input_stream);
+    auto pool = GetDefaultPool();
+
+    ASSERT_NOK_WITH_MSG(DeletionVector::Read(&in, std::nullopt, pool.get()),
+                        "Invalid magic number");
+}
+
 }  // namespace paimon::test

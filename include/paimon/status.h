@@ -53,6 +53,7 @@ enum class StatusCode : char {
     IOError = 5,
     CapacityError = 6,
     IndexError = 7,
+    Cancelled = 8,
     UnknownError = 9,
     NotImplemented = 10,
     SerializationError = 11,
@@ -176,6 +177,12 @@ class PAIMON_MUST_USE_TYPE PAIMON_EXPORT Status : public util::EqualityComparabl
         return Status::FromArgs(StatusCode::IndexError, std::forward<Args>(args)...);
     }
 
+    /// Return an error status for cancelled operation
+    template <typename... Args>
+    static Status Cancelled(Args&&... args) {
+        return Status::FromArgs(StatusCode::Cancelled, std::forward<Args>(args)...);
+    }
+
     /// Return an error status when a container's capacity would exceed its limits
     template <typename... Args>
     static Status CapacityError(Args&&... args) {
@@ -222,6 +229,10 @@ class PAIMON_MUST_USE_TYPE PAIMON_EXPORT Status : public util::EqualityComparabl
     /// Return true iff the status indicates invalid data.
     bool IsInvalid() const {
         return code() == StatusCode::Invalid;
+    }
+    /// Return true iff the status indicates a cancelled operation.
+    bool IsCancelled() const {
+        return code() == StatusCode::Cancelled;
     }
     /// Return true iff the status indicates an IO-related failure.
     bool IsIOError() const {
@@ -457,10 +468,5 @@ inline Status GenericToStatus(Status&& st) {
             return _s;                                                \
         }                                                             \
     } while (false)
-
-// This is an internal-use macro and should not be used in public headers.
-#ifndef RETURN_NOT_OK
-#define RETURN_NOT_OK(s) PAIMON_RETURN_NOT_OK(s)
-#endif
 
 }  // namespace paimon

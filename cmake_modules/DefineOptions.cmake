@@ -95,6 +95,9 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
     define_option(PAIMON_BUILD_STATIC "Build static libraries" ON)
 
     define_option(PAIMON_BUILD_SHARED "Build shared libraries" ON)
+
+    define_option(PAIMON_USE_CCACHE "Use ccache when compiling (if available)" ON)
+
     #----------------------------------------------------------------------
     set_option_category("Test")
 

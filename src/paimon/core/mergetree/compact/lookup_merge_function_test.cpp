@@ -119,4 +119,68 @@ TEST(LookupMergeFunctionTest, TestDeduplicate) {
     KeyValueChecker::CheckResult(expected2, result_kv, /*key_arity=*/1, /*value_arity=*/2);
 }
 
+TEST(LookupMergeFunctionTest, TestPickHighLevel) {
+    auto deduplicate_merge_func =
+        std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
+    auto merge_func = std::make_unique<LookupMergeFunction>(std::move(deduplicate_merge_func));
+
+    auto pool = GetDefaultPool();
+
+    merge_func->Reset();
+    ASSERT_FALSE(merge_func->PickHighLevelIdx());
+    ASSERT_FALSE(merge_func->ContainLevel0());
+
+    merge_func->Reset();
+    KeyValue kv1(RowKind::Insert(), /*sequence_number=*/1, /*level=*/2, /*key=*/
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+    KeyValue kv2(RowKind::Insert(), /*sequence_number=*/2, /*level=*/1,
+                 /*key=*/BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+    KeyValue kv3(RowKind::Insert(), /*sequence_number=*/4, /*level=*/0, /*key=*/
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+
+    ASSERT_OK(merge_func->Add(std::move(kv1)));
+    ASSERT_OK(merge_func->Add(std::move(kv2)));
+    ASSERT_OK(merge_func->Add(std::move(kv3)));
+    ASSERT_TRUE(merge_func->ContainLevel0());
+    ASSERT_EQ(merge_func->GetKey()->GetInt(0), 10);
+    ASSERT_EQ(merge_func->PickHighLevelIdx(), 1);
+}
+
+TEST(LookupMergeFunctionTest, TestInsertInto) {
+    auto deduplicate_merge_func =
+        std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
+    auto merge_func = std::make_unique<LookupMergeFunction>(std::move(deduplicate_merge_func));
+
+    auto pool = GetDefaultPool();
+
+    merge_func->Reset();
+    KeyValue kv1(RowKind::Insert(), /*sequence_number=*/1, /*level=*/0, /*key=*/
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+    KeyValue kv2(RowKind::Insert(), /*sequence_number=*/2, /*level=*/0,
+                 /*key=*/BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+    KeyValue kv3(RowKind::Insert(), /*sequence_number=*/0, /*level=*/3, /*key=*/
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+
+    ASSERT_OK(merge_func->Add(std::move(kv1)));
+    ASSERT_OK(merge_func->Add(std::move(kv2)));
+    merge_func->InsertInto(std::move(kv3), [](const KeyValue& o1, const KeyValue& o2) {
+        return o1.sequence_number < o2.sequence_number;
+    });
+    ASSERT_EQ(merge_func->candidates_.size(), 3);
+    ASSERT_EQ(merge_func->candidates_[0].sequence_number, 0);
+    ASSERT_EQ(merge_func->candidates_[1].sequence_number, 1);
+    ASSERT_EQ(merge_func->candidates_[2].sequence_number, 2);
+
+    auto result_kv = std::move(merge_func->GetResult().value().value());
+    KeyValue expected(RowKind::Insert(), /*sequence_number=*/2, /*level=*/0,
+                      /*key=*/BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                      /*value=*/BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+    KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+}
 }  // namespace paimon::test

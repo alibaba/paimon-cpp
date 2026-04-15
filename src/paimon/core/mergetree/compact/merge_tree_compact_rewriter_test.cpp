@@ -40,21 +40,16 @@ class MergeTreeCompactRewriterTest : public testing::Test {
         int32_t bucket, const BinaryRow& partition) const {
         PAIMON_ASSIGN_OR_RAISE(auto options, CoreOptions::FromMap(table_schema->Options()));
         auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+        auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
+            return std::shared_ptr<DeletionVector>();
+        };
 
-        PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> external_paths,
-                               options.CreateExternalPaths());
-        PAIMON_ASSIGN_OR_RAISE(std::optional<std::string> global_index_external_path,
-                               options.CreateGlobalIndexExternalPath());
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<FileStorePathFactory> path_factory,
-            FileStorePathFactory::Create(
-                table_path, arrow_schema, table_schema->PartitionKeys(),
-                options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
-                options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
-                global_index_external_path, options.IndexFileInDataFileDir(), pool_));
-
-        return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, path_factory,
-                                                options, pool_, CreateDefaultExecutor());
+        auto cancellation_controller = std::make_shared<CancellationController>();
+        auto path_factory_cache =
+            std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
+        return MergeTreeCompactRewriter::Create(bucket, partition, table_schema, dv_factory,
+                                                path_factory_cache, options,
+                                                cancellation_controller, pool_);
     }
 
     Result<std::vector<std::vector<SortedRun>>> GenerateSortedRuns(
@@ -74,9 +69,8 @@ class MergeTreeCompactRewriterTest : public testing::Test {
 
         PAIMON_ASSIGN_OR_RAISE(auto pk_fields,
                                table_schema->GetFields(table_schema->TrimmedPrimaryKeys().value()));
-        PAIMON_ASSIGN_OR_RAISE(
-            std::shared_ptr<FieldsComparator> key_comparator,
-            FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true, /*use_view=*/false));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
+                               FieldsComparator::Create(pk_fields, /*is_ascending_order=*/true));
         IntervalPartition interval_partition(metas, key_comparator);
         return interval_partition.Partition();
     }
@@ -301,8 +295,3 @@ TEST_F(MergeTreeCompactRewriterTest, TestIOException) {
 }
 
 }  // namespace paimon::test
-// TODO(xinyu.lxy): e2e test
-// test multiple MergeFunction
-// test multiple RowKind
-// test external path
-// test branch

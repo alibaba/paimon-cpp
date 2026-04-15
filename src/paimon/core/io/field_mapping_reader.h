@@ -30,7 +30,7 @@
 #include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/core/partition/partition_info.h"
 #include "paimon/core/utils/field_mapping.h"
-#include "paimon/reader/batch_reader.h"
+#include "paimon/reader/file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 
@@ -44,9 +44,9 @@ class MemoryPool;
 class Metrics;
 struct FieldMapping;
 
-class FieldMappingReader : public BatchReader {
+class FieldMappingReader : public FileBatchReader {
  public:
-    FieldMappingReader(int32_t field_count, std::unique_ptr<BatchReader>&& reader,
+    FieldMappingReader(int32_t field_count, std::unique_ptr<FileBatchReader>&& reader,
                        const BinaryRow& partition, std::unique_ptr<FieldMapping>&& mapping,
                        const std::shared_ptr<MemoryPool>& pool);
 
@@ -63,6 +63,27 @@ class FieldMappingReader : public BatchReader {
 
     void Close() override {
         reader_->Close();
+    }
+
+    Result<std::unique_ptr<::ArrowSchema>> GetFileSchema() const override {
+        return Status::Invalid("FieldMappingReader does not support GetFileSchema");
+    }
+
+    Status SetReadSchema(::ArrowSchema* read_schema, const std::shared_ptr<Predicate>& predicate,
+                         const std::optional<RoaringBitmap32>& selection_bitmap) override {
+        return Status::Invalid("FieldMappingReader does not support SetReadSchema");
+    }
+
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const override {
+        return reader_->GetPreviousBatchFirstRowNumber();
+    }
+
+    Result<uint64_t> GetNumberOfRows() const override {
+        return reader_->GetNumberOfRows();
+    }
+
+    bool SupportPreciseBitmapSelection() const override {
+        return reader_->SupportPreciseBitmapSelection();
     }
 
  private:
@@ -86,7 +107,7 @@ class FieldMappingReader : public BatchReader {
     bool need_casting_ = false;
     int32_t field_count_;
     std::shared_ptr<arrow::MemoryPool> arrow_pool_;
-    std::unique_ptr<BatchReader> reader_;
+    std::unique_ptr<FileBatchReader> reader_;
     BinaryRow partition_ = BinaryRow::EmptyRow();
 
     std::optional<PartitionInfo> partition_info_;

@@ -18,20 +18,18 @@
 
 namespace paimon {
 
-std::shared_ptr<MemorySegment> CacheManager::GetPage(
+Result<MemorySegment> CacheManager::GetPage(
     std::shared_ptr<CacheKey>& key,
-    std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader) {
+    std::function<Result<MemorySegment>(const std::shared_ptr<CacheKey>&)> reader,
+    CacheCallback eviction_callback) {
     auto& cache = key->IsIndex() ? index_cache_ : data_cache_;
-    auto supplier = [=](const std::shared_ptr<CacheKey>& k) -> std::shared_ptr<CacheValue> {
-        auto ret = reader(k);
-        if (!ret.ok()) {
-            return nullptr;
-        }
-        auto segment = ret.value();
-        auto ptr = std::make_shared<MemorySegment>(segment);
-        return std::make_shared<CacheValue>(ptr);
+    auto supplier =
+        [&](const std::shared_ptr<CacheKey>& key) -> Result<std::shared_ptr<CacheValue>> {
+        PAIMON_ASSIGN_OR_RAISE(MemorySegment segment, reader(key));
+        return std::make_shared<CacheValue>(segment, std::move(eviction_callback));
     };
-    return cache->Get(key, supplier)->GetSegment();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CacheValue> cache_value, cache->Get(key, supplier));
+    return cache_value->GetSegment();
 }
 
 void CacheManager::InvalidPage(const std::shared_ptr<CacheKey>& key) {

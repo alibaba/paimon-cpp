@@ -43,7 +43,7 @@
     "type" : {
       "type" : "MAP",
       "key" : {
-        "type" : "ARRAY",
+        "type" : "ARRAY NOT NULL",
         "element" : "FLOAT"
       },
       "value" : {

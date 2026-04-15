@@ -60,7 +60,7 @@ class OrcFileBatchReaderTest : public ::testing::Test,
             arrow::field("f2", arrow::int32()), arrow::field("f3", arrow::float64())};
 
         struct_array_ = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Bob", 10, 0, 12.1], ["Emily", 10, 0, 13.1], ["Tony", 10, 0, 14.1], ["Emily", 10, 0, 15.1],
         ["Bob", 10, 0, 12.1], ["Alex", 10, 0, 16.1], ["David", 10, 0, 17.1], ["Lily", 10, 0, 17.1]
     ])")
@@ -356,10 +356,10 @@ TEST_P(OrcFileBatchReaderTest, TestNextBatchSimple) {
     for (auto batch_size : {1, 2, 3, 5, 8, 10}) {
         auto orc_batch_reader =
             PrepareOrcFileBatchReader(file_name, &read_schema, batch_size, natural_read_size);
-        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), -1);
+        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), -1);
         ASSERT_OK_AND_ASSIGN(auto result_array, paimon::test::ReadResultCollector::CollectResult(
                                                     orc_batch_reader.get()));
-        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), 8);
+        ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 8);
         orc_batch_reader->Close();
         auto expected_array = std::make_shared<arrow::ChunkedArray>(struct_array_);
         ASSERT_TRUE(result_array->Equals(expected_array));
@@ -458,7 +458,7 @@ TEST_F(OrcFileBatchReaderTest, TestNextBatchWithDictionary) {
 
     arrow::FieldVector fields = {f0, f1, f2};
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [["a", "a", "b"], [["a", "q"], ["b", "w"]],             [10, "q", "a"]],
         [["a", "c"],      [["a", "e"], ["b", "r"], ["c", "e"]], [20, "w", "a"]],
         [["a", "d"],      [["d", "r"], ["e", "t"]],             [null, "e", "b"]],
@@ -630,18 +630,18 @@ TEST_F(OrcFileBatchReaderTest, TestReadNoField) {
     auto orc_batch_reader = PrepareOrcFileBatchReader(file_name, &read_schema, /*batch_size=*/3,
                                                       /*natural_read_size=*/10);
     // read 3 rows
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), -1);
+    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), -1);
     ASSERT_OK_AND_ASSIGN(auto batch1, orc_batch_reader->NextBatch());
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), 0);
+    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 0);
     // read 3 rows
     ASSERT_OK_AND_ASSIGN(auto batch2, orc_batch_reader->NextBatch());
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), 3);
+    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 3);
     // read 2 rows
     ASSERT_OK_AND_ASSIGN(auto batch3, orc_batch_reader->NextBatch());
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), 6);
+    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 6);
     // read rows with eof
     ASSERT_OK_AND_ASSIGN(auto batch4, orc_batch_reader->NextBatch());
-    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber(), 8);
+    ASSERT_EQ(orc_batch_reader->GetPreviousBatchFirstRowNumber().value(), 8);
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
     orc_batch_reader->Close();
 

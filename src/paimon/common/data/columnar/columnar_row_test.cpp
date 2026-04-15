@@ -386,4 +386,69 @@ TEST(ColumnarRowTest, TestDataLifeCycle) {
     ASSERT_EQ(result_row->GetLong(3), 5);
 }
 
+TEST(ColumnarRowTest, TestColumnarRowRefGetBinary) {
+    auto pool = GetDefaultPool();
+    std::shared_ptr<arrow::DataType> target_type = arrow::struct_({
+        arrow::field("f0", arrow::binary()),
+        arrow::field("f1", arrow::binary()),
+    });
+    auto f0 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::binary(), R"(["hello", "world", null])")
+            .ValueOrDie();
+    auto f1 = arrow::ipc::internal::json::ArrayFromJSON(arrow::binary(), R"(["abc", "", "xyz"])")
+                  .ValueOrDie();
+    auto data = arrow::StructArray::Make({f0, f1}, target_type->fields()).ValueOrDie();
+
+    auto ctx = std::make_shared<ColumnarBatchContext>(data->fields(), pool);
+
+    {
+        ColumnarRowRef row(ctx, 0);
+        auto binary = row.GetBinary(0);
+        ASSERT_TRUE(binary);
+        ASSERT_EQ(std::string(binary->data(), binary->size()), "hello");
+
+        auto binary1 = row.GetBinary(1);
+        ASSERT_TRUE(binary1);
+        ASSERT_EQ(std::string(binary1->data(), binary1->size()), "abc");
+    }
+    {
+        ColumnarRowRef row(ctx, 1);
+        auto binary = row.GetBinary(0);
+        ASSERT_TRUE(binary);
+        ASSERT_EQ(std::string(binary->data(), binary->size()), "world");
+
+        auto binary1 = row.GetBinary(1);
+        ASSERT_TRUE(binary1);
+        ASSERT_EQ(binary1->size(), 0);
+    }
+    {
+        ColumnarRowRef row(ctx, 2);
+        ASSERT_TRUE(row.IsNullAt(0));
+
+        auto binary1 = row.GetBinary(1);
+        ASSERT_TRUE(binary1);
+        ASSERT_EQ(std::string(binary1->data(), binary1->size()), "xyz");
+    }
+}
+
+TEST(ColumnarRowTest, TestColumnarRowRefToString) {
+    auto pool = GetDefaultPool();
+    std::shared_ptr<arrow::DataType> target_type =
+        arrow::struct_({arrow::field("f0", arrow::int32())});
+    auto f0 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), R"([1, 2, 3])").ValueOrDie();
+    auto data = arrow::StructArray::Make({f0}, target_type->fields()).ValueOrDie();
+
+    auto ctx = std::make_shared<ColumnarBatchContext>(data->fields(), pool);
+
+    {
+        ColumnarRowRef row(ctx, 0);
+        ASSERT_EQ(row.ToString(), "ColumnarRowRef, row_id 0");
+    }
+    {
+        ColumnarRowRef row(ctx, 2);
+        ASSERT_EQ(row.ToString(), "ColumnarRowRef, row_id 2");
+    }
+}
+
 }  // namespace paimon::test

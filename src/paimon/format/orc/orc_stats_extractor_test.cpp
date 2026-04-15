@@ -449,7 +449,7 @@ TEST_F(OrcStatsExtractorTest, TestNullForAllType) {
                                 {{"orc.timestamp-ltz.legacy.type", "false"}}, "zstd",
                                 /*batch_size=*/10, pool_));
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null]
     ])")
             .ValueOrDie());

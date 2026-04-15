@@ -238,7 +238,7 @@ TEST_F(OrcAdapterTest, TestAppendAndWriteBatchWithSimpleBatch) {
         arrow::field("col4", arrow::boolean()), arrow::field("col5", arrow::float32())};
     auto arrow_schema = arrow::schema(fields);
     std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
             [null, null, null, null, null],
             ["abc", 1, "1970-01-01 00:02:03.123123", false, 1.1],
             [null, null, null, null, null],
@@ -294,7 +294,7 @@ TEST_F(OrcAdapterTest, TestAppendAndWriteBatchWithComplexType) {
     arrow::FieldVector fields = {list_field, map_field, date_field, decimal128_field};
     auto arrow_schema = arrow::schema(fields);
     std::shared_ptr<arrow::Array> array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
             [null, null, null, null],
             [[12345, 54321], [[1, 12]], 2345, "0.22"],
             [[12345], [[1, 12], [-1, -12]], 234, "0.12"],
@@ -382,7 +382,7 @@ TEST_P(OrcAdapterTest, TestEmptyBatch) {
                                  arrow::field("f1", arrow::binary())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
     ])")
             .ValueOrDie());
     auto [orc_reader_holder, read_batch] = GenerateOrcReadBatch(src_array);
@@ -407,7 +407,7 @@ TEST_P(OrcAdapterTest, TestDictionary) {
         arrow::field("f8", arrow::utf8()),    arrow::field("f9", arrow::boolean())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["data", 4.0, 5.1, 10, 100, 1000, 10000, true, "data1", true],
         ["data", 4.1, 6.2, null, 200, 2000, 20000, null, "data2", false],
         ["data", 4.2, null, 30, 300, null, 30000, true, "data3", true],
@@ -440,7 +440,7 @@ TEST_P(OrcAdapterTest, TestShadowCopyWithBlob) {
         arrow::field("f8", arrow::utf8()),    arrow::field("f9", arrow::boolean())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["apple", 4.0, 5.1, 10, 100, 1000, 10000, true, "apple", true],
         ["banana", 4.1, 6.2, null, 200, 2000, 20000, null, "banana", false],
         [null, 4.2, null, 30, 300, null, 30000, true, "apple", true],
@@ -468,7 +468,7 @@ TEST_P(OrcAdapterTest, TestDeepCopyWithString) {
                                  arrow::field("f1", arrow::utf8())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["apple", "apple"],
         ["banana", "banana"],
         [null, "apple"],
@@ -502,7 +502,7 @@ TEST_P(OrcAdapterTest, TestComplexTypeShallowCopyWithBlob) {
     };
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         null,
         [[1, 2, 3],    [["apple", 3], ["banana", 4]],          [10, 10.1, false]],
         [[4, 5],       [["cat", 5], ["dog", 6], ["mouse", 7]], [20, 20.1, true]],
@@ -527,7 +527,7 @@ TEST_P(OrcAdapterTest, TestAppendBatchWithBinary) {
                                  arrow::field("f1", arrow::binary())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["apple", "apple"],
         ["banana", "banana"],
         [null, "apple"],
@@ -551,7 +551,7 @@ TEST_P(OrcAdapterTest, TestAppendBatchWithBinaryForAllNull) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::binary())};
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null],
         [null]
     ])")
@@ -587,7 +587,7 @@ TEST_P(OrcAdapterTest, TestDecimalAndTimestamp) {
     };
     auto arrow_type = arrow::struct_(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         ["Alice", 10, 1, 1234,  "2033-05-18 03:33:20.0",         "123456789987654321.45678", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20", "2033-05-18 03:33:20.001", "2033-05-18 03:33:20.001001",
          "2033-05-18 03:33:20.0", "2033-05-18 03:33:20", "2033-05-18 03:33:20.001", "2033-05-18 03:33:20.001001"],
         ["Bob",   10, 1, null,  "1899-01-01 00:59:20.001001001", "-123456789987654321.45678", "1899-01-01 00:59:20.001001001", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001","1899-01-01 00:59:20.001001",

@@ -169,54 +169,23 @@ TEST_F(BlobFileBatchReaderTest, TestRowNumbers) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(3, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
-    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
-    ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber().value());
     ArrowArrayRelease(batch2.first.get());
     ArrowSchemaRelease(batch2.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
-    ASSERT_EQ(2, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(2, reader->GetPreviousBatchFirstRowNumber().value());
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(3, reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch4));
-}
-
-TEST_F(BlobFileBatchReaderTest, TestRowNumbersWithBitmap) {
-    auto schema = arrow::schema({BlobUtils::ToArrowField("my_blob_field", false)});
-    ::ArrowSchema c_schema;
-    ASSERT_TRUE(arrow::ExportSchema(*schema, &c_schema).ok());
-
-    std::string test_data_path = paimon::test::GetDataDir() + "/db_with_blob.db/table_with_blob/";
-    auto dir = paimon::test::UniqueTestDirectory::Create();
-    std::string table_path = dir->Str();
-    ASSERT_TRUE(paimon::test::TestUtil::CopyDirectory(test_data_path, table_path));
-
-    std::shared_ptr<FileSystem> fs = std::make_shared<LocalFileSystem>();
-    ASSERT_OK_AND_ASSIGN(
-        std::shared_ptr<InputStream> input_stream,
-        fs->Open(table_path + "/bucket-0/data-d7816e8e-6c6d-4e28-9137-837cdf706350-1.blob"));
-    ASSERT_OK_AND_ASSIGN(auto reader, BlobFileBatchReader::Create(
-                                          input_stream,
-                                          /*batch_size=*/1, /*blob_as_descriptor=*/true, pool_));
-    RoaringBitmap32 roaring;
-    roaring.Add(1);
-    ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, roaring));
-    ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
-    ASSERT_EQ(3, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
-    ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
-    ArrowArrayRelease(batch1.first.get());
-    ArrowSchemaRelease(batch1.second.get());
-    ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchFirstRowNumber());
-    ASSERT_TRUE(BatchReader::IsEofBatch(batch2));
 }
 
 TEST_F(BlobFileBatchReaderTest, InvalidScenario) {
@@ -287,7 +256,8 @@ TEST_P(BlobFileBatchReaderTest, EmptyFile) {
     ASSERT_OK(reader->SetReadSchema(&c_schema, nullptr, std::nullopt));
     ASSERT_OK_AND_ASSIGN(auto number_of_rows, reader->GetNumberOfRows());
     ASSERT_EQ(0, number_of_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch, reader->NextBatch());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch));
 }

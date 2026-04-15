@@ -22,50 +22,58 @@
 
 #include "paimon/common/io/cache/cache_key.h"
 #include "paimon/common/memory/memory_segment.h"
-#include "paimon/status.h"
+#include "paimon/result.h"
 
 namespace paimon {
+
 class CacheValue;
+
+/// Callback invoked when a cache entry is evicted by the LRU policy.
+using CacheCallback = std::function<void(const std::shared_ptr<CacheKey>&)>;
 
 class Cache {
  public:
     virtual ~Cache() = default;
-    virtual std::shared_ptr<CacheValue> Get(
+    virtual Result<std::shared_ptr<CacheValue>> Get(
         const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier) = 0;
+        std::function<Result<std::shared_ptr<CacheValue>>(const std::shared_ptr<CacheKey>&)>
+            supplier) = 0;
 
-    virtual void Put(const std::shared_ptr<CacheKey>& key,
-                     const std::shared_ptr<CacheValue>& value) = 0;
+    virtual Status Put(const std::shared_ptr<CacheKey>& key,
+                       const std::shared_ptr<CacheValue>& value) = 0;
 
     virtual void Invalidate(const std::shared_ptr<CacheKey>& key) = 0;
 
     virtual void InvalidateAll() = 0;
 
-    virtual std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() = 0;
-};
-
-class NoCache : public Cache {
- public:
-    std::shared_ptr<CacheValue> Get(
-        const std::shared_ptr<CacheKey>& key,
-        std::function<std::shared_ptr<CacheValue>(const std::shared_ptr<CacheKey>&)> supplier)
-        override;
-    void Put(const std::shared_ptr<CacheKey>& key,
-             const std::shared_ptr<CacheValue>& value) override;
-    void Invalidate(const std::shared_ptr<CacheKey>& key) override;
-    void InvalidateAll() override;
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> AsMap() override;
+    virtual size_t Size() const = 0;
 };
 
 class CacheValue {
  public:
-    explicit CacheValue(const std::shared_ptr<MemorySegment>& segment) : segment_(segment) {}
+    CacheValue(const MemorySegment& segment, CacheCallback callback)
+        : segment_(segment), callback_(std::move(callback)) {}
 
-    std::shared_ptr<MemorySegment> GetSegment() {
+    const MemorySegment& GetSegment() const {
         return segment_;
     }
 
+    /// Invoke the eviction callback, if one was registered.
+    void OnEvict(const std::shared_ptr<CacheKey>& key) const {
+        if (callback_) {
+            callback_(key);
+        }
+    }
+
+    bool operator==(const CacheValue& other) const {
+        if (this == &other) {
+            return true;
+        }
+        return segment_ == other.segment_;
+    }
+
  private:
-    std::shared_ptr<MemorySegment> segment_;
+    MemorySegment segment_;
+    CacheCallback callback_;
 };
 }  // namespace paimon

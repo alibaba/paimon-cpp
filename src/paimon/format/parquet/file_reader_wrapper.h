@@ -62,7 +62,7 @@ class FileReaderWrapper {
 
     Result<std::shared_ptr<arrow::RecordBatch>> Next();
 
-    uint64_t GetPreviousBatchFirstRowNumber() const {
+    Result<uint64_t> GetPreviousBatchFirstRowNumber() const {
         return previous_first_row_;
     }
 

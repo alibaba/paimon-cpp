@@ -187,7 +187,7 @@ Result<std::unique_ptr<OrphanFilesCleaner>> OrphanFilesCleaner::Create(
         std::shared_ptr<FileStorePathFactory> path_factory,
         FileStorePathFactory::Create(
             ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
-            options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
+            options.GetPartitionDefaultName(), options.GetFileFormat()->Identifier(),
             options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
             global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =

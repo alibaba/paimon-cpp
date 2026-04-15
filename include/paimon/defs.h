@@ -113,7 +113,7 @@ struct PAIMON_EXPORT Options {
     static const char BLOB_TARGET_FILE_SIZE[];
 
     /// "partition.default-name" - The default partition name in case the dynamic partition column
-    /// value is null/empty string.
+    /// value is null/empty string. Default is "__DEFAULT_PARTITION__".
     static const char PARTITION_DEFAULT_NAME[];
 
     /// "file.compression" - The default file compression is zstd. For faster read and write, it is
@@ -203,6 +203,47 @@ struct PAIMON_EXPORT Options {
     /// "commit.max-retries" - Maximum number of retries when commit failed. Default value is 10.
     static const char COMMIT_MAX_RETRIES[];
 
+    /// "compaction.max-size-amplification-percent" - The size amplification is defined as the
+    /// amount (in percentage) of additional storage needed to store a single byte of data in the
+    /// merge tree for changelog mode table. Default value is 200.
+    static const char COMPACTION_MAX_SIZE_AMPLIFICATION_PERCENT[];
+
+    /// "compaction.size-ratio" - Percentage flexibility while comparing sorted run size for
+    /// changelog mode table. If the candidate sorted run(s) size is 1% smaller than the next
+    /// sorted run's size, then include next sorted run into this candidate set. Default value is 1.
+    static const char COMPACTION_SIZE_RATIO[];
+
+    /// "num-sorted-run.compaction-trigger" - The sorted run number to trigger compaction. Includes
+    /// level0 files (one file one sorted run) and high-level runs (one level one sorted run).
+    /// Default value is 5.
+    static const char NUM_SORTED_RUNS_COMPACTION_TRIGGER[];
+
+    /// "num-sorted-run.stop-trigger" - The number of sorted runs that trigger the stopping of
+    /// writes, the default value is 'num-sorted-run.compaction-trigger' + 3.
+    static const char NUM_SORTED_RUNS_STOP_TRIGGER[];
+
+    /// "num-levels" - Total level number, for example, there are 3 levels, including 0,1,2 levels.
+    /// No default value.
+    static const char NUM_LEVELS[];
+
+    /// "lookup-wait" - When need to lookup, commit will wait for compaction by lookup. Default
+    /// value is "true".
+    static const char LOOKUP_WAIT[];
+
+    /// "lookup-compact" - Lookup compact mode used for lookup compaction. Default value is
+    /// LookupCompactMode::RADICAL.
+    static const char LOOKUP_COMPACT[];
+
+    /// "compaction.force-up-level-0" - If set to true, compaction strategy will always include all
+    /// level 0 files in candidates. Default value is false.
+    static const char COMPACTION_FORCE_UP_LEVEL_0[];
+
+    /// "lookup-compact.max-interval" - The max interval for a gentle mode lookup compaction to be
+    /// triggered. For every interval, a forced lookup compaction will be performed to flush L0
+    /// files to higher level. This option is only valid when lookup-compact mode is gentle. No
+    /// default value.
+    static const char LOOKUP_COMPACT_MAX_INTERVAL[];
+
     /// "sequence.field" - The field that generates the sequence number for primary key table, the
     /// sequence number determines which data is the most recent. Value use "," as delimiter.
     static const char SEQUENCE_FIELD[];
@@ -231,6 +272,15 @@ struct PAIMON_EXPORT Options {
     /// for deletion. During read operations, by applying these index files, merging can be avoided.
     /// Default value is false.
     static const char DELETION_VECTORS_ENABLED[];
+
+    /// "deletion-vector.index-file.target-size" - The target size of deletion vector index file.
+    /// Default value is 2MB.
+    static const char DELETION_VECTOR_INDEX_FILE_TARGET_SIZE[];
+
+    /// "deletion-vectors.bitmap64" - Enable 64 bit bitmap implementation. Note that only 64 bit
+    /// bitmap implementation is compatible with Iceberg. Default value is "false".
+    /// @note: bitmap64 dv is not supported.
+    static const char DELETION_VECTOR_BITMAP64[];
 
     ///  @note `CHANGELOG_PRODUCER` currently only support `none`
     ///
@@ -295,7 +345,6 @@ struct PAIMON_EXPORT Options {
     static const char SCAN_TAG_NAME[];
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
     /// option is used along with dedicated compact jobs. Default value is "false".
-    /// @note: This option will be ignore until compaction is supported.
     static const char WRITE_ONLY[];
     /// "compaction.min.file-num" - For file set [f_0,...,f_N], the minimum file number to trigger a
     /// compaction for append-only table. Default value is 5.
@@ -335,6 +384,13 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.bloom.filter.fpp" - Define the default false positive probability for lookup
     /// cache bloom filters. Default value is 0.05.
     static const char LOOKUP_CACHE_BLOOM_FILTER_FPP[];
+    /// "lookup.remote-file.enabled" - Whether to enable the remote file for lookup.
+    /// Default value is false.
+    static const char LOOKUP_REMOTE_FILE_ENABLED[];
+    /// "lookup.remote-file.level-threshold" - Level threshold of lookup to generate remote lookup
+    /// files. Level files below this threshold will not generate remote lookup files.
+    /// Default value is INT32_MIN.
+    static const char LOOKUP_REMOTE_LEVEL_THRESHOLD[];
     /// "lookup.cache-spill-compression" - Spill compression for lookup cache, currently zstd, none,
     /// lz4 are supported. Default value is zstd.
     /// Noted that java paimon also supports lzo which paimon-cpp does not support for now.
@@ -345,6 +401,26 @@ struct PAIMON_EXPORT Options {
     static const char SPILL_COMPRESSION_ZSTD_LEVEL[];
     /// "cache-page-size" - Memory page size for caching. Default value is 64 kb.
     static const char CACHE_PAGE_SIZE[];
+    /// "file.format.per.level" - Define different file format for different level, you can add the
+    /// conf like this:  'file.format.per.level' = '0:avro,3:parquet', if the file format for level
+    /// is not provided, the default format which set by FILE_FORMAT will be used.
+    static const char FILE_FORMAT_PER_LEVEL[];
+    /// "file.compression.per.level" - Define different compression policies for different level,
+    /// you can add the conf like this: 'file.compression.per.level' = '0:lz4,1:zstd'.
+    /// If a level is not configured, the default compression set by FILE_COMPRESSION will be used.
+    static const char FILE_COMPRESSION_PER_LEVEL[];
+    /// "lookup.cache-max-memory-size" - Max memory size for lookup cache. Default value is 256 mb.
+    static const char LOOKUP_CACHE_MAX_MEMORY_SIZE[];
+    /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
+    /// high-priority data like index, filter. Default value is 0.25.
+    static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
+    /// "lookup.cache-file-retention" - The cached files retention time for lookup.
+    /// After the file expires, if there is a need for access, it will be re-read from the DFS
+    /// to build an index on the local disk. Default value is 1 hour.
+    static const char LOOKUP_CACHE_FILE_RETENTION[];
+    /// "lookup.cache-max-disk-size" - Max disk size for lookup cache, you can use this option
+    /// to limit the use of local disks. Default value is unlimited (INT64_MAX).
+    static const char LOOKUP_CACHE_MAX_DISK_SIZE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

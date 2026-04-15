@@ -19,15 +19,12 @@
 #include <cstdint>
 #include <memory>
 
-#include "paimon/common/utils/arrow/mem_utils.h"
 #include "paimon/format/format_writer.h"
-#include "paimon/format/parquet/parquet_output_stream_impl.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/metrics.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 #include "parquet/arrow/writer.h"
-#include "parquet/file_writer.h"
 
 namespace arrow {
 class MemoryPool;
@@ -36,10 +33,7 @@ class Schema;
 namespace paimon {
 class Metrics;
 class OutputStream;
-
-namespace parquet {
-class ParquetOutputStreamImpl;
-}  // namespace parquet
+class ArrowOutputStreamAdapter;
 }  // namespace paimon
 namespace parquet {
 class WriterProperties;
@@ -70,14 +64,14 @@ class ParquetFormatWriter : public FormatWriter {
 
  private:
     ParquetFormatWriter(std::unique_ptr<::parquet::arrow::FileWriter> writer,
-                        const std::shared_ptr<ParquetOutputStreamImpl>& out,
+                        const std::shared_ptr<ArrowOutputStreamAdapter>& out,
                         const std::shared_ptr<arrow::Schema>& schema, uint64_t max_memory_use,
                         const std::shared_ptr<arrow::MemoryPool>& pool);
 
     Result<uint64_t> GetEstimateLength() const;
 
     std::shared_ptr<arrow::MemoryPool> pool_;
-    std::shared_ptr<ParquetOutputStreamImpl> out_;
+    std::shared_ptr<ArrowOutputStreamAdapter> out_;
     std::unique_ptr<::parquet::arrow::FileWriter> writer_;
     std::shared_ptr<arrow::Schema> schema_;
     std::shared_ptr<Metrics> metrics_;

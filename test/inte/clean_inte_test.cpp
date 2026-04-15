@@ -177,6 +177,7 @@ class CleanInteTest : public testing::Test {
         for (const auto& file_path : cleaned_paths) {
             file_names.insert(PathUtil::GetName(file_path));
         }
+        EXPECT_EQ(file_names, expected_names);
         return file_names == expected_names;
     }
 
@@ -929,19 +930,33 @@ TEST_F(CleanInteTest, TestOrphanFilesCleanWithIOException) {
                                  OrphanFilesCleaner::Create(std::move(clean_context)));
 
             io_hook->Reset(i, IOHook::Mode::RETURN_ERROR);
-            auto clean_result = cleaner->Clean();
+            auto clean_result = cleaner->Clean();  // first clean
             io_hook->Clear();
             if (HitIOHook(clean_result.status(), i)) {
                 scanned_all_io_hook = false;
-                clean_result = cleaner->Clean();
+                clean_result = cleaner->Clean();  // second clean
             }
             ASSERT_OK(clean_result);
-            ASSERT_TRUE(CheckEqual(clean_result.value(), {"data-orphan2.orc", "manifest-orphan",
-                                                          ".manifest-orphan.uuid.tmp"}));
-            // because clean is quietly delete, if touch IO exception in Delete(), Clean() will
-            // return OK, but files may not be deleted, so need to call Clean() again.
-            // If the next call Clean() return empty, it means all files are deleted.
-            clean_result = cleaner->Clean();
+
+            std::set<std::string> expected_orphans = {"data-orphan2.orc", "manifest-orphan",
+                                                      ".manifest-orphan.uuid.tmp"};
+            // In the first clean, IO errors may already have been triggered in
+            // TryBestListingDirs or MinimalTryBestListingDirs. Those errors are handled quietly,
+            // which means the cleaner may build an incomplete view of the full file set.
+            // As a result, the subsequent delete phase may only run on part of the expected orphan
+            // files. So here we only require the cleaned result to be a subset of
+            // expected_orphans instead of an exact match.
+            std::set<std::string> cleaned_file_names;
+            for (const auto& file_path : clean_result.value()) {
+                cleaned_file_names.insert(PathUtil::GetName(file_path));
+            }
+            ASSERT_TRUE(std::includes(expected_orphans.begin(), expected_orphans.end(),
+                                      cleaned_file_names.begin(), cleaned_file_names.end()));
+            // because clean is quietly delete, if touch IO exception in Delete() in the first
+            // clean, Clean() will return OK, but files may not be deleted, so need to call Clean()
+            // again. If the third call Clean() return empty, it means all files are deleted and
+            // already scanned all io hooks.
+            clean_result = cleaner->Clean();  // third clean
             ASSERT_OK(clean_result);
             if (!clean_result.value().empty()) {
                 scanned_all_io_hook = false;

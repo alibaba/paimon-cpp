@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -43,31 +44,18 @@ namespace paimon {
 class Bytes;
 class MemoryPool;
 
-/// An implementation of `InternalRow` which is backed by `MemorySegment`.
-/// A Row has two part: Fixed-length part and variable-length part.
+/// An implementation of `InternalRow` which is backed by a single `MemorySegment`.
+/// A Row has two parts: Fixed-length part and variable-length part.
 ///
 /// Fixed-length part contains 1 byte header and null bit set and field values. Null bit
 /// set is used for null tracking and is aligned to 8-byte word boundaries. Field values
-/// holds fixed-length primitive types and variable-length values which can be stored in 8
-/// bytes inside. If it do not fit the variable-length field, then store the length and
+/// hold fixed-length primitive types and variable-length values which can be stored in 8
+/// bytes inside. If it does not fit the variable-length field, then store the length and
 /// offset of variable-length part.
 ///
-/// %In BinaryRow, Fixed-length part will certainly fall into a MemorySegment, which will speed up
-/// the read and write of field. During the write phase, if the target memory segment has less space
-/// than fixed length part size, we will skip the space. So the number of fields in a single Row
-/// cannot exceed the capacity of a single MemorySegment, if there are too many fields, we suggest
-/// that user set a bigger pageSize of MemorySegment.
-///
-/// Variable-length part may fall into multiple MemorySegments.
-///
-/// Noted that the BinaryRow class of c++ support both the `NestedRow` and BinaryRow class in
-/// java.
-/// `NestedRow` memory storage structure is exactly the same with BinaryRow. The only
-/// different is that, as `NestedRow` is used to store row value in the variable-length part
-/// of BinaryRow, every field (including both fixed-length part and variable-length part) of
-/// `NestedRow` has a possibility to cross the boundary of a segment, while the fixed-length part of
-/// BinaryRow must fit into its first memory segment.
-
+/// @note: Unlike the Java implementation where variable-length data may span multiple
+/// MemorySegments, in this C++ implementation both the fixed-length part and the
+/// variable-length part reside within a single MemorySegment.
 class BinaryRow final : public BinarySection, public InternalRow, public DataSetters {
  public:
     BinaryRow() : BinaryRow(0) {}
@@ -106,11 +94,7 @@ class BinaryRow final : public BinarySection, public InternalRow, public DataSet
     float GetFloat(int32_t pos) const override;
     double GetDouble(int32_t pos) const override;
     BinaryString GetString(int32_t pos) const override;
-    /// In binary row, string data may in multiple segments, we cannot construct a std::string_view
-    std::string_view GetStringView(int32_t pos) const override {
-        assert(false);
-        return std::string_view();
-    }
+    std::string_view GetStringView(int32_t pos) const override;
 
     Decimal GetDecimal(int32_t pos, int32_t precision, int32_t scale) const override;
     Timestamp GetTimestamp(int32_t pos, int32_t precision) const override;
@@ -160,6 +144,19 @@ struct hash<std::pair<paimon::BinaryRow, int32_t>> {
         const auto& [partition, bucket] = partition_bucket;
         return paimon::MurmurHashUtils::HashUnsafeBytes(reinterpret_cast<const void*>(&bucket), 0,
                                                         sizeof(bucket), partition.HashCode());
+    }
+};
+
+/// for std::unordered_map<std::tuple<paimon::BinaryRow, int32_t, std::string>, ...>
+template <>
+struct hash<std::tuple<paimon::BinaryRow, int32_t, std::string>> {
+    size_t operator()(
+        const std::tuple<paimon::BinaryRow, int32_t, std::string>& partition_bucket_type) const {
+        const auto& [partition, bucket, index_type] = partition_bucket_type;
+        size_t hash = paimon::MurmurHashUtils::HashUnsafeBytes(
+            reinterpret_cast<const void*>(&bucket), 0, sizeof(bucket), partition.HashCode());
+        return paimon::MurmurHashUtils::HashUnsafeBytes(index_type.data(), 0, index_type.size(),
+                                                        hash);
     }
 };
 

@@ -320,25 +320,26 @@ TEST_F(AvroFileBatchReaderTest, TestGetPreviousBatchFirstRowNumber) {
 
     ASSERT_OK_AND_ASSIGN(auto num_rows, reader->GetNumberOfRows());
     ASSERT_EQ(4, num_rows);
-    ASSERT_EQ(std::numeric_limits<uint64_t>::max(), reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(std::numeric_limits<uint64_t>::max(),
+              reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch1, reader->NextBatch());
     ArrowArrayRelease(batch1.first.get());
     ArrowSchemaRelease(batch1.second.get());
-    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(0, reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_OK_AND_ASSIGN(auto batch2, reader->NextBatch());
-    ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(1, reader->GetPreviousBatchFirstRowNumber().value());
     ArrowArrayRelease(batch2.first.get());
     ArrowSchemaRelease(batch2.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch3, reader->NextBatch());
-    ASSERT_EQ(2, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(2, reader->GetPreviousBatchFirstRowNumber().value());
     ArrowArrayRelease(batch3.first.get());
     ArrowSchemaRelease(batch3.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch4, reader->NextBatch());
-    ASSERT_EQ(3, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(3, reader->GetPreviousBatchFirstRowNumber().value());
     ArrowArrayRelease(batch4.first.get());
     ArrowSchemaRelease(batch4.second.get());
     ASSERT_OK_AND_ASSIGN(auto batch5, reader->NextBatch());
-    ASSERT_EQ(4, reader->GetPreviousBatchFirstRowNumber());
+    ASSERT_EQ(4, reader->GetPreviousBatchFirstRowNumber().value());
     ASSERT_TRUE(BatchReader::IsEofBatch(batch5));
 }
 

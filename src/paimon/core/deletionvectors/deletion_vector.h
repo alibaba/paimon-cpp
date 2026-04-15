@@ -23,6 +23,7 @@
 
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/table/source/deletion_file.h"
+#include "paimon/io/data_input_stream.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -32,12 +33,22 @@
 namespace paimon {
 class FileSystem;
 class DataOutputStream;
+class BucketedDvMaintainer;
 struct DeletionFile;
 
 /// The DeletionVector can efficiently record the positions of rows that are deleted in a file,
 /// which can then be used to filter out deleted rows when processing the file.
 class DeletionVector {
  public:
+    using Factory = std::function<Result<std::shared_ptr<DeletionVector>>(const std::string&)>;
+
+    static Factory CreateFactory(
+        const std::shared_ptr<FileSystem>& file_system,
+        const std::unordered_map<std::string, DeletionFile>& deletion_file_map,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    static Factory CreateFactory(const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer);
+
     virtual ~DeletionVector() = default;
 
     /// Marks the row at the specified position as deleted.
@@ -97,7 +108,12 @@ class DeletionVector {
                                                           const DeletionFile& deletion_file,
                                                           MemoryPool* pool);
 
+    static Result<PAIMON_UNIQUE_PTR<DeletionVector>> Read(DataInputStream* input_stream,
+                                                          std::optional<int64_t> length,
+                                                          MemoryPool* pool);
+
     static PAIMON_UNIQUE_PTR<DeletionVector> FromPrimitiveArray(const std::vector<char>& is_deleted,
                                                                 MemoryPool* pool);
 };
+
 }  // namespace paimon

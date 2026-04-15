@@ -44,7 +44,6 @@
 #include "paimon/logging.h"
 #include "paimon/read_context.h"
 #include "paimon/result.h"
-
 namespace arrow {
 class Schema;
 }  // namespace arrow
@@ -61,13 +60,15 @@ AppendOnlyFileStoreWrite::AppendOnlyFileStoreWrite(
     const std::string& root_path, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<arrow::Schema>& schema,
     const std::shared_ptr<arrow::Schema>& write_schema,
-    const std::shared_ptr<arrow::Schema>& partition_schema, const CoreOptions& options,
+    const std::shared_ptr<arrow::Schema>& partition_schema,
+    const std::shared_ptr<BucketedDvMaintainer::Factory>& dv_maintainer_factory,
+    const std::shared_ptr<IOManager>& io_manager, const CoreOptions& options,
     bool ignore_previous_files, bool is_streaming_mode, bool ignore_num_bucket_check,
     const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool)
     : AbstractFileStoreWrite(file_store_path_factory, snapshot_manager, schema_manager, commit_user,
                              root_path, table_schema, schema, write_schema, partition_schema,
-                             options, ignore_previous_files, is_streaming_mode,
-                             ignore_num_bucket_check, executor, pool),
+                             dv_maintainer_factory, io_manager, options, ignore_previous_files,
+                             is_streaming_mode, ignore_num_bucket_check, executor, pool),
       logger_(Logger::GetLogger("AppendOnlyFileStoreWrite")) {
     write_cols_ = write_schema->field_names();
     auto schemas = BlobUtils::SeparateBlobSchema(schema_);
@@ -105,15 +106,15 @@ Result<std::unique_ptr<FileStoreScan>> AppendOnlyFileStoreWrite::CreateFileStore
 }
 
 Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::CompactRewrite(
-    const BinaryRow& partition, int32_t bucket,
-    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact) {
+    const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
+    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+    const std::shared_ptr<CancellationController>& cancellation_controller) {
     if (to_compact.empty()) {
         return std::vector<std::shared_ptr<DataFileMeta>>{};
     }
 
-    // TODO(yonghao.fyh): support dv factory
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> reader,
-                           CreateFilesReader(partition, bucket, to_compact));
+                           CreateFilesReader(partition, bucket, dv_factory, to_compact));
     auto rewriter =
         std::make_unique<RollingFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>(
             options_.GetTargetFileSize(/*has_primary_key=*/false),
@@ -132,6 +133,9 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
     });
 
     while (true) {
+        if (cancellation_controller->IsCancelled()) {
+            return Status::Cancelled("Compaction cancelled while rewriting files.");
+        }
         PAIMON_ASSIGN_OR_RAISE(BatchReader::ReadBatch batch, reader->NextBatch());
         if (BatchReader::IsEofBatch(batch)) {
             break;
@@ -148,58 +152,62 @@ Result<std::vector<std::shared_ptr<DataFileMeta>>> AppendOnlyFileStoreWrite::Com
                                                  struct_array, SpecialFields::ValueKind().Name()));
         PAIMON_RETURN_NOT_OK_FROM_ARROW(
             arrow::ExportArray(*struct_array, c_array.get(), c_schema.get()));
-        ScopeGuard guard([schema = c_schema.get()]() { ArrowSchemaRelease(schema); });
+        ArrowSchemaRelease(c_schema.get());
+        ScopeGuard guard([array = c_array.get()]() { ArrowArrayRelease(array); });
         PAIMON_RETURN_NOT_OK(rewriter->Write(c_array.get()));
+        guard.Release();
     }
     rewriter_guard.Release();
     PAIMON_RETURN_NOT_OK(rewriter->Close());
-    reader_guard.Release();
-    reader->Close();
     return rewriter->GetResult();
 }
 
-Result<std::pair<int32_t, std::shared_ptr<BatchWriter>>> AppendOnlyFileStoreWrite::CreateWriter(
-    const BinaryRow& partition, int32_t bucket, bool ignore_previous_files) {
+Result<std::shared_ptr<BatchWriter>> AppendOnlyFileStoreWrite::CreateWriter(
+    const BinaryRow& partition, int32_t bucket,
+    const std::vector<std::shared_ptr<DataFileMeta>>& restore_data_files,
+    int64_t restore_max_seq_number, const std::shared_ptr<BucketedDvMaintainer>& dv_maintainer) {
     PAIMON_LOG_DEBUG(logger_, "Creating append only writer for partition %s, bucket %d",
                      partition.ToString().c_str(), bucket);
-    int32_t total_buckets = GetDefaultBucketNum();
-    std::vector<std::shared_ptr<DataFileMeta>> restore_data_files;
-    if (!ignore_previous_files) {
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<RestoreFiles> restore_files,
-                               ScanExistingFileMetas(partition, bucket));
-        restore_data_files = restore_files->DataFiles();
-        if (restore_files->TotalBuckets()) {
-            total_buckets = restore_files->TotalBuckets().value();
-        }
-    }
-    int64_t max_sequence_number = DataFileMeta::GetMaxSequenceNumber(restore_data_files);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<DataFilePathFactory> data_file_path_factory,
                            file_store_path_factory_->CreateDataFilePathFactory(partition, bucket));
 
     std::shared_ptr<CompactManager> compact_manager;
     auto schemas = BlobUtils::SeparateBlobSchema(write_schema_);
-    if (options_.WriteOnly() || with_blob_) {
-        // TODO(yonghao.fyh): check data evolution
+    if (options_.WriteOnly() || options_.DataEvolutionEnabled() || options_.GetBucket() == -1 ||
+        with_blob_) {
         compact_manager = std::make_shared<NoopCompactManager>();
     } else {
-        auto rewriter = [this, partition,
-                         bucket](const std::vector<std::shared_ptr<DataFileMeta>>& files)
-            -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
-            return CompactRewrite(partition, bucket, files);
+        auto dv_factory =
+            [dv_maintainer](
+                const std::string& file_name) -> Result<std::shared_ptr<DeletionVector>> {
+            if (dv_maintainer) {
+                return dv_maintainer->DeletionVectorOf(file_name).value_or(
+                    std::shared_ptr<DeletionVector>());
+            }
+            return std::shared_ptr<DeletionVector>();
         };
+        auto cancellation_controller = std::make_shared<CancellationController>();
+
+        auto rewriter = [this, partition, bucket, dv_factory, cancellation_controller](
+                            const std::vector<std::shared_ptr<DataFileMeta>>& to_compact)
+            -> Result<std::vector<std::shared_ptr<DataFileMeta>>> {
+            return CompactRewrite(partition, bucket, dv_factory, to_compact,
+                                  cancellation_controller);
+        };
+
         compact_manager = std::make_shared<BucketedAppendCompactManager>(
-            compact_executor_, restore_data_files, /*dv_maintainer=*/nullptr,
+            compact_executor_, restore_data_files, dv_maintainer,
             options_.GetCompactionMinFileNum(),
             options_.GetTargetFileSize(/*has_primary_key=*/false),
             options_.GetCompactionFileSize(/*has_primary_key=*/false),
             options_.CompactionForceRewriteAllFiles(), rewriter,
-            compaction_metrics_->CreateReporter(partition, bucket));
+            compaction_metrics_->CreateReporter(partition, bucket), cancellation_controller);
     }
 
     auto writer = std::make_shared<AppendOnlyWriter>(
-        options_, table_schema_->Id(), write_schema_, write_cols_, max_sequence_number,
+        options_, table_schema_->Id(), write_schema_, write_cols_, restore_max_seq_number,
         data_file_path_factory, compact_manager, pool_);
-    return std::pair<int32_t, std::shared_ptr<BatchWriter>>(total_buckets, writer);
+    return std::shared_ptr<BatchWriter>(writer);
 }
 
 AppendOnlyFileStoreWrite::SingleFileWriterCreator
@@ -214,7 +222,7 @@ AppendOnlyFileStoreWrite::GetDataFileWriterCreator(
             ::ArrowSchema arrow_schema;
             ScopeGuard guard([&arrow_schema]() { ArrowSchemaRelease(&arrow_schema); });
             PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, &arrow_schema));
-            auto format = options_.GetWriteFileFormat();
+            auto format = options_.GetFileFormat();
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<WriterBuilder> writer_builder,
                 format->CreateWriterBuilder(&arrow_schema, options_.GetWriteBatchSize()));
@@ -239,17 +247,23 @@ AppendOnlyFileStoreWrite::GetDataFileWriterCreator(
 }
 
 Result<std::unique_ptr<BatchReader>> AppendOnlyFileStoreWrite::CreateFilesReader(
-    const BinaryRow& partition, int32_t bucket,
+    const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
     const std::vector<std::shared_ptr<DataFileMeta>>& files) const {
     ReadContextBuilder context_builder(root_path_);
-    context_builder.EnablePrefetch(true).SetPrefetchMaxParallelNum(1);
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
+    context_builder.EnablePrefetch(true)
+        .SetPrefetchMaxParallelNum(1)
+        .SetPrefetchBatchCount(3)
+        .AddOption("parquet.read.enable-pre-buffer", "false");
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
     std::map<std::string, std::string> map = options_.ToMap();
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_read_context,
                            InternalReadContext::Create(read_context, table_schema_, map));
     auto read = std::make_unique<RawFileSplitRead>(file_store_path_factory_, internal_read_context,
                                                    pool_, compact_executor_);
-    return read->CreateReader(partition, bucket, files, {});
+
+    return read->CreateReader(partition, bucket, files, dv_factory);
 }
 
 }  // namespace paimon

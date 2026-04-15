@@ -30,6 +30,7 @@ if(CMAKE_GENERATOR_TOOLSET)
 endif()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} UPPERCASE_BUILD_TYPE)
+string(TOLOWER ${CMAKE_BUILD_TYPE} LOWERCASE_BUILD_TYPE)
 
 set(EP_COMMON_TOOLCHAIN "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
                         "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}")
@@ -144,6 +145,18 @@ else()
     else()
         set_urls(JIEBA_SOURCE_URL
                  "${THIRDPARTY_MIRROR_URL}https://github.com/yanyiwu/cppjieba/archive/refs/tags/${PAIMON_JIEBA_BUILD_VERSION}.tar.gz"
+        )
+    endif()
+endif()
+
+if(DEFINED ENV{PAIMON_RE2_URL})
+    set(RE2_SOURCE_URL "$ENV{PAIMON_RE2_URL}")
+else()
+    if(EXISTS "${THIRDPARTY_DIR}/${PAIMON_RE2_PKG_NAME}")
+        set_urls(RE2_SOURCE_URL "${THIRDPARTY_DIR}/${PAIMON_RE2_PKG_NAME}")
+    else()
+        set_urls(RE2_SOURCE_URL
+                 "${THIRDPARTY_MIRROR_URL}https://github.com/google/re2/archive/${PAIMON_RE2_BUILD_VERSION}.tar.gz"
         )
     endif()
 endif()
@@ -322,6 +335,11 @@ set(EP_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 set(EP_C_FLAGS "${CMAKE_C_FLAGS}")
 string(REPLACE "-Wglobal-constructors" "" EP_CXX_FLAGS ${EP_CXX_FLAGS})
 string(REPLACE "-Wglobal-constructors" "" EP_C_FLAGS ${EP_C_FLAGS})
+# Remove coverage flags from third-party dependencies to avoid gcov dependency
+string(REPLACE "--coverage" "" EP_CXX_FLAGS ${EP_CXX_FLAGS})
+string(REPLACE "--coverage" "" EP_C_FLAGS ${EP_C_FLAGS})
+string(REPLACE "-DCOVERAGE_BUILD" "" EP_CXX_FLAGS ${EP_CXX_FLAGS})
+string(REPLACE "-DCOVERAGE_BUILD" "" EP_C_FLAGS ${EP_C_FLAGS})
 if(NOT MSVC_TOOLCHAIN)
     # Set -fPIC on all external projects
     string(APPEND EP_CXX_FLAGS
@@ -638,6 +656,34 @@ macro(build_boost)
     add_dependencies(boost_iostreams boost_ep)
     add_dependencies(boost_system boost_ep)
 endmacro(build_boost)
+
+macro(build_re2)
+    message(STATUS "Building RE2 from source")
+    set(RE2_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/re2_ep-install")
+    set(RE2_INCLUDE_DIR "${RE2_PREFIX}/include")
+    set(RE2_STATIC_LIB
+        "${RE2_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}re2${CMAKE_STATIC_LIBRARY_SUFFIX}"
+    )
+    set(RE2_LIBRARIES ${RE2_STATIC_LIB})
+
+    set(RE2_CMAKE_ARGS ${EP_COMMON_CMAKE_ARGS} "-DCMAKE_INSTALL_PREFIX=${RE2_PREFIX}")
+
+    externalproject_add(re2_ep
+                        ${EP_COMMON_OPTIONS}
+                        INSTALL_DIR ${RE2_PREFIX}
+                        URL ${RE2_SOURCE_URL}
+                        URL_HASH "SHA256=${PAIMON_RE2_BUILD_SHA256_CHECKSUM}"
+                        CMAKE_ARGS ${RE2_CMAKE_ARGS} ${THIRDPARTY_LOG_OPTIONS}
+                        BUILD_BYPRODUCTS "${RE2_STATIC_LIB}")
+
+    file(MAKE_DIRECTORY "${RE2_INCLUDE_DIR}")
+
+    include_directories(SYSTEM ${RE2_INCLUDE_DIR})
+    add_library(re2::re2 STATIC IMPORTED)
+    set_target_properties(re2::re2 PROPERTIES IMPORTED_LOCATION "${RE2_STATIC_LIB}")
+    target_include_directories(re2::re2 INTERFACE "${RE2_INCLUDE_DIR}")
+    add_dependencies(re2::re2 re2_ep)
+endmacro()
 
 macro(build_snappy)
     message(STATUS "Building snappy from source")
@@ -1074,6 +1120,9 @@ macro(build_arrow)
     get_target_property(ARROW_ZLIB_INCLUDE_DIR zlib INTERFACE_INCLUDE_DIRECTORIES)
     get_filename_component(ARROW_ZLIB_ROOT "${ARROW_ZLIB_INCLUDE_DIR}" DIRECTORY)
 
+    get_target_property(ARROW_RE2_INCLUDE_DIR re2::re2 INTERFACE_INCLUDE_DIRECTORIES)
+    get_filename_component(ARROW_RE2_ROOT "${ARROW_RE2_INCLUDE_DIR}" DIRECTORY)
+
     set(ARROW_CMAKE_CXX_FLAGS "${EP_CXX_FLAGS} -Wno-error")
     set(ARROW_CMAKE_C_FLAGS "${EP_C_FLAGS} -Wno-error")
     string(REPLACE "-Werror" "" ARROW_CMAKE_CXX_FLAGS ${ARROW_CMAKE_CXX_FLAGS})
@@ -1091,7 +1140,6 @@ macro(build_arrow)
     file(MAKE_DIRECTORY "${ARROW_INCLUDE_DIR}")
 
     set(ARROW_BUILD_DIR "${CMAKE_BINARY_DIR}/arrow")
-    string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
     set(ARROW_STATIC_LIB
         "${ARROW_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}arrow${CMAKE_STATIC_LIBRARY_SUFFIX}"
     )
@@ -1140,7 +1188,9 @@ macro(build_arrow)
         -DZSTD_ROOT=${ARROW_ZSTD_ROOT}
         -DZLIB_ROOT=${ARROW_ZLIB_ROOT}
         -DSnappy_ROOT=${ARROW_SNAPPY_ROOT}
-        -DLZ4_ROOT=${ARROW_LZ4_ROOT})
+        -DLZ4_ROOT=${ARROW_LZ4_ROOT}
+        -Dre2_ROOT=${ARROW_RE2_ROOT}
+        -DBUILD_WARNING_LEVEL=PRODUCTION) # ignore warnings under gcc8
 
     set(ARROW_CONFIGURE SOURCE_SUBDIR "cpp" CMAKE_ARGS ${ARROW_CMAKE_ARGS})
     set(PATCH_FILE "${CMAKE_CURRENT_LIST_DIR}/arrow.diff")
@@ -1157,14 +1207,18 @@ macro(build_arrow)
                                          "${PARQUET_STATIC_LIB}"
                                          "${ARROW_DATASET_STATIC_LIB}"
                                          "${ARROW_ACERO_STATIC_LIB}"
-                        DEPENDS zstd snappy lz4 zlib)
+                        DEPENDS zstd
+                                snappy
+                                lz4
+                                zlib
+                                re2::re2)
 
     add_library(arrow STATIC IMPORTED)
     set_target_properties(arrow
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libarrow.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_dataset STATIC IMPORTED)
     set_target_properties(arrow_dataset
@@ -1172,7 +1226,7 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_dataset.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_acero STATIC IMPORTED)
     set_target_properties(arrow_acero
@@ -1180,14 +1234,14 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_acero.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(parquet STATIC IMPORTED)
     set_target_properties(parquet
                           PROPERTIES IMPORTED_LOCATION "${ARROW_PREFIX}/lib/libparquet.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_library(arrow_bundled_dependencies STATIC IMPORTED)
     set_target_properties(arrow_bundled_dependencies
@@ -1195,7 +1249,7 @@ macro(build_arrow)
                                      "${ARROW_PREFIX}/lib/libarrow_bundled_dependencies.a"
                                      INTERFACE_INCLUDE_DIRECTORIES "${ARROW_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${ARROW_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${ARROW_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
 
     add_dependencies(arrow arrow_ep)
     add_dependencies(parquet arrow_ep)
@@ -1212,6 +1266,7 @@ macro(build_arrow)
                                     snappy
                                     lz4
                                     zlib
+                                    re2::re2
                                     arrow_bundled_dependencies)
 
     target_link_libraries(parquet
@@ -1238,7 +1293,7 @@ macro(build_gtest)
     # Library and runtime same on non-Windows
     set(_GTEST_LIBRARY_DIR "${_GTEST_RUNTIME_DIR}")
 
-    if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
+    if(LOWERCASE_BUILD_TYPE STREQUAL "debug")
         set(GTEST_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gtestd.a")
         set(GMOCK_STATIC_LIB "${GTEST_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}gmockd.a")
         set(GTEST_MAIN_STATIC_LIB
@@ -1301,7 +1356,7 @@ macro(build_tbb)
 
     set(TBB_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/tbb_ep-install")
 
-    if(CMAKE_BUILD_TYPE_LOWER STREQUAL "debug")
+    if(LOWERCASE_BUILD_TYPE STREQUAL "debug")
         set(TBB_STATIC_LIB "${TBB_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}tbb_debug.a")
     else()
         set(TBB_STATIC_LIB "${TBB_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}tbb.a")
@@ -1311,8 +1366,6 @@ macro(build_tbb)
     file(MAKE_DIRECTORY "${TBB_INCLUDE_DIR}")
 
     set(TBB_BUILD_DIR "${CMAKE_BINARY_DIR}/tbb")
-
-    string(TOLOWER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE_LOWER)
 
     set(TBB_CMAKE_ARGS
         ${EP_COMMON_CMAKE_ARGS}
@@ -1333,7 +1386,7 @@ macro(build_tbb)
                           PROPERTIES IMPORTED_LOCATION "${TBB_STATIC_LIB}"
                                      INTERFACE_INCLUDE_DIRECTORIES "${TBB_INCLUDE_DIR}"
                                      INTERFACE_LINK_DIRECTORIES
-                                     "${TBB_BUILD_DIR}/${CMAKE_BUILD_TYPE_LOWER}")
+                                     "${TBB_BUILD_DIR}/${LOWERCASE_BUILD_TYPE}")
     add_dependencies(tbb tbb_ep)
 
 endmacro(build_tbb)
@@ -1387,6 +1440,7 @@ endmacro()
 
 build_fmt()
 build_rapidjson()
+build_re2()
 build_snappy()
 build_zstd()
 build_zlib()

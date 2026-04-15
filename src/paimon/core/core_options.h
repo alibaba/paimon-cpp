@@ -27,6 +27,8 @@
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
+#include "paimon/core/options/lookup_compact_mode.h"
+#include "paimon/core/options/lookup_strategy.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/options/sort_engine.h"
 #include "paimon/format/file_format.h"
@@ -53,9 +55,11 @@ class PAIMON_EXPORT CoreOptions {
     ~CoreOptions();
 
     int32_t GetBucket() const;
-    std::shared_ptr<FileFormat> GetWriteFileFormat() const;
+    std::shared_ptr<FileFormat> GetFileFormat() const;
+    std::shared_ptr<FileFormat> GetWriteFileFormat(int32_t level) const;
     std::shared_ptr<FileSystem> GetFileSystem() const;
     const std::string& GetFileCompression() const;
+    const std::string& GetWriteFileCompression(int32_t level) const;
     int32_t GetFileCompressionZstdLevel() const;
     int64_t GetPageSize() const;
     int64_t GetTargetFileSize(bool has_primary_key) const;
@@ -82,9 +86,17 @@ class PAIMON_EXPORT CoreOptions {
 
     bool CommitForceCompact() const;
     bool CompactionForceRewriteAllFiles() const;
+    bool CompactionForceUpLevel0() const;
     int64_t GetCommitTimeout() const;
     int32_t GetCommitMaxRetries() const;
     int32_t GetCompactionMinFileNum() const;
+    int32_t GetCompactionMaxSizeAmplificationPercent() const;
+    int32_t GetCompactionSizeRatio() const;
+    int32_t GetNumSortedRunsCompactionTrigger() const;
+    int32_t GetNumSortedRunsStopTrigger() const;
+    int32_t GetNumLevels() const;
+    LookupCompactMode GetLookupCompactMode() const;
+    int32_t GetLookupCompactMaxInterval() const;
 
     const std::vector<std::string>& GetSequenceField() const;
     bool SequenceFieldSortOrderIsAscending() const;
@@ -97,8 +109,13 @@ class PAIMON_EXPORT CoreOptions {
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
     bool DeletionVectorsEnabled() const;
+    bool DeletionVectorsBitmap64() const;
+    int64_t DeletionVectorTargetFileSize() const;
     ChangelogProducer GetChangelogProducer() const;
+    LookupStrategy GetLookupStrategy() const;
+
     bool NeedLookup() const;
+    bool PrepareCommitWaitCompaction() const;
     bool FileIndexReadEnabled() const;
 
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;
@@ -137,8 +154,17 @@ class PAIMON_EXPORT CoreOptions {
     bool LookupCacheBloomFilterEnabled() const;
     double GetLookupCacheBloomFilterFpp() const;
 
+    bool LookupRemoteFileEnabled() const;
+    int32_t GetLookupRemoteLevelThreshold() const;
+
     const CompressOptions& GetLookupCompressOptions() const;
     int32_t GetCachePageSize() const;
+
+    int64_t GetLookupCacheMaxMemory() const;
+    double GetLookupCacheHighPrioPoolRatio() const;
+
+    int64_t GetLookupCacheFileRetentionMs() const;
+    int64_t GetLookupCacheMaxDiskSize() const;
 
     const std::map<std::string, std::string>& ToMap() const;
 
@@ -148,7 +174,6 @@ class PAIMON_EXPORT CoreOptions {
 
  private:
     struct Impl;
-
     std::unique_ptr<Impl> impl_;
 };
 

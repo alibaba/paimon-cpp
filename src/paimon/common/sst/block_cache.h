@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <unordered_map>
 
@@ -24,40 +25,62 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
-
 namespace paimon {
 
 class BlockCache {
  public:
     BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
-               const std::shared_ptr<MemoryPool>& pool,
-               std::unique_ptr<CacheManager>&& cache_manager)
-        : file_path_(file_path), in_(in), pool_(pool), cache_manager_(std::move(cache_manager)) {}
+               const std::shared_ptr<CacheManager>& cache_manager,
+               const std::shared_ptr<MemoryPool>& pool)
+        : pool_(pool), file_path_(file_path), in_(in), cache_manager_(cache_manager) {}
 
-    ~BlockCache() = default;
-
-    std::shared_ptr<MemorySegment> GetBlock(int64_t position, int32_t length, bool is_index) {
+    Result<MemorySegment> GetBlock(
+        int64_t position, int32_t length, bool is_index,
+        std::function<Result<MemorySegment>(const MemorySegment&)> decompress_func) {
         auto key = CacheKey::ForPosition(file_path_, position, length, is_index);
-
         auto it = blocks_.find(key);
-        if (it == blocks_.end()) {
-            auto segment = cache_manager_->GetPage(
-                key, [&](const std::shared_ptr<paimon::CacheKey>&) -> Result<MemorySegment> {
-                    return ReadFrom(position, length);
-                });
-            if (!segment.get()) {
-                blocks_.insert({key, std::make_shared<CacheValue>(segment)});
-            }
-            return segment;
+        if (it == blocks_.end() || it->second.GetAccessCount() == CacheManager::REFRESH_COUNT) {
+            PAIMON_ASSIGN_OR_RAISE(
+                MemorySegment segment,
+                cache_manager_->GetPage(
+                    key,
+                    [&](const std::shared_ptr<paimon::CacheKey>&) -> Result<MemorySegment> {
+                        PAIMON_ASSIGN_OR_RAISE(MemorySegment compress_data,
+                                               ReadFrom(position, length));
+                        if (!decompress_func) {
+                            return compress_data;
+                        }
+                        return decompress_func(compress_data);
+                    },
+                    [this](const std::shared_ptr<CacheKey>& evicted_key) {
+                        blocks_.erase(evicted_key);
+                    }));
+            auto container = CacheManager::SegmentContainer(segment);
+            const auto& result_segment = container.Access();
+            blocks_.insert_or_assign(key, container);
+            return result_segment;
         }
-        return it->second->GetSegment();
+        return it->second.Access();
+    }
+
+    /// Returns the number of entries in the local blocks_ cache.
+    size_t BlocksSize() const {
+        return blocks_.size();
+    }
+
+    /// Returns true if the local blocks_ cache contains an entry for the given position/length.
+    bool ContainsBlock(int64_t position, int32_t length, bool is_index) const {
+        auto key = CacheKey::ForPosition(file_path_, position, length, is_index);
+        return blocks_.find(key) != blocks_.end();
     }
 
     void Close() {
-        for (const auto& [key, _] : blocks_) {
+        // Snapshot blocks_ to avoid iterator invalidation from `InvalidPage` callback.
+        auto copied_blocks = blocks_;
+        for (const auto& [key, _] : copied_blocks) {
             cache_manager_->InvalidPage(key);
         }
-        blocks_.clear();
+        assert(blocks_.empty());
     }
 
  private:
@@ -69,11 +92,13 @@ class BlockCache {
     }
 
  private:
+    std::shared_ptr<MemoryPool> pool_;
     std::string file_path_;
     std::shared_ptr<InputStream> in_;
-    std::shared_ptr<MemoryPool> pool_;
 
-    std::unique_ptr<CacheManager> cache_manager_;
-    std::unordered_map<std::shared_ptr<CacheKey>, std::shared_ptr<CacheValue>> blocks_;
+    std::shared_ptr<CacheManager> cache_manager_;
+    std::unordered_map<std::shared_ptr<CacheKey>, CacheManager::SegmentContainer, CacheKeyHash,
+                       CacheKeyEqual>
+        blocks_;
 };
 }  // namespace paimon

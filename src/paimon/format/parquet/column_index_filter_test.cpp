@@ -30,7 +30,7 @@
 #include "paimon/defs.h"
 #include "paimon/format/parquet/parquet_format_defs.h"
 #include "paimon/format/parquet/parquet_format_writer.h"
-#include "paimon/format/parquet/parquet_input_stream_impl.h"
+#include "paimon/common/utils/arrow/arrow_input_stream_adapter.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/memory/memory_pool.h"
@@ -248,7 +248,7 @@ class ColumnIndexFilterTest : public ::testing::Test {
         // Open as raw ParquetFileReader
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name_));
         ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
-        auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+        auto in_stream = std::make_shared<ArrowInputStreamAdapter>(in, arrow_pool_, length);
         parquet_reader_ = ::parquet::ParquetFileReader::Open(in_stream);
         ASSERT_TRUE(parquet_reader_);
 

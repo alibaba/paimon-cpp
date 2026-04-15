@@ -106,9 +106,8 @@ Result<PAIMON_UNIQUE_PTR<Bytes>> Blob::ToData(const std::shared_ptr<FileSystem>&
 }
 
 Result<std::unique_ptr<ArrowSchema>> Blob::ArrowField(
-    const std::string& field_name, bool nullable,
-    std::unordered_map<std::string, std::string> metadata) {
-    auto blob_field = BlobUtils::ToArrowField(field_name, nullable, metadata);
+    const std::string& field_name, std::unordered_map<std::string, std::string> metadata) {
+    auto blob_field = BlobUtils::ToArrowField(field_name, /*nullable=*/false, metadata);
     auto field = std::make_unique<::ArrowSchema>();
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportField(*blob_field, field.get()));
     return field;

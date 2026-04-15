@@ -102,7 +102,7 @@ TEST_F(AvroStatsExtractorTest, TestPrimitiveStatsExtractor) {
     };
     auto schema = std::make_shared<arrow::Schema>(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [1, 11, 111, 1111, 1.1, 1.11, "Hello", "你好", 1234, "2033-05-18 03:33:20.0", "1.22", true, "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0", "2033-05-18 03:33:20.0"],
         [2, 22, 222, 2222, 2.2, 2.22, "World", "世界", -1234, "1899-01-01 00:59:20.001001001", "2.22", false, "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001","1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20", "1899-01-01 00:59:20.001001001"],
         [null, null, 0, null, null, 0, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
@@ -139,7 +139,7 @@ TEST_F(AvroStatsExtractorTest, TestNestedType) {
                                            arrow::field("sub_f1", arrow::int64())}))};
     auto schema = arrow::schema(fields);
     auto array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null, [true, 2]],
         [[0.1, 0.3], [true, 1]],
         [[1.1, 1.2], null]
@@ -194,7 +194,7 @@ TEST_F(AvroStatsExtractorTest, TestNullForAllType) {
     };
     auto schema = std::make_shared<arrow::Schema>(fields);
     auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null]
     ])")
             .ValueOrDie());

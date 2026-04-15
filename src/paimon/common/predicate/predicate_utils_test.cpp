@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/common/predicate/predicate_utils.h"
+#include "paimon/predicate/predicate_utils.h"
 
 #include <utility>
 

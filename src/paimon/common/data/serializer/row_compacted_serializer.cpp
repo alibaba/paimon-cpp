@@ -33,9 +33,8 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
     std::vector<RowCompactedSerializer::FieldReader> readers(schema->num_fields());
     for (int32_t i = 0; i < schema->num_fields(); i++) {
         auto field_type = schema->field(i)->type();
-        // TODO(xinyu.lxy): check if we can enable use view
         PAIMON_ASSIGN_OR_RAISE(getters[i],
-                               InternalRow::CreateFieldGetter(i, field_type, /*use_view=*/false));
+                               InternalRow::CreateFieldGetter(i, field_type, /*use_view=*/true));
         PAIMON_ASSIGN_OR_RAISE(writers[i], CreateFieldWriter(field_type, pool));
         PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
     }
@@ -43,25 +42,102 @@ Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(
         schema, std::move(getters), std::move(writers), std::move(readers), pool));
 }
 
+Result<int32_t> RowCompactedSerializer::CompareField(const FieldInfo& field_info,
+                                                     RowReader* reader1, RowReader* reader2) {
+    auto type = field_info.type_id;
+    switch (type) {
+        case arrow::Type::type::BOOL: {
+            auto val1 = reader1->ReadValue<bool>();
+            auto val2 = reader2->ReadValue<bool>();
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::INT8: {
+            auto val1 = reader1->ReadValue<char>();
+            auto val2 = reader2->ReadValue<char>();
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::INT16: {
+            auto val1 = reader1->ReadValue<int16_t>();
+            auto val2 = reader2->ReadValue<int16_t>();
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::INT32:
+        case arrow::Type::type::DATE32: {
+            auto val1 = reader1->ReadValue<int32_t>();
+            auto val2 = reader2->ReadValue<int32_t>();
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::INT64: {
+            auto val1 = reader1->ReadValue<int64_t>();
+            auto val2 = reader2->ReadValue<int64_t>();
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::FLOAT: {
+            auto val1 = reader1->ReadValue<float>();
+            auto val2 = reader2->ReadValue<float>();
+            return FieldsComparator::CompareFloatingPoint(val1, val2);
+        }
+        case arrow::Type::type::DOUBLE: {
+            auto val1 = reader1->ReadValue<double>();
+            auto val2 = reader2->ReadValue<double>();
+            return FieldsComparator::CompareFloatingPoint(val1, val2);
+        }
+        case arrow::Type::type::STRING:
+        case arrow::Type::type::BINARY: {
+            PAIMON_ASSIGN_OR_RAISE(std::string_view val1, reader1->ReadStringView());
+            PAIMON_ASSIGN_OR_RAISE(std::string_view val2, reader2->ReadStringView());
+            int32_t cmp = val1.compare(val2);
+            return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
+        }
+        case arrow::Type::type::TIMESTAMP: {
+            PAIMON_ASSIGN_OR_RAISE(Timestamp val1, reader1->ReadTimestamp(field_info.precision));
+            PAIMON_ASSIGN_OR_RAISE(Timestamp val2, reader2->ReadTimestamp(field_info.precision));
+            return val1 == val2 ? 0 : (val1 < val2 ? -1 : 1);
+        }
+        case arrow::Type::type::DECIMAL: {
+            PAIMON_ASSIGN_OR_RAISE(Decimal val1,
+                                   reader1->ReadDecimal(field_info.precision, field_info.scale));
+            PAIMON_ASSIGN_OR_RAISE(Decimal val2,
+                                   reader2->ReadDecimal(field_info.precision, field_info.scale));
+            int32_t cmp = val1.CompareTo(val2);
+            return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
+        }
+        default:
+            return Status::NotImplemented(
+                fmt::format("Do not support comparing type {} in CompareField",
+                            static_cast<int32_t>(field_info.type_id)));
+    }
+}
+
 Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparator(
     const std::shared_ptr<arrow::Schema>& schema, const std::shared_ptr<MemoryPool>& pool) {
     int32_t bit_set_in_bytes = RowCompactedSerializer::CalculateBitSetInBytes(schema->num_fields());
     auto row_reader1 = std::make_shared<RowReader>(bit_set_in_bytes, pool);
     auto row_reader2 = std::make_shared<RowReader>(bit_set_in_bytes, pool);
-    std::vector<RowCompactedSerializer::FieldReader> readers(schema->num_fields());
-    std::vector<FieldsComparator::VariantComparatorFunc> comparators(schema->num_fields());
+
+    std::vector<FieldInfo> field_infos(schema->num_fields());
     for (int32_t i = 0; i < schema->num_fields(); i++) {
         auto field_type = schema->field(i)->type();
-        PAIMON_ASSIGN_OR_RAISE(readers[i], CreateFieldReader(field_type, pool));
-        PAIMON_ASSIGN_OR_RAISE(comparators[i],
-                               FieldsComparator::CompareVariant(i, field_type, /*use_view=*/false));
+        field_infos[i].type_id = field_type->id();
+        if (field_type->id() == arrow::Type::type::TIMESTAMP) {
+            auto timestamp_type =
+                arrow::internal::checked_pointer_cast<arrow::TimestampType>(field_type);
+            assert(timestamp_type);
+            field_infos[i].precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
+        } else if (field_type->id() == arrow::Type::type::DECIMAL) {
+            auto decimal_type =
+                arrow::internal::checked_pointer_cast<arrow::Decimal128Type>(field_type);
+            assert(decimal_type);
+            field_infos[i].precision = decimal_type->precision();
+            field_infos[i].scale = decimal_type->scale();
+        }
     }
-    auto comparator = [row_reader1, row_reader2, readers, comparators](
-                          const std::shared_ptr<MemorySlice>& slice1,
-                          const std::shared_ptr<MemorySlice>& slice2) -> Result<int32_t> {
-        row_reader1->PointTo(*slice1->GetSegment(), slice1->Offset());
-        row_reader2->PointTo(*slice2->GetSegment(), slice2->Offset());
-        for (int32_t i = 0; i < static_cast<int32_t>(readers.size()); i++) {
+
+    auto comparator = [row_reader1, row_reader2, field_infos](
+                          const MemorySlice& slice1, const MemorySlice& slice2) -> Result<int32_t> {
+        row_reader1->PointTo(slice1.GetSegment(), slice1.Offset());
+        row_reader2->PointTo(slice2.GetSegment(), slice2.Offset());
+        for (int32_t i = 0; i < static_cast<int32_t>(field_infos.size()); i++) {
             bool is_null1 = row_reader1->IsNullAt(i);
             bool is_null2 = row_reader2->IsNullAt(i);
             if (!is_null1 || !is_null2) {
@@ -70,9 +146,9 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
                 } else if (is_null2) {
                     return 1;
                 } else {
-                    PAIMON_ASSIGN_OR_RAISE(VariantType field1, readers[i](i, row_reader1.get()));
-                    PAIMON_ASSIGN_OR_RAISE(VariantType field2, readers[i](i, row_reader2.get()));
-                    int32_t comp = comparators[i](field1, field2);
+                    PAIMON_ASSIGN_OR_RAISE(
+                        int32_t comp,
+                        CompareField(field_infos[i], row_reader1.get(), row_reader2.get()));
                     if (comp != 0) {
                         return comp;
                     }
@@ -81,8 +157,7 @@ Result<MemorySlice::SliceComparator> RowCompactedSerializer::CreateSliceComparat
         }
         return 0;
     };
-    return std::function<Result<int32_t>(const std::shared_ptr<MemorySlice>&,
-                                         const std::shared_ptr<MemorySlice>&)>(comparator);
+    return std::function<Result<int32_t>(const MemorySlice&, const MemorySlice&)>(comparator);
 }
 
 Result<std::shared_ptr<Bytes>> RowCompactedSerializer::SerializeToBytes(const InternalRow& row) {
@@ -112,6 +187,7 @@ Result<std::unique_ptr<InternalRow>> RowCompactedSerializer::Deserialize(
         PAIMON_ASSIGN_OR_RAISE(VariantType field, readers_[i](i, row_reader_.get()));
         row->SetField(i, field);
     }
+    row->AddDataHolder(bytes);
     return row;
 }
 
@@ -177,7 +253,7 @@ Result<RowCompactedSerializer::FieldReader> RowCompactedSerializer::CreateFieldR
         }
         case arrow::Type::type::STRING: {
             field_reader = [](int32_t pos, RowReader* reader) -> Result<VariantType> {
-                PAIMON_ASSIGN_OR_RAISE(VariantType value, reader->ReadString());
+                PAIMON_ASSIGN_OR_RAISE(VariantType value, reader->ReadStringView());
                 return value;
             };
             break;
@@ -306,9 +382,7 @@ Result<RowCompactedSerializer::FieldWriter> RowCompactedSerializer::CreateFieldW
             field_writer = [](int32_t pos, const VariantType& field, RowWriter* writer) -> Status {
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
-                    // TODO(xinyu.lxy): remove copy from view
-                    return writer->WriteString(
-                        BinaryString::FromString(std::string(*view), GetDefaultPool().get()));
+                    return writer->WriteStringView(*view);
                 }
                 return writer->WriteString(DataDefine::GetVariantValue<BinaryString>(field));
             };
@@ -318,9 +392,7 @@ Result<RowCompactedSerializer::FieldWriter> RowCompactedSerializer::CreateFieldW
             field_writer = [](int32_t pos, const VariantType& field, RowWriter* writer) -> Status {
                 const auto* view = DataDefine::GetVariantPtr<std::string_view>(field);
                 if (view) {
-                    auto bytes =
-                        std::make_shared<Bytes>(std::string(*view), GetDefaultPool().get());
-                    return writer->WriteBinary(bytes.get());
+                    return writer->WriteStringView(*view);
                 }
                 return writer->WriteBinary(
                     DataDefine::GetVariantValue<std::shared_ptr<Bytes>>(field).get());
@@ -433,16 +505,16 @@ Status RowCompactedSerializer::RowWriter::WriteArray(const std::shared_ptr<Inter
                                                      const std::shared_ptr<arrow::DataType>& type) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BinaryArray> binary_array,
                            BinarySerializerUtils::WriteBinaryArray(value, type, pool_.get()));
-    return WriteSegments(binary_array->GetSegments(), binary_array->GetOffset(),
-                         binary_array->GetSizeInBytes());
+    return WriteSegment(binary_array->GetSegment(), binary_array->GetOffset(),
+                        binary_array->GetSizeInBytes());
 }
 
 Status RowCompactedSerializer::RowWriter::WriteMap(const std::shared_ptr<InternalMap>& value,
                                                    const std::shared_ptr<arrow::DataType>& type) {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BinaryMap> binary_map,
                            BinarySerializerUtils::WriteBinaryMap(value, type, pool_.get()));
-    return WriteSegments(binary_map->GetSegments(), binary_map->GetOffset(),
-                         binary_map->GetSizeInBytes());
+    return WriteSegment(binary_map->GetSegment(), binary_map->GetOffset(),
+                        binary_map->GetSizeInBytes());
 }
 
 std::shared_ptr<Bytes> RowCompactedSerializer::RowWriter::CopyBuffer() const {
@@ -457,11 +529,11 @@ Status RowCompactedSerializer::RowWriter::WriteUnsignedInt(int32_t value) {
     return Status::OK();
 }
 
-Status RowCompactedSerializer::RowWriter::WriteSegments(const std::vector<MemorySegment>& segments,
-                                                        int32_t off, int32_t len) {
+Status RowCompactedSerializer::RowWriter::WriteSegment(const MemorySegment& segment, int32_t off,
+                                                       int32_t len) {
     PAIMON_RETURN_NOT_OK(WriteUnsignedInt(len));
     EnsureCapacity(len);
-    MemorySegmentUtils::CopyToBytes(segments, off, buffer_.get(), position_, len);
+    MemorySegmentUtils::CopyToBytes({segment}, off, buffer_.get(), position_, len);
     position_ += len;
     return Status::OK();
 }
@@ -493,7 +565,7 @@ void RowCompactedSerializer::RowReader::PointTo(const std::shared_ptr<Bytes>& by
 
 void RowCompactedSerializer::RowReader::PointTo(const MemorySegment& segment, int32_t offset) {
     segment_ = segment;
-    segments_ = {segment};
+
     offset_ = offset;
     position_ = offset + header_size_in_bytes_;
 }
@@ -503,9 +575,9 @@ Result<const RowKind*> RowCompactedSerializer::RowReader::ReadRowKind() const {
     return RowKind::FromByteValue(static_cast<int8_t>(b));
 }
 
-Result<BinaryString> RowCompactedSerializer::RowReader::ReadString() {
+Result<std::string_view> RowCompactedSerializer::RowReader::ReadStringView() {
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    BinaryString str = BinaryString::FromAddress(segments_, position_, length);
+    std::string_view str(segment_.GetArray()->data() + position_, length);
     position_ += length;
     return str;
 }
@@ -539,7 +611,7 @@ Result<Timestamp> RowCompactedSerializer::RowReader::ReadTimestamp(int32_t preci
 Result<std::shared_ptr<InternalArray>> RowCompactedSerializer::RowReader::ReadArray() {
     auto value = std::make_shared<BinaryArray>();
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    value->PointTo(segments_, position_, length);
+    value->PointTo(segment_, position_, length);
     position_ += length;
     return value;
 }
@@ -547,7 +619,7 @@ Result<std::shared_ptr<InternalArray>> RowCompactedSerializer::RowReader::ReadAr
 Result<std::shared_ptr<InternalMap>> RowCompactedSerializer::RowReader::ReadMap() {
     auto value = std::make_shared<BinaryMap>();
     PAIMON_ASSIGN_OR_RAISE(int32_t length, ReadUnsignedInt());
-    value->PointTo(segments_, position_, length);
+    value->PointTo(segment_, position_, length);
     position_ += length;
     return value;
 }

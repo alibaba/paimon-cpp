@@ -21,12 +21,14 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "paimon/core/compact/compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/data_file_path_factory.h"
 #include "paimon/core/io/rolling_file_writer.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
+#include "paimon/core/mergetree/write_buffer.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/core/utils/commit_increment.h"
 #include "paimon/core/utils/fields_comparator.h"
@@ -59,23 +61,17 @@ class MergeTreeWriter : public BatchWriter {
                     const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
                     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
                     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
-                    const CoreOptions& options, const std::shared_ptr<MemoryPool>& pool);
+                    const CoreOptions& options,
+                    const std::shared_ptr<CompactManager>& compact_manager,
+                    const std::shared_ptr<MemoryPool>& pool);
 
-    ~MergeTreeWriter() override {
-        [[maybe_unused]] auto status = DoClose();
-    }
     Status Write(std::unique_ptr<RecordBatch>&& batch) override;
-    Status Compact(bool full_compaction) override {
-        return Status::NotImplemented("not implemented");
-    }
 
-    Result<bool> CompactNotCompleted() override {
-        return false;
-    }
+    Status Compact(bool full_compaction) override;
 
-    Status Sync() override {
-        return Status::NotImplemented("not implemented");
-    }
+    Result<bool> CompactNotCompleted() override;
+
+    Status Sync() override;
 
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
@@ -88,22 +84,20 @@ class MergeTreeWriter : public BatchWriter {
     }
 
  private:
-    Status DoClose() {
-        batch_vec_.clear();
-        row_kinds_vec_.clear();
-        return Status::OK();
-    }
+    Status DoClose();
 
-    Status Flush();
+    Status Flush(bool wait_for_latest_compaction, bool forced_full_compaction);
     Result<CommitIncrement> DrainIncrement();
 
     std::unique_ptr<RollingFileWriter<KeyValueBatch, std::shared_ptr<DataFileMeta>>>
     CreateRollingRowWriter() const;
-    static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
+
+    Status TrySyncLatestCompaction(bool blocking);
+    Status UpdateCompactResult(const std::shared_ptr<CompactResult>& compact_result);
+    Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);
 
  private:
     int64_t last_sequence_number_;
-    int64_t current_memory_in_bytes_;
     std::shared_ptr<MemoryPool> pool_;
     std::vector<std::string> trimmed_primary_keys_;
     CoreOptions options_;
@@ -113,14 +107,19 @@ class MergeTreeWriter : public BatchWriter {
     std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
     int64_t schema_id_;
     // write_schema = value_schema + special fields
-    std::shared_ptr<arrow::DataType> value_type_;
     std::shared_ptr<arrow::Schema> write_schema_;
 
-    std::vector<std::shared_ptr<arrow::StructArray>> batch_vec_;
-    std::vector<std::vector<RecordBatch::RowKind>> row_kinds_vec_;
+    std::shared_ptr<CompactManager> compact_manager_;
+
+    std::unique_ptr<WriteBuffer> write_buffer_;
 
     std::shared_ptr<Metrics> metrics_;
+
     std::vector<std::shared_ptr<DataFileMeta>> new_files_;
     std::vector<std::shared_ptr<DataFileMeta>> deleted_files_;
+    std::vector<std::shared_ptr<DataFileMeta>> compact_before_;
+    std::vector<std::shared_ptr<DataFileMeta>> compact_after_;
+
+    std::shared_ptr<CompactDeletionFile> compact_deletion_file_;
 };
 }  // namespace paimon

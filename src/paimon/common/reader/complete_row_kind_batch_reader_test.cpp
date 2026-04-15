@@ -139,7 +139,7 @@ TEST_F(CompleteRowKindBatchReaderTest, TestNestedType) {
         arrow::field("f1", arrow::map(arrow::struct_({field("a", arrow::int64()),
                                                       field("b", arrow::boolean())}),
                                       arrow::boolean()))};
-    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({fields}), R"([
+    auto src_array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(fields), R"([
         [[null, [1, true], null], [[[1, true], true]]],
         [[[2, false], null], null],
         [[[2, false], [3, true], [4, null]], [[[1, true], true], [[5, false], null]]],

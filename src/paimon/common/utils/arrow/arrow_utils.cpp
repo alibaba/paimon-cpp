@@ -91,6 +91,24 @@ void ArrowUtils::TraverseArray(const std::shared_ptr<arrow::Array>& array) {
     }
 }
 
+bool ArrowUtils::EqualsIgnoreNullable(const std::shared_ptr<arrow::DataType>& type,
+                                      const std::shared_ptr<arrow::DataType>& other_type) {
+    if (type->id() != other_type->id() || type->num_fields() != other_type->num_fields()) {
+        return false;
+    }
+    for (int32_t i = 0; i < type->num_fields(); ++i) {
+        const auto& field = type->field(i);
+        const auto& other_field = other_type->field(i);
+        if (field->name() != other_field->name()) {
+            return false;
+        }
+        if (!EqualsIgnoreNullable(field->type(), other_field->type())) {
+            return false;
+        }
+    }
+    return true;
+}
+
 Status ArrowUtils::InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
                                               const std::shared_ptr<arrow::Array>& data) {
     if (PAIMON_UNLIKELY(!field->nullable() && data->null_count() != 0)) {

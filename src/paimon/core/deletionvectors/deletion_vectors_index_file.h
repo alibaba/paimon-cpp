@@ -35,13 +35,9 @@ class DeletionVectorsIndexFile : public IndexFile {
     static constexpr int8_t VERSION_ID_V1 = 1;
 
     DeletionVectorsIndexFile(const std::shared_ptr<FileSystem>& fs,
-                             const std::shared_ptr<IndexPathFactory>& path_factory,
-                             int64_t target_size_per_index_file, bool bitmap64,
+                             const std::shared_ptr<IndexPathFactory>& path_factory, bool bitmap64,
                              const std::shared_ptr<MemoryPool>& pool)
-        : IndexFile(fs, path_factory),
-          target_size_per_index_file_(target_size_per_index_file),
-          bitmap64_(bitmap64),
-          pool_(pool) {}
+        : IndexFile(fs, path_factory), bitmap64_(bitmap64), pool_(pool) {}
 
     ~DeletionVectorsIndexFile() override = default;
 
@@ -52,10 +48,17 @@ class DeletionVectorsIndexFile : public IndexFile {
     Result<std::shared_ptr<IndexFileMeta>> WriteSingleFile(
         const std::map<std::string, std::shared_ptr<DeletionVector>>& input);
 
+    Result<std::map<std::string, std::shared_ptr<DeletionVector>>> ReadAllDeletionVectors(
+        const std::shared_ptr<IndexFileMeta>& file_meta) const;
+
+    Result<std::map<std::string, std::shared_ptr<DeletionVector>>> ReadAllDeletionVectors(
+        const std::vector<std::shared_ptr<IndexFileMeta>>& index_files) const;
+
  private:
+    static Status CheckVersion(const std::shared_ptr<DataInputStream>& in);
+
     std::shared_ptr<DeletionVectorIndexFileWriter> CreateWriter() const;
 
-    const int64_t target_size_per_index_file_;
     const bool bitmap64_;
     std::shared_ptr<MemoryPool> pool_;
 };

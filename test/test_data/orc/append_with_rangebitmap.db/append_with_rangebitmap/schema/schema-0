@@ -1,0 +1,39 @@
+{
+  "version" : 3,
+  "id" : 0,
+  "fields" : [ {
+    "id" : 0,
+    "name" : "f0",
+    "type" : "INT"
+  }, {
+    "id" : 1,
+    "name" : "f1",
+    "type" : "BIGINT"
+  }, {
+    "id" : 2,
+    "name" : "f2",
+    "type" : "FLOAT"
+  }, {
+    "id" : 3,
+    "name" : "f3",
+    "type" : "DOUBLE"
+  }, {
+    "id" : 4,
+    "name" : "f4",
+    "type" : "DATE"
+  }, {
+    "id" : 5,
+    "name" : "f5",
+    "type" : "STRING"
+  } ],
+  "highestFieldId" : 5,
+  "partitionKeys" : [ ],
+  "primaryKeys" : [ ],
+  "options" : {
+    "file-index.range-bitmap.columns" : "f0,f1,f2,f3,f4",
+    "owner" : "xiaoheng",
+    "file.format" : "orc",
+    "file-index.in-manifest-threshold" : "1B"
+  },
+  "timeMillis" : 1772177550729
+}

@@ -16,7 +16,6 @@
 
 #include "paimon/common/data/abstract_binary_writer.h"
 
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -48,11 +47,11 @@ void AbstractBinaryWriter::WriteString(int32_t pos, const BinaryString& input) {
     int32_t len = input.GetSizeInBytes();
     if (len <= BinarySection::MAX_FIX_PART_DATA_SIZE) {
         auto bytes = Bytes::AllocateBytes(len, pool_);
-        MemorySegmentUtils::CopyToBytes(input.GetSegments(), input.GetOffset(), bytes.get(), 0,
+        MemorySegmentUtils::CopyToBytes({input.GetSegment()}, input.GetOffset(), bytes.get(), 0,
                                         len);
         WriteBytesToFixLenPart(&segment_, GetFieldOffset(pos), *bytes, len);
     } else {
-        WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(), len);
+        WriteSegmentToVarLenPart(pos, input.GetSegment(), input.GetOffset(), len);
     }
 }
 
@@ -75,20 +74,19 @@ void AbstractBinaryWriter::WriteStringView(int32_t pos, const std::string_view& 
 }
 
 void AbstractBinaryWriter::WriteRow(int32_t pos, const BinaryRow& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
-                                     input.GetSizeInBytes());
+    return WriteSegmentToVarLenPart(pos, input.GetSegment(), input.GetOffset(),
+                                    input.GetSizeInBytes());
 }
 
 void AbstractBinaryWriter::WriteArray(int32_t pos, const BinaryArray& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
-                                     input.GetSizeInBytes());
+    return WriteSegmentToVarLenPart(pos, input.GetSegment(), input.GetOffset(),
+                                    input.GetSizeInBytes());
 }
 
 void AbstractBinaryWriter::WriteMap(int32_t pos, const BinaryMap& input) {
-    return WriteSegmentsToVarLenPart(pos, input.GetSegments(), input.GetOffset(),
-                                     input.GetSizeInBytes());
+    return WriteSegmentToVarLenPart(pos, input.GetSegment(), input.GetOffset(),
+                                    input.GetSizeInBytes());
 }
-
 void AbstractBinaryWriter::WriteDecimal(int32_t pos, const std::optional<Decimal>& value,
                                         int32_t precision) {
     assert(value == std::nullopt || precision == value.value().Precision());
@@ -152,42 +150,17 @@ void AbstractBinaryWriter::EnsureCapacity(int32_t needed_size) {
     }
 }
 
-void AbstractBinaryWriter::WriteSegmentsToVarLenPart(int32_t pos,
-                                                     const std::vector<MemorySegment>& segments,
-                                                     int32_t offset, int32_t size) {
+void AbstractBinaryWriter::WriteSegmentToVarLenPart(int32_t pos, const MemorySegment& segment,
+                                                    int32_t offset, int32_t size) {
     const int32_t rounded_size = RoundNumberOfBytesToNearestWord(size);
     // grow the global buffer before writing data.
     EnsureCapacity(rounded_size);
     ZeroOutPaddingBytes(size);
 
-    if (segments.size() == 1) {
-        segments[0].CopyTo(offset, &segment_, cursor_, size);
-    } else {
-        WriteMultiSegmentsToVarLenPart(segments, offset, size);
-    }
+    segment.CopyTo(offset, &segment_, cursor_, size);
     SetOffsetAndSize(pos, cursor_, size);
     // move the cursor forward.
     cursor_ += rounded_size;
-}
-
-void AbstractBinaryWriter::WriteMultiSegmentsToVarLenPart(
-    const std::vector<MemorySegment>& segments, int32_t offset, int32_t size) {
-    // Write the bytes to the variable length portion.
-    int32_t need_copy = size;
-    int32_t from_offset = offset;
-    int32_t to_offset = cursor_;
-    for (const auto& source_segment : segments) {
-        int32_t remain = source_segment.Size() - from_offset;
-        if (remain > 0) {
-            int32_t copy_size = std::min(remain, need_copy);
-            source_segment.CopyTo(from_offset, &segment_, to_offset, copy_size);
-            need_copy -= copy_size;
-            to_offset += copy_size;
-            from_offset = 0;
-        } else {
-            from_offset -= source_segment.Size();
-        }
-    }
 }
 
 template <typename T>

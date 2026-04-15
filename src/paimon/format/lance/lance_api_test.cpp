@@ -120,7 +120,7 @@ TEST(LanceApiTest, TestInvalidCaseForWrite) {
         arrow::FieldVector mismatched_fields = {arrow::field("f1", arrow::int32())};
 
         auto mismatched_array = std::dynamic_pointer_cast<arrow::StructArray>(
-            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({mismatched_fields}), R"([
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(mismatched_fields), R"([
             [1], [2], [3] ])")
                 .ValueOrDie());
         ArrowArray mismatched_c_array;

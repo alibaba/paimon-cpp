@@ -28,20 +28,23 @@ class CompactFutureManager : public CompactManager {
         if (task_future_.valid()) {
             task_future_.wait();
         }
-        for (auto& f : cancelled_futures_) {
-            if (f.valid()) {
-                f.wait();
-            }
-        }
     }
 
-    /// Cancel the current compaction task if it is running.
-    /// @note: This method may leave behind orphan files.
-    void CancelCompaction() override {
+    /// Request cancellation for future-based compaction.
+    ///
+    /// `std::future` itself cannot be cancelled. Subclasses must override this
+    /// method to signal their concrete cancellation controller.
+    void RequestCancelCompaction() override = 0;
+
+    /// Wait for the current compaction task to exit if it is running.
+    /// @note This is a blocking join operation and may leave behind orphan files.
+    void WaitForCompactionToExit() override {
         // std::future does not support cancellation natively.
+        // Move away the active future first, then wait for completion so callers
+        // can safely start a new task without reusing cancellation state.
         if (task_future_.valid()) {
-            // Detach the future so we don't block on destruction
-            cancelled_futures_.push_back(std::move(task_future_));
+            auto cancelled = std::move(task_future_);
+            cancelled.wait();
         }
     }
 
@@ -62,15 +65,20 @@ class CompactFutureManager : public CompactManager {
         bool ready = blocking ||
                      (task_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready);
         if (ready) {
-            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<CompactResult> result,
-                                   ObtainCompactResult(std::move(task_future_)));
-            return std::make_optional(std::move(result));
+            Result<std::shared_ptr<CompactResult>> result =
+                ObtainCompactResult(std::move(task_future_));
+            if (result.status().ok()) {
+                return std::make_optional(std::move(result).value());
+            } else if (result.status().IsCancelled()) {
+                return std::optional<std::shared_ptr<CompactResult>>();
+            } else {
+                return result.status();
+            }
         }
         return std::optional<std::shared_ptr<CompactResult>>();
     }
 
     std::future<Result<std::shared_ptr<CompactResult>>> task_future_;
-    std::vector<std::future<Result<std::shared_ptr<CompactResult>>>> cancelled_futures_;
 };
 
 }  // namespace paimon

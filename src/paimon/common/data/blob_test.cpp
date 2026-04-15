@@ -16,10 +16,11 @@
 
 #include "paimon/data/blob.h"
 
+#include "arrow/api.h"
+#include "arrow/c/bridge.h"
 #include "gtest/gtest.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -140,6 +141,45 @@ TEST_F(BlobTest, TestNewInputStreamWithDynamicLength) {
     ASSERT_OK_AND_ASSIGN(auto bytes_read, input_stream->Read(buffer.data(), buffer.size()));
     ASSERT_EQ(12, bytes_read);
     ASSERT_EQ("cdefghijklmn", buffer);
+}
+
+TEST_F(BlobTest, TestArrowField) {
+    {
+        // basic: field name, non-nullable by default
+        ASSERT_OK_AND_ASSIGN(auto schema, Blob::ArrowField("my_blob"));
+        ASSERT_NE(schema, nullptr);
+
+        // import back to arrow::Field to verify
+        auto field_result = arrow::ImportField(schema.get());
+        ASSERT_TRUE(field_result.ok());
+        auto field = field_result.ValueUnsafe();
+
+        ASSERT_EQ(field->name(), "my_blob");
+        ASSERT_EQ(field->type()->id(), arrow::Type::LARGE_BINARY);
+        ASSERT_FALSE(field->nullable());
+        ASSERT_TRUE(field->HasMetadata());
+        auto extension_type = field->metadata()->Get("paimon.extension.type");
+        ASSERT_TRUE(extension_type.ok());
+        ASSERT_EQ(extension_type.ValueUnsafe(), "paimon.type.blob");
+    }
+    {
+        // with custom metadata
+        std::unordered_map<std::string, std::string> custom_metadata = {
+            {"custom_key", "custom_value"}};
+        ASSERT_OK_AND_ASSIGN(auto schema, Blob::ArrowField("meta_blob", custom_metadata));
+        auto field = arrow::ImportField(schema.get()).ValueUnsafe();
+        ASSERT_EQ(field->name(), "meta_blob");
+        ASSERT_FALSE(field->nullable());
+        ASSERT_TRUE(field->HasMetadata());
+        // blob extension metadata should be present
+        auto extension_type = field->metadata()->Get("paimon.extension.type");
+        ASSERT_TRUE(extension_type.ok());
+        ASSERT_EQ(extension_type.ValueUnsafe(), "paimon.type.blob");
+        // custom metadata should also be present
+        auto custom_val = field->metadata()->Get("custom_key");
+        ASSERT_TRUE(custom_val.ok());
+        ASSERT_EQ(custom_val.ValueUnsafe(), "custom_value");
+    }
 }
 
 }  // namespace paimon::test

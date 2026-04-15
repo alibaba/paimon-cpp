@@ -23,6 +23,7 @@
 #include "fmt/format.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/manifest/index_manifest_file.h"
 #include "paimon/core/mergetree/compact/lookup_merge_function.h"
 #include "paimon/core/mergetree/compact/merge_function.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
@@ -91,17 +92,20 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
 
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> file_store_path_factory,
-        FileStorePathFactory::Create(
-            ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
-            options.GetPartitionDefaultName(), options.GetWriteFileFormat()->Identifier(),
-            options.DataFilePrefix(), options.LegacyPartitionNameEnabled(), external_paths,
-            global_index_external_path, options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
+        FileStorePathFactory::Create(ctx->GetRootPath(), arrow_schema, schema->PartitionKeys(),
+                                     options.GetPartitionDefaultName(),
+                                     options.GetWriteFileFormat(/*level=*/0)->Identifier(),
+                                     options.DataFilePrefix(), options.LegacyPartitionNameEnabled(),
+                                     external_paths, global_index_external_path,
+                                     options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =
         std::make_shared<SnapshotManager>(options.GetFileSystem(), ctx->GetRootPath(), branch);
     bool ignore_previous_files = ctx->IgnorePreviousFiles();
     if (schema->PrimaryKeys().empty()) {
         // append table
+        bool need_dv_maintainer_factory = options.DeletionVectorsEnabled();
         if (options.GetBucket() == -1) {
+            need_dv_maintainer_factory = false;
             ignore_previous_files = true;
         } else if (options.GetBucket() <= 0) {
             return Status::Invalid(
@@ -123,18 +127,35 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
             }
             write_schema = arrow::schema(write_fields);
         }
+
+        std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory;
+        if (need_dv_maintainer_factory) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::unique_ptr<IndexManifestFile> index_manifest_file,
+                IndexManifestFile::Create(options.GetFileSystem(), options.GetManifestFormat(),
+                                          options.GetManifestCompression(), file_store_path_factory,
+                                          options.GetBucket(), ctx->GetMemoryPool(), options));
+            auto index_file_handler = std::make_shared<IndexFileHandler>(
+                options.GetFileSystem(), std::move(index_manifest_file),
+                std::make_shared<IndexFilePathFactories>(file_store_path_factory),
+                options.DeletionVectorsBitmap64(), ctx->GetMemoryPool());
+            dv_maintainer_factory =
+                std::make_shared<BucketedDvMaintainer::Factory>(index_file_handler);
+        }
+
         return std::make_unique<AppendOnlyFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
-            ctx->GetRootPath(), schema, arrow_schema, write_schema, partition_schema, options,
-            ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
-            ctx->GetExecutor(), ctx->GetMemoryPool());
+            ctx->GetRootPath(), schema, arrow_schema, write_schema, partition_schema,
+            dv_maintainer_factory, ctx->GetIOManager(), options, ignore_previous_files,
+            ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
+            ctx->GetMemoryPool());
     } else {
         // pk table
         if (options.GetBucket() == BucketModeDefine::POSTPONE_BUCKET) {
             return PostponeBucketFileStoreWrite::Create(
                 snapshot_manager, schema_manager, ctx->GetCommitUser(), ctx->GetRootPath(), schema,
-                arrow_schema, partition_schema, options, ctx->IsStreamingMode(),
-                ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
+                arrow_schema, partition_schema, ctx->GetIOManager(), options,
+                ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
                 ctx->GetFileSystemSchemeToIdentifierMap(), ctx->GetExecutor(), ctx->GetMemoryPool(),
                 ctx->GetSpecificFileSystem());
         }
@@ -146,10 +167,10 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
                                schema->TrimmedPrimaryKeys());
         PAIMON_ASSIGN_OR_RAISE(std::vector<DataField> trimmed_primary_key_fields,
                                schema->GetFields(trimmed_primary_keys));
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FieldsComparator> key_comparator,
-                               FieldsComparator::Create(trimmed_primary_key_fields,
-                                                        options.SequenceFieldSortOrderIsAscending(),
-                                                        /*use_view=*/true));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<FieldsComparator> key_comparator,
+            FieldsComparator::Create(trimmed_primary_key_fields,
+                                     options.SequenceFieldSortOrderIsAscending()));
         auto primary_keys = schema->PrimaryKeys();
         PAIMON_ASSIGN_OR_RAISE(
             std::unique_ptr<MergeFunction> merge_function,
@@ -163,12 +184,28 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         PAIMON_ASSIGN_OR_RAISE(
             std::shared_ptr<FieldsComparator> sequence_fields_comparator,
             PrimaryKeyTableUtils::CreateSequenceFieldsComparator(schema->Fields(), options));
+
+        std::shared_ptr<BucketedDvMaintainer::Factory> dv_maintainer_factory;
+        if (options.DeletionVectorsEnabled()) {
+            PAIMON_ASSIGN_OR_RAISE(
+                std::unique_ptr<IndexManifestFile> index_manifest_file,
+                IndexManifestFile::Create(options.GetFileSystem(), options.GetManifestFormat(),
+                                          options.GetManifestCompression(), file_store_path_factory,
+                                          options.GetBucket(), ctx->GetMemoryPool(), options));
+            auto index_file_handler = std::make_shared<IndexFileHandler>(
+                options.GetFileSystem(), std::move(index_manifest_file),
+                std::make_shared<IndexFilePathFactories>(file_store_path_factory),
+                options.DeletionVectorsBitmap64(), ctx->GetMemoryPool());
+            dv_maintainer_factory =
+                std::make_shared<BucketedDvMaintainer::Factory>(index_file_handler);
+        }
+
         return std::make_unique<KeyValueFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
-            ctx->GetRootPath(), schema, arrow_schema, partition_schema, key_comparator,
-            sequence_fields_comparator, merge_function_wrapper, options, ignore_previous_files,
-            ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
-            ctx->GetMemoryPool());
+            ctx->GetRootPath(), schema, arrow_schema, partition_schema, dv_maintainer_factory,
+            ctx->GetIOManager(), key_comparator, sequence_fields_comparator, merge_function_wrapper,
+            options, ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
+            ctx->GetExecutor(), ctx->GetMemoryPool());
     }
 }
 

@@ -40,12 +40,19 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
+      - name: Setup ccache
+        uses: ./.github/actions/setup-ccache
+        with:
+          cache-key-prefix: ccache-clang-release
       - name: Build Paimon
         shell: bash
         env:
           CC: clang
           CXX: clang++
         run: ci/scripts/build_paimon.sh $(pwd) false false Release
+      - name: Show ccache statistics
+        if: always()
+        run: ccache -s
   gcc-release:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
@@ -56,9 +63,16 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           lfs: true
+      - name: Setup ccache
+        uses: ./.github/actions/setup-ccache
+        with:
+          cache-key-prefix: ccache-gcc-release
       - name: Build Paimon
         shell: bash
         env:
           CC: gcc-14
           CXX: g++-14
         run: ci/scripts/build_paimon.sh $(pwd) false false Release
+      - name: Show ccache statistics
+        if: always()
+        run: ccache -s

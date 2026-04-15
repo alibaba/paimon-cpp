@@ -144,11 +144,11 @@ Status BinarySerializerUtils::WriteBinaryData(const std::shared_ptr<arrow::DataT
             break;
         }
         case arrow::Type::type::STRING: {
-            writer->WriteString(pos, getter->GetString(pos));
+            writer->WriteStringView(pos, getter->GetStringView(pos));
             break;
         }
         case arrow::Type::type::BINARY: {
-            writer->WriteBinary(pos, *(getter->GetBinary(pos)));
+            writer->WriteStringView(pos, getter->GetStringView(pos));
             break;
         }
         case arrow::Type::type::TIMESTAMP: {
