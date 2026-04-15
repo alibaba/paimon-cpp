@@ -48,6 +48,3 @@ FlameGraph
 
 # Third party dependencies archives
 third_party/*.tar.gz
-
-java
-demo

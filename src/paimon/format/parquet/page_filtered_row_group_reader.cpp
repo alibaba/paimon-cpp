@@ -23,8 +23,8 @@
 #include "arrow/chunked_array.h"
 #include "arrow/io/caching.h"
 #include "arrow/io/interfaces.h"
-#include "arrow/util/future.h"
 #include "arrow/table.h"
+#include "arrow/util/future.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "parquet/arrow/reader_internal.h"
@@ -33,10 +33,8 @@
 
 namespace paimon::parquet {
 
-std::function<bool(const ::parquet::DataPageStats&)>
-PageFilteredRowGroupReader::MakePageFilter(
-    const RowRanges& row_ranges,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
+std::function<bool(const ::parquet::DataPageStats&)> PageFilteredRowGroupReader::MakePageFilter(
+    const RowRanges& row_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     int64_t row_group_row_count) {
     // Shared counter tracks the current page index as the callback is invoked
     // in order for each data page.
@@ -67,10 +65,8 @@ PageFilteredRowGroupReader::MakePageFilter(
     };
 }
 
-std::pair<RowRanges, int64_t>
-PageFilteredRowGroupReader::ComputeCompressedRowRanges(
-    const RowRanges& original_ranges,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
+std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRanges(
+    const RowRanges& original_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     int64_t row_group_row_count) {
     const auto& page_locations = offset_index->page_locations();
     int32_t num_pages = static_cast<int32_t>(page_locations.size());
@@ -82,8 +78,8 @@ PageFilteredRowGroupReader::ComputeCompressedRowRanges(
     for (int32_t page_idx = 0; page_idx < num_pages; ++page_idx) {
         int64_t page_from = page_locations[page_idx].first_row_index;
         int64_t page_to = (page_idx + 1 < num_pages)
-            ? page_locations[page_idx + 1].first_row_index - 1
-            : row_group_row_count - 1;
+                              ? page_locations[page_idx + 1].first_row_index - 1
+                              : row_group_row_count - 1;
         int64_t page_size = page_to - page_from + 1;
 
         if (!original_ranges.IsOverlapping(page_from, page_to)) {
@@ -112,17 +108,12 @@ PageFilteredRowGroupReader::ComputeCompressedRowRanges(
     return {compressed, compressed_offset};
 }
 
-Result<std::shared_ptr<arrow::ChunkedArray>>
-PageFilteredRowGroupReader::ReadFilteredColumn(
+Result<std::shared_ptr<arrow::ChunkedArray>> PageFilteredRowGroupReader::ReadFilteredColumn(
     const std::shared_ptr<::parquet::RowGroupReader>& row_group_reader,
     ::parquet::ParquetFileReader* parquet_reader,
-    const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader,
-    int32_t row_group_index,
-    int32_t column_index,
-    const RowRanges& row_ranges,
-    const std::shared_ptr<arrow::Field>& field,
-    int64_t row_group_row_count,
-    ::arrow::MemoryPool* pool) {
+    const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader, int32_t row_group_index,
+    int32_t column_index, const RowRanges& row_ranges, const std::shared_ptr<arrow::Field>& field,
+    int64_t row_group_row_count, ::arrow::MemoryPool* pool) {
     auto file_metadata = parquet_reader->metadata();
     const auto* col_descriptor = file_metadata->schema()->Column(column_index);
 
@@ -179,10 +170,10 @@ PageFilteredRowGroupReader::ReadFilteredColumn(
         int64_t to_read = range.Count();
         int64_t read = record_reader->ReadRecords(to_read);
         if (read != to_read) {
-            return Status::Invalid(fmt::format(
-                "PageFilteredRowGroupReader: expected to read {} records but read {} "
-                "(row_group={}, column={}, range=[{},{}])",
-                to_read, read, row_group_index, column_index, range.from, range.to));
+            return Status::Invalid(
+                fmt::format("PageFilteredRowGroupReader: expected to read {} records but read {} "
+                            "(row_group={}, column={}, range=[{},{}])",
+                            to_read, read, row_group_index, column_index, range.from, range.to));
         }
         current_row += to_read;
     }
@@ -200,16 +191,11 @@ PageFilteredRowGroupReader::ReadFilteredColumn(
     return chunked_array;
 }
 
-Result<std::shared_ptr<arrow::RecordBatch>>
-PageFilteredRowGroupReader::ReadFilteredRowGroup(
-    ::parquet::ParquetFileReader* parquet_reader,
-    int32_t row_group_index,
-    const RowRanges& row_ranges,
-    const std::vector<int32_t>& column_indices,
-    const std::shared_ptr<arrow::Schema>& arrow_schema,
-    ::arrow::MemoryPool* pool,
-    const ::arrow::io::CacheOptions& cache_options,
-    bool pre_buffered,
+Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilteredRowGroup(
+    ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
+    const RowRanges& row_ranges, const std::vector<int32_t>& column_indices,
+    const std::shared_ptr<arrow::Schema>& arrow_schema, ::arrow::MemoryPool* pool,
+    const ::arrow::io::CacheOptions& cache_options, bool pre_buffered,
     const std::vector<::arrow::io::ReadRange>& page_ranges) {
     if (row_ranges.IsEmpty()) {
         std::vector<std::shared_ptr<arrow::Array>> empty_columns;
@@ -234,8 +220,7 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
             PAIMON_RETURN_NOT_OK_FROM_ARROW(
                 parquet_reader->WhenBufferedRanges(page_ranges).status());
         } else {
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                parquet_reader->WhenBuffered(rg_vec, col_vec).status());
+            PAIMON_RETURN_NOT_OK_FROM_ARROW(parquet_reader->WhenBuffered(rg_vec, col_vec).status());
         }
     }
 
@@ -252,10 +237,10 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     for (size_t i = 0; i < column_indices.size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(
             auto chunked_array,
-            ReadFilteredColumn(row_group_reader, parquet_reader, page_index_reader,
-                               row_group_index, column_indices[i], row_ranges,
-                               arrow_schema->field(static_cast<int>(i)),
-                               row_group_row_count, pool));
+            ReadFilteredColumn(row_group_reader, parquet_reader, page_index_reader, row_group_index,
+                               column_indices[i], row_ranges,
+                               arrow_schema->field(static_cast<int>(i)), row_group_row_count,
+                               pool));
 
         if (chunked_array->length() != expected_rows) {
             return Status::Invalid(fmt::format(
@@ -269,9 +254,7 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
 
     // Build Table from ChunkedArrays, then combine chunks and extract a single RecordBatch
     auto table = arrow::Table::Make(arrow_schema, columns, expected_rows);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-        auto combined_table,
-        table->CombineChunks(pool));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto combined_table, table->CombineChunks(pool));
 
     // Extract arrays from the single-chunk table
     std::vector<std::shared_ptr<arrow::Array>> arrays;
@@ -282,8 +265,7 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
             arrays.push_back(chunked->chunk(0));
         } else if (chunked->num_chunks() == 0) {
             PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
-                auto empty_array,
-                arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
+                auto empty_array, arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
             arrays.push_back(std::move(empty_array));
         } else {
             return Status::Invalid(fmt::format(
@@ -295,12 +277,9 @@ PageFilteredRowGroupReader::ReadFilteredRowGroup(
     return arrow::RecordBatch::Make(arrow_schema, expected_rows, std::move(arrays));
 }
 
-std::vector<::arrow::io::ReadRange>
-PageFilteredRowGroupReader::ComputePageRanges(
-    ::parquet::ParquetFileReader* parquet_reader,
-    int32_t row_group_index,
-    const RowRanges& row_ranges,
-    const std::vector<int32_t>& column_indices) {
+std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRanges(
+    ::parquet::ParquetFileReader* parquet_reader, int32_t row_group_index,
+    const RowRanges& row_ranges, const std::vector<int32_t>& column_indices) {
     std::vector<::arrow::io::ReadRange> ranges;
     auto file_metadata = parquet_reader->metadata();
     auto rg_metadata = file_metadata->RowGroup(row_group_index);
@@ -345,8 +324,8 @@ PageFilteredRowGroupReader::ComputePageRanges(
         for (int32_t page_idx = 0; page_idx < num_pages; ++page_idx) {
             int64_t first_row = page_locations[page_idx].first_row_index;
             int64_t last_row = (page_idx + 1 < num_pages)
-                ? page_locations[page_idx + 1].first_row_index - 1
-                : row_group_row_count - 1;
+                                   ? page_locations[page_idx + 1].first_row_index - 1
+                                   : row_group_row_count - 1;
 
             if (!row_ranges.IsOverlapping(first_row, last_row)) {
                 continue;  // Page doesn't overlap with target rows

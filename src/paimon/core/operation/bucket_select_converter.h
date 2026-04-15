@@ -48,10 +48,8 @@ class BucketSelectConverter {
     /// Returns nullopt if the predicate cannot be used to derive buckets
     /// (e.g., missing bucket key columns, too many combinations, or non-equality predicates).
     static Result<std::optional<std::set<int32_t>>> Convert(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::vector<std::string>& bucket_keys,
-        int32_t num_buckets,
-        const std::shared_ptr<TableSchema>& table_schema,
+        const std::shared_ptr<Predicate>& predicate, const std::vector<std::string>& bucket_keys,
+        int32_t num_buckets, const std::shared_ptr<TableSchema>& table_schema,
         const std::shared_ptr<MemoryPool>& pool);
 
  private:

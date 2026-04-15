@@ -62,8 +62,7 @@ class ColumnIndexFilter {
     static Result<RowRanges> CalculateRowRanges(
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index,
-        int32_t row_group_index,
+        const std::map<std::string, int32_t>& column_name_to_index, int32_t row_group_index,
         int64_t row_group_row_count);
 
  private:
@@ -71,58 +70,55 @@ class ColumnIndexFilter {
     static Result<RowRanges> VisitPredicate(
         const std::shared_ptr<Predicate>& predicate,
         ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index,
-        int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
 
     /// Visit a leaf predicate and calculate row ranges.
     static Result<RowRanges> VisitLeafPredicate(
         const std::shared_ptr<LeafPredicate>& leaf_predicate,
         ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index,
-        int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
 
     /// Visit a compound predicate (AND/OR) and calculate row ranges.
     static Result<RowRanges> VisitCompoundPredicate(
         const std::shared_ptr<CompoundPredicate>& compound_predicate,
         ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
-        const std::map<std::string, int32_t>& column_name_to_index,
-        int64_t row_group_row_count);
+        const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count);
 
     /// Filter pages based on column index statistics for EQUAL predicate.
     static std::vector<int32_t> FilterPagesByEqual(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for NOT_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByNotEqual(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for LESS_THAN predicate.
     static std::vector<int32_t> FilterPagesByLessThan(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for LESS_OR_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByLessOrEqual(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for GREATER_THAN predicate.
     static std::vector<int32_t> FilterPagesByGreaterThan(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for GREATER_OR_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByGreaterOrEqual(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        const Literal& literal, FieldType field_type);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        FieldType field_type);
 
     /// Filter pages based on column index statistics for IS_NULL predicate.
     static std::vector<int32_t> FilterPagesByIsNull(
@@ -149,38 +145,38 @@ class ColumnIndexFilter {
     /// Build row ranges from page indices (must be sorted in ascending order).
     static RowRanges BuildRowRangesFromPageIndices(
         const std::vector<int32_t>& page_indices,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
-        int64_t row_group_row_count);
+        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, int64_t row_group_row_count);
 
     /// Compare a parquet encoded value with a Literal.
     /// @return -1 if encoded < literal, 0 if equal, 1 if encoded > literal.
     ///         nullopt if comparison cannot be performed (unsupported type, etc.).
-    static std::optional<int32_t> CompareEncodedWithLiteral(
-        const std::string& encoded, const Literal& literal, FieldType field_type);
+    static std::optional<int32_t> CompareEncodedWithLiteral(const std::string& encoded,
+                                                            const Literal& literal,
+                                                            FieldType field_type);
 
     /// Check if a page might contain a value equal to the literal.
     /// Condition: min <= literal <= max
     static bool PageMightContainEqual(const std::string& encoded_min,
-                                      const std::string& encoded_max,
-                                      const Literal& literal, FieldType field_type);
+                                      const std::string& encoded_max, const Literal& literal,
+                                      FieldType field_type);
 
     /// Check if a page might contain values less than the literal.
     /// Condition: min < literal
     static bool PageMightContainLessThan(const std::string& encoded_min,
-                                         const std::string& encoded_max,
-                                         const Literal& literal, FieldType field_type);
+                                         const std::string& encoded_max, const Literal& literal,
+                                         FieldType field_type);
 
     /// Check if a page might contain values less than or equal to the literal.
     /// Condition: min <= literal
     static bool PageMightContainLessOrEqual(const std::string& encoded_min,
-                                            const std::string& encoded_max,
-                                            const Literal& literal, FieldType field_type);
+                                            const std::string& encoded_max, const Literal& literal,
+                                            FieldType field_type);
 
     /// Check if a page might contain values greater than the literal.
     /// Condition: max > literal
     static bool PageMightContainGreaterThan(const std::string& encoded_min,
-                                            const std::string& encoded_max,
-                                            const Literal& literal, FieldType field_type);
+                                            const std::string& encoded_max, const Literal& literal,
+                                            FieldType field_type);
 
     /// Check if a page might contain values greater than or equal to the literal.
     /// Condition: max >= literal

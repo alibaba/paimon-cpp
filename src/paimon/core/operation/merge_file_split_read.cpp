@@ -413,8 +413,8 @@ Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeRead
     for (size_t ri = 0; ri < section.size(); ri++) {
         // no overlap in a run
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader> run_reader,
-                               CreateReaderForRun(partition, section[ri], deletion_file_map, predicate,
-                                                  data_file_path_factory));
+                               CreateReaderForRun(partition, section[ri], deletion_file_map,
+                                                  predicate, data_file_path_factory));
         record_readers.emplace_back(std::move(run_reader));
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,

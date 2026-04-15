@@ -35,7 +35,6 @@ Result<RowRanges> ColumnIndexFilter::CalculateRowRanges(
     const std::shared_ptr<::parquet::PageIndexReader>& page_index_reader,
     const std::map<std::string, int32_t>& column_name_to_index, int32_t row_group_index,
     int64_t row_group_row_count) {
-
     if (!predicate || !page_index_reader) {
         return RowRanges::CreateSingle(row_group_row_count);
     }
@@ -70,7 +69,6 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
     const std::shared_ptr<LeafPredicate>& leaf_predicate,
     ::parquet::RowGroupPageIndexReader* rg_page_index_reader,
     const std::map<std::string, int32_t>& column_name_to_index, int64_t row_group_row_count) {
-
     const std::string& field_name = leaf_predicate->FieldName();
     auto it = column_name_to_index.find(field_name);
     if (it == column_name_to_index.end()) {
@@ -88,7 +86,7 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
                 // NULL = non_null → no rows.
                 bool has_null_literal = !literals.empty() && literals[0].IsNull();
                 return has_null_literal ? RowRanges::CreateSingle(row_group_row_count)
-                                       : RowRanges::CreateEmpty();
+                                        : RowRanges::CreateEmpty();
             }
             case Function::Type::IN: {
                 // IN list contains null → all rows; otherwise no rows.
@@ -102,7 +100,7 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
                 // (safe over-approximation matching Java).
                 bool has_null_literal = !literals.empty() && literals[0].IsNull();
                 return has_null_literal ? RowRanges::CreateEmpty()
-                                       : RowRanges::CreateSingle(row_group_row_count);
+                                        : RowRanges::CreateSingle(row_group_row_count);
             }
             case Function::Type::NOT_IN: {
                 // NOT_IN list contains null → no rows; otherwise all rows
@@ -157,31 +155,31 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
         case Function::Type::NOT_EQUAL:
             if (!literals.empty()) {
                 matching_pages = FilterPagesByNotEqual(column_index_ptr, offset_index_ptr,
-                                                      literals[0], field_type);
+                                                       literals[0], field_type);
             }
             break;
         case Function::Type::LESS_THAN:
             if (!literals.empty()) {
                 matching_pages = FilterPagesByLessThan(column_index_ptr, offset_index_ptr,
-                                                      literals[0], field_type);
+                                                       literals[0], field_type);
             }
             break;
         case Function::Type::LESS_OR_EQUAL:
             if (!literals.empty()) {
                 matching_pages = FilterPagesByLessOrEqual(column_index_ptr, offset_index_ptr,
-                                                         literals[0], field_type);
+                                                          literals[0], field_type);
             }
             break;
         case Function::Type::GREATER_THAN:
             if (!literals.empty()) {
                 matching_pages = FilterPagesByGreaterThan(column_index_ptr, offset_index_ptr,
-                                                         literals[0], field_type);
+                                                          literals[0], field_type);
             }
             break;
         case Function::Type::GREATER_OR_EQUAL:
             if (!literals.empty()) {
                 matching_pages = FilterPagesByGreaterOrEqual(column_index_ptr, offset_index_ptr,
-                                                            literals[0], field_type);
+                                                             literals[0], field_type);
             }
             break;
         case Function::Type::IN:
@@ -482,8 +480,8 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIn(
     bool has_null_counts = column_index->has_null_counts();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
 
-    bool has_null = std::any_of(literals.begin(), literals.end(),
-                                [](const Literal& l) { return l.IsNull(); });
+    bool has_null =
+        std::any_of(literals.begin(), literals.end(), [](const Literal& l) { return l.IsNull(); });
 
     // Pages outer loop, literals inner loop with early break when page is matched.
     // Naturally produces sorted output, avoids unordered_set overhead.
@@ -585,8 +583,9 @@ RowRanges ColumnIndexFilter::BuildRowRangesFromPageIndices(
     return ranges;
 }
 
-std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(
-    const std::string& encoded, const Literal& literal, FieldType field_type) {
+std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::string& encoded,
+                                                                    const Literal& literal,
+                                                                    FieldType field_type) {
     if (literal.IsNull()) {
         return std::nullopt;
     }
@@ -665,9 +664,8 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(
                 // FIXED_LEN_BYTE_ARRAY: big-endian two's complement
                 if (encoded.empty()) return std::nullopt;
                 // Sign-extend from the first byte
-                enc_val = (static_cast<int8_t>(encoded[0]) < 0)
-                    ? static_cast<Decimal::int128_t>(-1)
-                    : static_cast<Decimal::int128_t>(0);
+                enc_val = (static_cast<int8_t>(encoded[0]) < 0) ? static_cast<Decimal::int128_t>(-1)
+                                                                : static_cast<Decimal::int128_t>(0);
                 for (size_t i = 0; i < encoded.size(); ++i) {
                     enc_val = (enc_val << 8) | static_cast<uint8_t>(encoded[i]);
                 }
@@ -693,7 +691,7 @@ bool ColumnIndexFilter::PageMightContainEqual(const std::string& encoded_min,
     // Page might contain equal if min <= literal <= max
     auto cmp_min = CompareEncodedWithLiteral(encoded_min, literal, field_type);
     if (!cmp_min.has_value()) return true;  // Can't compare, assume match
-    if (*cmp_min > 0) return false;  // min > literal
+    if (*cmp_min > 0) return false;         // min > literal
 
     auto cmp_max = CompareEncodedWithLiteral(encoded_max, literal, field_type);
     if (!cmp_max.has_value()) return true;

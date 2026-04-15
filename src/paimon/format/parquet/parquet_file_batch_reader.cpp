@@ -84,10 +84,9 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
                                         ->properties(arrow_reader_properties)
                                         ->Build(&file_reader));
-    PAIMON_ASSIGN_OR_RAISE(
-        std::unique_ptr<FileReaderWrapper> reader,
-        FileReaderWrapper::Create(std::move(file_reader), pool.get(),
-                                  static_cast<int64_t>(batch_size)));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
+                           FileReaderWrapper::Create(std::move(file_reader), pool.get(),
+                                                     static_cast<int64_t>(batch_size)));
     auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
         new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
@@ -161,8 +160,9 @@ Status ParquetFileBatchReader::SetReadSchema(
             OptionsUtils::GetValueFromMap<bool>(options_, PARQUET_READ_ENABLE_PAGE_INDEX_FILTER,
                                                 DEFAULT_PARQUET_READ_ENABLE_PAGE_INDEX_FILTER));
         if (enable_page_index_filter && !row_groups.empty()) {
-            PAIMON_ASSIGN_OR_RAISE(auto page_filter_result, FilterRowGroupsByPageIndex(
-                                                   predicate, column_name_to_index, row_groups));
+            PAIMON_ASSIGN_OR_RAISE(
+                auto page_filter_result,
+                FilterRowGroupsByPageIndex(predicate, column_name_to_index, row_groups));
             row_groups = std::move(page_filter_result.first);
             reader_->SetRowGroupRowRanges(page_filter_result.second);
         }

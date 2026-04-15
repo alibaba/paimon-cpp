@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "paimon/format/parquet/page_filtered_row_group_reader.h"
+
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -42,6 +44,8 @@
 #include "paimon/status.h"
 #include "paimon/testing/utils/read_result_collector.h"
 #include "paimon/testing/utils/testharness.h"
+#include "parquet/arrow/reader.h"
+#include "parquet/file_reader.h"
 #include "parquet/properties.h"
 
 namespace paimon {
@@ -80,7 +84,7 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
         ::parquet::WriterProperties::Builder builder;
         builder.write_batch_size(write_batch_size);
         builder.max_row_group_length(max_row_group_length);
-        builder.disable_dictionary();  // Ensure page index min/max are meaningful
+        builder.disable_dictionary();       // Ensure page index min/max are meaningful
         builder.enable_write_page_index();  // Enable page index for page-level filtering
         // Set data page size to 1 byte to force a new page after every write_batch_size rows.
         // The writer flushes a page when accumulated data exceeds data_pagesize, so setting
@@ -98,21 +102,20 @@ class PageFilteredRowGroupReaderTest : public ::testing::Test {
 
     /// Read back a Parquet file with an optional predicate and page index filter enabled.
     /// Returns the collected result as a ChunkedArray.
-    void ReadWithPredicateImpl(
-        const std::string& file_name,
-        const std::shared_ptr<arrow::Schema>& read_schema,
-        const std::shared_ptr<Predicate>& predicate,
-        std::shared_ptr<arrow::ChunkedArray>* out,
-        int32_t batch_size = 1024) {
+    void ReadWithPredicateImpl(const std::string& file_name,
+                               const std::shared_ptr<arrow::Schema>& read_schema,
+                               const std::shared_ptr<Predicate>& predicate,
+                               std::shared_ptr<arrow::ChunkedArray>* out,
+                               int32_t batch_size = 1024) {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
         ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
         auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
 
         std::map<std::string, std::string> options;
         options[PARQUET_READ_ENABLE_PAGE_INDEX_FILTER] = "true";
-        ASSERT_OK_AND_ASSIGN(auto batch_reader,
-                             ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_,
-                                                            options, batch_size));
+        ASSERT_OK_AND_ASSIGN(
+            auto batch_reader,
+            ParquetFileBatchReader::Create(std::move(in_stream), arrow_pool_, options, batch_size));
         auto c_schema = std::make_unique<ArrowSchema>();
         ASSERT_TRUE(arrow::ExportSchema(*read_schema, c_schema.get()).ok());
         ASSERT_OK(batch_reader->SetReadSchema(c_schema.get(), predicate,
@@ -495,6 +498,165 @@ TEST_F(PageFilteredRowGroupReaderTest, StringColumnPageFilter) {
     ASSERT_TRUE(result);
     // Pages 2 (ccc_20..ccc_29) and 3 (ddd_30..ddd_39) should match.
     ASSERT_EQ(20, result->length());
+}
+
+/// Test: ComputePageRanges returns only matching page byte ranges.
+///
+/// 100 rows, 10 rows per page, 1 row group with page index enabled.
+/// RowRanges = [50, 59] (page 5 only). Should return exactly 1 page range per column.
+TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesPartialMatch) {
+    std::string file_name = dir_->Str() + "/compute_ranges_partial.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    // Open as raw ParquetFileReader
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+    auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+    ASSERT_TRUE(parquet_reader);
+
+    // Single page match: rows [50, 59] = page 5
+    RowRanges row_ranges;
+    row_ranges.Add(RowRanges::Range(50, 59));
+
+    auto ranges = PageFilteredRowGroupReader::ComputePageRanges(
+        parquet_reader.get(), /*row_group_index=*/0, row_ranges, /*column_indices=*/{0});
+
+    // Should have exactly 1 range (page 5 of column 0, no dictionary since disabled)
+    ASSERT_EQ(1, ranges.size());
+    ASSERT_GT(ranges[0].offset, 0);
+    ASSERT_GT(ranges[0].length, 0);
+}
+
+/// Test: ComputePageRanges returns all page ranges when RowRanges covers entire row group.
+TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesAllMatch) {
+    std::string file_name = dir_->Str() + "/compute_ranges_all.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+    auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+
+    // All rows match
+    RowRanges row_ranges;
+    row_ranges.Add(RowRanges::Range(0, 99));
+
+    auto ranges =
+        PageFilteredRowGroupReader::ComputePageRanges(parquet_reader.get(), 0, row_ranges, {0});
+
+    // 10 pages, all matching
+    ASSERT_EQ(10, ranges.size());
+    for (const auto& r : ranges) {
+        ASSERT_GT(r.offset, 0);
+        ASSERT_GT(r.length, 0);
+    }
+}
+
+/// Test: ComputePageRanges returns no page ranges for empty RowRanges.
+TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesNoMatch) {
+    std::string file_name = dir_->Str() + "/compute_ranges_none.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+    auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+
+    RowRanges row_ranges;  // empty
+
+    auto ranges =
+        PageFilteredRowGroupReader::ComputePageRanges(parquet_reader.get(), 0, row_ranges, {0});
+
+    ASSERT_EQ(0, ranges.size());
+}
+
+/// Test: ComputePageRanges with multiple columns returns ranges for each column.
+TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiColumn) {
+    std::string file_name = dir_->Str() + "/compute_ranges_multi_col.parquet";
+    auto data = MakeTwoColumnData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+    auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+
+    // Match page 5 only (rows 50-59)
+    RowRanges row_ranges;
+    row_ranges.Add(RowRanges::Range(50, 59));
+
+    auto ranges =
+        PageFilteredRowGroupReader::ComputePageRanges(parquet_reader.get(), 0, row_ranges, {0, 1});
+
+    // 1 matching page per column = 2 ranges total
+    ASSERT_EQ(2, ranges.size());
+    // Ranges should be at different offsets (different columns)
+    ASSERT_NE(ranges[0].offset, ranges[1].offset);
+}
+
+/// Test: ComputePageRanges with multiple matching pages.
+///
+/// 100 rows, 10 per page. RowRanges = [20,29] + [70,79] = pages 2 and 7.
+TEST_F(PageFilteredRowGroupReaderTest, ComputePageRangesMultiplePages) {
+    std::string file_name = dir_->Str() + "/compute_ranges_multi_page.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file_name));
+    ASSERT_OK_AND_ASSIGN(uint64_t length, in->Length());
+    auto in_stream = std::make_shared<ParquetInputStreamImpl>(in, arrow_pool_, length);
+    auto parquet_reader = ::parquet::ParquetFileReader::Open(in_stream);
+
+    RowRanges row_ranges;
+    row_ranges.Add(RowRanges::Range(20, 29));
+    row_ranges.Add(RowRanges::Range(70, 79));
+
+    auto ranges =
+        PageFilteredRowGroupReader::ComputePageRanges(parquet_reader.get(), 0, row_ranges, {0});
+
+    // 2 matching pages for 1 column
+    ASSERT_EQ(2, ranges.size());
+    // Pages should be at increasing offsets
+    ASSERT_LT(ranges[0].offset, ranges[1].offset);
+}
+
+/// Test: end-to-end page-filtered read produces correct results when using page-level PreBuffer.
+///
+/// This exercises the full path: ComputePageRanges → PreBufferRanges → CachedInputStream →
+/// ReadFilteredRowGroup with page_ranges.
+TEST_F(PageFilteredRowGroupReaderTest, EndToEndPageLevelPreBuffer) {
+    std::string file_name = dir_->Str() + "/e2e_page_prebuffer.parquet";
+    auto data = MakeSequentialIntData(100);
+    WriteTestFile(file_name, data, /*write_batch_size=*/10, /*max_row_group_length=*/100);
+
+    // Read via the standard ParquetFileBatchReader path (page index enabled)
+    auto read_schema = arrow::schema({arrow::field("val", arrow::int32())});
+    auto predicate = PredicateBuilder::Equal(
+        /*field_index=*/0, /*field_name=*/"val", FieldType::INT, Literal(55));
+
+    // Use small batch_size to verify batched consumption of page-filtered results
+    std::shared_ptr<arrow::ChunkedArray> result;
+    ReadWithPredicateImpl(file_name, read_schema, predicate, &result, /*batch_size=*/3);
+    ASSERT_TRUE(result);
+    // Page 5 (rows 50-59) matches, should return 10 rows
+    ASSERT_EQ(10, result->length());
+
+    // Verify actual values across chunks
+    int64_t offset = 0;
+    for (int i = 0; i < result->num_chunks(); ++i) {
+        auto struct_arr = std::dynamic_pointer_cast<arrow::StructArray>(result->chunk(i));
+        ASSERT_TRUE(struct_arr);
+        auto val_arr = std::dynamic_pointer_cast<arrow::Int32Array>(struct_arr->field(0));
+        for (int64_t j = 0; j < val_arr->length(); ++j) {
+            ASSERT_EQ(50 + offset, val_arr->Value(j));
+            ++offset;
+        }
+    }
+    ASSERT_EQ(10, offset);
 }
 
 }  // namespace paimon::parquet::test

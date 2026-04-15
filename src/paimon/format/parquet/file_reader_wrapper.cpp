@@ -34,8 +34,7 @@
 namespace paimon::parquet {
 
 Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
-    std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
-    ::arrow::MemoryPool* pool,
+    std::unique_ptr<::parquet::arrow::FileReader>&& file_reader, ::arrow::MemoryPool* pool,
     int64_t batch_size) {
     if (file_reader == nullptr) {
         return Status::Invalid("file reader wrapper create failed. file reader is nullptr");
@@ -58,9 +57,8 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
     std::vector<int32_t> row_groups_indices = arrow::internal::Iota(file_reader->num_row_groups());
     std::vector<int32_t> columns_indices =
         arrow::internal::Iota(file_reader->parquet_reader()->metadata()->num_columns());
-    auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(
-        new FileReaderWrapper(std::move(file_reader), all_row_group_ranges, num_rows, pool,
-                              batch_size));
+    auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
+        std::move(file_reader), all_row_group_ranges, num_rows, pool, batch_size));
     PAIMON_RETURN_NOT_OK(file_reader_wrapper->PrepareForReadingLazy(
         std::set<int32_t>(row_groups_indices.begin(), row_groups_indices.end()), columns_indices));
     return file_reader_wrapper;
@@ -85,8 +83,8 @@ void FileReaderWrapper::WaitForPendingPreBuffer() {
         // Wait for all outstanding PreBuffer async reads to complete before destruction.
         // Without this, JindoSDK async pread callbacks may fire after the underlying
         // buffers and memory pool are freed, causing use-after-free crashes.
-        auto status = file_reader_->parquet_reader()->WhenBufferedRanges(
-            prebuffered_ranges_).status();
+        auto status =
+            file_reader_->parquet_reader()->WhenBufferedRanges(prebuffered_ranges_).status();
         (void)status;  // Best-effort; ignore errors during cleanup
         prebuffered_ranges_.clear();
     }
@@ -149,8 +147,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
     // If we're still consuming slices from a page-filtered batch, return the next slice
     if (current_filtered_batch_) {
         int64_t remaining = current_filtered_batch_->num_rows() - filtered_batch_offset_;
-        int64_t slice_len = (batch_size_ > 0 && remaining > batch_size_)
-            ? batch_size_ : remaining;
+        int64_t slice_len = (batch_size_ > 0 && remaining > batch_size_) ? batch_size_ : remaining;
         record_batch = current_filtered_batch_->Slice(filtered_batch_offset_, slice_len);
         filtered_batch_offset_ += slice_len;
         previous_first_row_ = next_row_to_read_;
@@ -178,12 +175,11 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
     auto pending_it = pending_filtered_reads_.find(current_row_group_idx_);
     if (pending_it != pending_filtered_reads_.end()) {
         const auto& meta = pending_it->second;
-        PAIMON_ASSIGN_OR_RAISE(
-            auto full_batch,
-            PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges,
-                meta.column_indices, meta.read_schema, pool_, meta.cache_options,
-                /*pre_buffered=*/true, meta.page_ranges));
+        PAIMON_ASSIGN_OR_RAISE(auto full_batch,
+                               PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                                   file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges,
+                                   meta.column_indices, meta.read_schema, pool_, meta.cache_options,
+                                   /*pre_buffered=*/true, meta.page_ranges));
         pending_filtered_reads_.erase(pending_it);
 
         // If batch exceeds batch_size_, store and return first slice
@@ -309,14 +305,17 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
                 file_reader_->parquet_reader(), rg_idx, range_it->second, column_indices);
 
             // Store metadata for lazy on-demand reading instead of eager pre-read
-            pending_filtered_reads_[pos] = PageFilteredRowGroupMeta{
-                rg_idx, range_it->second, column_indices, read_schema,
-                file_reader_->properties().cache_options(), std::move(page_ranges)};
+            pending_filtered_reads_[pos] =
+                PageFilteredRowGroupMeta{rg_idx,
+                                         range_it->second,
+                                         column_indices,
+                                         read_schema,
+                                         file_reader_->properties().cache_options(),
+                                         std::move(page_ranges)};
         } else {
             fully_matched_row_groups.push_back(rg_idx);
         }
     }
-
 
     // Wait for any previously pre-buffered data before starting new pre-buffer.
     WaitForPendingPreBuffer();
@@ -339,8 +338,7 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
 
         // Page-filtered row groups: add their page-level ranges
         for (const auto& [pos, meta] : pending_filtered_reads_) {
-            all_ranges.insert(all_ranges.end(),
-                              meta.page_ranges.begin(), meta.page_ranges.end());
+            all_ranges.insert(all_ranges.end(), meta.page_ranges.begin(), meta.page_ranges.end());
         }
 
         // Fully-matched row groups: add entire column chunk ranges
@@ -350,10 +348,10 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
             for (int32_t col_idx : column_indices) {
                 auto col_chunk = rg_metadata->ColumnChunk(col_idx);
                 int64_t offset = col_chunk->dictionary_page_offset() > 0
-                    ? col_chunk->dictionary_page_offset()
-                    : col_chunk->data_page_offset();
-                int64_t size = col_chunk->total_compressed_size() +
-                    (col_chunk->data_page_offset() - offset);
+                                     ? col_chunk->dictionary_page_offset()
+                                     : col_chunk->data_page_offset();
+                int64_t size =
+                    col_chunk->total_compressed_size() + (col_chunk->data_page_offset() - offset);
                 all_ranges.push_back({offset, size});
             }
         }
@@ -418,8 +416,7 @@ std::shared_ptr<::parquet::PageIndexReader> FileReaderWrapper::GetPageIndexReade
 }
 
 Result<RowRanges> FileReaderWrapper::CalculateFilteredRowRanges(
-    int32_t row_group_index,
-    const std::shared_ptr<Predicate>& predicate,
+    int32_t row_group_index, const std::shared_ptr<Predicate>& predicate,
     const std::map<std::string, int32_t>& column_name_to_index) {
     if (!predicate) {
         auto meta_data = file_reader_->parquet_reader()->metadata();
@@ -437,8 +434,8 @@ Result<RowRanges> FileReaderWrapper::CalculateFilteredRowRanges(
     auto meta_data = file_reader_->parquet_reader()->metadata();
     int64_t row_count = meta_data->RowGroup(row_group_index)->num_rows();
 
-    return ColumnIndexFilter::CalculateRowRanges(
-        predicate, page_index_reader, column_name_to_index, row_group_index, row_count);
+    return ColumnIndexFilter::CalculateRowRanges(predicate, page_index_reader, column_name_to_index,
+                                                 row_group_index, row_count);
 }
 
 }  // namespace paimon::parquet

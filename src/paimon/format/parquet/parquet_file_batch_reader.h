@@ -34,10 +34,10 @@
 #include "arrow/type.h"
 #include "arrow/type_fwd.h"
 #include "paimon/common/metrics/metrics_impl.h"
-#include "paimon/logging.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/file_reader_wrapper.h"
 #include "paimon/format/parquet/row_ranges.h"
+#include "paimon/logging.h"
 #include "paimon/reader/prefetch_file_batch_reader.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -166,10 +166,9 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     // Apply page-level filtering using column index.
     // Returns (filtered row groups, per-row-group RowRanges for partial matches).
     Result<std::pair<std::vector<int32_t>, std::map<int32_t, RowRanges>>>
-    FilterRowGroupsByPageIndex(
-        const std::shared_ptr<Predicate>& predicate,
-        const std::map<std::string, int32_t>& column_name_to_index,
-        const std::vector<int32_t>& src_row_groups);
+    FilterRowGroupsByPageIndex(const std::shared_ptr<Predicate>& predicate,
+                               const std::map<std::string, int32_t>& column_name_to_index,
+                               const std::vector<int32_t>& src_row_groups);
 
  private:
     std::map<std::string, std::string> options_;
@@ -188,7 +187,6 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
     // last time set read schema
     std::vector<int32_t> read_row_groups_;
     std::vector<int32_t> read_column_indices_;
-
 };
 
 }  // namespace paimon::parquet

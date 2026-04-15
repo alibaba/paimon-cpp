@@ -202,7 +202,7 @@ index 4d3acb491e..3906ff3c59 100644
 @@ -210,6 +210,17 @@
    ::arrow::Future<> WhenBuffered(const std::vector<int>& row_groups,
                                   const std::vector<int>& column_indices) const;
- 
+
 +  /// Pre-buffer arbitrary byte ranges (e.g., page-level ranges from OffsetIndex).
 +  /// Unlike PreBuffer(), this does NOT set the column bitmap, so
 +  /// GetColumnPageReader will use CachedInputStream (page-level cache path).
@@ -223,7 +223,7 @@ index 4d3acb491e..3906ff3c59 100644
 @@ -207,6 +207,100 @@
    return {col_start, col_length};
  }
- 
+
 +// CachedInputStream: InputStream adapter that reads through ReadRangeCache with
 +// zero-cost skip for non-cached pages. Used for page-level caching where only
 +// specific pages are pre-buffered.
@@ -336,7 +336,7 @@ index 4d3acb491e..3906ff3c59 100644
 @@ -417,6 +516,26 @@
      return cached_source_->WaitFor(ranges);
    }
- 
+
 +  void PreBufferRanges(const std::vector<::arrow::io::ReadRange>& ranges,
 +                       const ::arrow::io::IOContext& ctx,
 +                       const ::arrow::io::CacheOptions& options) {
@@ -359,11 +359,11 @@ index 4d3acb491e..3906ff3c59 100644
 +
    // Metadata/footer parsing. Divided up to separate sync/async paths, and to use
    // exceptions for error handling (with the async path converting to Future/Status).
- 
+
 @@ -911,6 +1030,22 @@
    return file->WhenBuffered(row_groups, column_indices);
  }
- 
+
 +void ParquetFileReader::PreBufferRanges(
 +    const std::vector<::arrow::io::ReadRange>& ranges,
 +    const ::arrow::io::IOContext& ctx,
@@ -382,4 +382,3 @@ index 4d3acb491e..3906ff3c59 100644
 +
  // ----------------------------------------------------------------------
  // File metadata helpers
- 

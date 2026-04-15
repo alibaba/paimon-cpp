@@ -16,7 +16,6 @@
 
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_min_heap.h"
 
-
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
 #include "paimon/status.h"
 

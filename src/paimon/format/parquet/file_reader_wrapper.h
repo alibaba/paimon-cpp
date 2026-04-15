@@ -25,9 +25,9 @@
 #include <vector>
 
 #include "arrow/array.h"
-#include "arrow/io/caching.h"
 #include "arrow/compute/api.h"
 #include "arrow/dataset/file_parquet.h"
+#include "arrow/io/caching.h"
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "arrow/type_fwd.h"
@@ -56,8 +56,7 @@ class FileReaderWrapper {
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
         std::unique_ptr<::parquet::arrow::FileReader>&& reader,
-        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(),
-        int64_t batch_size = 0);
+        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(), int64_t batch_size = 0);
 
     Status SeekToRow(uint64_t row_number);
 
@@ -128,16 +127,13 @@ class FileReaderWrapper {
     /// @param column_name_to_index Map from column name to column index.
     /// @return RowRanges that may contain matching rows.
     Result<RowRanges> CalculateFilteredRowRanges(
-        int32_t row_group_index,
-        const std::shared_ptr<Predicate>& predicate,
+        int32_t row_group_index, const std::shared_ptr<Predicate>& predicate,
         const std::map<std::string, int32_t>& column_name_to_index);
 
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows,
-                      ::arrow::MemoryPool* pool,
-                      int64_t batch_size);
+                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
 
     Result<std::set<int32_t>> ReadRangesToRowGroupIds(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;

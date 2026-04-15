@@ -27,6 +27,7 @@
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -61,8 +62,9 @@ std::vector<std::shared_ptr<Predicate>> SplitOr(const std::shared_ptr<Predicate>
 
 // Write a Literal value into a BinaryRowWriter at the given column position.
 // The FieldType determines how the value is serialized.
+// @param timestamp_precision: precision for TIMESTAMP type (0=second, 3=milli, 6=micro, 9=nano).
 Status WriteLiteralToBinaryRow(BinaryRowWriter* writer, int32_t col_id, const Literal& literal,
-                               FieldType field_type) {
+                               FieldType field_type, int32_t timestamp_precision = 3) {
     if (literal.IsNull()) {
         writer->SetNullAt(col_id);
         return Status::OK();
@@ -104,11 +106,7 @@ Status WriteLiteralToBinaryRow(BinaryRowWriter* writer, int32_t col_id, const Li
         }
         case FieldType::TIMESTAMP: {
             auto ts = literal.GetValue<Timestamp>();
-            // Use precision 3 (millisecond) as default for hash computation.
-            // The Java side uses InternalRowSerializer which serializes based on the schema type.
-            // For hash compatibility, the precision must match the schema definition.
-            // TODO: pass actual precision from schema if timestamp bucket keys are used
-            writer->WriteTimestamp(col_id, ts, 3);
+            writer->WriteTimestamp(col_id, ts, timestamp_precision);
             break;
         }
         case FieldType::DECIMAL: {
@@ -125,9 +123,8 @@ Status WriteLiteralToBinaryRow(BinaryRowWriter* writer, int32_t col_id, const Li
 }  // namespace
 
 Result<std::optional<std::set<int32_t>>> BucketSelectConverter::Convert(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::vector<std::string>& bucket_keys, int32_t num_buckets,
-    const std::shared_ptr<TableSchema>& table_schema,
+    const std::shared_ptr<Predicate>& predicate, const std::vector<std::string>& bucket_keys,
+    int32_t num_buckets, const std::shared_ptr<TableSchema>& table_schema,
     const std::shared_ptr<MemoryPool>& pool) {
     if (!predicate || bucket_keys.empty() || num_buckets <= 0) {
         return std::optional<std::set<int32_t>>(std::nullopt);
@@ -208,13 +205,22 @@ Result<std::optional<std::set<int32_t>>> BucketSelectConverter::Convert(
         }
     }
 
-    // Get field types for bucket keys (ordered)
+    // Get field types and timestamp precisions for bucket keys (ordered)
     std::vector<FieldType> field_types;
+    std::vector<int32_t> timestamp_precisions;
     field_types.reserve(bucket_keys.size());
+    timestamp_precisions.reserve(bucket_keys.size());
     for (const auto& key : bucket_keys) {
         PAIMON_ASSIGN_OR_RAISE(DataField field, table_schema->GetField(key));
         PAIMON_ASSIGN_OR_RAISE(FieldType ft, table_schema->GetFieldType(key));
         field_types.push_back(ft);
+        int32_t precision = 3;  // default millisecond
+        if (ft == FieldType::TIMESTAMP && field.Type()->id() == arrow::Type::TIMESTAMP) {
+            auto ts_type =
+                arrow::internal::checked_pointer_cast<arrow::TimestampType>(field.Type());
+            precision = DateTimeUtils::GetPrecisionFromType(ts_type);
+        }
+        timestamp_precisions.push_back(precision);
     }
 
     int32_t num_fields = static_cast<int32_t>(bucket_keys.size());
@@ -238,8 +244,9 @@ Result<std::optional<std::set<int32_t>>> BucketSelectConverter::Convert(
         for (int32_t col = num_fields - 1; col >= 0; --col) {
             int64_t idx = remainder % sizes[col];
             remainder /= sizes[col];
-            PAIMON_RETURN_NOT_OK(WriteLiteralToBinaryRow(
-                &writer, col, column_values[bucket_keys[col]][idx], field_types[col]));
+            PAIMON_RETURN_NOT_OK(
+                WriteLiteralToBinaryRow(&writer, col, column_values[bucket_keys[col]][idx],
+                                        field_types[col], timestamp_precisions[col]));
         }
         writer.Complete();
         int32_t bucket = std::abs(bucket_row.HashCode() % num_buckets);

@@ -35,13 +35,21 @@ class RowRanges {
 
         Range(int64_t f, int64_t t) : from(f), to(t) {}
 
-        int64_t Count() const { return to - from + 1; }
+        int64_t Count() const {
+            return to - from + 1;
+        }
 
-        bool IsBefore(const Range& other) const { return to < other.from; }
+        bool IsBefore(const Range& other) const {
+            return to < other.from;
+        }
 
-        bool IsAfter(const Range& other) const { return from > other.to; }
+        bool IsAfter(const Range& other) const {
+            return from > other.to;
+        }
 
-        std::string ToString() const { return "[" + std::to_string(from) + ", " + std::to_string(to) + "]"; }
+        std::string ToString() const {
+            return "[" + std::to_string(from) + ", " + std::to_string(to) + "]";
+        }
     };
 
     /// Creates an empty RowRanges.
@@ -62,7 +70,9 @@ class RowRanges {
     }
 
     /// Creates an empty RowRanges.
-    static RowRanges CreateEmpty() { return RowRanges(); }
+    static RowRanges CreateEmpty() {
+        return RowRanges();
+    }
 
     /// Calculates the union of two RowRanges.
     /// The union contains all row indexes that were contained in either of the inputs.
@@ -76,16 +86,22 @@ class RowRanges {
     int64_t RowCount() const;
 
     /// Returns the ranges.
-    const std::vector<Range>& GetRanges() const { return ranges_; }
+    const std::vector<Range>& GetRanges() const {
+        return ranges_;
+    }
 
     /// Returns true if there are no ranges.
-    bool IsEmpty() const { return ranges_.empty(); }
+    bool IsEmpty() const {
+        return ranges_.empty();
+    }
 
     /// Returns true if the specified range overlaps with any of the ranges.
     bool IsOverlapping(int64_t from, int64_t to) const;
 
     /// Returns true if the specified row is contained in any of the ranges.
-    bool Contains(int64_t row) const { return IsOverlapping(row, row); }
+    bool Contains(int64_t row) const {
+        return IsOverlapping(row, row);
+    }
 
     /// Adds a range to the end of the list, maintaining sorted disjoint ranges.
     void Add(const Range& range);
