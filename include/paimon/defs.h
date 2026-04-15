@@ -420,6 +420,9 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
     /// high-priority data like index, filter. Default value is 0.25.
     static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
+    /// "bucket-function.type" - The bucket function type for paimon bucket.
+    /// Values can be: "default", "mod", "hive". Default value is "default".
+    static const char BUCKET_FUNCTION_TYPE[];
     /// "lookup.cache-file-retention" - The cached files retention time for lookup.
     /// After the file expires, if there is a need for access, it will be re-read from the DFS
     /// to build an index on the local disk. Default value is 1 hour.

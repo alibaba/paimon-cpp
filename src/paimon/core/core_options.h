@@ -36,6 +36,7 @@
 #include "paimon/result.h"
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/type_fwd.h"
+#include "paimon/utils/bucket_function_type.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -169,6 +170,8 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetLookupCacheMaxDiskSize() const;
 
     const std::map<std::string, std::string>& ToMap() const;
+
+    BucketFunctionType GetBucketFunctionType() const;
 
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;
