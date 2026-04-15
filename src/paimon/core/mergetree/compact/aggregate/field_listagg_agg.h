@@ -45,8 +45,8 @@ class FieldListaggAgg : public FieldAggregator {
         }
         PAIMON_ASSIGN_OR_RAISE(std::string delimiter, options.FieldListAggDelimiter(field_name));
         PAIMON_ASSIGN_OR_RAISE(bool distinct, options.FieldCollectAggDistinct(field_name));
-        // When delimiter is empty, fall back to whitespace split
-        if (delimiter.empty()) {
+        // When delimiter is empty and distinct is true, fall back to whitespace split.
+        if (distinct && delimiter.empty()) {
             delimiter = " ";
         }
         return std::unique_ptr<FieldListaggAgg>(
