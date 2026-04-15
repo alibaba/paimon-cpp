@@ -516,6 +516,8 @@ struct CoreOptions::Impl {
         // Parse data-evolution.enabled - whether to enable data evolution for row tracking
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::DATA_EVOLUTION_ENABLED, &data_evolution_enabled));
+        // Parse bucket-function - bucket function type, default "DEFAULT"
+        PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&bucket_function_type));
         return Status::OK();
     }
 
@@ -841,30 +843,6 @@ Result<CoreOptions> CoreOptions::FromMap(
     PAIMON_RETURN_NOT_OK(impl->ParseCompactionOptions(parser));
     PAIMON_RETURN_NOT_OK(impl->ParseLookupOptions(parser));
 
-    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_SORTED_RUNS_COMPACTION_TRIGGER,
-                                               &impl->num_sorted_runs_compaction_trigger));
-    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_SORTED_RUNS_STOP_TRIGGER,
-                                               &impl->num_sorted_runs_stop_trigger));
-    PAIMON_RETURN_NOT_OK(parser.Parse<int32_t>(Options::NUM_LEVELS, &impl->num_levels));
-
-    PAIMON_RETURN_NOT_OK(parser.ParseLookupCompactMode(&impl->lookup_compact_mode));
-    PAIMON_RETURN_NOT_OK(
-        parser.Parse(Options::LOOKUP_COMPACT_MAX_INTERVAL, &impl->lookup_compact_max_interval));
-
-    // parse lookup cache
-    PAIMON_RETURN_NOT_OK(parser.ParseMemorySize(Options::LOOKUP_CACHE_MAX_MEMORY_SIZE,
-                                                &impl->lookup_cache_max_memory));
-    PAIMON_RETURN_NOT_OK(parser.Parse<double>(Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO,
-                                              &impl->lookup_cache_high_prio_pool_ratio));
-    if (impl->lookup_cache_high_prio_pool_ratio < 0.0 ||
-        impl->lookup_cache_high_prio_pool_ratio >= 1.0) {
-        return Status::Invalid(fmt::format(
-            "The high priority pool ratio should in the range [0, 1), while input is {}",
-            impl->lookup_cache_high_prio_pool_ratio));
-    }
-
-    // Parse bucket function type
-    PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&impl->bucket_function_type));
     return options;
 }
 
