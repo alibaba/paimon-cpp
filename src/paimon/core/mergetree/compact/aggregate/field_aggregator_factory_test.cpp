@@ -114,4 +114,14 @@ TEST(FieldAggregatorFactoryTest, TestSimple) {
     }
 }
 
+TEST(FieldAggregatorFactoryTest, TestRemoveRecordOnDeleteConflictsWithIgnoreRetract) {
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions options,
+        CoreOptions::FromMap({{Options::AGGREGATION_REMOVE_RECORD_ON_DELETE, "true"},
+                              {"fields.f0.ignore-retract", "true"}}));
+    ASSERT_NOK_WITH_MSG(
+        FieldAggregatorFactory::CreateFieldAggregator("f0", arrow::int32(), "sum", options),
+        "conflicting behavior");
+}
+
 }  // namespace paimon::test

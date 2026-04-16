@@ -51,6 +51,7 @@ class AggregateMergeFunction : public MergeFunction {
 
     void Reset() override {
         latest_kv_ = std::nullopt;
+        current_delete_row_ = false;
         row_ = std::make_unique<GenericRow>(getters_.size());
         for (const auto& agg : aggregators_) {
             agg->Reset();
@@ -63,9 +64,11 @@ class AggregateMergeFunction : public MergeFunction {
 
  private:
     AggregateMergeFunction(std::vector<InternalRow::FieldGetterFunc>&& getters,
-                           std::vector<std::unique_ptr<FieldAggregator>>&& aggregators)
+                           std::vector<std::unique_ptr<FieldAggregator>>&& aggregators,
+                           bool remove_record_on_delete)
         : getters_(std::move(getters)),
           aggregators_(std::move(aggregators)),
+          remove_record_on_delete_(remove_record_on_delete),
           row_(std::make_unique<GenericRow>(getters_.size())) {
         assert(getters_.size() == aggregators_.size());
     }
@@ -76,6 +79,8 @@ class AggregateMergeFunction : public MergeFunction {
  private:
     std::vector<InternalRow::FieldGetterFunc> getters_;
     std::vector<std::unique_ptr<FieldAggregator>> aggregators_;
+    bool remove_record_on_delete_;
+    bool current_delete_row_ = false;
     std::optional<KeyValue> latest_kv_;
     std::unique_ptr<GenericRow> row_;
 };

@@ -23,6 +23,8 @@ const char Options::FIELDS_PREFIX[] = "fields";
 const char Options::AGG_FUNCTION[] = "aggregate-function";
 const char Options::DEFAULT_AGG_FUNCTION[] = "default-aggregate-function";
 const char Options::IGNORE_RETRACT[] = "ignore-retract";
+const char Options::DISTINCT[] = "distinct";
+const char Options::LIST_AGG_DELIMITER[] = "list-agg-delimiter";
 const char Options::SEQUENCE_GROUP[] = "sequence-group";
 
 const char Options::BUCKET[] = "bucket";
@@ -85,6 +87,7 @@ const char Options::PARTITION_GENERATE_LEGACY_NAME[] = "partition.legacy-name";
 const char Options::BLOB_AS_DESCRIPTOR[] = "blob-as-descriptor";
 const char Options::GLOBAL_INDEX_ENABLED[] = "global-index.enabled";
 const char Options::GLOBAL_INDEX_EXTERNAL_PATH[] = "global-index.external-path";
+const char Options::AGGREGATION_REMOVE_RECORD_ON_DELETE[] = "aggregation.remove-record-on-delete";
 const char Options::SCAN_TAG_NAME[] = "scan.tag-name";
 const char Options::WRITE_ONLY[] = "write-only";
 const char Options::COMPACTION_MIN_FILE_NUM[] = "compaction.min.file-num";
@@ -117,6 +120,7 @@ const char Options::LOOKUP_COMPACT[] = "lookup-compact";
 const char Options::LOOKUP_COMPACT_MAX_INTERVAL[] = "lookup-compact.max-interval";
 const char Options::LOOKUP_CACHE_MAX_MEMORY_SIZE[] = "lookup.cache-max-memory-size";
 const char Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[] = "lookup.cache.high-priority-pool-ratio";
+const char Options::BUCKET_FUNCTION_TYPE[] = "bucket-function.type";
 const char Options::LOOKUP_CACHE_FILE_RETENTION[] = "lookup.cache-file-retention";
 const char Options::LOOKUP_CACHE_MAX_DISK_SIZE[] = "lookup.cache-max-disk-size";
 
