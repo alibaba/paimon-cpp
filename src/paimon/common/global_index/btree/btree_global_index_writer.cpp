@@ -70,7 +70,6 @@ BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
       arrow_type_(std::move(arrow_type)),
       pool_(pool),
       file_writer_(file_writer),
-      block_size_(block_size),
       null_bitmap_(std::make_shared<RoaringBitmap64>()),
       has_nulls_(false),
       current_row_id_(0) {}

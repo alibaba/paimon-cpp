@@ -74,7 +74,6 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     std::shared_ptr<arrow::DataType> arrow_type_;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<GlobalIndexFileWriter> file_writer_;
-    int32_t block_size_;
 
     // SST file writer (declared after pool_ to ensure correct destruction order)
     std::unique_ptr<SstFileWriter> sst_writer_;
