@@ -149,6 +149,8 @@ set(PAIMON_CORE_SRCS
     core/disk/io_manager.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
+    core/bucket/hive_bucket_function.cpp
+    core/bucket/mod_bucket_function.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -520,6 +522,9 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     core/append/append_only_writer_test.cpp
                     core/append/bucketed_append_compact_manager_test.cpp
+                    core/bucket/default_bucket_function_test.cpp
+                    core/bucket/hive_bucket_function_test.cpp
+                    core/bucket/mod_bucket_function_test.cpp
                     core/casting/cast_executor_factory_test.cpp
                     core/casting/cast_executor_test.cpp
                     core/casting/casted_row_test.cpp
@@ -583,6 +588,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/field_ignore_retract_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_non_null_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_value_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_listagg_agg_test.cpp
                     core/mergetree/compact/aggregate/field_min_max_agg_test.cpp
                     core/mergetree/compact/aggregate/field_primary_key_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp

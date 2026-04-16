@@ -49,13 +49,29 @@ Result<std::unique_ptr<AggregateMergeFunction>> AggregateMergeFunction::Create(
         aggregators.push_back(std::move(agg));
     }
 
+    bool remove_record_on_delete = options.AggregationRemoveRecordOnDelete();
+
     PAIMON_ASSIGN_OR_RAISE(std::vector<InternalRow::FieldGetterFunc> getters,
                            InternalRowUtils::CreateFieldGetters(value_schema, /*use_view=*/true));
-    return std::unique_ptr<AggregateMergeFunction>(
-        new AggregateMergeFunction(std::move(getters), std::move(aggregators)));
+    return std::unique_ptr<AggregateMergeFunction>(new AggregateMergeFunction(
+        std::move(getters), std::move(aggregators), remove_record_on_delete));
 }
 
 Status AggregateMergeFunction::Add(KeyValue&& kv) {
+    // When removeRecordOnDelete is enabled, if we receive a DELETE row,
+    // mark the current row for deletion and initialize the row with input values.
+    if (remove_record_on_delete_ && kv.value_kind == RowKind::Delete()) {
+        current_delete_row_ = true;
+        row_ = std::make_unique<GenericRow>(getters_.size());
+        for (size_t i = 0; i < getters_.size(); i++) {
+            row_->SetField(i, getters_[i](*(kv.value)));
+        }
+        row_->AddDataHolder(std::move(kv.value));
+        latest_kv_ = std::move(kv);
+        return Status::OK();
+    }
+
+    current_delete_row_ = false;
     bool is_retract = kv.value_kind->IsRetract();
     for (size_t i = 0; i < getters_.size(); i++) {
         auto accumulator = getters_[i](*row_);
@@ -77,7 +93,7 @@ Status AggregateMergeFunction::Add(KeyValue&& kv) {
 Result<std::optional<KeyValue>> AggregateMergeFunction::GetResult() {
     assert(latest_kv_);
     latest_kv_.value().value = std::move(row_);
-    latest_kv_.value().value_kind = RowKind::Insert();
+    latest_kv_.value().value_kind = current_delete_row_ ? RowKind::Delete() : RowKind::Insert();
     latest_kv_.value().level = KeyValue::UNKNOWN_LEVEL;
     return std::move(latest_kv_);
 }

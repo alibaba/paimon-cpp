@@ -29,6 +29,7 @@
 #include "paimon/core/mergetree/compact/aggregate/field_ignore_retract_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_last_non_null_value_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_last_value_agg.h"
+#include "paimon/core/mergetree/compact/aggregate/field_listagg_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_max_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_min_agg.h"
 #include "paimon/core/mergetree/compact/aggregate/field_primary_key_agg.h"
@@ -71,12 +72,23 @@ class FieldAggregatorFactory {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolOrAgg::Create(field_type));
         } else if (str_agg == FieldBoolAndAgg::NAME) {
             PAIMON_ASSIGN_OR_RAISE(field_aggregator, FieldBoolAndAgg::Create(field_type));
+        } else if (str_agg == FieldListaggAgg::NAME) {
+            PAIMON_ASSIGN_OR_RAISE(field_aggregator,
+                                   FieldListaggAgg::Create(field_type, options, field_name));
         } else {
             return Status::Invalid(fmt::format(
                 "Use unsupported aggregation {} or spell aggregate function incorrectly!",
                 str_agg));
         }
+        bool remove_record_on_retract = options.AggregationRemoveRecordOnDelete();
         PAIMON_ASSIGN_OR_RAISE(bool ignore_retract, options.FieldAggIgnoreRetract(field_name));
+        if (remove_record_on_retract && ignore_retract) {
+            return Status::Invalid(fmt::format(
+                "{} and {}.{}.{} have conflicting behavior so should not be enabled at the same "
+                "time.",
+                Options::AGGREGATION_REMOVE_RECORD_ON_DELETE, Options::FIELDS_PREFIX, field_name,
+                Options::IGNORE_RETRACT));
+        }
         if (ignore_retract) {
             field_aggregator = std::make_unique<FieldIgnoreRetractAgg>(std::move(field_aggregator));
         }
