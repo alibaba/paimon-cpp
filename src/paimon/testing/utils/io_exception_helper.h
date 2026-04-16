@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 #pragma once
-
 #include <string>
+
+#include "fmt/format.h"
 
 namespace paimon::test {
 

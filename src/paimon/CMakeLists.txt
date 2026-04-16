@@ -350,6 +350,7 @@ if(PAIMON_BUILD_TESTS)
                     common/memory/bytes_test.cpp
                     common/memory/memory_segment_test.cpp
                     common/memory/memory_segment_utils_test.cpp
+                    common/memory/memory_slice_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
@@ -417,6 +418,7 @@ if(PAIMON_BUILD_TESTS)
                     common/io/data_input_output_stream_test.cpp
                     common/io/buffered_input_stream_test.cpp
                     common/io/memory_segment_output_stream_test.cpp
+                    common/io/cache_input_stream_test.cpp
                     common/io/offset_input_stream_test.cpp
                     common/lookup/sort/sort_lookup_store_test.cpp
                     common/logging/logging_test.cpp

@@ -36,7 +36,7 @@ class Lz4BlockCompressor : public BlockCompressor {
             LZ4_compress_default(src, dst + BlockCompressor::HEADER_LENGTH, src_length,
                                  dst_length - BlockCompressor::HEADER_LENGTH);
         if (compressed_size < 0) {
-            return Status::IOError(fmt::format("Compression failed with code {}", compressed_size));
+            return Status::Invalid(fmt::format("Compression failed with code {}", compressed_size));
         }
         WriteIntLE(compressed_size, dst);
         WriteIntLE(src_length, dst + 4);

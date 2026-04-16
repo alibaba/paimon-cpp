@@ -33,19 +33,19 @@ class Lz4BlockDecompressor : public BlockDecompressor {
         PAIMON_RETURN_NOT_OK(ValidateLength(compressed_len, original_len));
 
         if (dst_length < original_len) {
-            return Status::IOError(
+            return Status::Invalid(
                 fmt::format("Buffer length too small, compressed_len= {}, original_len={}",
                             compressed_len, original_len));
         }
 
         if (src_length - HEADER_LENGTH < compressed_len) {
-            return Status::IOError("Source data is not integral for decompression.");
+            return Status::Invalid("Source data is not integral for decompression.");
         }
 
         int32_t decompressed_size =
             LZ4_decompress_safe(src + HEADER_LENGTH, dst, src_length - HEADER_LENGTH, dst_length);
         if (decompressed_size != original_len) {
-            return Status::IOError(fmt::format("Input is corrupted, expected {}, but got {}",
+            return Status::Invalid(fmt::format("Input is corrupted, expected {}, but got {}",
                                                original_len, decompressed_size));
         }
         return decompressed_size;

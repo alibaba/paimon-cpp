@@ -38,7 +38,7 @@ Result<std::unique_ptr<SortLookupStoreFooter>> SortLookupStoreFooter::ReadSortLo
 
     auto magic = input->ReadInt();
     if (magic != MAGIC_NUMBER) {
-        return Status::IOError(
+        return Status::Invalid(
             fmt::format("Expected magic number {}, but got {}", MAGIC_NUMBER, magic));
     }
     return std::make_unique<SortLookupStoreFooter>(index_block_handle, bloom_filter_handle);

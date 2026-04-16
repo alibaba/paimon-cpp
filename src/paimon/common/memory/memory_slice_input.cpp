@@ -16,6 +16,7 @@
 
 #include "paimon/common/memory/memory_slice_input.h"
 
+#include "fmt/format.h"
 #include "paimon/common/utils/math.h"
 
 namespace paimon {
@@ -28,7 +29,7 @@ int32_t MemorySliceInput::Position() const {
 
 Status MemorySliceInput::SetPosition(int32_t position) {
     if (position < 0 || position > slice_.Length()) {
-        return Status::IndexError("position " + std::to_string(position) + " index out of bounds");
+        return Status::IndexError(fmt::format("position {} index out of bounds", position));
     }
     position_ = position;
     return Status::OK();

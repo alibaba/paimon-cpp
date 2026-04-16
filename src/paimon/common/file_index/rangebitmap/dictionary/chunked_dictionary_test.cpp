@@ -629,6 +629,43 @@ TEST_P(ChunkedDictionaryParamTest, TestSizeLimitAndCardinalityDouble) {
                                                      cardinality);
 }
 
+TEST_F(ChunkedDictionaryTest, TestChunkFindFirstKeyFastPath) {
+    ASSERT_OK_AND_ASSIGN(auto key_factory, KeyFactory::Create(FieldType::INT));
+    // Large chunk size so all keys land in one chunk
+    ASSERT_OK_AND_ASSIGN(auto appender,
+                         ChunkedDictionary::Appender::Create(key_factory, 1024 * 1024, pool_));
+
+    int32_t key_count = 10;
+    for (int32_t i = 0; i < key_count; i++) {
+        ASSERT_OK(appender->AppendSorted(Literal((i + 1) * 10), i));
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto bytes, appender->Serialize());
+    auto input_stream = std::make_shared<ByteArrayInputStream>(bytes->data(), bytes->size());
+    ASSERT_OK_AND_ASSIGN(auto dict,
+                         ChunkedDictionary::Create(FieldType::INT, input_stream, 0, pool_));
+
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(10)));
+        ASSERT_EQ(code, 0);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(Literal literal, dict->Find(0));
+        ASSERT_EQ(literal, Literal(10));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(50)));
+        ASSERT_EQ(code, 4);
+
+        ASSERT_OK_AND_ASSIGN(Literal literal, dict->Find(4));
+        ASSERT_EQ(literal, Literal(50));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(15)));
+        ASSERT_LT(code, 0);
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(
     SizeLimitAndCardinality, ChunkedDictionaryParamTest,
     ::testing::Combine(::testing::Values(1, 16, 64, 128, 1024),               // chunk size limit
