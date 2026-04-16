@@ -67,21 +67,15 @@ class PartialUpdateMergeFunction : public MergeFunction {
         const std::map<std::string, std::vector<std::string>>& value_field_to_seq_group_field,
         const std::set<std::string>& seq_group_key_set);
 
-    void Reset() override {
-        current_key_.reset();
-        row_ = std::make_unique<GenericRow>(getters_.size());
-        for (auto& [_, agg] : field_aggregators_) {
-            assert(agg);
-            agg->Reset();
-        }
-    }
+    void Reset() override;
 
     Status Add(KeyValue&& kv) override;
 
     Result<std::optional<KeyValue>> GetResult() override {
-        return std::optional<KeyValue>(
-            KeyValue(current_delete_row_ ? RowKind::Delete() : RowKind::Insert(), last_seq_num_,
-                     KeyValue::UNKNOWN_LEVEL, std::move(current_key_), std::move(row_)));
+        const RowKind* row_kind =
+            (current_delete_row_ || !meet_insert_) ? RowKind::Delete() : RowKind::Insert();
+        return std::optional<KeyValue>(KeyValue(row_kind, last_seq_num_, KeyValue::UNKNOWN_LEVEL,
+                                                std::move(current_key_), std::move(row_)));
     };
 
  private:
@@ -105,6 +99,13 @@ class PartialUpdateMergeFunction : public MergeFunction {
     bool IsEmptySequenceGroup(const KeyValue& kv,
                               const std::shared_ptr<FieldsComparator>& comparator) const;
 
+    /// Initialize row_ with all field values from the given InternalRow.
+    /// This only reads field values without taking ownership of the source row.
+    void InitRow(const InternalRow& value);
+
+    /// Initialize row_ with all field values and transfer data ownership to row_.
+    void InitRowAndHoldData(std::unique_ptr<InternalRow>&& value);
+
     void UpdateNonNullFields(KeyValue&& kv);
 
     void UpdateWithSequenceGroup(KeyValue&& kv);
@@ -124,5 +125,13 @@ class PartialUpdateMergeFunction : public MergeFunction {
     std::unique_ptr<GenericRow> row_;
     int64_t last_seq_num_ = KeyValue::UNKNOWN_SEQUENCE;
     bool current_delete_row_ = false;
+
+    /// If the first value is retract, and no insert record is received, the row kind should be
+    /// RowKind::Delete. (Partial update sequence group may not correctly set current_delete_row_
+    /// if no RowKind::Insert value is received)
+    bool meet_insert_ = false;
+
+    /// Whether the row has been initialized with non-null column values from the first record.
+    bool not_null_column_filled_ = false;
 };
 }  // namespace paimon

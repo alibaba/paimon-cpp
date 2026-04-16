@@ -177,13 +177,11 @@ TEST_F(PartialUpdateMergeFunctionTest, TestSequenceGroupPartialDelete) {
     Add(mfunc, RowKind::Delete(), {1, 1, 1, 3, 1, 1, NullType()});
     CheckResult(mfunc, {1, NullType(), NullType(), 3, 3, 3, 3});
     Add(mfunc, RowKind::Delete(), {1, 1, 1, 3, 1, 1, 4});
-    CheckResult(mfunc, {NullType(), NullType(), NullType(), NullType(), NullType(), NullType(),
-                        NullType()});
+    CheckResult(mfunc, {1, 1, 1, 3, 1, 1, 4});
     Add(mfunc, {1, 4, 4, 4, 5, 5, 5});
     CheckResult(mfunc, {1, 4, 4, 4, 5, 5, 5});
     Add(mfunc, RowKind::Delete(), {1, 1, 1, 6, 1, 1, 6});
-    CheckResult(mfunc, {NullType(), NullType(), NullType(), NullType(), NullType(), NullType(),
-                        NullType()});
+    CheckResult(mfunc, {1, 1, 1, 6, 1, 1, 6});
 }
 
 TEST_F(PartialUpdateMergeFunctionTest, TestMultiSequenceFields) {
@@ -793,5 +791,85 @@ TEST_F(PartialUpdateMergeFunctionTest, TestCreateFieldAggregatorsWithoutDefaultA
     ASSERT_TRUE(dynamic_cast<FieldMinAgg*>(aggs[2].get()));
     // test no agg: f2
     ASSERT_TRUE(aggs.find(3) == aggs.end());
+}
+
+TEST_F(PartialUpdateMergeFunctionTest, TestSequenceGroupPartialDeleteWithProjection) {
+    std::map<std::string, std::string> options_map = {
+        {"fields.f3.sequence-group", "f1,f2"},
+        {"fields.f6.sequence-group", "f4,f5"},
+        {"partial-update.remove-record-on-sequence-group", "f3,f6"}};
+
+    auto table_fields = CreateDataFields(/*value_arity=*/7);
+    // Reordered fields: f3, f6, f0, f1, f2, f4, f5
+    std::vector<DataField> value_fields = {table_fields[3], table_fields[6], table_fields[0],
+                                           table_fields[1], table_fields[2], table_fields[4],
+                                           table_fields[5]};
+    std::vector<DataField> expected_completed_value_fields = value_fields;
+
+    auto mfunc = CreateMergeFunctionWithProjection(table_fields, value_fields, options_map,
+                                                   expected_completed_value_fields);
+    mfunc->Reset();
+    // Reordered: f3=11, f6=22, f0=100, f1=200, f2=1, f4=12, f5=21
+    Add(mfunc, {11, 22, 100, 200, 1, 12, 21});
+    Add(mfunc, RowKind::Delete(), {11, 22, 100, 200, 1, 12, 21});
+    CheckResult(mfunc, {11, 22, 100, 200, 1, 12, 21});
+}
+
+TEST_F(PartialUpdateMergeFunctionTest, TestAdjustProjectionNonProject) {
+    std::map<std::string, std::string> options_map = {{"fields.f4.sequence-group", "f1,f3"},
+                                                      {"fields.f5.sequence-group", "f7"}};
+    auto table_fields = CreateDataFields(/*value_arity=*/8);
+    // Non-projection: use all fields
+    std::vector<DataField> value_fields = table_fields;
+    std::vector<DataField> expected_completed_value_fields = table_fields;
+
+    auto mfunc = CreateMergeFunctionWithProjection(table_fields, value_fields, options_map,
+                                                   expected_completed_value_fields);
+    mfunc->Reset();
+    Add(mfunc, {1, 1, 1, 1, 1, 1, 1, 1});
+    Add(mfunc, {4, 2, 4, 2, 2, 0, NullType(), 3});
+    CheckResult(mfunc, {4, 2, 4, 2, 2, 1, 1, 1});
+}
+
+TEST_F(PartialUpdateMergeFunctionTest, TestDeleteReproduceCorrectSequenceNumber) {
+    std::map<std::string, std::string> options_map = {
+        {"partial-update.remove-record-on-delete", "true"}};
+    auto mfunc = CreateMergeFunction(/*value_arity=*/5, options_map);
+    mfunc->Reset();
+
+    Add(mfunc, {1, 1, 1, 1, 1});
+    Add(mfunc, RowKind::Delete(), {1, 1, 1, 1, 1});
+
+    ASSERT_OK_AND_ASSIGN(auto result, mfunc->GetResult());
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result->sequence_number, 1);
+}
+
+TEST_F(PartialUpdateMergeFunctionTest, TestInitRowWithNullableFieldOnDelete) {
+    std::map<std::string, std::string> options_map = {
+        {"partial-update.remove-record-on-delete", "true"}};
+    // f0 and f1 are not nullable, f2 and f3 are nullable
+    std::vector<DataField> data_fields = {
+        DataField(0, arrow::field("f0", arrow::int32(), /*nullable=*/false)),
+        DataField(1, arrow::field("f1", arrow::int32(), /*nullable=*/false)),
+        DataField(2, arrow::field("f2", arrow::int32(), /*nullable=*/true)),
+        DataField(3, arrow::field("f3", arrow::int32(), /*nullable=*/true))};
+    auto value_schema = DataField::ConvertDataFieldsToArrowSchema(data_fields);
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(options_map));
+    std::map<std::string, std::vector<std::string>> value_field_to_seq_group_field;
+    std::set<std::string> seq_group_key_set;
+    ASSERT_OK(PartialUpdateMergeFunction::ParseSequenceGroupFields(
+        options, &value_field_to_seq_group_field, &seq_group_key_set));
+    ASSERT_OK_AND_ASSIGN(auto mfunc, PartialUpdateMergeFunction::Create(
+                                         value_schema, /*primary_keys=*/{"f0"}, options,
+                                         value_field_to_seq_group_field, seq_group_key_set));
+    mfunc->Reset();
+
+    // insert some data first
+    Add(mfunc, {1, 3, 5, 7});
+    // send a DELETE with nullable field as null, triggers initRow
+    Add(mfunc, RowKind::Delete(), {1, 2, 2, NullType()});
+    // after delete with removeRecordOnDelete, row is re-initialized via initRow
+    CheckResult(mfunc, {1, 2, 2, NullType()});
 }
 }  // namespace paimon::test
