@@ -31,12 +31,13 @@
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "arrow/type_fwd.h"
+#include "parquet/arrow/reader.h"
+#include "parquet/page_index.h"
+
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
-#include "parquet/arrow/reader.h"
-#include "parquet/page_index.h"
 
 namespace arrow {
 class Schema;
@@ -58,40 +59,52 @@ class FileReaderWrapper {
         std::unique_ptr<::parquet::arrow::FileReader>&& reader,
         ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(), int64_t batch_size = 0);
 
+    /// Seek to the specified row number.
+    /// @param row_number The row to seek to (must be at a row group boundary).
     Status SeekToRow(uint64_t row_number);
 
+    /// Read the next batch of rows.
+    /// @return The next RecordBatch, or nullptr if end of data.
     Result<std::shared_ptr<arrow::RecordBatch>> Next();
 
+    /// Get the first row number of the previously returned batch.
     Result<uint64_t> GetPreviousBatchFirstRowNumber() const {
         return previous_first_row_;
     }
 
+    /// Get the row number that will be read next.
     uint64_t GetNextRowToRead() const {
         return next_row_to_read_;
     }
 
+    /// Get the total number of rows in the file.
     uint64_t GetNumberOfRows() const {
         return num_rows_;
     }
 
+    /// Get the number of row groups in the file.
     int32_t GetNumberOfRowGroups() const {
         return file_reader_->num_row_groups();
     }
 
+    /// Get the underlying Parquet file reader.
     ::parquet::arrow::FileReader* GetFileReader() const {
         return file_reader_.get();
     }
 
+    /// Get the [start, end) ranges for all row groups.
     const std::vector<std::pair<uint64_t, uint64_t>>& GetAllRowGroupRanges() const {
         return all_row_group_ranges_;
     }
 
+    /// Get the Arrow schema of the file.
     Result<std::shared_ptr<arrow::Schema>> GetSchema() const {
         std::shared_ptr<arrow::Schema> file_schema;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_->GetSchema(&file_schema));
         return file_schema;
     }
 
+    /// Close the batch reader and release resources.
     Status Close() {
         if (batch_reader_) {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(batch_reader_->Close());
@@ -99,14 +112,22 @@ class FileReaderWrapper {
         return Status::OK();
     }
 
+    /// Get the [start, end) ranges for the specified row groups.
+    /// @param row_group_indices The row group indices to get ranges for.
     Result<std::vector<std::pair<uint64_t, uint64_t>>> GetRowGroupRanges(
         const std::set<int32_t>& row_group_indices) const;
 
+    /// Prepare for lazy reading of the specified row groups and columns.
+    /// Actual reader initialization is deferred until the first Next() call.
     Status PrepareForReadingLazy(const std::set<int32_t>& row_group_indices,
                                  const std::vector<int32_t>& column_indices);
+
+    /// Prepare for immediate reading of the specified row groups and columns.
+    /// Initializes the reader and starts pre-buffering I/O.
     Status PrepareForReading(const std::set<int32_t>& row_group_indices,
                              const std::vector<int32_t>& column_indices);
 
+    /// Filter row groups by read ranges, returning only those that overlap.
     Result<std::set<int32_t>> FilterRowGroupsByReadRanges(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges,
         const std::vector<int32_t>& src_row_groups) const;

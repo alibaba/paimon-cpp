@@ -236,7 +236,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
 
     for (size_t i = 0; i < column_indices.size(); ++i) {
         PAIMON_ASSIGN_OR_RAISE(
-            auto chunked_array,
+            std::shared_ptr<arrow::ChunkedArray> chunked_array,
             ReadFilteredColumn(row_group_reader, parquet_reader, page_index_reader, row_group_index,
                                column_indices[i], row_ranges,
                                arrow_schema->field(static_cast<int>(i)), row_group_row_count,
@@ -254,7 +254,8 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
 
     // Build Table from ChunkedArrays, then combine chunks and extract a single RecordBatch
     auto table = arrow::Table::Make(arrow_schema, columns, expected_rows);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto combined_table, table->CombineChunks(pool));
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> combined_table,
+                                     table->CombineChunks(pool));
 
     // Extract arrays from the single-chunk table
     std::vector<std::shared_ptr<arrow::Array>> arrays;

@@ -175,7 +175,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
     auto pending_it = pending_filtered_reads_.find(current_row_group_idx_);
     if (pending_it != pending_filtered_reads_.end()) {
         const auto& meta = pending_it->second;
-        PAIMON_ASSIGN_OR_RAISE(auto full_batch,
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> full_batch,
                                PageFilteredRowGroupReader::ReadFilteredRowGroup(
                                    file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges,
                                    meta.column_indices, meta.read_schema, pool_, meta.cache_options,

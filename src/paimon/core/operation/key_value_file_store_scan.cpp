@@ -71,7 +71,7 @@ Result<std::unique_ptr<KeyValueFileStoreScan>> KeyValueFileStoreScan::Create(
     // Derive bucket filter from predicates if not manually set
     if (!scan->HasBucketFilter() && scan->predicates_ && table_schema->NumBuckets() > 0) {
         PAIMON_ASSIGN_OR_RAISE(
-            auto derived_buckets,
+            std::optional<std::set<int32_t>> derived_buckets,
             BucketSelectConverter::Convert(scan->predicates_, table_schema->BucketKeys(),
                                            table_schema->NumBuckets(), table_schema, pool));
         if (derived_buckets) {

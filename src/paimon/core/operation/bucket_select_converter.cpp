@@ -25,7 +25,6 @@
 
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
-#include "paimon/predicate/predicate_utils.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/schema/table_schema.h"
@@ -37,6 +36,7 @@
 #include "paimon/predicate/leaf_predicate.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate.h"
+#include "paimon/predicate/predicate_utils.h"
 
 namespace paimon {
 namespace {
@@ -200,7 +200,7 @@ Result<std::optional<std::set<int32_t>>> BucketSelectConverter::Convert(
     int64_t row_count = 1;
     for (const auto& key : bucket_keys) {
         row_count *= static_cast<int64_t>(column_values[key].size());
-        if (row_count > MAX_VALUES) {
+        if (row_count > kMaxValues) {
             return std::optional<std::set<int32_t>>(std::nullopt);
         }
     }

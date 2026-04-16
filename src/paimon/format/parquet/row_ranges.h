@@ -21,6 +21,8 @@
 #include <string>
 #include <vector>
 
+#include "fmt/format.h"
+
 namespace paimon::parquet {
 
 /// RowRanges represents a set of row ranges in a row group.
@@ -30,8 +32,10 @@ class RowRanges {
  public:
     /// A single range [from, to] where both are inclusive.
     struct Range {
-        int64_t from;  // inclusive
-        int64_t to;    // inclusive
+        /// Inclusive lower bound.
+        int64_t from;
+        /// Inclusive upper bound.
+        int64_t to;
 
         Range(int64_t f, int64_t t) : from(f), to(t) {}
 
@@ -48,7 +52,7 @@ class RowRanges {
         }
 
         std::string ToString() const {
-            return "[" + std::to_string(from) + ", " + std::to_string(to) + "]";
+            return fmt::format("[{}, {}]", from, to);
         }
     };
 

@@ -53,7 +53,7 @@ class BucketSelectConverter {
         const std::shared_ptr<MemoryPool>& pool);
 
  private:
-    static constexpr int32_t MAX_VALUES = 1000;
+    static constexpr int32_t kMaxValues = 1000;
 };
 
 }  // namespace paimon
