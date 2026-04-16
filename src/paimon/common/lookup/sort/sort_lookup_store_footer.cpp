@@ -16,6 +16,7 @@
 
 #include "paimon/common/lookup/sort/sort_lookup_store_footer.h"
 
+#include "fmt/format.h"
 #include "paimon/common/memory/memory_slice_output.h"
 
 namespace paimon {

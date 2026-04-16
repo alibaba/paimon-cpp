@@ -21,11 +21,11 @@
 #include <vector>
 
 #include "paimon/common/utils/bin_packing.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/mergetree/sorted_run.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/table/source/split_generator.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/result.h"
 
 namespace paimon {

@@ -60,7 +60,7 @@ class PAIMON_EXPORT BlockWriter {
 
     ~BlockWriter() = default;
 
-    void Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
+    Status Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
 
     void Reset();
 

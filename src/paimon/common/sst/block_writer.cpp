@@ -20,22 +20,23 @@
 
 namespace paimon {
 
-void BlockWriter::Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value) {
-    int start_position = block_->Size();
-    block_->WriteVarLenInt(key->size());
+Status BlockWriter::Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value) {
+    int32_t start_position = block_->Size();
+    PAIMON_RETURN_NOT_OK(block_->WriteVarLenInt(key->size()));
     block_->WriteBytes(key);
-    block_->WriteVarLenInt(value->size());
+    PAIMON_RETURN_NOT_OK(block_->WriteVarLenInt(value->size()));
     block_->WriteBytes(value);
-    int end_position = block_->Size();
+    int32_t end_position = block_->Size();
     positions_.push_back(start_position);
     if (aligned_) {
-        int current_size = end_position - start_position;
+        int32_t current_size = end_position - start_position;
         if (aligned_size_ == 0) {
             aligned_size_ = current_size;
         } else {
             aligned_ = aligned_size_ == current_size;
         }
     }
+    return Status::OK();
 }
 
 void BlockWriter::Reset() {

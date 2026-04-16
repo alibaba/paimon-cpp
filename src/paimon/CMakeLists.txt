@@ -132,10 +132,10 @@ set(PAIMON_COMMON_SRCS
     common/utils/bit_set.cpp
     common/utils/bloom_filter.cpp
     common/utils/bloom_filter64.cpp
-    common/utils/bucket_id_calculator.cpp
     common/utils/crc32c.cpp
     common/utils/decimal_utils.cpp
     common/utils/delta_varint_compressor.cpp
+    common/utils/fields_comparator.cpp
     common/utils/path_util.cpp
     common/utils/range.cpp
     common/utils/read_ahead_cache.cpp
@@ -151,6 +151,7 @@ set(PAIMON_CORE_SRCS
     core/append/bucketed_append_compact_manager.cpp
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
+    core/bucket/bucket_id_calculator.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -304,7 +305,6 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/tag/tag.cpp
     core/utils/field_mapping.cpp
-    core/utils/fields_comparator.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
     core/utils/manifest_meta_reader.cpp
@@ -457,13 +457,13 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/bloom_filter_test.cpp
                     common/utils/bloom_filter64_test.cpp
                     common/utils/xxhash_test.cpp
-                    common/utils/bucket_id_calculator_test.cpp
                     common/utils/binary_row_partition_computer_test.cpp
                     common/utils/bin_packing_test.cpp
                     common/utils/data_converter_utils_test.cpp
                     common/utils/date_time_utils_test.cpp
                     common/utils/delta_varint_compressor_test.cpp
                     common/utils/field_type_utils_test.cpp
+                    common/utils/fields_comparator_test.cpp
                     common/utils/internal_row_utils_test.cpp
                     common/utils/jsonizable_test.cpp
                     common/utils/linked_hash_map_test.cpp
@@ -526,6 +526,7 @@ if(PAIMON_BUILD_TESTS)
                     core/append/bucketed_append_compact_manager_test.cpp
                     core/bucket/default_bucket_function_test.cpp
                     core/bucket/hive_bucket_function_test.cpp
+                    core/bucket/bucket_id_calculator_test.cpp
                     core/bucket/mod_bucket_function_test.cpp
                     core/casting/cast_executor_factory_test.cpp
                     core/casting/cast_executor_test.cpp
@@ -668,7 +669,6 @@ if(PAIMON_BUILD_TESTS)
                     core/utils/branch_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
-                    core/utils/fields_comparator_test.cpp
                     core/utils/file_store_path_factory_test.cpp
                     core/utils/file_utils_test.cpp
                     core/utils/manifest_meta_reader_test.cpp
