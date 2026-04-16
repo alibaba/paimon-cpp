@@ -57,7 +57,7 @@ Status SstFileWriter::Flush() {
 
     PAIMON_ASSIGN_OR_RAISE(BlockHandle handle, FlushBlockWriter(data_block_writer_.get()));
 
-    auto slice = handle.WriteBlockHandle(pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(MemorySlice slice, handle.WriteBlockHandle(pool_.get()));
     auto value = slice.CopyBytes(pool_.get());
     index_block_writer_->Write(last_key_, value);
     return Status::OK();
