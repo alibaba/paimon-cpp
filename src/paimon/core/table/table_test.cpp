@@ -77,7 +77,9 @@ TEST(TableTest, TestCreateFailedWithNonExistSchema) {
     std::string schema_path = schema_manager.ToSchemaPath(0);
     ASSERT_OK(fs->Delete(schema_path, /*recursive=*/false));
     // check create table failed
-    ASSERT_NOK_WITH_MSG(Table::Create(fs, dir->Str(), Identifier("tbl1")), "load table schema");
+    ASSERT_NOK_WITH_MSG(
+        Table::Create(fs, dir->Str(), Identifier("tbl1")),
+        "load table schema for Identifier{database='unknown', table='tbl1'} failed");
 }
 
 }  // namespace paimon::test

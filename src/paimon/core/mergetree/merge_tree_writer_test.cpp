@@ -913,6 +913,7 @@ TEST_F(MergeTreeWriterTest, TestShouldWait) {
 }
 
 TEST_F(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
+    // TODO(lisizhuo.lsz): test UpdateCompactResult in inte compaction test.
     ASSERT_OK_AND_ASSIGN(CoreOptions options,
                          CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
     auto dir = UniqueTestDirectory::Create();
