@@ -663,4 +663,14 @@ TEST(MemorySegmentTest, TestBulkByteAccess) {
     }
 }
 
+TEST(MemorySegmentTest, TestEqual) {
+    auto pool = paimon::GetDefaultPool();
+    auto seg1 = MemorySegment::Wrap(std::make_shared<Bytes>("abcd", pool.get()));
+    auto seg2 = MemorySegment::Wrap(std::make_shared<Bytes>("abce", pool.get()));
+    auto seg3 = MemorySegment::Wrap(std::make_shared<Bytes>("abcd", pool.get()));
+    ASSERT_EQ(seg1, seg1);
+    ASSERT_EQ(seg1, seg3);
+    ASSERT_FALSE(seg1 == seg2);
+    ASSERT_FALSE(seg2 == seg1);
+}
 }  // namespace paimon::test

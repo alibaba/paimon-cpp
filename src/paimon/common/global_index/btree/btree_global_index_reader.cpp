@@ -23,11 +23,11 @@
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/predicate/literal.h"
-
 namespace paimon {
 
 // Helper function to convert Literal to MemorySlice
@@ -116,7 +116,7 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
             // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
             MemorySliceOutput ts_out(13, pool);
             ts_out.WriteValue(ts.GetMillisecond());
-            ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond());
+            PAIMON_RETURN_NOT_OK(ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond()));
             return ts_out.ToSlice();
         }
     }

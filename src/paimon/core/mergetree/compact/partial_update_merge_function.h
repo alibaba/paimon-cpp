@@ -28,12 +28,12 @@
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/data/internal_row.h"
 #include "paimon/common/types/row_kind.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/aggregate/field_aggregator.h"
 #include "paimon/core/mergetree/compact/merge_function.h"
 #include "paimon/core/schema/table_schema.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 

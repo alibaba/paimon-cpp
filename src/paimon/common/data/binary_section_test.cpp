@@ -27,7 +27,7 @@ class BinarySectionTest : public ::testing::Test {
         pool_ = GetDefaultPool();
 
         segment_ = MemorySegment::AllocateHeapMemory(2048, pool_.get());
-        for (int i = 0; i < 2048; ++i) {
+        for (int32_t i = 0; i < 2048; ++i) {
             segment_.Put(i, static_cast<uint8_t>(i % 128));
         }
         offset_ = 0;
@@ -53,7 +53,7 @@ TEST_F(BinarySectionTest, EqualityOperator) {
 TEST_F(BinarySectionTest, ToBytes) {
     auto bytes = binary_section_.ToBytes(pool_.get());
     ASSERT_EQ(bytes->size(), size_in_bytes_);
-    for (int i = 0; i < size_in_bytes_; ++i) {
+    for (int32_t i = 0; i < size_in_bytes_; ++i) {
         EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 128));
     }
 }
@@ -68,7 +68,7 @@ TEST_F(BinarySectionTest, ReadBinary) {
     auto bytes =
         BinarySection::ReadBinary(segment_, 0, offset_, variable_part_offset_and_len, pool_.get());
     ASSERT_EQ(bytes->size(), size_in_bytes_);
-    for (int i = 0; i < size_in_bytes_; ++i) {
+    for (int32_t i = 0; i < size_in_bytes_; ++i) {
         EXPECT_EQ(static_cast<uint8_t>(bytes->data()[i]), static_cast<uint8_t>(i % 128));
     }
 }

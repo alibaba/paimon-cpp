@@ -33,28 +33,28 @@ void BitSet::UnsetMemorySegment() {
     segment_ = MemorySegment();
 }
 
-Status BitSet::Set(unsigned int index) {
+Status BitSet::Set(uint32_t index) {
     if (index >= bit_size_) {
         return Status::IndexError("Index out of bound");
     }
-    unsigned int byte_index = index >> 3;
+    uint32_t byte_index = index >> 3;
     auto val = segment_.Get(offset_ + byte_index);
     val |= (1 << (index & BYTE_INDEX_MASK));
     segment_.PutValue(offset_ + byte_index, val);
     return Status::OK();
 }
 
-bool BitSet::Get(unsigned int index) {
+bool BitSet::Get(uint32_t index) {
     if (index >= bit_size_) {
         return false;
     }
-    unsigned int byte_index = index >> 3;
+    uint32_t byte_index = index >> 3;
     auto val = segment_.Get(offset_ + byte_index);
     return (val & (1 << (index & BYTE_INDEX_MASK))) != 0;
 }
 
 void BitSet::Clear() {
-    int index = 0;
+    int32_t index = 0;
     while (index + 8 <= byte_length_) {
         segment_.PutValue(offset_ + index, 0L);
         index += 8;

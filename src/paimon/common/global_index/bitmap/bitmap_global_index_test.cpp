@@ -78,6 +78,9 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array));
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
+        if (result_metas.empty()) {
+            return Status::Invalid("write global index no data");
+        }
         EXPECT_EQ(result_metas.size(), 1);
         auto file_name = PathUtil::GetName(result_metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "bitmap-global-index-"));
@@ -165,6 +168,12 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
                                 "f0", 10, std::vector<float>({1.0f, 2.0f}), nullptr, nullptr,
                                 std::nullopt, std::map<std::string, std::string>())),
                             "FileIndexReaderWrapper is not supposed to handle vector search query");
+        // test VisitStartsWith, VisitEndsWith, VisitContains, VisitLike, VisitFullTextSearch
+        CheckResult(reader->VisitStartsWith(lit_c).value(), {0, 1, 2, 3, 4});
+        CheckResult(reader->VisitEndsWith(lit_c).value(), {0, 1, 2, 3, 4});
+        CheckResult(reader->VisitContains(lit_c).value(), {0, 1, 2, 3, 4});
+        CheckResult(reader->VisitLike(lit_c).value(), {0, 1, 2, 3, 4});
+        CheckResult(reader->VisitFullTextSearch(nullptr).value(), {0, 1, 2, 3, 4});
     };
 
     {
@@ -387,6 +396,24 @@ TEST_F(BitmapGlobalIndexTest, TestAllNull) {
         ASSERT_OK_AND_ASSIGN(auto meta, write_index(/*version=*/2));
         check_index(meta);
     }
+}
+
+TEST_F(BitmapGlobalIndexTest, TestEmpty) {
+    auto test_root_dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+    // no data
+    auto type = arrow::int32();
+    auto write_index = [&](int32_t version) -> Result<GlobalIndexIOMeta> {
+        auto array = std::dynamic_pointer_cast<arrow::StructArray>(
+            arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({arrow::field("f0", type)}),
+                                                      R"([])")
+                .ValueOrDie());
+
+        return WriteGlobalIndex(test_root, type, version, array, Range(0, 2));
+    };
+    ASSERT_NOK_WITH_MSG(write_index(/*version=*/1), "write global index no data");
+    ASSERT_NOK_WITH_MSG(write_index(/*version=*/2), "write global index no data");
 }
 
 }  // namespace paimon::test

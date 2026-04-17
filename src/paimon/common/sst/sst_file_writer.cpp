@@ -35,7 +35,7 @@ SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
 }
 
 Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) {
-    data_block_writer_->Write(key, value);
+    PAIMON_RETURN_NOT_OK(data_block_writer_->Write(key, value));
     last_key_ = key;
     if (data_block_writer_->Memory() > block_size_) {
         PAIMON_RETURN_NOT_OK(Flush());
@@ -57,9 +57,9 @@ Status SstFileWriter::Flush() {
 
     PAIMON_ASSIGN_OR_RAISE(BlockHandle handle, FlushBlockWriter(data_block_writer_.get()));
 
-    auto slice = handle.WriteBlockHandle(pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(MemorySlice slice, handle.WriteBlockHandle(pool_.get()));
     auto value = slice.CopyBytes(pool_.get());
-    index_block_writer_->Write(last_key_, value);
+    PAIMON_RETURN_NOT_OK(index_block_writer_->Write(last_key_, value));
     return Status::OK();
 }
 
@@ -140,7 +140,7 @@ Result<int32_t> SstFileWriter::WriteVarLenInt(char* bytes, int32_t value) {
     if (value < 0) {
         return Status::Invalid("negative value: v=" + std::to_string(value));
     }
-    int i = 0;
+    int32_t i = 0;
     while ((value & ~0x7F) != 0) {
         bytes[i++] = (static_cast<char>((value & 0x7F) | 0x80));
         value >>= 7;

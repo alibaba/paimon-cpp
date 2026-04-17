@@ -27,13 +27,13 @@
 
 #include "arrow/api.h"
 #include "gtest/gtest.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/mergetree/level_sorted_run.h"
 #include "paimon/core/mergetree/levels.h"
 #include "paimon/core/mergetree/sorted_run.h"
 #include "paimon/core/stats/simple_stats.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 

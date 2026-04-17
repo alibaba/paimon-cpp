@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/core/utils/fields_comparator.h"
+#include "paimon/common/utils/fields_comparator.h"
 
 #include <cstddef>
 #include <string>

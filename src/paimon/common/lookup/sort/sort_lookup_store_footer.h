@@ -21,7 +21,6 @@
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/sst/block_handle.h"
 #include "paimon/common/sst/bloom_filter_handle.h"
-#include "paimon/core/key_value.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 

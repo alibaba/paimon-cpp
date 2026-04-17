@@ -19,7 +19,6 @@
 #include <memory>
 
 #include "paimon/common/memory/memory_slice_input.h"
-#include "paimon/core/key_value.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"
 

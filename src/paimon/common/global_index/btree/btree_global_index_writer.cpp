@@ -189,7 +189,7 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
                     // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
                     MemorySliceOutput ts_out(13, pool_.get());
                     ts_out.WriteValue(milli);
-                    ts_out.WriteVarLenInt(static_cast<int32_t>(nano));
+                    PAIMON_RETURN_NOT_OK(ts_out.WriteVarLenInt(static_cast<int32_t>(nano)));
                     auto slice = ts_out.ToSlice();
                     key_bytes = slice.GetHeapMemory();
                 }
@@ -221,21 +221,21 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
 
 Status BTreeGlobalIndexWriter::WriteKeyValue(std::shared_ptr<Bytes> key,
                                              const std::vector<int64_t>& row_ids) {
-    auto value = SerializeRowIds(row_ids);
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> value, SerializeRowIds(row_ids));
 
     return sst_writer_->Write(std::move(key), std::move(value));
 }
 
-std::shared_ptr<Bytes> BTreeGlobalIndexWriter::SerializeRowIds(
+Result<std::shared_ptr<Bytes>> BTreeGlobalIndexWriter::SerializeRowIds(
     const std::vector<int64_t>& row_ids) {
     // Format: [num_row_ids (VarLenLong)][row_id1 (VarLenLong)][row_id2]...
     // Use VarLenLong for row IDs to match Java's MemorySliceOutput.writeVarLenLong
     int32_t estimated_size = 10 + row_ids.size() * 10;  // Conservative estimate
     auto output = std::make_shared<MemorySliceOutput>(estimated_size, pool_.get());
 
-    output->WriteVarLenLong(static_cast<int64_t>(row_ids.size()));
+    PAIMON_RETURN_NOT_OK(output->WriteVarLenLong(static_cast<int64_t>(row_ids.size())));
     for (int64_t row_id : row_ids) {
-        output->WriteVarLenLong(row_id);
+        PAIMON_RETURN_NOT_OK(output->WriteVarLenLong(row_id));
     }
 
     auto slice = output->ToSlice();

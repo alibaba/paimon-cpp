@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
@@ -28,7 +29,6 @@
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
-#include "paimon/utils/bucket_function_type.h"
 namespace paimon::test {
 
 TEST(CoreOptionsTest, TestDefaultValue) {

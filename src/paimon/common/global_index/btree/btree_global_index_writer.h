@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "arrow/api.h"
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/sst/sst_file_writer.h"
@@ -60,7 +61,7 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     Status WriteKeyValue(std::shared_ptr<Bytes> key, const std::vector<int64_t>& row_ids);
 
     // Helper method to serialize row IDs into a Bytes object
-    std::shared_ptr<Bytes> SerializeRowIds(const std::vector<int64_t>& row_ids);
+    Result<std::shared_ptr<Bytes>> SerializeRowIds(const std::vector<int64_t>& row_ids);
 
     // Helper method to write null bitmap to the output stream
     Result<std::shared_ptr<BlockHandle>> WriteNullBitmap(const std::shared_ptr<OutputStream>& out);

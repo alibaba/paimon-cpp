@@ -23,7 +23,7 @@
 #include "paimon/common/data/generic_row.h"
 #include "paimon/common/data/serializer/binary_serializer_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
-#include "paimon/core/utils/fields_comparator.h"
+#include "paimon/common/utils/fields_comparator.h"
 
 namespace paimon {
 Result<std::unique_ptr<RowCompactedSerializer>> RowCompactedSerializer::Create(

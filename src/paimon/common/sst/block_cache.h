@@ -84,7 +84,7 @@ class PAIMON_EXPORT BlockCache {
     }
 
  private:
-    Result<MemorySegment> ReadFrom(int64_t offset, int length) {
+    Result<MemorySegment> ReadFrom(int64_t offset, int32_t length) {
         PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
         PAIMON_RETURN_NOT_OK(in_->Read(segment.GetHeapMemory()->data(), length));

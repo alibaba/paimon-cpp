@@ -20,6 +20,7 @@
 #include <memory>
 #include <optional>
 
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/compact/cancellation_controller.h"
 #include "paimon/core/compact/compact_future_manager.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
@@ -27,7 +28,6 @@
 #include "paimon/core/mergetree/compact/compact_strategy.h"
 #include "paimon/core/mergetree/levels.h"
 #include "paimon/core/operation/metrics/compaction_metrics.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/executor.h"
 #include "paimon/logging.h"
 

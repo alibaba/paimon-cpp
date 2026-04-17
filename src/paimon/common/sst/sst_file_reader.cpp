@@ -161,9 +161,9 @@ Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compre
         static_cast<char>(static_cast<int32_t>(trailer->CompressionType()) & 0xFF);
     crc32c_code = CRC32C::calculate(&compression_val, 1, crc32c_code);
     if (trailer->Crc32c() != static_cast<int32_t>(crc32c_code)) {
-        return Status::IOError("Expected crc32c(" + SstFileUtils::ToHexString(trailer->Crc32c()) +
-                               ") but found crc32c(" + SstFileUtils::ToHexString(crc32c_code) +
-                               ")");
+        return Status::Invalid(fmt::format("Expected crc32c({}) but found crc32c({})",
+                                           SstFileUtils::ToHexString(trailer->Crc32c()),
+                                           SstFileUtils::ToHexString(crc32c_code)));
     }
 
     // decompress data
