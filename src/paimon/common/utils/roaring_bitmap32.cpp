@@ -209,6 +209,10 @@ bool RoaringBitmap32::operator==(const RoaringBitmap32& other) const noexcept {
 PAIMON_UNIQUE_PTR<Bytes> RoaringBitmap32::Serialize(MemoryPool* pool) const {
     GetRoaringBitmap(roaring_bitmap_).runOptimize();
     auto& bitmap = GetRoaringBitmap(roaring_bitmap_);
+    // Use default pool if no pool is provided
+    if (pool == nullptr) {
+        pool = GetDefaultPool().get();
+    }
     auto bytes = Bytes::AllocateBytes(bitmap.getSizeInBytes(), pool);
     bitmap.write(bytes->data());
     return bytes;

@@ -27,11 +27,11 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
 #include "paimon/core/stats/simple_stats.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
@@ -94,8 +94,8 @@ class IntervalPartitionTest : public testing::Test {
 
         std::string::const_iterator search_start(in.cbegin());
         while (std::regex_search(search_start, in.cend(), matches, pattern)) {
-            int start = std::stoi(matches[1].str());
-            int end = std::stoi(matches[2].str());
+            int32_t start = std::stoi(matches[1].str());
+            int32_t end = std::stoi(matches[2].str());
             metas.push_back(MakeInterval(start, end));
 
             // Move to the next position in the string to continue searching

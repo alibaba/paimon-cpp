@@ -23,11 +23,12 @@
 #include "paimon/common/compression/block_decompressor.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/result.h"
+#include "paimon/visibility.h"
 namespace paimon {
 
 /// Each compression codec has an implementation of {@link BlockCompressionFactory} to create
 /// compressors and decompressors.
-class BlockCompressionFactory {
+class PAIMON_EXPORT BlockCompressionFactory {
  public:
     static Result<std::shared_ptr<BlockCompressionFactory>> Create(
         const CompressOptions& compression);

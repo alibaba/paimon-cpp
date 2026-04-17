@@ -139,7 +139,7 @@ Result<RoaringBitmap32> BitSliceIndexBitmap::Eq(int32_t code) {
         batch_loaded_ = true;
     }
     // process slices from LSB to MSB
-    for (int i = 0; i < static_cast<int32_t>(bit_slices_.size()); ++i) {
+    for (int32_t i = 0; i < static_cast<int32_t>(bit_slices_.size()); ++i) {
         PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* slice_bitmap, GetSliceBitmap(i));
         if ((code >> i & 1) == 1) {
             // Intersect with rows that also have this bit turned on
@@ -169,7 +169,7 @@ Result<RoaringBitmap32> BitSliceIndexBitmap::Gt(int32_t code) {
         batch_loaded_ = true;
     }
     // process slices from LSB to MSB
-    for (int i = start; i < static_cast<int32_t>(bit_slices_.size()); ++i) {
+    for (int32_t i = start; i < static_cast<int32_t>(bit_slices_.size()); ++i) {
         if (!state_inited) {
             PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap32* slice_ptr, GetSliceBitmap(i));
             // current i_th bit of code has to be 0 after skip,
@@ -236,7 +236,7 @@ Status BitSliceIndexBitmap::Appender::Append(int32_t key, int32_t value) {
     if (value < min_ || value > max_) {
         return Status::Invalid(fmt::format("value: {} not in range [{}, {}]", value, min_, max_));
     }
-    int bits = value;
+    int32_t bits = value;
     while (bits != 0) {
         slices_[NumberOfTrailingZeros(bits)].Add(key);
         bits &= (bits - 1);

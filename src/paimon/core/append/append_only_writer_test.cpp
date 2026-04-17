@@ -262,7 +262,7 @@ TEST_F(AppendOnlyWriterTest, TestEmptyCommits) {
     AppendOnlyWriter writer(options, /*schema_id=*/0, schema, /*write_cols=*/std::nullopt,
                             /*max_sequence_number=*/-1, path_factory, compact_manager_,
                             memory_pool_);
-    for (int i = 0; i < 3; i++) {
+    for (int32_t i = 0; i < 3; i++) {
         ASSERT_OK_AND_ASSIGN(CommitIncrement inc, writer.PrepareCommit(true));
         ASSERT_TRUE(inc.GetNewFilesIncrement().IsEmpty());
         ASSERT_TRUE(inc.GetCompactIncrement().IsEmpty());

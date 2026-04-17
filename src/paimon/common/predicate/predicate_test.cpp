@@ -92,6 +92,50 @@ class PredicateTest : public ::testing::Test {
         return ret;
     }
 
+    struct StringFieldStats {
+        StringFieldStats(const std::optional<std::string>& _min_value,
+                         const std::optional<std::string>& _max_value, int64_t _null_count)
+            : min_value(_min_value), max_value(_max_value), null_count(_null_count) {}
+        std::optional<std::string> min_value;
+        std::optional<std::string> max_value;
+        int64_t null_count;
+    };
+
+    bool StringStatsCheck(const PredicateFilter& predicate, int64_t row_count,
+                          const std::vector<StringFieldStats>& field_stats) const {
+        auto pool = GetDefaultPool();
+        BinaryRow min_row(/*arity=*/field_stats.size());
+        BinaryRowWriter min_row_writer(&min_row, 0, pool.get());
+        BinaryRow max_row(/*arity=*/field_stats.size());
+        BinaryRowWriter max_row_writer(&max_row, 0, pool.get());
+        std::vector<int64_t> nulls;
+        arrow::FieldVector fields;
+        for (uint32_t i = 0; i < field_stats.size(); i++) {
+            const auto& stats = field_stats[i];
+            if (stats.min_value == std::nullopt) {
+                min_row_writer.SetNullAt(i);
+            } else {
+                min_row_writer.WriteString(
+                    i, BinaryString::FromString(stats.min_value.value(), pool.get()));
+            }
+            if (stats.max_value == std::nullopt) {
+                max_row_writer.SetNullAt(i);
+            } else {
+                max_row_writer.WriteString(
+                    i, BinaryString::FromString(stats.max_value.value(), pool.get()));
+            }
+            nulls.emplace_back(stats.null_count);
+            fields.emplace_back(arrow::field("f" + std::to_string(i), arrow::utf8()));
+        }
+        min_row_writer.Complete();
+        max_row_writer.Complete();
+        auto null_counts = BinaryArray::FromLongArray(nulls, pool.get());
+        auto arrow_schema = arrow::schema(fields);
+        EXPECT_OK_AND_ASSIGN(
+            auto ret, predicate.Test(arrow_schema, row_count, min_row, max_row, null_counts));
+        return ret;
+    }
+
     BinaryRow CreateBigIntRow(const std::vector<std::optional<int64_t>>& value) const {
         auto pool = GetDefaultPool();
         BinaryRow row(/*arity=*/value.size());
@@ -1084,6 +1128,21 @@ TEST_F(PredicateTest, TestStartsWith) {
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
     ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"aabbcc"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats
+    // min="aaa", max="aaz" covers prefix "aab"
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "aaz", 0ll)}));
+    // min="aab", max="aab" exact match prefix
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aab", "aab", 0ll)}));
+    // min="aabxxx", max="aabzzz" both start with "aab"
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aabxxx", "aabzzz", 0ll)}));
+    // min="bbb", max="ccc" entirely above prefix "aab"
+    ASSERT_FALSE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("bbb", "ccc", 0ll)}));
+    // min="aaa", max="aaa" entirely below prefix "aab"
+    ASSERT_FALSE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "aaa", 0ll)}));
+    // all nulls
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestStartsWithNull) {
@@ -1111,6 +1170,11 @@ TEST_F(PredicateTest, TestStartsWithNull) {
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats: null literal always returns false
+    ASSERT_FALSE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestEndsWith) {
@@ -1143,6 +1207,13 @@ TEST_F(PredicateTest, TestEndsWith) {
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
     ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"aabbcc"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats: EndsWith base class always returns true for non-null stats
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("xxx", "yyy", 0ll)}));
+    // all nulls
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestEndsWithNull) {
@@ -1170,6 +1241,11 @@ TEST_F(PredicateTest, TestEndsWithNull) {
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"bbccdd"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats: null literal always returns false
+    ASSERT_FALSE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestContains) {
@@ -1202,6 +1278,13 @@ TEST_F(PredicateTest, TestContains) {
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"defghi"})).value());
     ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"abcdef"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats: Contains base class always returns true for non-null stats
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("xxx", "yyy", 0ll)}));
+    // all nulls
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestContainsNull) {
@@ -1229,6 +1312,11 @@ TEST_F(PredicateTest, TestContainsNull) {
     auto arrow_schema = arrow::schema(arrow::FieldVector({arrow::field("f0", string_type)}));
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"defghi"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({std::nullopt})).value());
+
+    // with stats: null literal always returns false
+    ASSERT_FALSE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestLike) {
@@ -1314,6 +1402,12 @@ TEST_F(PredicateTest, TestLike) {
     predicate = std::dynamic_pointer_cast<PredicateFilter>(predicate_base);
     ASSERT_TRUE(predicate->Test(arrow_schema, CreateStringRow({"abchahadefxx"})).value());
     ASSERT_FALSE(predicate->Test(arrow_schema, CreateStringRow({"abchahadafxx"})).value());
+
+    // with stats: Like base class always returns true for non-null stats
+    ASSERT_TRUE(StringStatsCheck(*predicate, 3ll, {StringFieldStats("aaa", "zzz", 0ll)}));
+    // all nulls
+    ASSERT_FALSE(
+        StringStatsCheck(*predicate, 1ll, {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestCompound) {
@@ -1330,6 +1424,17 @@ TEST_F(PredicateTest, TestCompound) {
     ASSERT_NOK_WITH_MSG(
         PredicateBuilder::Not(compound_predicate),
         "Could not construct A NOT predicate from And([StartsWith(f0, aab), EndsWith(f0, bcc)])");
+
+    // with stats: And of StartsWith + EndsWith
+    auto compound_filter = std::dynamic_pointer_cast<PredicateFilter>(compound_predicate);
+    ASSERT_TRUE(compound_filter);
+    // min="aab", max="aaz" covers StartsWith("aab"), EndsWith("bcc") returns true by default
+    ASSERT_TRUE(StringStatsCheck(*compound_filter, 3ll, {StringFieldStats("aab", "aaz", 0ll)}));
+    // min="bbb", max="ccc" does not cover StartsWith("aab")
+    ASSERT_FALSE(StringStatsCheck(*compound_filter, 3ll, {StringFieldStats("bbb", "ccc", 0ll)}));
+    // all nulls
+    ASSERT_FALSE(StringStatsCheck(*compound_filter, 1ll,
+                                  {StringFieldStats(std::nullopt, std::nullopt, 1ll)}));
 }
 
 TEST_F(PredicateTest, TestPredicateToString) {

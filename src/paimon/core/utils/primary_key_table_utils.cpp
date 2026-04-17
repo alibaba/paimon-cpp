@@ -24,6 +24,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/mergetree/compact/aggregate/aggregate_merge_function.h"
@@ -32,7 +33,6 @@
 #include "paimon/core/mergetree/compact/merge_function.h"
 #include "paimon/core/mergetree/compact/partial_update_merge_function.h"
 #include "paimon/core/options/merge_engine.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/status.h"
 
 namespace arrow {

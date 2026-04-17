@@ -27,7 +27,7 @@
 #include "paimon/result.h"
 namespace paimon {
 
-class BlockCache {
+class PAIMON_EXPORT BlockCache {
  public:
     BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
                const std::shared_ptr<CacheManager>& cache_manager,
@@ -84,7 +84,7 @@ class BlockCache {
     }
 
  private:
-    Result<MemorySegment> ReadFrom(int64_t offset, int length) {
+    Result<MemorySegment> ReadFrom(int64_t offset, int32_t length) {
         PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
         PAIMON_RETURN_NOT_OK(in_->Read(segment.GetHeapMemory()->data(), length));

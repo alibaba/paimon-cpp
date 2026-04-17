@@ -23,6 +23,7 @@
 #include <string>
 #include <utility>
 
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/deletionvectors/bucketed_dv_maintainer.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/lookup_merge_function.h"
@@ -30,7 +31,6 @@
 #include "paimon/core/mergetree/lookup/file_position.h"
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
 #include "paimon/core/options/lookup_strategy.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
 namespace paimon {

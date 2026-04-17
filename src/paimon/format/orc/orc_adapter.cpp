@@ -1460,7 +1460,7 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
         return arrow::null();
     }
     ::orc::TypeKind kind = type->getKind();
-    const int subtype_count = static_cast<int>(type->getSubtypeCount());
+    const auto subtype_count = static_cast<int32_t>(type->getSubtypeCount());
 
     switch (kind) {
         case ::orc::BOOLEAN:
@@ -1502,8 +1502,8 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
         case ::orc::DATE:
             return arrow::date32();
         case ::orc::DECIMAL: {
-            const int precision = static_cast<int>(type->getPrecision());
-            const int scale = static_cast<int>(type->getScale());
+            const auto precision = static_cast<int32_t>(type->getPrecision());
+            const auto scale = static_cast<int32_t>(type->getScale());
             return arrow::decimal128(precision, scale);
         }
         case ::orc::LIST: {
@@ -1526,7 +1526,7 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
         }
         case ::orc::STRUCT: {
             arrow::FieldVector fields(subtype_count);
-            for (int child = 0; child < subtype_count; ++child) {
+            for (int32_t child = 0; child < subtype_count; ++child) {
                 const auto& name = type->getFieldName(child);
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::Field> elem_field,
                                        GetArrowField(name, type->getSubtype(child)));

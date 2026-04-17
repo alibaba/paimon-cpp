@@ -53,8 +53,8 @@ class PAIMON_EXPORT BitSet {
         return byte_length_;
     }
 
-    Status Set(unsigned int index);
-    bool Get(unsigned int index);
+    Status Set(uint32_t index);
+    bool Get(uint32_t index);
     void Clear();
 
  private:

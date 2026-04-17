@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/io/key_value_record_reader.h"
@@ -31,7 +32,6 @@
 #include "paimon/core/mergetree/sorted_run.h"
 #include "paimon/core/operation/abstract_split_read.h"
 #include "paimon/core/table/source/deletion_file.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/reader/batch_reader.h"
 #include "paimon/result.h"

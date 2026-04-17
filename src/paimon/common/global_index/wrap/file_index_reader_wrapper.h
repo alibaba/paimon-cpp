@@ -123,6 +123,30 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
         return transform_(file_index_result);
     }
 
+    Result<std::shared_ptr<GlobalIndexResult>> VisitBetween(const Literal& from,
+                                                            const Literal& to) override {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileIndexResult> file_index_result,
+                               reader_->VisitBetween(from, to));
+        return transform_(file_index_result);
+    }
+
+    Result<std::shared_ptr<GlobalIndexResult>> VisitNotBetween(const Literal& from,
+                                                               const Literal& to) override {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<FileIndexResult> file_index_result,
+                               reader_->VisitNotBetween(from, to));
+        return transform_(file_index_result);
+    }
+
+    Result<std::shared_ptr<GlobalIndexResult>> VisitAnd(
+        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override {
+        return Status::Invalid("FileIndexReaderWrapper is not supposed to handle AND operations");
+    }
+
+    Result<std::shared_ptr<GlobalIndexResult>> VisitOr(
+        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override {
+        return Status::Invalid("FileIndexReaderWrapper is not supposed to handle OR operations");
+    }
+
     Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override {
         return Status::Invalid(

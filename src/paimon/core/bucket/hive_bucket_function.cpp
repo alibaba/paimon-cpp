@@ -28,13 +28,6 @@
 #include "paimon/status.h"
 
 namespace paimon {
-
-namespace {
-
-static constexpr int32_t SEED = 0;
-
-}  // namespace
-
 HiveBucketFunction::HiveBucketFunction(const std::vector<HiveFieldInfo>& field_infos)
     : field_infos_(field_infos) {}
 
@@ -76,6 +69,7 @@ Result<std::unique_ptr<HiveBucketFunction>> HiveBucketFunction::Create(
 }
 
 int32_t HiveBucketFunction::Bucket(const BinaryRow& row, int32_t num_buckets) const {
+    static constexpr int32_t SEED = 0;
     int32_t hash = SEED;
     for (int32_t i = 0; i < row.GetFieldCount(); i++) {
         hash = (31 * hash) + ComputeHash(row, i);

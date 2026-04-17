@@ -20,9 +20,9 @@
 #include <memory>
 #include <vector>
 
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/core/bucket/bucket_function.h"
 #include "paimon/result.h"
-#include "paimon/utils/bucket_function_type.h"
 
 namespace paimon {
 

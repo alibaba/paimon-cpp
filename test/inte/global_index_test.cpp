@@ -418,7 +418,6 @@ TEST_P(GlobalIndexTest, TestWriteIndexWithPartition) {
             DataIncrement expected_data_increment({expected_index_file_meta});
             auto expected_commit_message = std::make_shared<CommitMessageImpl>(
                 /*partition=*/expected_partition_row,
-                //                /*partition=*/BinaryRowGenerator::GenerateRow({20}, pool_.get()),
                 /*bucket=*/0,
                 /*total_buckets=*/std::nullopt, expected_data_increment,
                 CompactIncrement({}, {}, {}));

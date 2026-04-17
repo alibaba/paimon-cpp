@@ -20,11 +20,11 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/io/byte_order.h"
+#include "paimon/status.h"
 #include "paimon/visibility.h"
 
 namespace paimon {
@@ -44,16 +44,16 @@ class PAIMON_EXPORT MemorySliceOutput {
     template <typename T>
     void WriteValue(T value);
 
-    void WriteVarLenInt(int32_t value);
-    void WriteVarLenLong(int64_t value);
+    Status WriteVarLenInt(int32_t value);
+    Status WriteVarLenLong(int64_t value);
 
     void WriteBytes(const std::shared_ptr<Bytes>& source);
-    void WriteBytes(const std::shared_ptr<Bytes>& source, int source_index, int length);
+    void WriteBytes(const std::shared_ptr<Bytes>& source, int32_t source_index, int32_t length);
 
     void SetOrder(ByteOrder order);
 
  private:
-    void EnsureSize(int bytes);
+    void EnsureSize(int32_t bytes);
     bool NeedSwap() const;
 
  private:

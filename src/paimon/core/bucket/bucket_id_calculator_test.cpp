@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/utils/bucket_id_calculator.h"
+#include "paimon/bucket/bucket_id_calculator.h"
 
 #include <string>
 #include <utility>
