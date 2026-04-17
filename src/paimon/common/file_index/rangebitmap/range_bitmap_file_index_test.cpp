@@ -614,7 +614,7 @@ TEST_F(RangeBitmapFileIndexTest, TestRangeBitmapEdgeCases) {
         CheckResult(neq_42_result, {});
     }
 
-    // Scope 2: Empty data (cardinality == 0), covers lines 94, 155, 167
+    // Scope 2: Empty data (cardinality == 0)
     {
         std::vector<int32_t> empty_data;
         const auto& arrow_type = arrow::int32();
@@ -622,18 +622,18 @@ TEST_F(RangeBitmapFileIndexTest, TestRangeBitmapEdgeCases) {
         ASSERT_OK_AND_ASSIGN(auto reader, (CreateReaderForTest<arrow::Int32Builder, int32_t>(
                                               arrow_type, empty_data, &serialized_bytes)));
 
-        // line 94: Neq with cardinality <= 0
+        // Neq with cardinality <= 0
         ASSERT_OK_AND_ASSIGN(auto neq_result,
                              reader->VisitNotEqual(Literal(static_cast<int32_t>(1))));
         CheckResult(neq_result, {});
 
-        // line 155: In with cardinality <= 0
+        // In with cardinality <= 0
         std::vector<Literal> in_values = {Literal(static_cast<int32_t>(1)),
                                           Literal(static_cast<int32_t>(2))};
         ASSERT_OK_AND_ASSIGN(auto in_result, reader->VisitIn(in_values));
         CheckResult(in_result, {});
 
-        // line 167: NotIn with cardinality <= 0
+        // NotIn with cardinality <= 0
         ASSERT_OK_AND_ASSIGN(auto not_in_result, reader->VisitNotIn(in_values));
         CheckResult(not_in_result, {});
     }
