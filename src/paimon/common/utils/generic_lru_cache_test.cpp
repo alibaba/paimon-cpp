@@ -130,7 +130,7 @@ TEST_F(GenericLruCacheTest, GetCacheMissLoadsViaSupplier) {
     StringIntCache::Options options;
     StringIntCache cache(options);
 
-    int supplier_calls = 0;
+    int32_t supplier_calls = 0;
     auto supplier = [&](const std::string& key) -> Result<int> {
         supplier_calls++;
         return 42;
@@ -148,7 +148,7 @@ TEST_F(GenericLruCacheTest, GetCacheHitSkipsSupplier) {
 
     ASSERT_OK(cache.Put("key1", 100));
 
-    int supplier_calls = 0;
+    int32_t supplier_calls = 0;
     auto supplier = [&](const std::string& key) -> Result<int> {
         supplier_calls++;
         return 999;
@@ -481,7 +481,7 @@ TEST_F(GenericLruCacheTest, ExpirationOnGetWithSupplier) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(80));
 
-    int supplier_calls = 0;
+    int32_t supplier_calls = 0;
     auto supplier = [&](const std::string& key) -> Result<int> {
         supplier_calls++;
         return 200;
@@ -534,7 +534,7 @@ TEST_F(GenericLruCacheTest, ExpiredEntriesEvictedOnPut) {
     ASSERT_OK(cache.Put("c", 3));
 
     // "a" and "b" should have been expired
-    int expired_count = 0;
+    int32_t expired_count = 0;
     for (const auto& record : removals) {
         if (record.cause == RemovalCause::EXPIRED) {
             expired_count++;

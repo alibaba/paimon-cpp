@@ -60,7 +60,7 @@ class ParquetFieldIdConverterTest : public ::testing::Test {
         }
     }
 
-    void PrintFieldMetadataRecursive(const std::shared_ptr<arrow::Field>& field, int indent,
+    void PrintFieldMetadataRecursive(const std::shared_ptr<arrow::Field>& field, int32_t indent,
                                      ParquetFieldIdConverter::IdConvertType convert_type,
                                      std::vector<FieldInfo>* field_infos) const {
         std::string prefix(indent * 2, ' ');
@@ -80,7 +80,7 @@ class ParquetFieldIdConverterTest : public ::testing::Test {
             }
             field_infos->push_back({field->name(), field->type()->id(), field_id});
             if (print_) {
-                for (int i = 0; i < meta->size(); ++i) {
+                for (int32_t i = 0; i < meta->size(); ++i) {
                     std::cout << prefix << "  [meta] " << meta->key(i) << " = " << meta->value(i)
                               << std::endl;
                 }

@@ -236,7 +236,7 @@ TEST_F(ChunkedDictionaryTest, TestMultiChunk) {
                              key_factory, 64, pool_));  // Small chunk size to force multiple chunks
 
     // Add many keys to force chunk splitting
-    for (int i = 0; i < 20; ++i) {
+    for (int32_t i = 0; i < 20; ++i) {
         ASSERT_OK(appender->AppendSorted(Literal(i * 10), i));
     }
 

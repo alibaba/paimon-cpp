@@ -78,8 +78,8 @@ void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source) {
     WriteBytes(source, 0, source->size());
 }
 
-void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source, int source_index,
-                                   int length) {
+void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source, int32_t source_index,
+                                   int32_t length) {
     EnsureSize(size_ + length);
     std::string_view sv{source->data(), source->size()};
     segment_.Put(size_, sv, source_index, length);
@@ -94,12 +94,12 @@ bool MemorySliceOutput::NeedSwap() const {
     return SystemByteOrder() != byte_order_;
 }
 
-void MemorySliceOutput::EnsureSize(int size) {
+void MemorySliceOutput::EnsureSize(int32_t size) {
     if (size <= segment_.Size()) {
         return;
     }
     int32_t capacity = segment_.Size();
-    int min_capacity = segment_.Size() + size;
+    int32_t min_capacity = segment_.Size() + size;
     while (capacity < min_capacity) {
         capacity <<= 1;
     }

@@ -69,7 +69,7 @@ class PAIMON_EXPORT BlockWriter {
     }
 
     int32_t Memory() const {
-        int memory = block_->Size() + 5;
+        int32_t memory = block_->Size() + 5;
         if (!aligned_) {
             memory += positions_.size() * 4;
         }

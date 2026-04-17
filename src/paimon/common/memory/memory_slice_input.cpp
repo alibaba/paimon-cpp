@@ -70,8 +70,8 @@ int64_t MemorySliceInput::ReadLong() {
 }
 
 Result<int32_t> MemorySliceInput::ReadVarLenInt() {
-    for (int offset = 0, result = 0; offset < 32; offset += 7) {
-        int b = ReadUnsignedByte();
+    for (int32_t offset = 0, result = 0; offset < 32; offset += 7) {
+        int32_t b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
         if ((b & 0x80) == 0) {
             return result;
@@ -82,7 +82,7 @@ Result<int32_t> MemorySliceInput::ReadVarLenInt() {
 
 Result<int64_t> MemorySliceInput::ReadVarLenLong() {
     int64_t result = 0;
-    for (int offset = 0; offset < 64; offset += 7) {
+    for (int32_t offset = 0; offset < 64; offset += 7) {
         int64_t b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
         if ((b & 0x80) == 0) {

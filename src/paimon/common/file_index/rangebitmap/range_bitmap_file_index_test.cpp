@@ -151,7 +151,7 @@ Result<std::shared_ptr<RangeBitmapFileIndexReader>> RangeBitmapFileIndexTest::Cr
 
 // Test with all NULL values
 TEST_F(RangeBitmapFileIndexTest, TestAllNullValues) {
-    constexpr int num_rows = 10;
+    constexpr int32_t num_rows = 10;
     std::vector<int32_t> test_data(num_rows, 0);  // placeholders, all will be NULL
     std::set<int32_t> null_indices;
     for (int32_t i = 0; i < num_rows; ++i) {

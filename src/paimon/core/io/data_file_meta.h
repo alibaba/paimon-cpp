@@ -49,7 +49,7 @@ struct DataFileMeta {
                  const BinaryRow& _min_key, const BinaryRow& _max_key,
                  const SimpleStats& _key_stats, const SimpleStats& _value_stats,
                  int64_t _min_sequence_number, int64_t _max_sequence_number, int64_t _schema_id,
-                 int _level, const std::vector<std::optional<std::string>>& _extra_files,
+                 int32_t _level, const std::vector<std::optional<std::string>>& _extra_files,
                  const Timestamp& _creation_time, const std::optional<int64_t>& _delete_row_count,
                  const std::shared_ptr<Bytes>& _embedded_index,
                  const std::optional<FileSource>& _file_source,

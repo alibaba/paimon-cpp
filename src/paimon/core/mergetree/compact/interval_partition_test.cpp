@@ -94,8 +94,8 @@ class IntervalPartitionTest : public testing::Test {
 
         std::string::const_iterator search_start(in.cbegin());
         while (std::regex_search(search_start, in.cend(), matches, pattern)) {
-            int start = std::stoi(matches[1].str());
-            int end = std::stoi(matches[2].str());
+            int32_t start = std::stoi(matches[1].str());
+            int32_t end = std::stoi(matches[2].str());
             metas.push_back(MakeInterval(start, end));
 
             // Move to the next position in the string to continue searching

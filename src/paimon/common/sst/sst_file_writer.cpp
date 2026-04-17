@@ -140,7 +140,7 @@ Result<int32_t> SstFileWriter::WriteVarLenInt(char* bytes, int32_t value) {
     if (value < 0) {
         return Status::Invalid("negative value: v=" + std::to_string(value));
     }
-    int i = 0;
+    int32_t i = 0;
     while ((value & ~0x7F) != 0) {
         bytes[i++] = (static_cast<char>((value & 0x7F) | 0x80));
         value >>= 7;

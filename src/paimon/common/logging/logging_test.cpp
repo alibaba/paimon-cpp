@@ -31,7 +31,7 @@ TEST(LoggerTest, TestMultiThreadGetLogger) {
     };
 
     std::vector<std::future<void>> futures;
-    for (int i = 0; i < 1000; ++i) {
+    for (int32_t i = 0; i < 1000; ++i) {
         futures.push_back(Via(executor.get(), get_logger));
     }
     Wait(futures);

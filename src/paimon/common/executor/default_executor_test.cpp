@@ -35,7 +35,7 @@ TEST(DefaultExecutorTest, TestViaVoidFunc) {
     auto executor = GetGlobalDefaultExecutor();
     std::atomic<int64_t> sum = {0};
     std::vector<std::future<void>> futures;
-    for (int i = 0; i < 10; ++i) {
+    for (int32_t i = 0; i < 10; ++i) {
         futures.push_back(Via(executor.get(), [&sum]() { sum++; }));
     }
     Wait(futures);
@@ -46,8 +46,8 @@ TEST(DefaultExecutorTest, TestVia) {
     auto executor = GetGlobalDefaultExecutor();
     std::atomic<int64_t> sum = {0};
     std::vector<std::future<int>> futures;
-    for (int i = 0; i < 10; ++i) {
-        futures.push_back(Via(executor.get(), [i, &sum]() -> int {
+    for (int32_t i = 0; i < 10; ++i) {
+        futures.push_back(Via(executor.get(), [i, &sum]() -> int32_t {
             sum++;
             return i * 2;
         }));

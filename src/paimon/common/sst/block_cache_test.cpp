@@ -167,7 +167,7 @@ TEST_F(BlockCacheTest, TestClose) {
     BlockCache block_cache(file_path, in, cache_manager, pool_);
 
     // Load 3 blocks and verify blocks_ keys
-    for (int i = 0; i < 3; i++) {
+    for (int32_t i = 0; i < 3; i++) {
         ASSERT_OK_AND_ASSIGN(auto seg, GetBlock(i, block_size, &block_cache));
         ASSERT_EQ(seg.Get(0), static_cast<char>(i));
     }
@@ -270,7 +270,7 @@ TEST_F(BlockCacheTest, TestRefreshPreventsEviction) {
     ASSERT_EQ(cache_manager->DataCache()->Size(), 2);
 
     // Access block 0 REFRESH_COUNT times to trigger a refresh (moves it to LRU front)
-    for (int i = 1; i < CacheManager::REFRESH_COUNT; i++) {
+    for (int32_t i = 1; i < CacheManager::REFRESH_COUNT; i++) {
         ASSERT_OK_AND_ASSIGN(seg0, GetBlock(0, block_size, &block_cache));
     }
     // This 11th access triggers refresh, moving block 0 to LRU front
