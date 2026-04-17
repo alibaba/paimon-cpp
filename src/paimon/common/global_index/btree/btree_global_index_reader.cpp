@@ -116,7 +116,7 @@ static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPo
             // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
             MemorySliceOutput ts_out(13, pool);
             ts_out.WriteValue(ts.GetMillisecond());
-            ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond());
+            PAIMON_RETURN_NOT_OK(ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond()));
             return ts_out.ToSlice();
         }
     }
