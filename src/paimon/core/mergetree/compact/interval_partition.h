@@ -19,9 +19,9 @@
 #include <memory>
 #include <vector>
 
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/mergetree/sorted_run.h"
-#include "paimon/core/utils/fields_comparator.h"
 
 namespace paimon {
 

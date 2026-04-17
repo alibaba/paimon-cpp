@@ -19,7 +19,6 @@
 #include <memory>
 
 #include "paimon/common/compression/block_compression_factory.h"
-#include "paimon/common/sst/block_footer.h"
 #include "paimon/common/sst/block_handle.h"
 #include "paimon/common/sst/block_trailer.h"
 #include "paimon/common/sst/block_writer.h"
@@ -39,7 +38,7 @@ class MemoryPool;
 
 /// The writer for writing SST Files. SST Files are row-oriented and designed to serve frequent
 /// point queries and range queries by key.
-class SstFileWriter {
+class PAIMON_EXPORT SstFileWriter {
  public:
     SstFileWriter(const std::shared_ptr<OutputStream>& out,
                   const std::shared_ptr<BloomFilter>& bloom_filter, int32_t block_size,
@@ -50,8 +49,6 @@ class SstFileWriter {
 
     Status Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value);
 
-    Status Write(const MemorySlice& slice);
-
     Status Flush();
 
     Result<BlockHandle> WriteIndexBlock();
@@ -59,8 +56,7 @@ class SstFileWriter {
     // When bloom-filter is disabled, return nullptr.
     Result<std::shared_ptr<BloomFilterHandle>> WriteBloomFilter();
 
-    Status WriteFooter(const BlockHandle& index_block_handle,
-                       const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle);
+    Status WriteSlice(const MemorySlice& slice);
 
  private:
     Result<BlockHandle> FlushBlockWriter(BlockWriter* writer);

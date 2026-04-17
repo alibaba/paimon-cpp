@@ -21,6 +21,7 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/compact/compact_manager.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
@@ -31,7 +32,6 @@
 #include "paimon/core/mergetree/write_buffer.h"
 #include "paimon/core/utils/batch_writer.h"
 #include "paimon/core/utils/commit_increment.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/core/utils/path_factory.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"

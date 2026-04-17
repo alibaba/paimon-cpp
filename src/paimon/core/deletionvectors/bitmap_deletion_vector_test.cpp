@@ -103,17 +103,17 @@ TEST(BitmapDeletionVectorTest, GetCardinality) {
     ASSERT_EQ(dv_empty.GetCardinality(), 0);
 
     RoaringBitmap32 cont;
-    for (int i = 0; i < 100; ++i) cont.Add(i);
+    for (int32_t i = 0; i < 100; ++i) cont.Add(i);
     BitmapDeletionVector dv_cont(cont);
     ASSERT_EQ(dv_cont.GetCardinality(), 100);
 
     RoaringBitmap32 gap;
-    for (int i = 0; i < 1000; i += 10) gap.Add(i);
+    for (int32_t i = 0; i < 1000; i += 10) gap.Add(i);
     BitmapDeletionVector dv_gap(gap);
     ASSERT_EQ(dv_gap.GetCardinality(), 100);
 
     RoaringBitmap32 del;
-    for (int i = 0; i < 10; ++i) del.Add(i);
+    for (int32_t i = 0; i < 10; ++i) del.Add(i);
     BitmapDeletionVector dv_del(del);
     ASSERT_EQ(dv_del.GetCardinality(), 10);
     ASSERT_OK(dv_del.Delete(100));

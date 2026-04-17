@@ -20,11 +20,11 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 
 namespace paimon {
-PAIMON_EXPORT int GetArrowCpuThreadPoolCapacity() {
+PAIMON_EXPORT int32_t GetArrowCpuThreadPoolCapacity() {
     return arrow::GetCpuThreadPoolCapacity();
 }
 
-PAIMON_EXPORT Status SetArrowCpuThreadPoolCapacity(int threads) {
+PAIMON_EXPORT Status SetArrowCpuThreadPoolCapacity(int32_t threads) {
     PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::SetCpuThreadPoolCapacity(threads));
     return Status::OK();
 }

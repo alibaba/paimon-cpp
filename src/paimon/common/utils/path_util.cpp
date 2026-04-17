@@ -48,7 +48,7 @@ std::string PathUtil::JoinPath(const std::string& path, const std::string& name)
     if (name.empty()) {
         return path;
     }
-    int slash_cnt = (*(path.rbegin()) == '/') + (*(name.begin()) == '/');
+    int32_t slash_cnt = (*(path.rbegin()) == '/') + (*(name.begin()) == '/');
     if (!slash_cnt) {
         return path + "/" + name;
     } else if (slash_cnt == 2) {

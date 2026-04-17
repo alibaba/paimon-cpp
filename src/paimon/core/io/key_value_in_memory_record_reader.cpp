@@ -32,8 +32,8 @@
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/arrow/arrow_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/status.h"
 namespace paimon {
 class MemoryPool;

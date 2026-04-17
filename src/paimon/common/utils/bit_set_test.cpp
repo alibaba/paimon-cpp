@@ -35,14 +35,14 @@ TEST(BitSetTest, TestBitSet) {
     auto pool = GetDefaultPool();
     auto seg = MemorySegment::AllocateHeapMemory(1024, pool.get());
     ASSERT_OK(bit_set->SetMemorySegment(seg));
-    for (int i = 0; i < 100; i++) {
+    for (int32_t i = 0; i < 100; i++) {
         ASSERT_OK(bit_set->Set(i * 2 + 1));
     }
-    for (int i = 0; i < 100; i++) {
+    for (int32_t i = 0; i < 100; i++) {
         ASSERT_TRUE(bit_set->Get(i * 2 + 1));
     }
     bit_set->Clear();
-    for (int i = 0; i < 100; i++) {
+    for (int32_t i = 0; i < 100; i++) {
         ASSERT_FALSE(bit_set->Get(i * 2 + 1));
     }
 }

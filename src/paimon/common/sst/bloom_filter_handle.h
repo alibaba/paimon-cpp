@@ -24,7 +24,7 @@
 
 namespace paimon {
 
-class BloomFilterHandle {
+class PAIMON_EXPORT BloomFilterHandle {
  public:
     BloomFilterHandle(int64_t offset, int32_t size, int64_t expected_entries)
         : offset_(offset), size_(size), expected_entries_(expected_entries) {}

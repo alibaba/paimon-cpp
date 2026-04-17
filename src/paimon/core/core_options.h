@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
@@ -36,7 +37,6 @@
 #include "paimon/result.h"
 #include "paimon/table/source/startup_mode.h"
 #include "paimon/type_fwd.h"
-#include "paimon/utils/bucket_function_type.h"
 #include "paimon/visibility.h"
 
 namespace paimon {

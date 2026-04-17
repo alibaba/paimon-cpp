@@ -191,7 +191,7 @@ Result<std::shared_ptr<ArrowType>> FromInt64(const ::parquet::LogicalType& logic
 
 Result<std::shared_ptr<ArrowType>> GetArrowType(
     ::parquet::Type::type physical_type, const ::parquet::LogicalType& logical_type,
-    int type_length, const ::arrow::TimeUnit::type int96_arrow_time_unit) {
+    int32_t type_length, const ::arrow::TimeUnit::type int96_arrow_time_unit) {
     if (logical_type.is_invalid() || logical_type.is_null()) {
         return ::arrow::null();
     }

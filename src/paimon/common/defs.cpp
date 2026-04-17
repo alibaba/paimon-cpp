@@ -123,5 +123,11 @@ const char Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[] = "lookup.cache.high-pri
 const char Options::BUCKET_FUNCTION_TYPE[] = "bucket-function.type";
 const char Options::LOOKUP_CACHE_FILE_RETENTION[] = "lookup.cache-file-retention";
 const char Options::LOOKUP_CACHE_MAX_DISK_SIZE[] = "lookup.cache-max-disk-size";
+const char Options::BTREE_INDEX_COMPRESSION[] = "btree-index.compression";
+const char Options::BTREE_INDEX_COMPRESSION_LEVEL[] = "btree-index.compression-level";
+const char Options::BTREE_INDEX_BLOCK_SIZE[] = "btree-index.block-size";
+const char Options::BTREE_INDEX_CACHE_SIZE[] = "btree-index.cache-size";
+const char Options::BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO[] = "btree-index.high-priority-pool-ratio";
+const char Options::BTREE_INDEX_RECORDS_PER_RANGE[] = "btree-index.records-per-range";
 
 }  // namespace paimon

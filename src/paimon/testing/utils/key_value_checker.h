@@ -22,8 +22,8 @@
 
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/key_value.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {

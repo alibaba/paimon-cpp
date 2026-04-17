@@ -35,20 +35,19 @@ SstFileWriter::SstFileWriter(const std::shared_ptr<OutputStream>& out,
 }
 
 Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>&& value) {
-    data_block_writer_->Write(key, value);
+    PAIMON_RETURN_NOT_OK(data_block_writer_->Write(key, value));
     last_key_ = key;
     if (data_block_writer_->Memory() > block_size_) {
         PAIMON_RETURN_NOT_OK(Flush());
     }
-    if (bloom_filter_.get()) {
+    if (bloom_filter_) {
+        // Double-check that bloom_filter_ is valid
+        if (!bloom_filter_->GetBitSet()) {
+            return Status::Invalid("Bloom filter bit set is null");
+        }
         PAIMON_RETURN_NOT_OK(bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key)));
     }
     return Status::OK();
-}
-
-Status SstFileWriter::Write(const MemorySlice& slice) {
-    auto data = slice.ReadStringView();
-    return WriteBytes(data.data(), data.size());
 }
 
 Status SstFileWriter::Flush() {
@@ -58,9 +57,9 @@ Status SstFileWriter::Flush() {
 
     PAIMON_ASSIGN_OR_RAISE(BlockHandle handle, FlushBlockWriter(data_block_writer_.get()));
 
-    auto slice = handle.WriteBlockHandle(pool_.get());
+    PAIMON_ASSIGN_OR_RAISE(MemorySlice slice, handle.WriteBlockHandle(pool_.get()));
     auto value = slice.CopyBytes(pool_.get());
-    index_block_writer_->Write(last_key_, value);
+    PAIMON_RETURN_NOT_OK(index_block_writer_->Write(last_key_, value));
     return Status::OK();
 }
 
@@ -83,10 +82,7 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     return handle;
 }
 
-Status SstFileWriter::WriteFooter(const BlockHandle& index_block_handle,
-                                  const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle) {
-    BlockFooter footer(index_block_handle, bloom_filter_handle);
-    auto slice = footer.WriteBlockFooter(pool_.get());
+Status SstFileWriter::WriteSlice(const MemorySlice& slice) {
     auto data = slice.ReadStringView();
     PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
     return Status::OK();
@@ -144,7 +140,7 @@ Result<int32_t> SstFileWriter::WriteVarLenInt(char* bytes, int32_t value) {
     if (value < 0) {
         return Status::Invalid("negative value: v=" + std::to_string(value));
     }
-    int i = 0;
+    int32_t i = 0;
     while ((value & ~0x7F) != 0) {
         bytes[i++] = (static_cast<char>((value & 0x7F) | 0x80));
         value >>= 7;

@@ -48,6 +48,20 @@ class PAIMON_EXPORT GlobalIndexReader : public FunctionVisitor<std::shared_ptr<G
     virtual Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search) = 0;
 
+    /// VisitAnd performs logical AND across multiple child results.
+    /// Default implementation returns "not supported" error.
+    Result<std::shared_ptr<GlobalIndexResult>> VisitAnd(
+        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override {
+        return Status::NotImplemented("AND operations not supported by this index type");
+    }
+
+    /// VisitOr performs logical OR across multiple child results.
+    /// Default implementation returns "not supported" error.
+    Result<std::shared_ptr<GlobalIndexResult>> VisitOr(
+        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override {
+        return Status::NotImplemented("OR operations not supported by this index type");
+    }
+
     /// @return true if the reader is thread-safe; false otherwise.
     virtual bool IsThreadSafe() const = 0;
 

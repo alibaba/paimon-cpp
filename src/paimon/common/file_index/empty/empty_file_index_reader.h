@@ -65,6 +65,16 @@ class EmptyFileIndexReader : public FileIndexReader {
         const std::vector<Literal>& literals) override {
         return FileIndexResult::Skip();
     }
+
+    Result<std::shared_ptr<FileIndexResult>> VisitBetween(const Literal& from,
+                                                          const Literal& to) override {
+        return FileIndexResult::Skip();
+    }
+
+    Result<std::shared_ptr<FileIndexResult>> VisitNotBetween(const Literal& from,
+                                                             const Literal& to) override {
+        return FileIndexResult::Remain();
+    }
 };
 
 }  // namespace paimon

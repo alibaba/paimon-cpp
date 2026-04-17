@@ -16,6 +16,7 @@
 
 #include "paimon/common/memory/memory_slice_output.h"
 
+#include "fmt/format.h"
 #include "paimon/common/utils/math.h"
 namespace paimon {
 
@@ -49,34 +50,36 @@ void MemorySliceOutput::WriteValue(T value) {
     size_ += write_length;
 }
 
-void MemorySliceOutput::WriteVarLenInt(int32_t value) {
+Status MemorySliceOutput::WriteVarLenInt(int32_t value) {
     if (value < 0) {
-        throw std::invalid_argument("negative value: v=" + std::to_string(value));
+        return Status::Invalid(fmt::format("negative value: v={}", value));
     }
     while ((value & ~0x7F) != 0) {
         WriteValue(static_cast<char>((value & 0x7F) | 0x80));
         value >>= 7;
     }
     WriteValue(static_cast<char>(value));
+    return Status::OK();
 }
 
-void MemorySliceOutput::WriteVarLenLong(int64_t value) {
+Status MemorySliceOutput::WriteVarLenLong(int64_t value) {
     if (value < 0) {
-        throw std::invalid_argument("negative value: v=" + std::to_string(value));
+        return Status::Invalid(fmt::format("negative value: v={}", value));
     }
     while ((value & ~0x7F) != 0) {
         WriteValue(static_cast<char>((value & 0x7F) | 0x80));
         value >>= 7;
     }
     WriteValue(static_cast<char>(value));
+    return Status::OK();
 }
 
 void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source) {
     WriteBytes(source, 0, source->size());
 }
 
-void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source, int source_index,
-                                   int length) {
+void MemorySliceOutput::WriteBytes(const std::shared_ptr<Bytes>& source, int32_t source_index,
+                                   int32_t length) {
     EnsureSize(size_ + length);
     std::string_view sv{source->data(), source->size()};
     segment_.Put(size_, sv, source_index, length);
@@ -91,12 +94,12 @@ bool MemorySliceOutput::NeedSwap() const {
     return SystemByteOrder() != byte_order_;
 }
 
-void MemorySliceOutput::EnsureSize(int size) {
+void MemorySliceOutput::EnsureSize(int32_t size) {
     if (size <= segment_.Size()) {
         return;
     }
     int32_t capacity = segment_.Size();
-    int min_capacity = segment_.Size() + size;
+    int32_t min_capacity = segment_.Size() + size;
     while (capacity < min_capacity) {
         capacity <<= 1;
     }

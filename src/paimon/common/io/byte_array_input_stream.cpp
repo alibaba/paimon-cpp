@@ -86,7 +86,7 @@ void ByteArrayInputStream::ReadAsync(char* buffer, uint32_t size, uint64_t offse
     Result<int32_t> read_size = Read(buffer, size, offset);
     Status status = Status::OK();
     if (read_size.ok() && static_cast<uint32_t>(read_size.value()) != size) {
-        status = Status::IOError(fmt::format(
+        status = Status::Invalid(fmt::format(
             "ByteArrayInputStream async read size {} != expected {}", read_size.value(), size));
     } else if (!read_size.ok()) {
         status = read_size.status();

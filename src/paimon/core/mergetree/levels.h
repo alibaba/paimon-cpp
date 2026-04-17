@@ -15,10 +15,10 @@
  */
 
 #pragma once
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/mergetree/level_sorted_run.h"
 #include "paimon/core/mergetree/sorted_run.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/result.h"
 namespace paimon {
 /// A class which stores all level files of merge tree.
