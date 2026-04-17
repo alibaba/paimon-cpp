@@ -165,6 +165,38 @@ TEST_F(MergeTreeCompactRewriterTest, TestSimple) {
     CheckResult(compact_file_name, fs, table_schema, expected_array);
 }
 
+TEST_F(MergeTreeCompactRewriterTest, TestCancel) {
+    std::string origin_table_path = GetDataDir() + "/orc/pk_table_scan_and_read_mor.db/";
+    auto table_dir = UniqueTestDirectory::Create("local");
+    ASSERT_TRUE(TestUtil::CopyDirectory(origin_table_path, table_dir->Str()));
+    std::string table_path = table_dir->Str() + "/pk_table_scan_and_read_mor";
+    auto fs = table_dir->GetFileSystem();
+
+    SchemaManager schema_manager(fs, table_path);
+    ASSERT_OK_AND_ASSIGN(auto table_schema, schema_manager.ReadSchema(0));
+    ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap(table_schema->Options()));
+    auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(table_schema->Fields());
+    auto dv_factory = [](const std::string&) -> Result<std::shared_ptr<DeletionVector>> {
+        return std::shared_ptr<DeletionVector>();
+    };
+    auto cancellation_controller = std::make_shared<CancellationController>();
+    auto path_factory_cache =
+        std::make_shared<FileStorePathFactoryCache>(table_path, table_schema, options, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto rewriter,
+        MergeTreeCompactRewriter::Create(
+            /*bucket=*/1, /*partition=*/BinaryRowGenerator::GenerateRow({10}, pool_.get()),
+            table_schema, dv_factory, path_factory_cache, options, cancellation_controller, pool_));
+
+    ASSERT_OK_AND_ASSIGN(auto runs, GenerateSortedRuns(table_path, table_schema, /*bucket=*/1,
+                                                       /*partition=*/{{"f1", "10"}}));
+
+    // cancel compaction here
+    cancellation_controller->Cancel();
+    ASSERT_NOK_WITH_MSG(rewriter->Rewrite(/*output_level=*/5, /*drop_delete=*/true, runs),
+                        "Compaction is cancelled");
+}
+
 TEST_F(MergeTreeCompactRewriterTest, TestNotDropDelete) {
     std::string origin_table_path = GetDataDir() + "/orc/pk_table_scan_and_read_mor.db/";
     auto table_dir = UniqueTestDirectory::Create("local");

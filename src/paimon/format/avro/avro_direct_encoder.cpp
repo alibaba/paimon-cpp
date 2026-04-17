@@ -101,7 +101,7 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
         }
 
         case ::avro::AVRO_INT: {
-            // AVRO_INT can represent: int32, date (days since epoch)
+            // AVRO_INT can represent: int8, int16, int32, date (days since epoch)
             switch (array.type()->id()) {
                 case arrow::Type::INT8: {
                     const auto& int8_array =
@@ -130,7 +130,8 @@ Status AvroDirectEncoder::EncodeArrowToAvro(const ::avro::NodePtr& avro_node,
                 }
                 default:
                     return Status::Invalid(
-                        fmt::format("AVRO_INT expects Int32Array or Date32Array, got {}",
+                        fmt::format("AVRO_INT expects Int8Array or Int16Array or Int32Array or "
+                                    "Date32Array, got {}",
                                     array.type()->ToString()));
             }
         }

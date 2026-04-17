@@ -250,16 +250,22 @@ Result<std::unique_ptr<BatchReader>> AppendOnlyFileStoreWrite::CreateFilesReader
     const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
     const std::vector<std::shared_ptr<DataFileMeta>>& files) const {
     ReadContextBuilder context_builder(root_path_);
-    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
-    // usage during compaction. Will fix via parquet format refactor.
-    context_builder.EnablePrefetch(true)
+    context_builder.SetOptions(options_.ToMap())
+        .WithFileSystem(options_.GetFileSystem())
+        .EnablePrefetch(true)
         .SetPrefetchMaxParallelNum(1)
         .SetPrefetchBatchCount(3)
-        .AddOption("parquet.read.enable-pre-buffer", "false");
+        .WithMemoryPool(pool_);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context, context_builder.Finish());
-    std::map<std::string, std::string> map = options_.ToMap();
+    std::map<std::string, std::string> options = options_.ToMap();
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high
+    // memory usage during compaction. Will fix via parquet format refactor.
+    auto new_options = options;
+    if (new_options.find("parquet.read.enable-pre-buffer") == new_options.end()) {
+        new_options["parquet.read.enable-pre-buffer"] = "false";
+    }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_read_context,
-                           InternalReadContext::Create(read_context, table_schema_, map));
+                           InternalReadContext::Create(read_context, table_schema_, new_options));
     auto read = std::make_unique<RawFileSplitRead>(file_store_path_factory_, internal_read_context,
                                                    pool_, compact_executor_);
 

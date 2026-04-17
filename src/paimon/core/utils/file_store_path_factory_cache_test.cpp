@@ -27,7 +27,8 @@ TEST(FileStorePathFactoryCacheTest, TestSimple) {
         std::shared_ptr<TableSchema> table_schema,
         TableSchema::InitSchema(/*schema_id=*/0, fields, /*highest_field_id=*/fields.size(),
                                 /*partition_keys=*/{},
-                                /*primary_keys=*/{}, /*options=*/{}, /*time_millis=*/0));
+                                /*primary_keys=*/{}, /*options=*/{}, /*comment=*/std::nullopt,
+                                /*time_millis=*/0));
 
     ASSERT_OK_AND_ASSIGN(auto options, CoreOptions::FromMap({}));
     FileStorePathFactoryCache cache("/test_root/", table_schema, options, GetDefaultPool());
