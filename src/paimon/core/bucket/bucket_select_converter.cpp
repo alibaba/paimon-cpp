@@ -119,9 +119,9 @@ std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqua
     return result;
 }
 
-Status BucketSelectConverter::WriteLiteralToRow(BinaryRowWriter* writer, int32_t pos,
-                                                const Literal& literal, FieldType field_type,
-                                                const std::shared_ptr<arrow::DataType>& arrow_type) {
+Status BucketSelectConverter::WriteLiteralToRow(
+    BinaryRowWriter* writer, int32_t pos, const Literal& literal, FieldType field_type,
+    const std::shared_ptr<arrow::DataType>& arrow_type) {
     switch (field_type) {
         case FieldType::BOOLEAN:
             writer->WriteBoolean(pos, literal.GetValue<bool>());

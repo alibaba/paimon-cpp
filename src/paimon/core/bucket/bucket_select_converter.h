@@ -24,10 +24,10 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
-#include "paimon/bucket/bucket_function_type.h"
 
 namespace paimon {
 
@@ -53,7 +53,8 @@ class BucketSelectConverter {
     /// @param bucket_function_type The bucket function type (DEFAULT, MOD, HIVE).
     /// @param num_buckets The total number of buckets.
     /// @param pool Memory pool for BinaryRow construction.
-    /// @return The target bucket ID, or nullopt if predicates don't fully constrain all bucket keys.
+    /// @return The target bucket ID, or nullopt if predicates don't fully constrain all bucket
+    /// keys.
     static Result<std::optional<int32_t>> Convert(
         const std::shared_ptr<Predicate>& predicate,
         const std::vector<std::string>& bucket_key_names,

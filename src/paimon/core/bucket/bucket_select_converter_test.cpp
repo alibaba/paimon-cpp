@@ -44,9 +44,9 @@ TEST_F(BucketSelectConverterTest, SingleIntEqualDefault) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -66,9 +66,9 @@ TEST_F(BucketSelectConverterTest, SingleStringEqualDefault) {
     Literal lit(FieldType::STRING, val.c_str(), val.size());
     auto predicate = PredicateBuilder::Equal(0, "name", FieldType::STRING, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"name"}, {FieldType::STRING}, {arrow::utf8()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"name"}, {FieldType::STRING}, {arrow::utf8()},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -123,9 +123,9 @@ TEST_F(BucketSelectConverterTest, NonEqualPredicateReturnsNullopt) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::GreaterThan(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result.value().has_value());
 }
@@ -139,9 +139,9 @@ TEST_F(BucketSelectConverterTest, OrPredicateReturnsNullopt) {
     auto predicate = PredicateBuilder::Or({pred1, pred2});
     ASSERT_TRUE(predicate.ok());
 
-    auto result = BucketSelectConverter::Convert(
-        predicate.value(), {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result = BucketSelectConverter::Convert(predicate.value(), {"id"}, {FieldType::INT},
+                                                 {arrow::int32()}, BucketFunctionType::DEFAULT,
+                                                 num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result.value().has_value());
 }
@@ -151,9 +151,9 @@ TEST_F(BucketSelectConverterTest, ModBucketFunction) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::MOD, num_buckets,
-        pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::MOD, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -172,9 +172,9 @@ TEST_F(BucketSelectConverterTest, NullLiteralReturnsNullopt) {
     Literal lit(FieldType::INT);  // null literal
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result.value().has_value());
 }
@@ -183,17 +183,17 @@ TEST_F(BucketSelectConverterTest, DynamicBucketModeReturnsNullopt) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT, -1,
-        pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::DEFAULT, -1, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result.value().has_value());
 }
 
 TEST_F(BucketSelectConverterTest, NullPredicateReturnsNullopt) {
-    auto result = BucketSelectConverter::Convert(
-        nullptr, {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT, 5,
-        pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(nullptr, {"id"}, {FieldType::INT}, {arrow::int32()},
+                                       BucketFunctionType::DEFAULT, 5, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result.value().has_value());
 }
@@ -203,9 +203,9 @@ TEST_F(BucketSelectConverterTest, BigintKeyDefault) {
     Literal lit(static_cast<int64_t>(123456789L));
     auto predicate = PredicateBuilder::Equal(0, "user_id", FieldType::BIGINT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"user_id"}, {FieldType::BIGINT}, {arrow::int64()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result = BucketSelectConverter::Convert(predicate, {"user_id"}, {FieldType::BIGINT},
+                                                 {arrow::int64()}, BucketFunctionType::DEFAULT,
+                                                 num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -229,9 +229,9 @@ TEST_F(BucketSelectConverterTest, AndWithExtraPredicateStillWorks) {
     auto predicate = PredicateBuilder::And({pred_id, pred_val});
     ASSERT_TRUE(predicate.ok());
 
-    auto result = BucketSelectConverter::Convert(
-        predicate.value(), {"id"}, {FieldType::INT}, {arrow::int32()}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result = BucketSelectConverter::Convert(predicate.value(), {"id"}, {FieldType::INT},
+                                                 {arrow::int32()}, BucketFunctionType::DEFAULT,
+                                                 num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -251,9 +251,9 @@ TEST_F(BucketSelectConverterTest, TimestampMillisPrecision) {
     auto predicate = PredicateBuilder::Equal(0, "ts", FieldType::TIMESTAMP, lit);
 
     auto arrow_type = arrow::timestamp(arrow::TimeUnit::MILLI);
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -274,9 +274,9 @@ TEST_F(BucketSelectConverterTest, TimestampMicrosPrecision) {
     auto predicate = PredicateBuilder::Equal(0, "ts", FieldType::TIMESTAMP, lit);
 
     auto arrow_type = arrow::timestamp(arrow::TimeUnit::MICRO);
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
@@ -315,9 +315,9 @@ TEST_F(BucketSelectConverterTest, DecimalKey) {
     auto predicate = PredicateBuilder::Equal(0, "amount", FieldType::DECIMAL, lit);
 
     auto arrow_type = arrow::decimal128(10, 2);
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"amount"}, {FieldType::DECIMAL}, {arrow_type}, BucketFunctionType::DEFAULT,
-        num_buckets, pool_.get());
+    auto result =
+        BucketSelectConverter::Convert(predicate, {"amount"}, {FieldType::DECIMAL}, {arrow_type},
+                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
     ASSERT_TRUE(result.ok());
     ASSERT_TRUE(result.value().has_value());
 
