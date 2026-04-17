@@ -28,6 +28,7 @@
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/predicate/predicate_filter.h"
 #include "paimon/common/utils/object_utils.h"
+#include "paimon/core/bucket/bucket_select_converter.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/options/merge_engine.h"
@@ -115,6 +116,26 @@ Status KeyValueFileStoreScan::SplitAndSetKeyValueFilter(
             return Status::Invalid("invalid key predicate, cannot cast to PredicateFilter");
         }
         WithKeyFilter(key_filter);
+
+        // Bucket select conversion: derive target bucket from EQUAL predicates on bucket keys
+        const auto& bucket_keys = table_schema_->BucketKeys();
+        int32_t num_buckets = core_options_.GetBucket();
+        if (num_buckets > 0 && !bucket_keys.empty()) {
+            std::vector<FieldType> bucket_key_types;
+            bucket_key_types.reserve(bucket_keys.size());
+            for (const auto& key : bucket_keys) {
+                PAIMON_ASSIGN_OR_RAISE(FieldType ft, table_schema_->GetFieldType(key));
+                bucket_key_types.push_back(ft);
+            }
+            PAIMON_ASSIGN_OR_RAISE(
+                auto selected_bucket,
+                BucketSelectConverter::Convert(key_predicate, bucket_keys, bucket_key_types,
+                                               core_options_.GetBucketFunctionType(), num_buckets,
+                                               pool_.get()));
+            if (selected_bucket.has_value()) {
+                SetBucketFilterIfAbsent(selected_bucket.value());
+            }
+        }
     }
 
     // Only set value filtering when there are predicates on non-primary-key fields.
