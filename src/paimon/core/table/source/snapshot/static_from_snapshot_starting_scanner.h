@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "paimon/core/table/source/snapshot/starting_scanner.h"
+#include "paimon/logging.h"
 
 namespace paimon {
 /// `StartingScanner` for the `StartupMode::FromSnapshot()` or `StartupMode::FromSnapshotFull()`
@@ -38,7 +39,9 @@ class StaticFromSnapshotStartingScanner : public StartingScanner {
         PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> latest,
                                snapshot_manager_->LatestSnapshotId());
         if (earliest == std::nullopt || latest == std::nullopt) {
-            // TODO(liancheng.lsz): Log
+            static auto logger = Logger::GetLogger("StaticFromSnapshotStartingScanner");
+            PAIMON_LOG_INFO(
+                logger, "There is currently no snapshot. Waiting for snapshot generation.%s", "");
             return std::make_shared<StartingScanner::NoSnapshot>();
         }
         if (starting_snapshot_id_.value() < earliest.value() ||

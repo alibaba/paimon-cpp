@@ -19,6 +19,7 @@
 #include <memory>
 
 #include "paimon/core/table/source/snapshot/follow_up_scanner.h"
+#include "paimon/logging.h"
 
 namespace paimon {
 class DeltaFollowUpScanner : public FollowUpScanner {
@@ -27,7 +28,10 @@ class DeltaFollowUpScanner : public FollowUpScanner {
         if (snapshot.GetCommitKind() == Snapshot::CommitKind::Append()) {
             return true;
         }
-        // TODO(liancheng.lsz): log
+        static auto logger = Logger::GetLogger("DeltaFollowUpScanner");
+        PAIMON_LOG_WARN(
+            logger, "Ignore snapshot #%ld with commit kind %s in delta follow-up scanner.",
+            snapshot.Id(), Snapshot::CommitKind::ToString(snapshot.GetCommitKind()).c_str());
         return false;
     }
     Result<std::shared_ptr<Plan>> Scan(

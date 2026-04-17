@@ -61,7 +61,13 @@ class BucketedAppendCompactManager : public CompactFutureManager {
                 return false;
             }
             if (!ignore_overlap && IsOverlap(lhs, rhs)) {
-                // TODO(yonghao.fyh): add log
+                static auto logger = Logger::GetLogger("BucketedAppendCompactManager");
+                PAIMON_LOG_WARN(logger,
+                                "Overlap detected between files %s and %s, "
+                                "sequence range [%ld, %ld] and [%ld, %ld].",
+                                lhs->file_name.c_str(), rhs->file_name.c_str(),
+                                lhs->min_sequence_number, lhs->max_sequence_number,
+                                rhs->min_sequence_number, rhs->max_sequence_number);
             }
             return lhs->min_sequence_number < rhs->min_sequence_number;
         };
