@@ -1460,7 +1460,7 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
         return arrow::null();
     }
     ::orc::TypeKind kind = type->getKind();
-    const int32_t subtype_count = static_cast<int>(type->getSubtypeCount());
+    const auto subtype_count = static_cast<int32_t>(type->getSubtypeCount());
 
     switch (kind) {
         case ::orc::BOOLEAN:
@@ -1502,8 +1502,8 @@ Result<std::shared_ptr<arrow::DataType>> OrcAdapter::GetArrowType(const ::orc::T
         case ::orc::DATE:
             return arrow::date32();
         case ::orc::DECIMAL: {
-            const int32_t precision = static_cast<int32_t>(type->getPrecision());
-            const int32_t scale = static_cast<int32_t>(type->getScale());
+            const auto precision = static_cast<int32_t>(type->getPrecision());
+            const auto scale = static_cast<int32_t>(type->getScale());
             return arrow::decimal128(precision, scale);
         }
         case ::orc::LIST: {

@@ -19,6 +19,7 @@
 #include <memory>
 #include <string>
 
+#include "arrow/api.h"
 #include "paimon/common/global_index/btree/btree_file_footer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 #include "paimon/common/sst/sst_file_writer.h"

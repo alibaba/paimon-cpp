@@ -16,10 +16,10 @@
 
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
 
-#include <arrow/c/bridge.h>
-#include <arrow/ipc/json_simple.h>
-#include <gtest/gtest.h>
-
+#include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
+#include "arrow/ipc/json_simple.h"
+#include "gtest/gtest.h"
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
