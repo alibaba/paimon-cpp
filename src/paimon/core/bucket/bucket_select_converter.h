@@ -27,7 +27,7 @@
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
-#include "paimon/utils/bucket_function_type.h"
+#include "paimon/bucket/bucket_function_type.h"
 
 namespace paimon {
 
