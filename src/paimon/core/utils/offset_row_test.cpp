@@ -19,44 +19,88 @@
 #include <utility>
 #include <variant>
 
+#include "arrow/api.h"
+#include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/data/binary_row.h"
+#include "paimon/common/data/columnar/columnar_map.h"
 #include "paimon/common/data/data_define.h"
+#include "paimon/common/data/generic_row.h"
+#include "paimon/common/data/internal_array.h"
+#include "paimon/common/data/internal_map.h"
 #include "paimon/common/types/row_kind.h"
-#include "paimon/memory/bytes.h"
+#include "paimon/common/utils/decimal_utils.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 
 namespace paimon::test {
 TEST(OffsetRowTest, TestSimple) {
-    auto pool = GetDefaultPool().get();
-    auto bytes = std::make_shared<Bytes>("world", pool);
-    Timestamp ts(/*millisecond=*/1000, /*nano_of_millisecond=*/10);
-    Decimal decimal(/*precision=*/20, /*scale=*/3, 1234567l);
-    auto inner_row = BinaryRowGenerator::GenerateRow(
-        {static_cast<int8_t>(0), static_cast<int8_t>(1), static_cast<int16_t>(11),
-         static_cast<int32_t>(111), static_cast<int64_t>(1111), static_cast<float>(12.3), 12.34,
-         false, std::string("hello"), bytes, TimestampType(ts, Timestamp::MAX_PRECISION), decimal,
-         NullType()},
-        pool);
-    OffsetRow row(inner_row, /*arity=*/12, /*offset=*/1);
+    auto pool = GetDefaultPool();
+    // generate internal row
+    GenericRow internal_row(17);
+    internal_row.SetField(0, false);
+    internal_row.SetField(1, true);
+    internal_row.SetField(2, static_cast<char>(1));
+    internal_row.SetField(3, static_cast<int16_t>(2));
+    internal_row.SetField(4, static_cast<int32_t>(3));
+    internal_row.SetField(5, static_cast<int64_t>(4));
+    internal_row.SetField(6, static_cast<float>(5.1));
+    internal_row.SetField(7, 6.12);
+    auto str = BinaryString::FromString("abcd", pool.get());
+    internal_row.SetField(8, str);
+    std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes("efgh", pool.get());
+    internal_row.SetField(9, bytes);
+    std::string str9 = "apple";
+    internal_row.SetField(10, std::string_view(str9.data(), str9.size()));
+
+    Timestamp ts(100, 20);
+    internal_row.SetField(11, ts);
+    Decimal decimal(/*precision=*/30, /*scale=*/20,
+                    DecimalUtils::StrToInt128("12345678998765432145678").value());
+    internal_row.SetField(12, decimal);
+
+    auto array = std::make_shared<BinaryArray>(BinaryArray::FromLongArray(
+        {static_cast<int64_t>(10), static_cast<int64_t>(20)}, pool.get()));
+    internal_row.SetField(13, array);
+
+    std::shared_ptr<InternalRow> binary_row =
+        BinaryRowGenerator::GenerateRowPtr({100, 200}, pool.get());
+    internal_row.SetField(14, binary_row);
+
+    auto key = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3]").ValueOrDie();
+    auto value =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::int64(), "[2, 4, 6]").ValueOrDie();
+    auto map = std::make_shared<ColumnarMap>(key, value, pool, /*offset=*/0, /*length=*/3);
+    internal_row.SetField(15, map);
+    // do not set value at pos 16, therefore, pos 16 is null
+    ASSERT_EQ(internal_row.GetFieldCount(), 17);
+
+    OffsetRow row(internal_row, /*arity=*/16, /*offset=*/1);
     ASSERT_EQ(row.GetRowKind().value(), RowKind::Insert());
-    ASSERT_EQ(row.GetFieldCount(), 12);
-    ASSERT_FALSE(row.IsNullAt(0));
-    ASSERT_EQ(row.GetByte(0), static_cast<char>(1));
-    ASSERT_EQ(row.GetShort(1), static_cast<int16_t>(11));
-    ASSERT_EQ(row.GetInt(2), static_cast<int32_t>(111));
-    ASSERT_EQ(row.GetDate(2), static_cast<int32_t>(111));
-    ASSERT_EQ(row.GetLong(3), static_cast<int64_t>(1111));
-    ASSERT_EQ(row.GetFloat(4), static_cast<float>(12.3));
-    ASSERT_EQ(row.GetDouble(5), static_cast<double>(12.34));
-    ASSERT_EQ(row.GetBoolean(6), false);
-    ASSERT_EQ(row.GetString(7).ToString(), "hello");
+    ASSERT_EQ(row.GetFieldCount(), 16);
+    ASSERT_EQ(row.GetBoolean(0), true);
+    ASSERT_EQ(row.GetByte(1), static_cast<char>(1));
+    ASSERT_EQ(row.GetShort(2), static_cast<int16_t>(2));
+    ASSERT_EQ(row.GetInt(3), static_cast<int32_t>(3));
+    ASSERT_EQ(row.GetDate(3), static_cast<int32_t>(3));
+    ASSERT_EQ(row.GetLong(4), static_cast<int64_t>(4));
+    ASSERT_EQ(row.GetFloat(5), static_cast<float>(5.1));
+    ASSERT_EQ(row.GetDouble(6), static_cast<double>(6.12));
+    ASSERT_EQ(row.GetString(7), str);
     ASSERT_EQ(*row.GetBinary(8), *bytes);
-    ASSERT_EQ(row.GetTimestamp(9, Timestamp::MAX_PRECISION), ts);
-    ASSERT_EQ(row.GetDecimal(10, /*precision=*/20, /*scale=*/3), decimal);
-    ASSERT_TRUE(row.IsNullAt(11));
-    ASSERT_EQ(row.ToString(), "OffsetRow, arity 12, offset 1");
+    ASSERT_EQ(std::string(row.GetStringView(9)), str9);
+    ASSERT_EQ(row.GetTimestamp(10, /*precision=*/9), ts);
+    ASSERT_EQ(row.GetDecimal(11, /*precision=*/30, /*scale=*/20), decimal);
+    ASSERT_EQ(row.GetArray(12)->ToLongArray().value(), array->ToLongArray().value());
+    auto binary_row_result = std::dynamic_pointer_cast<BinaryRow>(row.GetRow(13, 2));
+    auto binary_row_expected = std::dynamic_pointer_cast<BinaryRow>(binary_row);
+    ASSERT_EQ(*binary_row_result, *binary_row_expected);
+    ASSERT_EQ(row.GetMap(14)->KeyArray()->ToIntArray().value(),
+              map->KeyArray()->ToIntArray().value());
+    ASSERT_EQ(row.GetMap(14)->ValueArray()->ToLongArray().value(),
+              map->ValueArray()->ToLongArray().value());
+    ASSERT_TRUE(row.IsNullAt(15));
+    ASSERT_EQ(row.ToString(), "OffsetRow, arity 16, offset 1");
 }
 
 }  // namespace paimon::test

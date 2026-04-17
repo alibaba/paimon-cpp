@@ -117,12 +117,14 @@ class TableSchema : public Schema, public Jsonizable<TableSchema> {
         int64_t schema_id, const std::vector<DataField>& fields, int32_t highest_field_id,
         const std::vector<std::string>& partition_keys,
         const std::vector<std::string>& primary_keys,
-        const std::map<std::string, std::string>& options, int64_t time_millis);
+        const std::map<std::string, std::string>& options,
+        const std::optional<std::string>& comment, int64_t time_millis);
 
     TableSchema(int32_t version, int64_t id, const std::vector<DataField>& fields,
                 int32_t highest_field_id, const std::vector<std::string>& partition_keys,
                 const std::vector<std::string>& primary_keys,
-                const std::map<std::string, std::string>& options, int64_t time_millis);
+                const std::map<std::string, std::string>& options,
+                const std::optional<std::string>& comment, int64_t time_millis);
 
     Result<std::vector<std::string>> OriginalBucketKeys() const;
 

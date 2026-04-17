@@ -36,7 +36,8 @@ TEST(DeletionVectorsIndexFileTest, Basic) {
                          FileSystemFactory::Get("local", dir->Str(), {}));
     auto path_factory = std::make_shared<MockIndexPathFactory>(dir->Str());
     auto pool = GetDefaultPool();
-    DeletionVectorsIndexFile index_file(fs, path_factory, /*bitmap64=*/false, pool);
+    auto index_file =
+        std::make_shared<DeletionVectorsIndexFile>(fs, path_factory, /*bitmap64=*/false, pool);
 
     std::map<std::string, std::shared_ptr<DeletionVector>> input;
     RoaringBitmap32 roaring_1;
@@ -50,15 +51,18 @@ TEST(DeletionVectorsIndexFileTest, Basic) {
     }
     input["dv2"] = std::make_shared<BitmapDeletionVector>(roaring_2);
 
-    ASSERT_FALSE(index_file.Bitmap64());
-    ASSERT_OK_AND_ASSIGN(auto meta, index_file.WriteSingleFile(input));
+    ASSERT_FALSE(index_file->Bitmap64());
+    ASSERT_OK_AND_ASSIGN(auto meta, index_file->WriteSingleFile(input));
     ASSERT_GT(meta->FileSize(), 0);
+    ASSERT_OK_AND_ASSIGN(auto size, index_file->FileSize(meta));
+    ASSERT_EQ(meta->FileSize(), size);
     ASSERT_EQ(meta->IndexType(), DeletionVectorsIndexFile::DELETION_VECTORS_INDEX);
     ASSERT_EQ(meta->FileName(), "index-0");
+    ASSERT_FALSE(index_file->IsExternalPath());
     ASSERT_EQ(meta->ExternalPath(), std::nullopt);
 
     // Round trip: write then read all deletion vectors from index file.
-    ASSERT_OK_AND_ASSIGN(auto read_back, index_file.ReadAllDeletionVectors(meta));
+    ASSERT_OK_AND_ASSIGN(auto read_back, index_file->ReadAllDeletionVectors(meta));
     ASSERT_EQ(read_back.size(), input.size());
     ASSERT_EQ(read_back.at("dv1")->GetCardinality(), 10);
     ASSERT_EQ(read_back.at("dv2")->GetCardinality(), 10);

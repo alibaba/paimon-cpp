@@ -265,6 +265,21 @@ TEST_F(AvroDirectEncoderDecoderTest, TestTimestampType) {
     }
 }
 
+TEST_F(AvroDirectEncoderDecoderTest, TestInvalidTimestampType) {
+    std::string schema_json = R"({"type": "long", "logicalType": "timestamp-millis"})";
+    arrow::TimestampBuilder builder(arrow::timestamp(arrow::TimeUnit::NANO),
+                                    arrow::default_memory_pool());
+    ASSERT_TRUE(builder.Append(1609459200123L).ok());  // 2021-01-01 00:00:00.123
+    ASSERT_TRUE(builder.Append(0L).ok());              // 1970-01-01 00:00:00
+    std::shared_ptr<arrow::Array> input_array;
+    ASSERT_TRUE(builder.Finish(&input_array).ok());
+
+    auto avro_schema = ::avro::compileJsonSchemaFromString(schema_json);
+    ASSERT_NOK_WITH_MSG(EncodeData(avro_schema.root(), input_array),
+                        "Unsupported timestamp type with avro logical type \"logicalType\": "
+                        "\"timestamp-millis\" and arrow time unit NANOSECOND.");
+}
+
 TEST_F(AvroDirectEncoderDecoderTest, TestUnionType) {
     // Test nullable int (union of null and int)
     std::string schema_json = R"(["null", "int"])";

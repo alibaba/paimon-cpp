@@ -510,6 +510,7 @@ TEST_F(TableSchemaTest, TestToJson2) {
                 "file.format" : "orc",
                 "manifest.format" : "orc"
         },
+        "comment" : "this is a comment",
         "timeMillis" : 1721614341162
     })";
     ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableSchema> schema_result,
