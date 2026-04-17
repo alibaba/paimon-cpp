@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 
+#include "arrow/type_fwd.h"
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/result.h"
@@ -41,11 +42,14 @@ class Predicate;
 class BucketSelectConverter {
  public:
     BucketSelectConverter() = delete;
+    ~BucketSelectConverter() = delete;
 
     /// Convert predicates to a target bucket ID.
     /// @param predicate The predicate (possibly compound AND) to analyze.
     /// @param bucket_key_names Ordered bucket key field names.
     /// @param bucket_key_types Ordered bucket key field types (matching bucket_key_names).
+    /// @param bucket_key_arrow_types Ordered Arrow data types for bucket key fields.
+    ///        Used to extract precision/scale for TIMESTAMP and DECIMAL types.
     /// @param bucket_function_type The bucket function type (DEFAULT, MOD, HIVE).
     /// @param num_buckets The total number of buckets.
     /// @param pool Memory pool for BinaryRow construction.
@@ -53,8 +57,9 @@ class BucketSelectConverter {
     static Result<std::optional<int32_t>> Convert(
         const std::shared_ptr<Predicate>& predicate,
         const std::vector<std::string>& bucket_key_names,
-        const std::vector<FieldType>& bucket_key_types, BucketFunctionType bucket_function_type,
-        int32_t num_buckets, MemoryPool* pool);
+        const std::vector<FieldType>& bucket_key_types,
+        const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types,
+        BucketFunctionType bucket_function_type, int32_t num_buckets, MemoryPool* pool);
 
  private:
     /// Extract single literal per bucket key field from EQUAL predicates.
@@ -66,7 +71,8 @@ class BucketSelectConverter {
 
     /// Write a Literal value to a BinaryRowWriter at the given position.
     static Status WriteLiteralToRow(BinaryRowWriter* writer, int32_t pos, const Literal& literal,
-                                    FieldType field_type);
+                                    FieldType field_type,
+                                    const std::shared_ptr<arrow::DataType>& arrow_type);
 
     /// Create the appropriate BucketFunction for the given type.
     static Result<std::unique_ptr<BucketFunction>> CreateBucketFunction(

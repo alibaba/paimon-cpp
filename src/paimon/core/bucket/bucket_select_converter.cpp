@@ -20,9 +20,12 @@
 #include <string>
 #include <utility>
 
+#include "arrow/type.h"
+#include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
+#include "paimon/common/utils/date_time_utils.h"
 #include "paimon/core/bucket/bucket_function.h"
 #include "paimon/core/bucket/default_bucket_function.h"
 #include "paimon/core/bucket/hive_bucket_function.h"
@@ -36,16 +39,19 @@
 namespace paimon {
 
 Result<std::optional<int32_t>> BucketSelectConverter::Convert(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::vector<std::string>& bucket_key_names,
-    const std::vector<FieldType>& bucket_key_types, BucketFunctionType bucket_function_type,
-    int32_t num_buckets, MemoryPool* pool) {
+    const std::shared_ptr<Predicate>& predicate, const std::vector<std::string>& bucket_key_names,
+    const std::vector<FieldType>& bucket_key_types,
+    const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types,
+    BucketFunctionType bucket_function_type, int32_t num_buckets, MemoryPool* pool) {
     if (!predicate || bucket_key_names.empty() || num_buckets <= 0 || !pool) {
         return std::optional<int32_t>(std::nullopt);
     }
 
-    if (bucket_key_names.size() != bucket_key_types.size()) {
-        return Status::Invalid("bucket_key_names and bucket_key_types must have the same size");
+    if (bucket_key_names.size() != bucket_key_types.size() ||
+        bucket_key_names.size() != bucket_key_arrow_types.size()) {
+        return Status::Invalid(
+            "bucket_key_names, bucket_key_types, and bucket_key_arrow_types must have the same "
+            "size");
     }
 
     auto literals_opt = ExtractEqualLiterals(predicate, bucket_key_names);
@@ -64,20 +70,20 @@ Result<std::optional<int32_t>> BucketSelectConverter::Convert(
     for (int32_t i = 0; i < num_fields; i++) {
         const auto& field_name = bucket_key_names[i];
         const auto& literal = literals_map.at(field_name);
-        PAIMON_RETURN_NOT_OK(WriteLiteralToRow(&writer, i, literal, bucket_key_types[i]));
+        PAIMON_RETURN_NOT_OK(
+            WriteLiteralToRow(&writer, i, literal, bucket_key_types[i], bucket_key_arrow_types[i]));
     }
     writer.Complete();
 
     // Create the bucket function and compute the bucket
-    PAIMON_ASSIGN_OR_RAISE(auto bucket_function,
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BucketFunction> bucket_function,
                            CreateBucketFunction(bucket_function_type, bucket_key_types));
     int32_t bucket = bucket_function->Bucket(row, num_buckets);
     return std::optional<int32_t>(bucket);
 }
 
 std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqualLiterals(
-    const std::shared_ptr<Predicate>& predicate,
-    const std::vector<std::string>& bucket_key_names) {
+    const std::shared_ptr<Predicate>& predicate, const std::vector<std::string>& bucket_key_names) {
     std::set<std::string> key_set(bucket_key_names.begin(), bucket_key_names.end());
     std::map<std::string, Literal> result;
 
@@ -114,7 +120,8 @@ std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqua
 }
 
 Status BucketSelectConverter::WriteLiteralToRow(BinaryRowWriter* writer, int32_t pos,
-                                                const Literal& literal, FieldType field_type) {
+                                                const Literal& literal, FieldType field_type,
+                                                const std::shared_ptr<arrow::DataType>& arrow_type) {
     switch (field_type) {
         case FieldType::BOOLEAN:
             writer->WriteBoolean(pos, literal.GetValue<bool>());
@@ -146,13 +153,18 @@ Status BucketSelectConverter::WriteLiteralToRow(BinaryRowWriter* writer, int32_t
         }
         case FieldType::TIMESTAMP: {
             Timestamp ts = literal.GetValue<Timestamp>();
-            // Use precision 3 (millisecond) as default for compact timestamps
-            writer->WriteTimestamp(pos, ts, /*precision=*/3);
+            auto timestamp_type =
+                arrow::internal::checked_pointer_cast<arrow::TimestampType>(arrow_type);
+            int32_t precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
+            writer->WriteTimestamp(pos, ts, precision);
             break;
         }
         case FieldType::DECIMAL: {
             Decimal dec = literal.GetValue<Decimal>();
-            writer->WriteDecimal(pos, dec, dec.Precision());
+            const auto* decimal_type =
+                arrow::internal::checked_cast<const arrow::Decimal128Type*>(arrow_type.get());
+            int32_t precision = decimal_type->precision();
+            writer->WriteDecimal(pos, dec, precision);
             break;
         }
         default:
