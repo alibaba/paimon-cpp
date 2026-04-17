@@ -64,6 +64,7 @@ Result<bool> BlockIterator::SeekTo(const MemorySlice& target_key) {
 
         int32_t entry_position = reader_->SeekTo(mid);
         PAIMON_RETURN_NOT_OK(input_.SetPosition(entry_position));
+
         PAIMON_ASSIGN_OR_RAISE(MemorySlice mid_key, ReadKeyAndSkipValue());
         PAIMON_ASSIGN_OR_RAISE(int32_t compare, reader_->Comparator()(mid_key, target_key));
 
@@ -71,14 +72,18 @@ Result<bool> BlockIterator::SeekTo(const MemorySlice& target_key) {
             polled_position_ = entry_position;
             return true;
         } else if (compare > 0) {
+            // mid_key > target_key, this could be the first key >= target_key
             polled_position_ = entry_position;
             right = mid - 1;
         } else {
-            polled_position_ = -1;
+            // mid_key < target_key, need to look at larger keys
+            // Don't reset polled_position_ here - keep the last position where key > target
             left = mid + 1;
         }
     }
 
+    // If we exit the loop without finding exact match, polled_position_ points to
+    // the first entry with key > target_key (if any), or -1 if all keys < target_key
     return false;
 }
 

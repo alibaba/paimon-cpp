@@ -40,15 +40,14 @@ Status SstFileWriter::Write(std::shared_ptr<Bytes>&& key, std::shared_ptr<Bytes>
     if (data_block_writer_->Memory() > block_size_) {
         PAIMON_RETURN_NOT_OK(Flush());
     }
-    if (bloom_filter_.get()) {
+    if (bloom_filter_) {
+        // Double-check that bloom_filter_ is valid
+        if (!bloom_filter_->GetBitSet()) {
+            return Status::Invalid("Bloom filter bit set is null");
+        }
         PAIMON_RETURN_NOT_OK(bloom_filter_->AddHash(MurmurHashUtils::HashBytes(key)));
     }
     return Status::OK();
-}
-
-Status SstFileWriter::Write(const MemorySlice& slice) {
-    auto data = slice.ReadStringView();
-    return WriteBytes(data.data(), data.size());
 }
 
 Status SstFileWriter::Flush() {
@@ -83,10 +82,7 @@ Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     return handle;
 }
 
-Status SstFileWriter::WriteFooter(const BlockHandle& index_block_handle,
-                                  const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle) {
-    BlockFooter footer(index_block_handle, bloom_filter_handle);
-    auto slice = footer.WriteBlockFooter(pool_.get());
+Status SstFileWriter::WriteSlice(const MemorySlice& slice) {
     auto data = slice.ReadStringView();
     PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
     return Status::OK();

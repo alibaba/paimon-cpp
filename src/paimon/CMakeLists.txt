@@ -69,6 +69,7 @@ set(PAIMON_COMMON_SRCS
     common/io/cache/lru_cache.cpp
     common/logging/logging.cpp
     common/lookup/sort/sort_lookup_store_factory.cpp
+    common/lookup/sort/sort_lookup_store_footer.cpp
     common/lookup/lookup_store_factory.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
@@ -112,7 +113,6 @@ set(PAIMON_COMMON_SRCS
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
     common/sst/block_handle.cpp
-    common/sst/block_footer.cpp
     common/sst/block_iterator.cpp
     common/sst/block_trailer.cpp
     common/sst/block_reader.cpp
@@ -406,6 +406,12 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp
                     common/global_index/bitmap/bitmap_global_index_test.cpp
+                    common/global_index/btree/btree_index_meta_test.cpp
+                    common/global_index/btree/btree_file_footer_test.cpp
+                    common/global_index/btree/btree_global_indexer_test.cpp
+                    common/global_index/btree/btree_global_index_writer_test.cpp
+                    common/global_index/btree/btree_global_index_integration_test.cpp
+                    common/global_index/btree/btree_compatibility_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
                     common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp

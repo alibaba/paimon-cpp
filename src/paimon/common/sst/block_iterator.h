@@ -22,7 +22,7 @@
 namespace paimon {
 class BlockReader;
 
-class BlockIterator {
+class PAIMON_EXPORT BlockIterator {
  public:
     explicit BlockIterator(const std::shared_ptr<BlockReader>& reader);
 

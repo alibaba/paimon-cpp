@@ -434,6 +434,24 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache-max-disk-size" - Max disk size for lookup cache, you can use this option
     /// to limit the use of local disks. Default value is unlimited (INT64_MAX).
     static const char LOOKUP_CACHE_MAX_DISK_SIZE[];
+    /// "btree-index.compression" - The compression algorithm to use for BTreeIndex.
+    /// Default value is "none".
+    static const char BTREE_INDEX_COMPRESSION[];
+    /// "btree-index.compression-level" - The compression level of the compression algorithm.
+    /// Default value is 1.
+    static const char BTREE_INDEX_COMPRESSION_LEVEL[];
+    /// "btree-index.block-size" - The block size to use for BTreeIndex.
+    /// Default value is 64 KB.
+    static const char BTREE_INDEX_BLOCK_SIZE[];
+    /// "btree-index.cache-size" - The cache size to use for BTreeIndex.
+    /// Default value is 128 MB.
+    static const char BTREE_INDEX_CACHE_SIZE[];
+    /// "btree-index.high-priority-pool-ratio" - The high priority pool ratio to use for BTreeIndex.
+    /// Default value is 0.1.
+    static const char BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO[];
+    /// "btree-index.records-per-range" - The expected number of records per BTree Index File.
+    /// Default value is 1000000.
+    static const char BTREE_INDEX_RECORDS_PER_RANGE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

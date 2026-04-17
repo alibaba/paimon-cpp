@@ -25,7 +25,7 @@
 
 namespace paimon {
 
-class BlockHandle {
+class PAIMON_EXPORT BlockHandle {
  public:
     static Result<BlockHandle> ReadBlockHandle(MemorySliceInput* input);
 

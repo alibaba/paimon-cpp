@@ -22,6 +22,7 @@
 
 #include "paimon/fs/file_system.h"
 #include "paimon/io/byte_array_input_stream.h"
+#include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "roaring.hh"  // NOLINT(build/include_subdir)
 
@@ -227,6 +228,10 @@ bool RoaringBitmap64::operator==(const RoaringBitmap64& other) const noexcept {
 PAIMON_UNIQUE_PTR<Bytes> RoaringBitmap64::Serialize(MemoryPool* pool) const {
     GetRoaringBitmap(roaring_bitmap_).runOptimize();
     auto& bitmap = GetRoaringBitmap(roaring_bitmap_);
+    // Use default pool if no pool is provided
+    if (pool == nullptr) {
+        pool = GetDefaultPool().get();
+    }
     auto bytes = Bytes::AllocateBytes(bitmap.getSizeInBytes(), pool);
     bitmap.write(bytes->data());
     return bytes;

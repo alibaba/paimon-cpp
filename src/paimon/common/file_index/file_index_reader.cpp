@@ -98,4 +98,44 @@ Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitNotIn(
     }
     return file_index_result;
 }
+
+Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitAnd(
+    const std::vector<Result<std::shared_ptr<FileIndexResult>>>& children) {
+    if (children.empty()) {
+        return Status::Invalid("VisitAnd called with no children");
+    }
+
+    // Start with the first child
+    PAIMON_RETURN_NOT_OK(children[0]);
+    auto current = children[0].value();
+
+    // AND with remaining children
+    for (size_t i = 1; i < children.size(); ++i) {
+        PAIMON_RETURN_NOT_OK(children[i]);
+        auto child = children[i].value();
+        PAIMON_ASSIGN_OR_RAISE(current, current->And(child));
+    }
+
+    return current;
+}
+
+Result<std::shared_ptr<FileIndexResult>> FileIndexReader::VisitOr(
+    const std::vector<Result<std::shared_ptr<FileIndexResult>>>& children) {
+    if (children.empty()) {
+        return Status::Invalid("VisitOr called with no children");
+    }
+
+    // Start with the first child
+    PAIMON_RETURN_NOT_OK(children[0]);
+    auto current = children[0].value();
+
+    // OR with remaining children
+    for (size_t i = 1; i < children.size(); ++i) {
+        PAIMON_RETURN_NOT_OK(children[i]);
+        auto child = children[i].value();
+        PAIMON_ASSIGN_OR_RAISE(current, current->Or(child));
+    }
+
+    return current;
+}
 }  // namespace paimon
