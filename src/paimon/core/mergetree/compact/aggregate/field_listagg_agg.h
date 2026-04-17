@@ -79,7 +79,7 @@ class FieldListaggAgg : public FieldAggregator {
             new_result.append(in_str);
             result_ = std::move(new_result);
         }
-        return std::string_view(result_);
+        return std::string_view{result_};
     }
 
  private:

@@ -143,6 +143,21 @@ TEST_F(UniversalCompactionTest, TestPick) {
     ASSERT_EQ(GetFileSizeVecFromCompactUnit(pick.value()), std::vector<int64_t>({1, 50, 3}));
 }
 
+TEST_F(UniversalCompactionTest, TestAllLevelRunsInvolved) {
+    int64_t current_time = 0;
+    auto full_compact_trigger = std::make_shared<TestableEarlyFullCompaction>(
+        /*full_compaction_interval=*/std::nullopt,
+        /*total_size_threshold=*/std::nullopt,
+        /*incremental_size_threshold=*/1000l, &current_time);
+    UniversalCompaction compaction(/*max_size_amp=*/100, /*size_ratio=*/1,
+                                   /*num_run_compaction_trigger=*/3, full_compact_trigger, nullptr);
+    ASSERT_OK_AND_ASSIGN(auto pick, compaction.Pick(/*num_levels=*/3, CreateRunsWithLevelAndSize(
+                                                                          /*levels=*/{0, 0, 0},
+                                                                          /*sizes=*/{1, 1, 3})));
+    ASSERT_TRUE(pick);
+    ASSERT_EQ(GetFileSizeVecFromCompactUnit(pick.value()), std::vector<int64_t>({1, 1, 3}));
+}
+
 TEST_F(UniversalCompactionTest, TestOptimizedCompactionInterval) {
     int64_t current_time = 0;
     auto full_compact_trigger = std::make_shared<TestableEarlyFullCompaction>(

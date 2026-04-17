@@ -47,6 +47,7 @@
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/memory_pool.h"
+#include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -60,6 +61,41 @@ class MergeFunctionWrapper;
 namespace paimon::test {
 class MergeTreeWriterTest : public ::testing::Test {
  public:
+    class FakeCompactManager : public paimon::CompactManager {
+     public:
+        Status AddNewFile(const std::shared_ptr<DataFileMeta>& file) override {
+            return Status::OK();
+        }
+        std::vector<std::shared_ptr<DataFileMeta>> AllFiles() const override {
+            static std::vector<std::shared_ptr<DataFileMeta>> empty;
+            return empty;
+        }
+        Status TriggerCompaction(bool full_compaction) override {
+            return Status::OK();
+        }
+        Result<std::optional<std::shared_ptr<CompactResult>>> GetCompactionResult(
+            bool blocking) override {
+            get_result_blocking_calls.push_back(blocking);
+            return std::optional<std::shared_ptr<CompactResult>>();
+        }
+        void RequestCancelCompaction() override {}
+        void WaitForCompactionToExit() override {}
+        bool CompactNotCompleted() const override {
+            return false;
+        }
+        bool ShouldWaitForLatestCompaction() const override {
+            return true;
+        }
+        bool ShouldWaitForPreparingCheckpoint() const override {
+            return true;
+        }
+        Status Close() override {
+            return Status::OK();
+        }
+
+        std::vector<bool> get_result_blocking_calls;
+    };
+
     void SetUp() override {
         pool_ = GetDefaultPool();
         file_system_ = std::make_shared<LocalFileSystem>();
@@ -114,6 +150,18 @@ class MergeTreeWriterTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(std::shared_ptr<arrow::ChunkedArray> result_array,
                              ReadResultCollector::CollectResult(orc_batch_reader.get()));
         ASSERT_TRUE(expected_array->Equals(result_array)) << result_array->ToString();
+    }
+
+    std::shared_ptr<DataFileMeta> CreateMeta(const std::string& name, int32_t level) const {
+        return std::make_shared<DataFileMeta>(
+            name, /*file_size=*/100, /*row_count=*/1, DataFileMeta::EmptyMinKey(),
+            DataFileMeta::EmptyMaxKey(), SimpleStats::EmptyStats(), SimpleStats::EmptyStats(),
+            /*min_sequence_number=*/0, /*max_sequence_number=*/1, /*schema_id=*/0, level,
+            /*extra_files=*/std::vector<std::optional<std::string>>(), Timestamp(),
+            /*delete_row_count=*/0,
+            /*embedded_index=*/nullptr, FileSource::Append(),
+            /*value_stats_cols=*/std::nullopt, /*external_path=*/std::nullopt,
+            /*first_row_id=*/std::nullopt, /*write_cols=*/std::nullopt);
     }
 
  private:
@@ -830,6 +878,138 @@ TEST_F(MergeTreeWriterTest, TestBulkData) {
             /*write_cols=*/std::nullopt);
         ASSERT_EQ(*commit_increment.GetNewFilesIncrement().NewFiles()[i], *expected_data_file_meta);
     }
+}
+
+TEST_F(MergeTreeWriterTest, TestShouldWait) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    auto fake_compact_manager = std::make_shared<FakeCompactManager>();
+    auto merge_writer = std::make_shared<MergeTreeWriter>(
+        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
+        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+        value_schema_, options, fake_compact_manager, pool_);
+
+    std::shared_ptr<arrow::Array> array =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+      ["Lucy", 20, 1, 14.1],
+      ["Paul", 20, 1, null],
+      ["Alice", 10, 0, 13.1]
+    ])")
+            .ValueOrDie();
+    WriteBatch(array, /*row_kinds=*/{}, merge_writer.get());
+    ASSERT_TRUE(fake_compact_manager->get_result_blocking_calls.empty());
+
+    ASSERT_OK_AND_ASSIGN(CommitIncrement commit_increment,
+                         merge_writer->PrepareCommit(/*wait_compaction=*/false));
+    ASSERT_EQ(fake_compact_manager->get_result_blocking_calls.size(), 2u);
+    ASSERT_TRUE(fake_compact_manager->get_result_blocking_calls[0]);
+    ASSERT_TRUE(fake_compact_manager->get_result_blocking_calls[1]);
+    ASSERT_OK(merge_writer->Close());
+}
+
+TEST_F(MergeTreeWriterTest, TestUpdateCompactResultDeleteIntermediateFile) {
+    // TODO(lisizhuo.lsz): test UpdateCompactResult in inte compaction test.
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    auto fake_compact_manager = std::make_shared<FakeCompactManager>();
+    auto merge_writer = std::make_shared<MergeTreeWriter>(
+        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
+        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+        value_schema_, options, fake_compact_manager, pool_);
+
+    // Round 1: Before=[A], After=[X]  => compact_before_=[A], compact_after_=[X]
+    // Round 2: Before=[X], After=[Y]  => X is in compact_after_, so it's an intermediate file
+    auto file_a = CreateMeta("file_a", /*level=*/0);
+    auto file_x = CreateMeta("file_x", /*level=*/0);
+    auto file_y = CreateMeta("file_y", /*level=*/1);
+
+    merge_writer->compact_before_ = {file_a};
+    merge_writer->compact_after_ = {file_x};
+
+    auto before = std::vector<std::shared_ptr<DataFileMeta>>({file_x});
+    auto after = std::vector<std::shared_ptr<DataFileMeta>>({file_y});
+    auto compact_result = std::make_shared<CompactResult>(before, after);
+    ASSERT_OK(merge_writer->UpdateCompactResult(compact_result));
+    ASSERT_EQ(merge_writer->compact_before_, std::vector<std::shared_ptr<DataFileMeta>>({file_a}));
+    ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
+}
+
+TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactAfter) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    auto fake_compact_manager = std::make_shared<FakeCompactManager>();
+    auto merge_writer = std::make_shared<MergeTreeWriter>(
+        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
+        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+        value_schema_, options, fake_compact_manager, pool_);
+
+    // Round 1: Before=[A], After=[X@level0] => compact_after_ = [X@level0]
+    // Round 2 (upgrade): Before=[X@level0], After=[X@level1]
+    // X is in compact_after_, but also in after_files => should NOT be deleted.
+    auto file_a = CreateMeta("file_a", /*level=*/0);
+    auto file_x_level0 = CreateMeta("file_x_level0", /*level=*/0);
+    auto file_x_level1 = CreateMeta("file_x_level1", /*level=*/1);
+
+    merge_writer->compact_before_ = {file_a};
+    merge_writer->compact_after_ = {file_x_level0};
+
+    auto before = std::vector<std::shared_ptr<DataFileMeta>>({file_x_level0});
+    auto after = std::vector<std::shared_ptr<DataFileMeta>>({file_x_level1});
+    auto compact_result = std::make_shared<CompactResult>(before, after);
+    ASSERT_OK(merge_writer->UpdateCompactResult(compact_result));
+    ASSERT_EQ(merge_writer->compact_before_, std::vector<std::shared_ptr<DataFileMeta>>({file_a}));
+    ASSERT_EQ(merge_writer->compact_after_,
+              std::vector<std::shared_ptr<DataFileMeta>>({file_x_level1}));
+}
+
+TEST_F(MergeTreeWriterTest, TestUpdateCompactResultWithFileInCompactBefore) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::FILE_FORMAT, "orc"}}));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto path_factory = std::make_shared<DataFilePathFactory>();
+    ASSERT_OK(path_factory->Init(dir->Str(), "orc", options.DataFilePrefix(), nullptr));
+
+    auto fake_compact_manager = std::make_shared<FakeCompactManager>();
+    auto merge_writer = std::make_shared<MergeTreeWriter>(
+        /*last_sequence_number=*/-1, primary_keys_, path_factory, key_comparator_,
+        /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_, /*schema_id=*/0,
+        value_schema_, options, fake_compact_manager, pool_);
+
+    // Round 1 (upgrade): Before=[X@level0], After=[X@level1]
+    // X is not in compact_after_ yet, so it goes to compact_before_ = [X].
+    // compact_after_ = [X@level1].
+    // Round 2: Before=[X@level1], After=[Y]
+    // X@level1 is in compact_after_, so it's an intermediate file candidate.
+    // But in_compact_before(X) is true (from round 1), so X should NOT be deleted.
+    auto file_x = CreateMeta("file_x", /*level=*/0);
+    auto file_x_level1 = CreateMeta("file_x_level1", /*level=*/1);
+    auto file_y = CreateMeta("file_y", /*level=*/1);
+
+    merge_writer->compact_before_ = {file_x};
+    merge_writer->compact_after_ = {file_x_level1};
+
+    auto before = std::vector<std::shared_ptr<DataFileMeta>>({file_x_level1});
+    auto after = std::vector<std::shared_ptr<DataFileMeta>>({file_y});
+    auto compact_result = std::make_shared<CompactResult>(before, after);
+    ASSERT_OK(merge_writer->UpdateCompactResult(compact_result));
+    ASSERT_EQ(merge_writer->compact_before_, std::vector<std::shared_ptr<DataFileMeta>>({file_x}));
+    ASSERT_EQ(merge_writer->compact_after_, std::vector<std::shared_ptr<DataFileMeta>>({file_y}));
 }
 
 }  // namespace paimon::test

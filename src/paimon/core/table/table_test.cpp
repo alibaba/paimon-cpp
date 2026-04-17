@@ -55,4 +55,31 @@ TEST(TableTest, TestCreateWithUnknownDatabase) {
     EXPECT_EQ(latest_schema->PrimaryKeys(), primary_keys);
 }
 
+TEST(TableTest, TestCreateFailedWithNonExistSchema) {
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    auto fs = dir->GetFileSystem();
+    SchemaManager schema_manager(fs, dir->Str());
+    auto schema =
+        arrow::schema({arrow::field("id", arrow::int32(), /*nullable=*/false),
+                       arrow::field("name", arrow::utf8()), arrow::field("value", arrow::int64())});
+    std::vector<std::string> partition_keys = {"name"};
+    std::vector<std::string> primary_keys = {"id"};
+    std::map<std::string, std::string> options = {
+        {"file.format", "orc"},
+        {"commit.force-compact", "true"},
+    };
+
+    ASSERT_OK_AND_ASSIGN([[maybe_unused]] std::unique_ptr<TableSchema> created_schema,
+                         schema_manager.CreateTable(schema, partition_keys, primary_keys, options));
+
+    // remove schema
+    std::string schema_path = schema_manager.ToSchemaPath(0);
+    ASSERT_OK(fs->Delete(schema_path, /*recursive=*/false));
+    // check create table failed
+    ASSERT_NOK_WITH_MSG(
+        Table::Create(fs, dir->Str(), Identifier("tbl1")),
+        "load table schema for Identifier{database='unknown', table='tbl1'} failed");
+}
+
 }  // namespace paimon::test

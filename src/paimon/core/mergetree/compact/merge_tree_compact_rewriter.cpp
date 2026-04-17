@@ -71,21 +71,23 @@ Result<std::unique_ptr<MergeTreeCompactRewriter>> MergeTreeCompactRewriter::Crea
     auto write_schema = SpecialFields::CompleteSequenceAndValueKindField(data_schema);
 
     // TODO(xinyu.lxy): set executor
-    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
-    // usage during compaction. Will fix via parquet format refactor.
     ReadContextBuilder read_context_builder(path_factory_cache->RootPath());
     read_context_builder.SetOptions(options.ToMap())
+        .WithFileSystem(options.GetFileSystem())
         .EnablePrefetch(true)
         .SetPrefetchMaxParallelNum(1)
         .SetPrefetchBatchCount(3)
-        .WithMemoryPool(pool)
-        .AddOption("parquet.read.enable-pre-buffer", "false");
+        .WithMemoryPool(pool);
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
-
-    PAIMON_ASSIGN_OR_RAISE(
-        std::shared_ptr<InternalReadContext> internal_context,
-        InternalReadContext::Create(read_context, table_schema, options.ToMap()));
+    // TODO(xinyu.lxy): temporarily disabled pre-buffer for parquet, which may cause high memory
+    // usage during compaction. Will fix via parquet format refactor.
+    auto new_options = options.ToMap();
+    if (new_options.find("parquet.read.enable-pre-buffer") == new_options.end()) {
+        new_options["parquet.read.enable-pre-buffer"] = "false";
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InternalReadContext> internal_context,
+                           InternalReadContext::Create(read_context, table_schema, new_options));
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileStorePathFactory> path_factory,
         path_factory_cache->GetOrCreatePathFactory(options.GetFileFormat()->Identifier()));
