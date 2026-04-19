@@ -155,7 +155,7 @@ class AppendCompactCoordinatorTest : public ::testing::Test {
         }
         ASSERT_EQ(total_before_rows, expected_total_rows);
         ASSERT_EQ(compact_after[0]->row_count, expected_total_rows);
-    };
+    }
 
  private:
     std::shared_ptr<MemoryPool> pool_;
