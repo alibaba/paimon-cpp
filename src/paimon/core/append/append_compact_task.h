@@ -35,8 +35,6 @@ class CoreOptions;
 /// This task holds the partition and the list of files to compact (compact_before),
 /// performs the actual compaction via `AppendOnlyFileStoreWrite::CompactRewrite`,
 /// and produces a `CommitMessage` containing the `CompactIncrement`.
-///
-/// Corresponds to Java's `org.apache.paimon.append.AppendCompactTask`.
 class AppendCompactTask {
  public:
     AppendCompactTask(const BinaryRow& partition,

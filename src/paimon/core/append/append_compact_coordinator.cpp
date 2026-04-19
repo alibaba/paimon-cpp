@@ -49,7 +49,6 @@ namespace paimon {
 namespace {
 
 /// A bin for packing small files into compaction groups.
-/// Corresponds to Java's `AppendCompactCoordinator.SubCoordinator.FileBin`.
 class FileBin {
  public:
     FileBin(int64_t target_file_size, int64_t open_file_cost, int32_t min_file_num)
@@ -308,7 +307,7 @@ Result<std::vector<std::shared_ptr<CommitMessage>>> AppendCompactCoordinator::Ru
     const std::vector<std::map<std::string, std::string>>& partitions,
     const std::shared_ptr<FileSystem>& file_system, const std::shared_ptr<MemoryPool>& input_pool) {
     auto pool = input_pool ? input_pool : GetDefaultPool();
-    std::shared_ptr<Executor> executor = GetGlobalDefaultExecutor();
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor();
 
     // Load schema and merge options
     std::pair<std::shared_ptr<TableSchema>, CoreOptions> schema_and_options;
