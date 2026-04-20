@@ -84,4 +84,18 @@ Result<PAIMON_UNIQUE_PTR<DeletionVector>> BitmapDeletionVector::Deserialize(cons
                                          length - MAGIC_NUMBER_SIZE_BYTES, pool);
 }
 
+Status BitmapDeletionVector::Merge(const std::shared_ptr<DeletionVector>& deletionVector) {
+    if (!deletionVector || deletionVector->IsEmpty()) {
+        return Status::OK();
+    }
+    auto* other = dynamic_cast<BitmapDeletionVector*>(deletionVector.get());
+    if (other != nullptr) {
+        roaring_bitmap_ |= other->roaring_bitmap_;
+    } else {
+        return Status::Invalid(
+            "Cannot merge a non-BitmapDeletionVector into a BitmapDeletionVector");
+    }
+    return Status::OK();
+}
+
 }  // namespace paimon

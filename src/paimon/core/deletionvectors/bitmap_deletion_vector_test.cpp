@@ -165,4 +165,73 @@ TEST(BitmapDeletionVectorTest, DeserializeWithoutMagicNumberShouldRoundTrip) {
     ASSERT_FALSE(deserialized->IsDeleted(8).value());
 }
 
+TEST(BitmapDeletionVectorTest, MergeTwoBitmapDeletionVectors) {
+    RoaringBitmap32 roaring1;
+    roaring1.Add(1);
+    roaring1.Add(3);
+    roaring1.Add(5);
+    auto dv1 = std::make_shared<BitmapDeletionVector>(roaring1);
+
+    RoaringBitmap32 roaring2;
+    roaring2.Add(2);
+    roaring2.Add(4);
+    roaring2.Add(5);  // overlapping position
+    auto dv2 = std::make_shared<BitmapDeletionVector>(roaring2);
+
+    ASSERT_OK(dv1->Merge(dv2));
+
+    // All positions from both vectors should be marked as deleted.
+    ASSERT_TRUE(dv1->IsDeleted(1).value());
+    ASSERT_TRUE(dv1->IsDeleted(2).value());
+    ASSERT_TRUE(dv1->IsDeleted(3).value());
+    ASSERT_TRUE(dv1->IsDeleted(4).value());
+    ASSERT_TRUE(dv1->IsDeleted(5).value());
+    ASSERT_FALSE(dv1->IsDeleted(0).value());
+    ASSERT_FALSE(dv1->IsDeleted(6).value());
+    ASSERT_EQ(dv1->GetCardinality(), 5);
+}
+
+TEST(BitmapDeletionVectorTest, MergeEmptyDeletionVector) {
+    RoaringBitmap32 roaring1;
+    roaring1.Add(10);
+    roaring1.Add(20);
+    auto dv1 = std::make_shared<BitmapDeletionVector>(roaring1);
+
+    RoaringBitmap32 empty_roaring;
+    auto dv_empty = std::make_shared<BitmapDeletionVector>(empty_roaring);
+
+    ASSERT_OK(dv1->Merge(dv_empty));
+    ASSERT_EQ(dv1->GetCardinality(), 2);
+    ASSERT_TRUE(dv1->IsDeleted(10).value());
+    ASSERT_TRUE(dv1->IsDeleted(20).value());
+}
+
+TEST(BitmapDeletionVectorTest, MergeNullDeletionVector) {
+    RoaringBitmap32 roaring1;
+    roaring1.Add(7);
+    auto dv1 = std::make_shared<BitmapDeletionVector>(roaring1);
+
+    ASSERT_OK(dv1->Merge(nullptr));
+    ASSERT_EQ(dv1->GetCardinality(), 1);
+    ASSERT_TRUE(dv1->IsDeleted(7).value());
+}
+
+TEST(BitmapDeletionVectorTest, MergeIntoEmptyDeletionVector) {
+    RoaringBitmap32 empty_roaring;
+    auto dv1 = std::make_shared<BitmapDeletionVector>(empty_roaring);
+    ASSERT_TRUE(dv1->IsEmpty());
+
+    RoaringBitmap32 roaring2;
+    roaring2.Add(100);
+    roaring2.Add(200);
+    roaring2.Add(300);
+    auto dv2 = std::make_shared<BitmapDeletionVector>(roaring2);
+
+    ASSERT_OK(dv1->Merge(dv2));
+    ASSERT_EQ(dv1->GetCardinality(), 3);
+    ASSERT_TRUE(dv1->IsDeleted(100).value());
+    ASSERT_TRUE(dv1->IsDeleted(200).value());
+    ASSERT_TRUE(dv1->IsDeleted(300).value());
+}
+
 }  // namespace paimon::test
