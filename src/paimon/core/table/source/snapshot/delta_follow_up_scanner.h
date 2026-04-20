@@ -29,7 +29,7 @@ class DeltaFollowUpScanner : public FollowUpScanner {
             return true;
         }
         static auto logger = Logger::GetLogger("DeltaFollowUpScanner");
-        PAIMON_LOG_WARN(
+        PAIMON_LOG_DEBUG(
             logger, "Ignore snapshot #%ld with commit kind %s in delta follow-up scanner.",
             snapshot.Id(), Snapshot::CommitKind::ToString(snapshot.GetCommitKind()).c_str());
         return false;
