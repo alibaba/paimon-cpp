@@ -61,7 +61,8 @@ class BucketedAppendCompactManager : public CompactFutureManager {
                 return false;
             }
             if (!ignore_overlap && IsOverlap(lhs, rhs)) {
-                PAIMON_LOG_WARN(kLogger,
+                static auto logger = Logger::GetLogger("BucketedAppendCompactManager");
+                PAIMON_LOG_WARN(logger,
                                 "Overlap detected between files %s and %s, "
                                 "sequence range [%ld, %ld] and [%ld, %ld].",
                                 lhs->file_name.c_str(), rhs->file_name.c_str(),
@@ -112,9 +113,6 @@ class BucketedAppendCompactManager : public CompactFutureManager {
     }
 
  private:
-    static inline const std::unique_ptr<Logger> kLogger =
-        Logger::GetLogger("BucketedAppendCompactManager");
-
     static constexpr int32_t FULL_COMPACT_MIN_FILE = 3;
 
     static bool IsOverlap(const std::shared_ptr<DataFileMeta>& o1,
