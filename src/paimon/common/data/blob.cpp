@@ -33,19 +33,6 @@ namespace paimon {
 
 class MemoryPool;
 
-Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path) {
-    return FromPath(path, /*offset=*/0, /*length=*/-1);
-}
-
-Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path, int64_t offset,
-                                             int64_t length) {
-    PAIMON_ASSIGN_OR_RAISE(std::string normalized_path, PathUtil::NormalizePath(path));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobDescriptor> descriptor,
-                           BlobDescriptor::Create(normalized_path, offset, length));
-    auto impl = std::make_unique<Blob::Impl>(std::move(descriptor), descriptor->Uri());
-    return std::unique_ptr<Blob>(new Blob(std::move(impl)));
-}
-
 class Blob::Impl {
  public:
     Impl(std::unique_ptr<BlobDescriptor>&& descriptor, const std::string& uri)
@@ -67,6 +54,19 @@ class Blob::Impl {
     std::unique_ptr<BlobDescriptor> descriptor_;
     std::string uri_;
 };
+
+Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path) {
+    return FromPath(path, /*offset=*/0, /*length=*/-1);
+}
+
+Result<std::unique_ptr<Blob>> Blob::FromPath(const std::string& path, int64_t offset,
+                                             int64_t length) {
+    PAIMON_ASSIGN_OR_RAISE(std::string normalized_path, PathUtil::NormalizePath(path));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlobDescriptor> descriptor,
+                           BlobDescriptor::Create(normalized_path, offset, length));
+    auto impl = std::make_unique<Blob::Impl>(std::move(descriptor), descriptor->Uri());
+    return std::unique_ptr<Blob>(new Blob(std::move(impl)));
+}
 
 Blob::Blob(std::unique_ptr<Impl>&& impl) : impl_(std::move(impl)) {}
 Blob::~Blob() = default;

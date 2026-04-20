@@ -55,7 +55,7 @@ void* MemoryPoolImpl::Malloc(uint64_t size, uint64_t alignment) {
     return memptr;
 }
 
-void* MemoryPoolImpl::Realloc(void* p, size_t old_size, size_t new_size, size_t alignment) {
+void* MemoryPoolImpl::Realloc(void* p, size_t old_size, size_t new_size, uint64_t alignment) {
     if (alignment == 0) {
         void* memptr = ::realloc(p, new_size);
         total_allocated_size.fetch_add(new_size - old_size);
