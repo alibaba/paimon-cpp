@@ -265,6 +265,18 @@ PartialUpdateMergeFunction::CreateFieldAggregators(
     return aggregators;
 }
 
+void PartialUpdateMergeFunction::Reset() {
+    current_key_.reset();
+    meet_insert_ = false;
+    not_null_column_filled_ = false;
+    row_ = std::make_unique<GenericRow>(getters_.size());
+    last_seq_num_ = 0;
+    for (auto& [_, agg] : field_aggregators_) {
+        assert(agg);
+        agg->Reset();
+    }
+}
+
 Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
     // refresh key object to avoid reference overwritten
     KeyValue kv = std::move(moved_kv);
@@ -275,9 +287,17 @@ Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
         // In 0.7- versions, the delete records might be written into data file even when
         // ignore-delete configured, so ignoreDelete still needs to be checked
         if (ignore_delete_) {
+            if (!not_null_column_filled_) {
+                InitRowAndHoldData(std::move(kv.value));
+                not_null_column_filled_ = true;
+            }
             return Status::OK();
         }
+
+        last_seq_num_ = kv.sequence_number;
+
         if (field_sequence_enabled_) {
+            // RetractWithSequenceGroup handles InitRow and AddDataHolder internally
             PAIMON_RETURN_NOT_OK(RetractWithSequenceGroup(std::move(kv)));
             return Status::OK();
         }
@@ -285,16 +305,23 @@ Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
             if (kv.value_kind == RowKind::Delete()) {
                 current_delete_row_ = true;
                 row_ = std::make_unique<GenericRow>(getters_.size());
+                InitRowAndHoldData(std::move(kv.value));
+            } else if (!not_null_column_filled_) {
+                InitRowAndHoldData(std::move(kv.value));
+                not_null_column_filled_ = true;
             }
             return Status::OK();
         }
 
         return Status::Invalid(
             "By default, Partial update can not accept delete records, you can choose one of "
-            "the following solutions:1. Configure ignore-delete to ignore delete records; 2. "
-            "Configure partial-update.remove-record-on-delete to remove the whole row when "
-            "receiving delete records; 3. Configure sequence-group to retract partial "
-            "columns.");
+            "the following solutions:\n"
+            "1. Configure 'ignore-delete' to ignore delete records.\n"
+            "2. Configure 'partial-update.remove-record-on-delete' to remove the whole row "
+            "when receiving delete records.\n"
+            "3. Configure 'sequence-group's to retract partial columns. Also configure "
+            "'partial-update.remove-record-on-sequence-group' to remove the whole row when "
+            "receiving deleted records of specified sequence group.");
     }
     last_seq_num_ = kv.sequence_number;
     if (field_comparators_.empty()) {
@@ -302,6 +329,8 @@ Status PartialUpdateMergeFunction::Add(KeyValue&& moved_kv) {
     } else {
         UpdateWithSequenceGroup(std::move(kv));
     }
+    meet_insert_ = true;
+    not_null_column_filled_ = true;
     return Status::OK();
 }
 
@@ -356,6 +385,15 @@ void PartialUpdateMergeFunction::UpdateWithSequenceGroup(KeyValue&& kv) {
 }
 
 Status PartialUpdateMergeFunction::RetractWithSequenceGroup(KeyValue&& kv) {
+    // Initialize row with all field values if this is the first record.
+    // InitRow only reads field values (string_view etc.) from kv.value without taking ownership.
+    // kv.value remains alive throughout this method, so the views are safe until AddDataHolder
+    // at the end transfers ownership to row_.
+    if (!not_null_column_filled_) {
+        InitRow(*(kv.value));
+        not_null_column_filled_ = true;
+    }
+
     std::set<int32_t> updated_sequence_fields;
     for (size_t i = 0; i < getters_.size(); ++i) {
         auto cmp_iter = field_comparators_.find(i);
@@ -382,6 +420,7 @@ Status PartialUpdateMergeFunction::RetractWithSequenceGroup(KeyValue&& kv) {
                                     sequence_group_partial_delete_.end()) {
                                 current_delete_row_ = true;
                                 row_ = std::make_unique<GenericRow>(getters_.size());
+                                InitRowAndHoldData(std::move(kv.value));
                                 return Status::OK();
                             } else {
                                 row_->SetField(field_idx, getters_[field_idx](*(kv.value)));
@@ -411,6 +450,18 @@ Status PartialUpdateMergeFunction::RetractWithSequenceGroup(KeyValue&& kv) {
     }
     row_->AddDataHolder(std::move(kv.value));
     return Status::OK();
+}
+
+void PartialUpdateMergeFunction::InitRow(const InternalRow& value) {
+    for (size_t i = 0; i < getters_.size(); ++i) {
+        VariantType field = getters_[i](value);
+        row_->SetField(i, field);
+    }
+}
+
+void PartialUpdateMergeFunction::InitRowAndHoldData(std::unique_ptr<InternalRow>&& value) {
+    InitRow(*value);
+    row_->AddDataHolder(std::move(value));
 }
 
 bool PartialUpdateMergeFunction::IsEmptySequenceGroup(

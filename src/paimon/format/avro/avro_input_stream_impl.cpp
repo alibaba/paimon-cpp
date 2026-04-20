@@ -68,7 +68,8 @@ bool AvroInputStreamImpl::next(const uint8_t** data, size_t* len) {
         return false;  // eof
     }
     auto read_length =
-        in_->Read(reinterpret_cast<char*>(buffer_), std::min(buffer_size_, remaining));
+        in_->Read(reinterpret_cast<char*>(buffer_),
+                  static_cast<uint32_t>(std::min<uint64_t>(buffer_size_, remaining)));
     if (!read_length.ok()) {
         throw ::avro::Exception("Read failed: {}", read_length.status().ToString());
     }
