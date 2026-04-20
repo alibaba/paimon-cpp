@@ -217,8 +217,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
         }
         if (!page_ranges.empty()) {
             // Page-level PreBuffer: wait on specific page byte ranges
-            PAIMON_RETURN_NOT_OK_FROM_ARROW(
-                parquet_reader->WhenBufferedRanges(page_ranges).status());
+            // If pre-buffering failed (e.g., IO error during testing), fall back to on-demand read
+            auto status = parquet_reader->WhenBufferedRanges(page_ranges).status();
+            if (!status.ok()) {
+                // Pre-buffering failed, fall back to row-group level PreBuffer
+                ::arrow::io::IOContext io_ctx(pool);
+                parquet_reader->PreBuffer(rg_vec, col_vec, io_ctx, cache_options);
+            }
         } else {
             PAIMON_RETURN_NOT_OK_FROM_ARROW(parquet_reader->WhenBuffered(rg_vec, col_vec).status());
         }
@@ -255,7 +260,7 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
     // Build Table from ChunkedArrays, then combine chunks and extract a single RecordBatch
     auto table = arrow::Table::Make(arrow_schema, columns, expected_rows);
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Table> combined_table,
-                                     table->CombineChunks(pool));
+                                      table->CombineChunks(pool));
 
     // Extract arrays from the single-chunk table
     std::vector<std::shared_ptr<arrow::Array>> arrays;

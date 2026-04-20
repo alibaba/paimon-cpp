@@ -24,12 +24,11 @@
 #include <string>
 #include <vector>
 
-#include "parquet/page_index.h"
-
 #include "paimon/defs.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/predicate/predicate.h"
 #include "paimon/result.h"
+#include "parquet/page_index.h"
 
 namespace paimon {
 class CompoundPredicate;

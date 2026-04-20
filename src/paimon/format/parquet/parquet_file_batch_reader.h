@@ -138,7 +138,8 @@ class ParquetFileBatchReader : public PrefetchFileBatchReader {
 
     static Result<::parquet::ArrowReaderProperties> CreateArrowReaderProperties(
         const std::shared_ptr<arrow::MemoryPool>& pool,
-        const std::map<std::string, std::string>& options, int32_t batch_size);
+        const std::map<std::string, std::string>& options, int32_t batch_size,
+        bool disable_prebuffer = false);
 
     static void FlattenSchema(const std::shared_ptr<arrow::DataType>& type, int32_t* index,
                               std::vector<int32_t>* index_vector) {

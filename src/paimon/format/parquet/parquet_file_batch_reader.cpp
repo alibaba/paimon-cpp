@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/parquet_file_batch_reader.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <unordered_map>
 
@@ -74,8 +75,22 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     assert(input_stream);
     PAIMON_ASSIGN_OR_RAISE(::parquet::ReaderProperties reader_properties,
                            CreateReaderProperties(pool, options));
-    PAIMON_ASSIGN_OR_RAISE(::parquet::ArrowReaderProperties arrow_reader_properties,
-                           CreateArrowReaderProperties(pool, options, batch_size));
+
+    // Parse test.disable-parquet-prebuffer option for IO error recovery testing
+    bool disable_prebuffer = false;
+    auto it = options.find("test.disable-parquet-prebuffer");
+    if (it != options.end()) {
+        std::string value = it->second;
+        std::transform(value.begin(), value.end(), value.begin(),
+                       [](unsigned char c) { return std::tolower(c); });
+        if (value == "true" || value == "1") {
+            disable_prebuffer = true;
+        }
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(
+        ::parquet::ArrowReaderProperties arrow_reader_properties,
+        CreateArrowReaderProperties(pool, options, batch_size, disable_prebuffer));
 
     ::parquet::arrow::FileReaderBuilder file_reader_builder;
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.Open(input_stream, reader_properties));
@@ -84,9 +99,10 @@ Result<std::unique_ptr<ParquetFileBatchReader>> ParquetFileBatchReader::Create(
     PAIMON_RETURN_NOT_OK_FROM_ARROW(file_reader_builder.memory_pool(pool.get())
                                         ->properties(arrow_reader_properties)
                                         ->Build(&file_reader));
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileReaderWrapper> reader,
-                           FileReaderWrapper::Create(std::move(file_reader), pool.get(),
-                                                     static_cast<int64_t>(batch_size)));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<FileReaderWrapper> reader,
+        FileReaderWrapper::Create(std::move(file_reader), pool.get(),
+                                  static_cast<int64_t>(batch_size), disable_prebuffer));
     auto parquet_file_batch_reader = std::unique_ptr<ParquetFileBatchReader>(
         new ParquetFileBatchReader(std::move(input_stream), std::move(reader), options, pool));
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<::ArrowSchema> file_schema,
@@ -356,7 +372,7 @@ Result<::parquet::ReaderProperties> ParquetFileBatchReader::CreateReaderProperti
 
 Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowReaderProperties(
     const std::shared_ptr<arrow::MemoryPool>& pool,
-    const std::map<std::string, std::string>& options, int32_t batch_size) {
+    const std::map<std::string, std::string>& options, int32_t batch_size, bool disable_prebuffer) {
     PAIMON_ASSIGN_OR_RAISE(bool use_threads,
                            OptionsUtils::GetValueFromMap<bool>(options, PARQUET_USE_MULTI_THREAD,
                                                                DEFAULT_PARQUET_USE_MULTI_THREAD));
@@ -366,6 +382,10 @@ Result<::parquet::ArrowReaderProperties> ParquetFileBatchReader::CreateArrowRead
     PAIMON_ASSIGN_OR_RAISE(
         bool enable_pre_buffer,
         OptionsUtils::GetValueFromMap<bool>(options, PARQUET_READ_ENABLE_PRE_BUFFER, true));
+    // Disable pre-buffer if explicitly requested (for IO error recovery testing)
+    if (disable_prebuffer) {
+        enable_pre_buffer = false;
+    }
     arrow_reader_props.set_pre_buffer(enable_pre_buffer);
     arrow_reader_props.set_batch_size(static_cast<int64_t>(batch_size));
     arrow_reader_props.set_use_threads(use_threads);

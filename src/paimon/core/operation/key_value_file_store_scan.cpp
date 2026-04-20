@@ -30,7 +30,6 @@
 #include "paimon/common/utils/object_utils.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/data_file_meta.h"
-#include "paimon/core/operation/bucket_select_converter.h"
 #include "paimon/core/options/merge_engine.h"
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/stats/simple_stats.h"
@@ -67,17 +66,6 @@ Result<std::unique_ptr<KeyValueFileStoreScan>> KeyValueFileStoreScan::Create(
         scan->SplitAndSetFilter(table_schema->PartitionKeys(), arrow_schema, scan_filters));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> trimmed_pk, table_schema->TrimmedPrimaryKeys());
     PAIMON_RETURN_NOT_OK(scan->SplitAndSetKeyValueFilter(trimmed_pk));
-
-    // Derive bucket filter from predicates if not manually set
-    if (!scan->HasBucketFilter() && scan->predicates_ && table_schema->NumBuckets() > 0) {
-        PAIMON_ASSIGN_OR_RAISE(
-            std::optional<std::set<int32_t>> derived_buckets,
-            BucketSelectConverter::Convert(scan->predicates_, table_schema->BucketKeys(),
-                                           table_schema->NumBuckets(), table_schema, pool));
-        if (derived_buckets) {
-            scan->SetBucketFilter(std::move(derived_buckets.value()));
-        }
-    }
 
     return scan;
 }

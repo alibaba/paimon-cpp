@@ -16,6 +16,7 @@
 
 #include "paimon/format/parquet/file_reader_wrapper.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 
@@ -33,9 +34,51 @@
 
 namespace paimon::parquet {
 
+namespace {
+
+// Merge overlapping or adjacent ReadRanges into a minimal set of non-overlapping ranges.
+// PreBufferRanges requires non-overlapping ranges, so this is necessary when combining
+// ranges from multiple sources (page-level ranges, column chunk ranges, etc.).
+std::vector<::arrow::io::ReadRange> MergeOverlappingRanges(
+    std::vector<::arrow::io::ReadRange> ranges) {
+    if (ranges.empty()) {
+        return ranges;
+    }
+
+    // Sort by offset
+    std::sort(ranges.begin(), ranges.end(),
+              [](const ::arrow::io::ReadRange& a, const ::arrow::io::ReadRange& b) {
+                  return a.offset < b.offset;
+              });
+
+    std::vector<::arrow::io::ReadRange> merged;
+    merged.push_back(ranges[0]);
+
+    for (size_t i = 1; i < ranges.size(); ++i) {
+        auto& last = merged.back();
+        const auto& curr = ranges[i];
+        // Check if current range overlaps or is adjacent to the last merged range
+        int64_t last_end = last.offset + last.length;
+        if (curr.offset <= last_end) {
+            // Merge: extend the last range if current extends beyond it
+            int64_t curr_end = curr.offset + curr.length;
+            if (curr_end > last_end) {
+                last.length = curr_end - last.offset;
+            }
+        } else {
+            // No overlap, add as new range
+            merged.push_back(curr);
+        }
+    }
+
+    return merged;
+}
+
+}  // namespace
+
 Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader, ::arrow::MemoryPool* pool,
-    int64_t batch_size) {
+    int64_t batch_size, bool disable_prebuffer) {
     if (file_reader == nullptr) {
         return Status::Invalid("file reader wrapper create failed. file reader is nullptr");
     }
@@ -57,8 +100,9 @@ Result<std::unique_ptr<FileReaderWrapper>> FileReaderWrapper::Create(
     std::vector<int32_t> row_groups_indices = arrow::internal::Iota(file_reader->num_row_groups());
     std::vector<int32_t> columns_indices =
         arrow::internal::Iota(file_reader->parquet_reader()->metadata()->num_columns());
-    auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(new FileReaderWrapper(
-        std::move(file_reader), all_row_group_ranges, num_rows, pool, batch_size));
+    auto file_reader_wrapper = std::unique_ptr<FileReaderWrapper>(
+        new FileReaderWrapper(std::move(file_reader), all_row_group_ranges, num_rows, pool,
+                              batch_size, disable_prebuffer));
     PAIMON_RETURN_NOT_OK(file_reader_wrapper->PrepareForReadingLazy(
         std::set<int32_t>(row_groups_indices.begin(), row_groups_indices.end()), columns_indices));
     return file_reader_wrapper;
@@ -71,12 +115,13 @@ FileReaderWrapper::~FileReaderWrapper() {
 FileReaderWrapper::FileReaderWrapper(
     std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
     const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges, uint64_t num_rows,
-    ::arrow::MemoryPool* pool, int64_t batch_size)
+    ::arrow::MemoryPool* pool, int64_t batch_size, bool disable_prebuffer)
     : file_reader_(std::move(file_reader)),
       all_row_group_ranges_(all_row_group_ranges),
       pool_(pool),
       batch_size_(batch_size),
-      num_rows_(num_rows) {}
+      num_rows_(num_rows),
+      disable_prebuffer_(disable_prebuffer) {}
 
 void FileReaderWrapper::WaitForPendingPreBuffer() {
     if (!prebuffered_ranges_.empty() && file_reader_) {
@@ -175,11 +220,13 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
     auto pending_it = pending_filtered_reads_.find(current_row_group_idx_);
     if (pending_it != pending_filtered_reads_.end()) {
         const auto& meta = pending_it->second;
-        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<arrow::RecordBatch> full_batch,
-                               PageFilteredRowGroupReader::ReadFilteredRowGroup(
-                                   file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges,
-                                   meta.column_indices, meta.read_schema, pool_, meta.cache_options,
-                                   /*pre_buffered=*/true, meta.page_ranges));
+        // pre_buffered is true only if prebuffer was attempted (prebuffered_ranges_ not empty)
+        bool pre_buffered = !prebuffered_ranges_.empty();
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<arrow::RecordBatch> full_batch,
+            PageFilteredRowGroupReader::ReadFilteredRowGroup(
+                file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges, meta.column_indices,
+                meta.read_schema, pool_, meta.cache_options, pre_buffered, meta.page_ranges));
         pending_filtered_reads_.erase(pending_it);
 
         // If batch exceeds batch_size_, store and return first slice
@@ -333,7 +380,8 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
     // Collect all byte ranges for a single PreBufferRanges call.
     // Page-filtered RGs: only matching page ranges (from ComputePageRanges).
     // Fully-matched RGs: entire column chunk ranges.
-    {
+    // Skip prebuffer when disable_prebuffer_ is set (for testing IO error recovery).
+    if (!disable_prebuffer_) {
         std::vector<::arrow::io::ReadRange> all_ranges;
 
         // Page-filtered row groups: add their page-level ranges
@@ -342,25 +390,40 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
         }
 
         // Fully-matched row groups: add entire column chunk ranges
+        // The correct calculation follows Arrow's ColumnChunkMetaData::file_range():
+        // - col_start = data_page_offset (or dictionary_page_offset if present and lower)
+        // - col_length = total_compressed_size (includes all pages: dictionary + data)
         auto file_metadata = file_reader_->parquet_reader()->metadata();
         for (int32_t rg_idx : fully_matched_row_groups) {
             auto rg_metadata = file_metadata->RowGroup(rg_idx);
             for (int32_t col_idx : column_indices) {
                 auto col_chunk = rg_metadata->ColumnChunk(col_idx);
-                int64_t offset = col_chunk->dictionary_page_offset() > 0
-                                     ? col_chunk->dictionary_page_offset()
-                                     : col_chunk->data_page_offset();
-                int64_t size =
-                    col_chunk->total_compressed_size() + (col_chunk->data_page_offset() - offset);
+                int64_t offset = col_chunk->data_page_offset();
+                if (col_chunk->has_dictionary_page() && col_chunk->dictionary_page_offset() > 0 &&
+                    offset > col_chunk->dictionary_page_offset()) {
+                    offset = col_chunk->dictionary_page_offset();
+                }
+                int64_t size = col_chunk->total_compressed_size();
                 all_ranges.push_back({offset, size});
             }
         }
 
         const auto& cache_opts = file_reader_->properties().cache_options();
         ::arrow::io::IOContext io_ctx(pool_);
-        file_reader_->parquet_reader()->PreBufferRanges(all_ranges, io_ctx, cache_opts);
-        // Track for cleanup on destruction
-        prebuffered_ranges_ = std::move(all_ranges);
+        // Merge overlapping ranges before calling PreBufferRanges, which rejects overlapping
+        // ranges.
+        auto merged_ranges = MergeOverlappingRanges(std::move(all_ranges));
+        // PreBuffer is an optimization - if it fails (e.g., IO error during testing),
+        // continue without pre-buffering. Subsequent reads will fetch data on-demand.
+        try {
+            file_reader_->parquet_reader()->PreBufferRanges(merged_ranges, io_ctx, cache_opts);
+            // Track for cleanup on destruction
+            prebuffered_ranges_ = std::move(merged_ranges);
+        } catch (const std::exception& e) {
+            // Pre-buffering failed, clear ranges to indicate no pre-buffered data available.
+            // Reading will fall back to on-demand I/O.
+            prebuffered_ranges_.clear();
+        }
     }
     target_row_groups_ = target_row_groups;
     target_column_indices_ = column_indices;

@@ -31,13 +31,12 @@
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
 #include "arrow/type_fwd.h"
-#include "parquet/arrow/reader.h"
-#include "parquet/page_index.h"
-
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/format/parquet/row_ranges.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
+#include "parquet/arrow/reader.h"
+#include "parquet/page_index.h"
 
 namespace arrow {
 class Schema;
@@ -57,7 +56,8 @@ class FileReaderWrapper {
 
     static Result<std::unique_ptr<FileReaderWrapper>> Create(
         std::unique_ptr<::parquet::arrow::FileReader>&& reader,
-        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(), int64_t batch_size = 0);
+        ::arrow::MemoryPool* pool = ::arrow::default_memory_pool(), int64_t batch_size = 0,
+        bool disable_prebuffer = false);
 
     /// Seek to the specified row number.
     /// @param row_number The row to seek to (must be at a row group boundary).
@@ -154,7 +154,8 @@ class FileReaderWrapper {
  private:
     FileReaderWrapper(std::unique_ptr<::parquet::arrow::FileReader>&& file_reader,
                       const std::vector<std::pair<uint64_t, uint64_t>>& all_row_group_ranges,
-                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size);
+                      uint64_t num_rows, ::arrow::MemoryPool* pool, int64_t batch_size,
+                      bool disable_prebuffer);
 
     Result<std::set<int32_t>> ReadRangesToRowGroupIds(
         const std::vector<std::pair<uint64_t, uint64_t>>& read_ranges) const;
@@ -200,6 +201,9 @@ class FileReaderWrapper {
 
     // Track pre-buffered ranges so we can wait on destruction
     std::vector<::arrow::io::ReadRange> prebuffered_ranges_;
+
+    // For testing: disable prebuffer to test IO error recovery
+    bool disable_prebuffer_;
 
     /// Wait for all pending PreBuffer operations to complete.
     void WaitForPendingPreBuffer();

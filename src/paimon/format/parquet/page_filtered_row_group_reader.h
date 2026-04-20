@@ -25,12 +25,11 @@
 #include "arrow/memory_pool.h"
 #include "arrow/record_batch.h"
 #include "arrow/type.h"
+#include "paimon/format/parquet/row_ranges.h"
+#include "paimon/result.h"
 #include "parquet/column_reader.h"
 #include "parquet/file_reader.h"
 #include "parquet/page_index.h"
-
-#include "paimon/format/parquet/row_ranges.h"
-#include "paimon/result.h"
 
 namespace paimon::parquet {
 

@@ -257,7 +257,6 @@ set(PAIMON_CORE_SRCS
     core/operation/append_only_file_store_write.cpp
     core/operation/commit_context.cpp
     core/operation/expire_snapshots.cpp
-    core/operation/bucket_select_converter.cpp
     core/operation/file_store_commit.cpp
     core/operation/file_store_commit_impl.cpp
     core/operation/file_store_scan.cpp
@@ -634,7 +633,6 @@ if(PAIMON_BUILD_TESTS)
                     core/operation/orphan_files_cleaner_test.cpp
                     core/operation/raw_file_split_read_test.cpp
                     core/operation/read_context_test.cpp
-                    core/operation/bucket_select_converter_test.cpp
                     core/operation/scan_context_test.cpp
                     core/operation/write_restore_test.cpp
                     core/operation/write_context_test.cpp
