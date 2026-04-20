@@ -16,6 +16,8 @@
 
 #include "paimon/core/bucket/bucket_select_converter.h"
 
+#include <cassert>
+
 #include <set>
 #include <string>
 #include <utility>
@@ -23,9 +25,11 @@
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
+
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/common/utils/field_type_utils.h"
 #include "paimon/core/bucket/bucket_function.h"
 #include "paimon/core/bucket/default_bucket_function.h"
 #include "paimon/core/bucket/hive_bucket_function.h"
@@ -40,18 +44,25 @@ namespace paimon {
 
 Result<std::optional<int32_t>> BucketSelectConverter::Convert(
     const std::shared_ptr<Predicate>& predicate, const std::vector<std::string>& bucket_key_names,
-    const std::vector<FieldType>& bucket_key_types,
     const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types,
     BucketFunctionType bucket_function_type, int32_t num_buckets, MemoryPool* pool) {
-    if (!predicate || bucket_key_names.empty() || num_buckets <= 0 || !pool) {
+    assert(pool);
+    if (!predicate || bucket_key_names.empty() || num_buckets <= 0) {
         return std::optional<int32_t>(std::nullopt);
     }
 
-    if (bucket_key_names.size() != bucket_key_types.size() ||
-        bucket_key_names.size() != bucket_key_arrow_types.size()) {
+    if (bucket_key_names.size() != bucket_key_arrow_types.size()) {
         return Status::Invalid(
-            "bucket_key_names, bucket_key_types, and bucket_key_arrow_types must have the same "
-            "size");
+            "bucket_key_names and bucket_key_arrow_types must have the same size");
+    }
+
+    // Derive FieldTypes from Arrow types
+    std::vector<FieldType> bucket_key_types;
+    bucket_key_types.reserve(bucket_key_arrow_types.size());
+    for (const auto& arrow_type : bucket_key_arrow_types) {
+        PAIMON_ASSIGN_OR_RAISE(FieldType ft,
+                               FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
+        bucket_key_types.push_back(ft);
     }
 
     auto literals_opt = ExtractEqualLiterals(predicate, bucket_key_names);
@@ -71,13 +82,14 @@ Result<std::optional<int32_t>> BucketSelectConverter::Convert(
         const auto& field_name = bucket_key_names[i];
         const auto& literal = literals_map.at(field_name);
         PAIMON_RETURN_NOT_OK(
-            WriteLiteralToRow(&writer, i, literal, bucket_key_types[i], bucket_key_arrow_types[i]));
+            WriteLiteralToRow(i, literal, bucket_key_types[i], bucket_key_arrow_types[i], &writer));
     }
     writer.Complete();
 
     // Create the bucket function and compute the bucket
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BucketFunction> bucket_function,
-                           CreateBucketFunction(bucket_function_type, bucket_key_types));
+                           CreateBucketFunction(bucket_function_type, bucket_key_types,
+                                                bucket_key_arrow_types));
     int32_t bucket = bucket_function->Bucket(row, num_buckets);
     return std::optional<int32_t>(bucket);
 }
@@ -120,8 +132,8 @@ std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqua
 }
 
 Status BucketSelectConverter::WriteLiteralToRow(
-    BinaryRowWriter* writer, int32_t pos, const Literal& literal, FieldType field_type,
-    const std::shared_ptr<arrow::DataType>& arrow_type) {
+    int32_t pos, const Literal& literal, FieldType field_type,
+    const std::shared_ptr<arrow::DataType>& arrow_type, BinaryRowWriter* writer) {
     switch (field_type) {
         case FieldType::BOOLEAN:
             writer->WriteBoolean(pos, literal.GetValue<bool>());
@@ -148,7 +160,7 @@ Status BucketSelectConverter::WriteLiteralToRow(
         case FieldType::STRING:
         case FieldType::BINARY: {
             std::string value = literal.GetValue<std::string>();
-            writer->WriteStringView(pos, std::string_view(value));
+            writer->WriteStringView(pos, std::string_view{value});
             break;
         }
         case FieldType::TIMESTAMP: {
@@ -176,7 +188,8 @@ Status BucketSelectConverter::WriteLiteralToRow(
 }
 
 Result<std::unique_ptr<BucketFunction>> BucketSelectConverter::CreateBucketFunction(
-    BucketFunctionType type, const std::vector<FieldType>& bucket_key_types) {
+    BucketFunctionType type, const std::vector<FieldType>& bucket_key_types,
+    const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types) {
     switch (type) {
         case BucketFunctionType::DEFAULT:
             return std::unique_ptr<BucketFunction>(std::make_unique<DefaultBucketFunction>());
@@ -184,17 +197,23 @@ Result<std::unique_ptr<BucketFunction>> BucketSelectConverter::CreateBucketFunct
             if (bucket_key_types.size() != 1) {
                 return Status::Invalid("MOD bucket function requires exactly one bucket key field");
             }
-            PAIMON_ASSIGN_OR_RAISE(auto func, ModBucketFunction::Create(bucket_key_types[0]));
-            return std::unique_ptr<BucketFunction>(std::move(func));
+            return ModBucketFunction::Create(bucket_key_types[0]);
         }
         case BucketFunctionType::HIVE: {
             std::vector<HiveFieldInfo> field_infos;
             field_infos.reserve(bucket_key_types.size());
-            for (const auto& ft : bucket_key_types) {
-                field_infos.emplace_back(ft);
+            for (size_t i = 0; i < bucket_key_types.size(); i++) {
+                if (bucket_key_types[i] == FieldType::DECIMAL) {
+                    const auto* decimal_type =
+                        arrow::internal::checked_cast<const arrow::Decimal128Type*>(
+                            bucket_key_arrow_types[i].get());
+                    field_infos.emplace_back(bucket_key_types[i], decimal_type->precision(),
+                                             decimal_type->scale());
+                } else {
+                    field_infos.emplace_back(bucket_key_types[i]);
+                }
             }
-            PAIMON_ASSIGN_OR_RAISE(auto func, HiveBucketFunction::Create(field_infos));
-            return std::unique_ptr<BucketFunction>(std::move(func));
+            return HiveBucketFunction::Create(field_infos);
         }
         default:
             return Status::Invalid(

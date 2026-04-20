@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
+
 #include "paimon/bucket/bucket_function_type.h"
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
@@ -47,9 +48,8 @@ class BucketSelectConverter {
     /// Convert predicates to a target bucket ID.
     /// @param predicate The predicate (possibly compound AND) to analyze.
     /// @param bucket_key_names Ordered bucket key field names.
-    /// @param bucket_key_types Ordered bucket key field types (matching bucket_key_names).
     /// @param bucket_key_arrow_types Ordered Arrow data types for bucket key fields.
-    ///        Used to extract precision/scale for TIMESTAMP and DECIMAL types.
+    ///        FieldType is derived from these automatically.
     /// @param bucket_function_type The bucket function type (DEFAULT, MOD, HIVE).
     /// @param num_buckets The total number of buckets.
     /// @param pool Memory pool for BinaryRow construction.
@@ -58,7 +58,6 @@ class BucketSelectConverter {
     static Result<std::optional<int32_t>> Convert(
         const std::shared_ptr<Predicate>& predicate,
         const std::vector<std::string>& bucket_key_names,
-        const std::vector<FieldType>& bucket_key_types,
         const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types,
         BucketFunctionType bucket_function_type, int32_t num_buckets, MemoryPool* pool);
 
@@ -71,13 +70,15 @@ class BucketSelectConverter {
         const std::vector<std::string>& bucket_key_names);
 
     /// Write a Literal value to a BinaryRowWriter at the given position.
-    static Status WriteLiteralToRow(BinaryRowWriter* writer, int32_t pos, const Literal& literal,
+    static Status WriteLiteralToRow(int32_t pos, const Literal& literal,
                                     FieldType field_type,
-                                    const std::shared_ptr<arrow::DataType>& arrow_type);
+                                    const std::shared_ptr<arrow::DataType>& arrow_type,
+                                    BinaryRowWriter* writer);
 
     /// Create the appropriate BucketFunction for the given type.
     static Result<std::unique_ptr<BucketFunction>> CreateBucketFunction(
-        BucketFunctionType type, const std::vector<FieldType>& bucket_key_types);
+        BucketFunctionType type, const std::vector<FieldType>& bucket_key_types,
+        const std::vector<std::shared_ptr<arrow::DataType>>& bucket_key_arrow_types);
 };
 
 }  // namespace paimon

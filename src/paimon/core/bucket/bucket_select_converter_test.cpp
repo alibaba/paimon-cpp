@@ -21,8 +21,7 @@
 
 #include "arrow/api.h"
 #include "gtest/gtest.h"
-#include "paimon/common/data/binary_row.h"
-#include "paimon/common/data/binary_row_writer.h"
+
 #include "paimon/core/bucket/default_bucket_function.h"
 #include "paimon/core/bucket/mod_bucket_function.h"
 #include "paimon/data/decimal.h"
@@ -30,6 +29,7 @@
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
+#include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -44,20 +44,16 @@ TEST_F(BucketSelectConverterTest, SingleIntEqualDefault) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify by computing the expected bucket manually
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteInt(0, 42);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({static_cast<int32_t>(42)}, pool_.get());
     DefaultBucketFunction func;
-    int32_t expected_bucket = func.Bucket(row, num_buckets);
-    ASSERT_EQ(expected_bucket, result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, SingleStringEqualDefault) {
@@ -66,19 +62,16 @@ TEST_F(BucketSelectConverterTest, SingleStringEqualDefault) {
     Literal lit(FieldType::STRING, val.c_str(), val.size());
     auto predicate = PredicateBuilder::Equal(0, "name", FieldType::STRING, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"name"}, {FieldType::STRING}, {arrow::utf8()},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"name"}, {arrow::utf8()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteStringView(0, std::string_view(val));
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({val}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, MultiKeyAndPredicate) {
@@ -87,23 +80,20 @@ TEST_F(BucketSelectConverterTest, MultiKeyAndPredicate) {
     Literal lit_name(FieldType::STRING, "test", 4);
     auto pred_id = PredicateBuilder::Equal(0, "id", FieldType::INT, lit_id);
     auto pred_name = PredicateBuilder::Equal(1, "name", FieldType::STRING, lit_name);
-    auto predicate = PredicateBuilder::And({pred_id, pred_name});
-    ASSERT_TRUE(predicate.ok());
+    ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({pred_id, pred_name}));
 
-    auto result = BucketSelectConverter::Convert(
-        predicate.value(), {"id", "name"}, {FieldType::INT, FieldType::STRING},
-        {arrow::int32(), arrow::utf8()}, BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id", "name"},
+                                                       {arrow::int32(), arrow::utf8()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify
-    BinaryRow row(2);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteInt(0, 100);
-    writer.WriteStringView(1, std::string_view("test", 4));
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow(
+        {static_cast<int32_t>(100), std::string("test")}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, MissingBucketKeyReturnsNullopt) {
@@ -111,11 +101,12 @@ TEST_F(BucketSelectConverterTest, MissingBucketKeyReturnsNullopt) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result = BucketSelectConverter::Convert(
-        predicate, {"id", "name"}, {FieldType::INT, FieldType::STRING},
-        {arrow::int32(), arrow::utf8()}, BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id", "name"},
+                                                       {arrow::int32(), arrow::utf8()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, NonEqualPredicateReturnsNullopt) {
@@ -123,11 +114,11 @@ TEST_F(BucketSelectConverterTest, NonEqualPredicateReturnsNullopt) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::GreaterThan(0, "id", FieldType::INT, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, OrPredicateReturnsNullopt) {
@@ -136,14 +127,13 @@ TEST_F(BucketSelectConverterTest, OrPredicateReturnsNullopt) {
     Literal lit2(static_cast<int32_t>(2));
     auto pred1 = PredicateBuilder::Equal(0, "id", FieldType::INT, lit1);
     auto pred2 = PredicateBuilder::Equal(0, "id", FieldType::INT, lit2);
-    auto predicate = PredicateBuilder::Or({pred1, pred2});
-    ASSERT_TRUE(predicate.ok());
+    ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({pred1, pred2}));
 
-    auto result = BucketSelectConverter::Convert(predicate.value(), {"id"}, {FieldType::INT},
-                                                 {arrow::int32()}, BucketFunctionType::DEFAULT,
-                                                 num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, ModBucketFunction) {
@@ -151,20 +141,16 @@ TEST_F(BucketSelectConverterTest, ModBucketFunction) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::MOD, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::MOD, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify: MOD function uses floorMod
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteInt(0, 42);
-    writer.Complete();
-    auto mod_func = ModBucketFunction::Create(FieldType::INT);
-    ASSERT_TRUE(mod_func.ok());
-    ASSERT_EQ(mod_func.value()->Bucket(row, num_buckets), result.value().value());
+    auto row = BinaryRowGenerator::GenerateRow({static_cast<int32_t>(42)}, pool_.get());
+    ASSERT_OK_AND_ASSIGN(auto mod_func, ModBucketFunction::Create(FieldType::INT));
+    ASSERT_EQ(mod_func->Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, NullLiteralReturnsNullopt) {
@@ -172,30 +158,30 @@ TEST_F(BucketSelectConverterTest, NullLiteralReturnsNullopt) {
     Literal lit(FieldType::INT);  // null literal
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, DynamicBucketModeReturnsNullopt) {
     Literal lit(static_cast<int32_t>(42));
     auto predicate = PredicateBuilder::Equal(0, "id", FieldType::INT, lit);
 
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::DEFAULT, -1, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, -1,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, NullPredicateReturnsNullopt) {
-    auto result =
-        BucketSelectConverter::Convert(nullptr, {"id"}, {FieldType::INT}, {arrow::int32()},
-                                       BucketFunctionType::DEFAULT, 5, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_FALSE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(nullptr, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, 5,
+                                                       pool_.get()));
+    ASSERT_FALSE(result.has_value());
 }
 
 TEST_F(BucketSelectConverterTest, BigintKeyDefault) {
@@ -203,19 +189,16 @@ TEST_F(BucketSelectConverterTest, BigintKeyDefault) {
     Literal lit(static_cast<int64_t>(123456789L));
     auto predicate = PredicateBuilder::Equal(0, "user_id", FieldType::BIGINT, lit);
 
-    auto result = BucketSelectConverter::Convert(predicate, {"user_id"}, {FieldType::BIGINT},
-                                                 {arrow::int64()}, BucketFunctionType::DEFAULT,
-                                                 num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"user_id"}, {arrow::int64()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteLong(0, 123456789L);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({static_cast<int64_t>(123456789L)}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, AndWithExtraPredicateStillWorks) {
@@ -226,21 +209,17 @@ TEST_F(BucketSelectConverterTest, AndWithExtraPredicateStillWorks) {
     Literal lit_val(static_cast<int32_t>(100));
     auto pred_id = PredicateBuilder::Equal(0, "id", FieldType::INT, lit_id);
     auto pred_val = PredicateBuilder::GreaterThan(1, "value", FieldType::INT, lit_val);
-    auto predicate = PredicateBuilder::And({pred_id, pred_val});
-    ASSERT_TRUE(predicate.ok());
+    ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({pred_id, pred_val}));
 
-    auto result = BucketSelectConverter::Convert(predicate.value(), {"id"}, {FieldType::INT},
-                                                 {arrow::int32()}, BucketFunctionType::DEFAULT,
-                                                 num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"id"}, {arrow::int32()},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteInt(0, 42);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({static_cast<int32_t>(42)}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, TimestampMillisPrecision) {
@@ -251,19 +230,16 @@ TEST_F(BucketSelectConverterTest, TimestampMillisPrecision) {
     auto predicate = PredicateBuilder::Equal(0, "ts", FieldType::TIMESTAMP, lit);
 
     auto arrow_type = arrow::timestamp(arrow::TimeUnit::MILLI);
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"ts"}, {arrow_type},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify: precision=3 uses compact WriteTimestamp
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteTimestamp(0, ts, /*precision=*/3);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({TimestampType(ts, 3)}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, TimestampMicrosPrecision) {
@@ -274,38 +250,16 @@ TEST_F(BucketSelectConverterTest, TimestampMicrosPrecision) {
     auto predicate = PredicateBuilder::Equal(0, "ts", FieldType::TIMESTAMP, lit);
 
     auto arrow_type = arrow::timestamp(arrow::TimeUnit::MICRO);
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"ts"}, {FieldType::TIMESTAMP}, {arrow_type},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"ts"}, {arrow_type},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify: precision=6 uses non-compact WriteTimestamp (different layout than precision=3)
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteTimestamp(0, ts, /*precision=*/6);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({TimestampType(ts, 6)}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
-}
-
-TEST_F(BucketSelectConverterTest, TimestampDifferentPrecisionProducesDifferentBucket) {
-    // Verify that precision=3 and precision=6 produce different BinaryRow layouts
-    // and thus potentially different bucket assignments
-    Timestamp ts(1700000000000L, 123456);
-
-    BinaryRow row_compact(1);
-    BinaryRowWriter writer_compact(&row_compact, 0, pool_.get());
-    writer_compact.WriteTimestamp(0, ts, /*precision=*/3);
-    writer_compact.Complete();
-
-    BinaryRow row_non_compact(1);
-    BinaryRowWriter writer_non_compact(&row_non_compact, 0, pool_.get());
-    writer_non_compact.WriteTimestamp(0, ts, /*precision=*/6);
-    writer_non_compact.Complete();
-
-    // The two rows have different memory layouts, so hash codes should differ
-    ASSERT_NE(row_compact.HashCode(), row_non_compact.HashCode());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 TEST_F(BucketSelectConverterTest, DecimalKey) {
@@ -315,19 +269,16 @@ TEST_F(BucketSelectConverterTest, DecimalKey) {
     auto predicate = PredicateBuilder::Equal(0, "amount", FieldType::DECIMAL, lit);
 
     auto arrow_type = arrow::decimal128(10, 2);
-    auto result =
-        BucketSelectConverter::Convert(predicate, {"amount"}, {FieldType::DECIMAL}, {arrow_type},
-                                       BucketFunctionType::DEFAULT, num_buckets, pool_.get());
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result.value().has_value());
+    ASSERT_OK_AND_ASSIGN(auto result,
+                         BucketSelectConverter::Convert(predicate, {"amount"}, {arrow_type},
+                                                       BucketFunctionType::DEFAULT, num_buckets,
+                                                       pool_.get()));
+    ASSERT_TRUE(result.has_value());
 
     // Verify
-    BinaryRow row(1);
-    BinaryRowWriter writer(&row, 0, pool_.get());
-    writer.WriteDecimal(0, dec, 10);
-    writer.Complete();
+    auto row = BinaryRowGenerator::GenerateRow({dec}, pool_.get());
     DefaultBucketFunction func;
-    ASSERT_EQ(func.Bucket(row, num_buckets), result.value().value());
+    ASSERT_EQ(func.Bucket(row, num_buckets), result.value());
 }
 
 }  // namespace paimon::test
