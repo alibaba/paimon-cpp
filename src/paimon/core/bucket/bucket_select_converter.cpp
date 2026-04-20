@@ -71,7 +71,7 @@ Result<std::optional<int32_t>> BucketSelectConverter::Convert(
     }
 
     const auto& literals_map = literals_opt.value();
-    int32_t num_fields = static_cast<int32_t>(bucket_key_names.size());
+    auto num_fields = static_cast<int32_t>(bucket_key_names.size());
 
     // Build a BinaryRow from the extracted literals
     BinaryRow row(num_fields);
@@ -159,12 +159,12 @@ Status BucketSelectConverter::WriteLiteralToRow(
             break;
         case FieldType::STRING:
         case FieldType::BINARY: {
-            std::string value = literal.GetValue<std::string>();
+            auto value = literal.GetValue<std::string>();
             writer->WriteStringView(pos, std::string_view{value});
             break;
         }
         case FieldType::TIMESTAMP: {
-            Timestamp ts = literal.GetValue<Timestamp>();
+            auto ts = literal.GetValue<Timestamp>();
             auto timestamp_type =
                 arrow::internal::checked_pointer_cast<arrow::TimestampType>(arrow_type);
             int32_t precision = DateTimeUtils::GetPrecisionFromType(timestamp_type);
@@ -172,7 +172,7 @@ Status BucketSelectConverter::WriteLiteralToRow(
             break;
         }
         case FieldType::DECIMAL: {
-            Decimal dec = literal.GetValue<Decimal>();
+            auto dec = literal.GetValue<Decimal>();
             const auto* decimal_type =
                 arrow::internal::checked_cast<const arrow::Decimal128Type*>(arrow_type.get());
             int32_t precision = decimal_type->precision();
