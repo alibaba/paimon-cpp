@@ -24,13 +24,14 @@
 namespace paimon {
 class DeltaFollowUpScanner : public FollowUpScanner {
  public:
+    DeltaFollowUpScanner() : logger_(Logger::GetLogger("DeltaFollowUpScanner")) {}
+
     bool NeedScanSnapshot(const Snapshot& snapshot) const override {
         if (snapshot.GetCommitKind() == Snapshot::CommitKind::Append()) {
             return true;
         }
-        static auto logger = Logger::GetLogger("DeltaFollowUpScanner");
         PAIMON_LOG_DEBUG(
-            logger, "Ignore snapshot #%ld with commit kind %s in delta follow-up scanner.",
+            logger_, "Ignore snapshot #%ld with commit kind %s in delta follow-up scanner.",
             snapshot.Id(), Snapshot::CommitKind::ToString(snapshot.GetCommitKind()).c_str());
         return false;
     }
@@ -39,5 +40,8 @@ class DeltaFollowUpScanner : public FollowUpScanner {
         const std::shared_ptr<SnapshotReader>& snapshot_reader) const override {
         return snapshot_reader->WithMode(ScanMode::DELTA)->WithSnapshot(snapshot)->Read();
     }
+
+ private:
+    std::unique_ptr<Logger> logger_;
 };
 }  // namespace paimon
