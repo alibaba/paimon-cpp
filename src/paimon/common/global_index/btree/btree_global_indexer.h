@@ -29,6 +29,25 @@
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/utils/roaring_bitmap64.h"
 namespace paimon {
+/// The indexer for btree index. We do not build a B-tree directly in memory, instead, we form a
+/// logical B-tree via multi-level metadata over SST files that store the actual data, as below:
+///
+///                                             BTree-Index
+///                                             /           |
+///                                            /    ...     |
+///                                           /             |
+///     +--------------------------------------+           +------------+
+///     |               SST File               |           |            |
+///     +--------------------------------------+           |            |
+///     |              Root Index              |           |            |
+///     |             /   ...    |             |    ...    |  SST File  |
+///     |     Leaf Index  ...  Leaf Index      |           |            |
+///     |     /  ...   |       /  ...   |      |           |            |
+///     | DataBlock       ...        DataBlock |           |            |
+///     +--------------------------------------+           +------------+
+///
+/// This approach significantly reduces memory pressure during index reads.
+
 class BTreeGlobalIndexer : public GlobalIndexer {
  public:
     explicit BTreeGlobalIndexer(const std::map<std::string, std::string>& options)

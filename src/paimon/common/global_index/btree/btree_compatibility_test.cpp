@@ -229,7 +229,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
                     unique_keys.insert(std::stoi(rec.key));
                 }
             }
-            ASSERT_TRUE(unique_keys.size() >= 3);
+            ASSERT_GE(unique_keys.size(), 3);
             auto it = unique_keys.begin();
             int32_t k1 = *it++;
             int32_t k2 = *it++;

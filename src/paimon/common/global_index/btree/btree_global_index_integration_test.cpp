@@ -1540,7 +1540,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
                          indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
 
     // Helper lambda: given a predicate on value, collect matching row ids
-    auto collect_rows = [total_rows](std::function<bool(int32_t)> predicate) {
+    auto collect_rows = [total_rows = total_rows](std::function<bool(int32_t)> predicate) {
         std::vector<int64_t> result;
         int32_t val = 0;
         for (int32_t i = 0; i < total_rows; ++i) {
@@ -1729,7 +1729,6 @@ TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
-    // writer.cpp:115 - keys must be monotonically incremental
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
@@ -1757,7 +1756,6 @@ TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
 }
 
 TEST_F(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
-    // writer.cpp:192 - Should never write an empty btree index file
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);

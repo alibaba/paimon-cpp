@@ -66,7 +66,7 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     ~BTreeGlobalIndexWriter() override = default;
 
     Status AddBatch(::ArrowArray* arrow_array) override {
-        // TODO: refactor AddBatch with relative row ids
+        // TODO(xinyu.lxy): refactor AddBatch with relative row ids
         return Status::Invalid("BTreeGlobalIndexWriter not support AddBatch without row_ids");
     }
 
