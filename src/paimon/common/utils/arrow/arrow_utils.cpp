@@ -18,7 +18,9 @@
 
 #include "arrow/array/array_base.h"
 #include "arrow/array/array_nested.h"
+#include "arrow/util/compression.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/string_utils.h"
 
 namespace paimon {
 Result<std::shared_ptr<arrow::Schema>> ArrowUtils::DataTypeToSchema(
@@ -159,6 +161,16 @@ Result<std::shared_ptr<arrow::StructArray>> ArrowUtils::RemoveFieldFromStructArr
         arrow::StructArray::Make(new_arrays, new_fields, struct_array->null_bitmap(),
                                  struct_array->null_count(), struct_array->offset()));
     return array;
+}
+
+Result<arrow::Compression::type> ArrowUtils::GetCompressionType(const std::string& compression) {
+    std::string normalized = StringUtils::ToLowerCase(compression);
+    if (normalized.empty() || normalized == "none") {
+        normalized = "uncompressed";
+    }
+    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(arrow::Compression::type compression_type,
+                                      arrow::util::Codec::GetCompressionType(normalized));
+    return compression_type;
 }
 
 }  // namespace paimon

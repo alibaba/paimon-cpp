@@ -29,7 +29,6 @@
 
 namespace paimon {
 class Executor;
-class IOManager;
 class MemoryPool;
 
 /// `WriteContext` is some configuration for write operations.
@@ -44,8 +43,7 @@ class PAIMON_EXPORT WriteContext {
                  const std::optional<int32_t>& write_id, const std::string& branch,
                  const std::vector<std::string>& write_schema,
                  const std::shared_ptr<MemoryPool>& memory_pool,
-                 const std::shared_ptr<Executor>& executor,
-                 const std::shared_ptr<IOManager>& io_manager,
+                 const std::shared_ptr<Executor>& executor, const std::string& temp_directory,
                  const std::shared_ptr<FileSystem>& specific_file_system,
                  const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
                  const std::map<std::string, std::string>& options);
@@ -100,8 +98,8 @@ class PAIMON_EXPORT WriteContext {
         return executor_;
     }
 
-    std::shared_ptr<IOManager> GetIOManager() const {
-        return io_manager_;
+    const std::string& GetTempDirectory() const {
+        return temp_directory_;
     }
 
     std::shared_ptr<FileSystem> GetSpecificFileSystem() const {
@@ -119,7 +117,7 @@ class PAIMON_EXPORT WriteContext {
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_;
     std::shared_ptr<Executor> executor_;
-    std::shared_ptr<IOManager> io_manager_;
+    std::string temp_directory_;
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::map<std::string, std::string> options_;
@@ -170,10 +168,10 @@ class PAIMON_EXPORT WriteContextBuilder {
     /// @return Reference to this builder for method chaining.
     WriteContextBuilder& WithExecutor(const std::shared_ptr<Executor>& executor);
 
-    /// Set custom IO manager for lookup and external disk spill operations.
-    /// @param io_manager The IO manager to use.
+    /// Set the temporary directory path for IO operations (lookup and external disk spill).
+    /// @param temp_dir The temporary directory path.
     /// @return Reference to this builder for method chaining.
-    WriteContextBuilder& WithIOManager(const std::shared_ptr<IOManager>& io_manager);
+    WriteContextBuilder& WithTempDirectory(const std::string& temp_dir);
 
     /// For postpone bucket mode in pk table, `WithWriteId()` supposed to be used.
     ///
