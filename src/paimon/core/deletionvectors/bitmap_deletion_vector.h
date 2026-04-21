@@ -64,6 +64,8 @@ class BitmapDeletionVector : public DeletionVector {
     Result<PAIMON_UNIQUE_PTR<Bytes>> SerializeToBytes(
         const std::shared_ptr<MemoryPool>& pool) override;
 
+    Status Merge(const std::shared_ptr<DeletionVector>& deletion_vector) override;
+
     const RoaringBitmap32* GetBitmap() const {
         return &roaring_bitmap_;
     }
