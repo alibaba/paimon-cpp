@@ -60,6 +60,10 @@ class FailingDeletionVector : public DeletionVector {
     Result<PAIMON_UNIQUE_PTR<Bytes>> SerializeToBytes(const std::shared_ptr<MemoryPool>&) override {
         return Status::Invalid("injected serialize failure");
     }
+
+    Status Merge(const std::shared_ptr<DeletionVector>&) override {
+        return Status::Invalid("injected merge failure");
+    }
 };
 
 }  // namespace
