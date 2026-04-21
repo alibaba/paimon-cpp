@@ -102,6 +102,7 @@ std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqua
         if (!leaf) {
             continue;
         }
+        // TODO(liangjie.liang): Support IN and OR predicates to enable multi-bucket pruning
         if (leaf->GetFunction().GetType() != Function::Type::EQUAL) {
             continue;
         }
