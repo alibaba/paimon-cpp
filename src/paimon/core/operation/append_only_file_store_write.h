@@ -79,6 +79,19 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
         const std::shared_ptr<Executor>& executor, const std::shared_ptr<MemoryPool>& pool);
     ~AppendOnlyFileStoreWrite() override;
 
+    /// Rewrites the given files into new compacted files.
+    ///
+    /// @param partition The partition of the files.
+    /// @param bucket The bucket number.
+    /// @param dv_factory Factory for creating deletion vectors (nullptr if DV is disabled).
+    /// @param to_compact The files to compact.
+    /// @param cancellation_controller Controller to cancel the compaction.
+    /// @return Result containing the new compacted files, or an error Status.
+    Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
+        const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
+        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
+        const std::shared_ptr<CancellationController>& cancellation_controller);
+
  private:
     using SingleFileWriterCreator = std::function<
         Result<std::unique_ptr<SingleFileWriter<::ArrowArray*, std::shared_ptr<DataFileMeta>>>>()>;
@@ -91,11 +104,6 @@ class AppendOnlyFileStoreWrite : public AbstractFileStoreWrite {
 
     Result<std::unique_ptr<FileStoreScan>> CreateFileStoreScan(
         const std::shared_ptr<ScanFilter>& filter) const override;
-
-    Result<std::vector<std::shared_ptr<DataFileMeta>>> CompactRewrite(
-        const BinaryRow& partition, int32_t bucket, DeletionVector::Factory dv_factory,
-        const std::vector<std::shared_ptr<DataFileMeta>>& to_compact,
-        const std::shared_ptr<CancellationController>& cancellation_controller);
 
     SingleFileWriterCreator GetDataFileWriterCreator(
         const BinaryRow& partition, int32_t bucket, const std::shared_ptr<arrow::Schema>& schema,
