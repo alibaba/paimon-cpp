@@ -80,7 +80,9 @@ class PAIMON_EXPORT BlockCache {
         for (const auto& [key, _] : copied_blocks) {
             cache_manager_->InvalidPage(key);
         }
-        assert(blocks_.empty());
+        // Some entries may remain in blocks_ if they were already evicted from the
+        // LRU cache (InvalidPage is a no-op for missing keys), so clear explicitly.
+        blocks_.clear();
     }
 
  private:

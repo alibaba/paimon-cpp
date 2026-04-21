@@ -138,6 +138,12 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 null_bitmap,
                            ReadNullBitmap(block_cache, footer->GetNullBitmapHandle(), pool.get()));
 
+    // Close the temporary block_cache to remove its entries from the shared LRU cache.
+    // This prevents use-after-free: the eviction callback captures `this` (the BlockCache),
+    // and if the BlockCache is destroyed without closing, a later eviction would invoke
+    // the callback on a dangling pointer.
+    block_cache->Close();
+
     // create SST file reader with footer information
     // TODO(xinyu.lxy): pass block cache to SstFileReader rather than cache_manager
     PAIMON_ASSIGN_OR_RAISE(
