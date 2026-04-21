@@ -255,6 +255,24 @@ class ConfigParser {
         return Status::OK();
     }
 
+    // Parse BucketFunctionType
+    Status ParseBucketFunctionType(BucketFunctionType* bucket_function_type) const {
+        auto iter = config_map_.find(Options::BUCKET_FUNCTION_TYPE);
+        if (iter != config_map_.end()) {
+            std::string str = StringUtils::ToLowerCase(iter->second);
+            if (str == "default") {
+                *bucket_function_type = BucketFunctionType::DEFAULT;
+            } else if (str == "mod") {
+                *bucket_function_type = BucketFunctionType::MOD;
+            } else if (str == "hive") {
+                *bucket_function_type = BucketFunctionType::HIVE;
+            } else {
+                return Status::Invalid(fmt::format("invalid bucket function type: {}", str));
+            }
+        }
+        return Status::OK();
+    }
+
     // Parse StartupMode
     Status ParseStartupMode(StartupMode* startup_mode) const {
         auto iter = config_map_.find(Options::SCAN_MODE);
@@ -389,6 +407,7 @@ struct CoreOptions::Impl {
     ExternalPathStrategy external_path_strategy = ExternalPathStrategy::NONE;
     LookupCompactMode lookup_compact_mode = LookupCompactMode::RADICAL;
     std::optional<int32_t> lookup_compact_max_interval;
+    BucketFunctionType bucket_function_type = BucketFunctionType::DEFAULT;
 
     int32_t file_compression_zstd_level = 1;
 
@@ -399,6 +418,7 @@ struct CoreOptions::Impl {
     bool force_lookup = false;
     bool lookup_wait = true;
     bool partial_update_remove_record_on_delete = false;
+    bool aggregation_remove_record_on_delete = false;
     bool file_index_read_enabled = true;
     bool enable_adaptive_prefetch_strategy = true;
     bool index_file_in_data_file_dir = false;
@@ -497,6 +517,8 @@ struct CoreOptions::Impl {
         // Parse data-evolution.enabled - whether to enable data evolution for row tracking
         PAIMON_RETURN_NOT_OK(
             parser.Parse<bool>(Options::DATA_EVOLUTION_ENABLED, &data_evolution_enabled));
+        // Parse bucket-function - bucket function type, default "DEFAULT"
+        PAIMON_RETURN_NOT_OK(parser.ParseBucketFunctionType(&bucket_function_type));
         return Status::OK();
     }
 
@@ -607,6 +629,9 @@ struct CoreOptions::Impl {
         // Parse partial-update.remove-record-on-delete - remove whole row on delete
         PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE,
                                                 &partial_update_remove_record_on_delete));
+        // Parse aggregation_remove_record_on_delete
+        PAIMON_RETURN_NOT_OK(parser.Parse<bool>(Options::AGGREGATION_REMOVE_RECORD_ON_DELETE,
+                                                &aggregation_remove_record_on_delete));
         // Parse partial-update.remove-record-on-sequence-group
         PAIMON_RETURN_NOT_OK(parser.ParseList<std::string>(
             Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP, Options::FIELDS_SEPARATOR,
@@ -1093,6 +1118,24 @@ Result<bool> CoreOptions::FieldAggIgnoreRetract(const std::string& field_name) c
     return field_agg_ignore_retract;
 }
 
+Result<std::string> CoreOptions::FieldListAggDelimiter(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    std::string delimiter = ",";
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::LIST_AGG_DELIMITER);
+    PAIMON_RETURN_NOT_OK(parser.ParseString(key, &delimiter));
+    return delimiter;
+}
+
+Result<bool> CoreOptions::FieldCollectAggDistinct(const std::string& field_name) const {
+    ConfigParser parser(impl_->raw_options);
+    bool distinct = false;
+    std::string key = std::string(Options::FIELDS_PREFIX) + "." + field_name + "." +
+                      std::string(Options::DISTINCT);
+    PAIMON_RETURN_NOT_OK(parser.Parse<bool>(key, &distinct));
+    return distinct;
+}
+
 bool CoreOptions::DeletionVectorsEnabled() const {
     return impl_->deletion_vectors_enabled;
 }
@@ -1157,6 +1200,10 @@ std::map<std::string, std::string> CoreOptions::GetFieldsSequenceGroups() const 
 
 bool CoreOptions::PartialUpdateRemoveRecordOnDelete() const {
     return impl_->partial_update_remove_record_on_delete;
+}
+
+bool CoreOptions::AggregationRemoveRecordOnDelete() const {
+    return impl_->aggregation_remove_record_on_delete;
 }
 
 std::vector<std::string> CoreOptions::GetPartialUpdateRemoveRecordOnSequenceGroup() const {
@@ -1304,6 +1351,10 @@ int64_t CoreOptions::GetLookupCacheMaxMemory() const {
 
 double CoreOptions::GetLookupCacheHighPrioPoolRatio() const {
     return impl_->lookup_cache_high_prio_pool_ratio;
+}
+
+BucketFunctionType CoreOptions::GetBucketFunctionType() const {
+    return impl_->bucket_function_type;
 }
 
 int64_t CoreOptions::GetLookupCacheFileRetentionMs() const {

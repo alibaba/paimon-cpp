@@ -33,7 +33,7 @@
 
 namespace paimon {
 Status ColumnarArray::CheckNoNull() const {
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         if (IsNullAt(i)) {
             return Status::Invalid(fmt::format("row {} is null", i));
         }
@@ -92,7 +92,7 @@ std::shared_ptr<InternalRow> ColumnarArray::GetRow(int32_t pos, int32_t num_fiel
 Result<std::vector<char>> ColumnarArray::ToBooleanArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<char> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         bool element = GetBoolean(i);
         res[i] = element ? static_cast<char>(1) : static_cast<char>(0);
     }
@@ -102,7 +102,7 @@ Result<std::vector<char>> ColumnarArray::ToBooleanArray() const {
 Result<std::vector<char>> ColumnarArray::ToByteArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<char> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetByte(i);
     }
     return res;
@@ -111,7 +111,7 @@ Result<std::vector<char>> ColumnarArray::ToByteArray() const {
 Result<std::vector<int16_t>> ColumnarArray::ToShortArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int16_t> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetShort(i);
     }
     return res;
@@ -120,7 +120,7 @@ Result<std::vector<int16_t>> ColumnarArray::ToShortArray() const {
 Result<std::vector<int32_t>> ColumnarArray::ToIntArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int32_t> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetInt(i);
     }
     return res;
@@ -129,7 +129,7 @@ Result<std::vector<int32_t>> ColumnarArray::ToIntArray() const {
 Result<std::vector<int64_t>> ColumnarArray::ToLongArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<int64_t> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetLong(i);
     }
     return res;
@@ -138,7 +138,7 @@ Result<std::vector<int64_t>> ColumnarArray::ToLongArray() const {
 Result<std::vector<float>> ColumnarArray::ToFloatArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<float> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetFloat(i);
     }
     return res;
@@ -147,7 +147,7 @@ Result<std::vector<float>> ColumnarArray::ToFloatArray() const {
 Result<std::vector<double>> ColumnarArray::ToDoubleArray() const {
     PAIMON_RETURN_NOT_OK(CheckNoNull());
     std::vector<double> res(length_);
-    for (int i = 0; i < length_; i++) {
+    for (int32_t i = 0; i < length_; i++) {
         res[i] = GetDouble(i);
     }
     return res;

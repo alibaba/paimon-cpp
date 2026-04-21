@@ -16,6 +16,7 @@
 
 #include "paimon/utils/roaring_bitmap64.h"
 
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -26,6 +27,7 @@
 #include "paimon/io/byte_array_input_stream.h"
 #include "paimon/result.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/utils/range.h"
 
 namespace paimon::test {
 TEST(RoaringBitmap64Test, TestSimple) {
@@ -413,5 +415,107 @@ TEST(RoaringBitmap64Test, TestIteratorEqualOrLarger) {
     ASSERT_EQ(*iter, 100l);
     iter.EqualOrLarger(200l);
     ASSERT_EQ(iter, roaring.End());
+}
+
+// Helper function to convert a RoaringBitmap64 to a list of contiguous ranges.
+static std::vector<Range> ToRangeList(const RoaringBitmap64& bitmap) {
+    std::vector<Range> ranges;
+    if (bitmap.IsEmpty()) {
+        return ranges;
+    }
+
+    int64_t current_start = -1;
+    int64_t current_end = -1;
+
+    for (auto it = bitmap.Begin(); it != bitmap.End(); ++it) {
+        int64_t value = *it;
+        if (current_start == -1) {
+            current_start = value;
+            current_end = value;
+        } else if (value == current_end + 1) {
+            current_end = value;
+        } else {
+            ranges.emplace_back(current_start, current_end);
+            current_start = value;
+            current_end = value;
+        }
+    }
+
+    if (current_start != -1) {
+        ranges.emplace_back(current_start, current_end);
+    }
+
+    return ranges;
+}
+
+TEST(RoaringBitmap64Test, TestAddRangeBasic) {
+    RoaringBitmap64 bitmap;
+    bitmap.AddRange(5, 11);  // half-open interval [5, 11) == closed [5, 10]
+
+    ASSERT_EQ(bitmap.Cardinality(), 6);
+    ASSERT_FALSE(bitmap.Contains(4));
+    ASSERT_TRUE(bitmap.Contains(5));
+    ASSERT_TRUE(bitmap.Contains(7));
+    ASSERT_TRUE(bitmap.Contains(10));
+    ASSERT_FALSE(bitmap.Contains(11));
+}
+
+TEST(RoaringBitmap64Test, TestAddRangeSingleElement) {
+    RoaringBitmap64 bitmap;
+    bitmap.AddRange(100, 101);  // half-open interval [100, 101) == single element 100
+
+    ASSERT_EQ(bitmap.Cardinality(), 1);
+    ASSERT_FALSE(bitmap.Contains(99));
+    ASSERT_TRUE(bitmap.Contains(100));
+    ASSERT_FALSE(bitmap.Contains(101));
+}
+
+TEST(RoaringBitmap64Test, TestAddRangeMultipleNonOverlapping) {
+    RoaringBitmap64 bitmap;
+    bitmap.AddRange(0, 6);    // [0, 5]
+    bitmap.AddRange(10, 16);  // [10, 15]
+    bitmap.AddRange(20, 26);  // [20, 25]
+
+    ASSERT_EQ(bitmap.Cardinality(), 18);
+
+    ASSERT_FALSE(bitmap.Contains(6));
+    ASSERT_FALSE(bitmap.Contains(9));
+    ASSERT_FALSE(bitmap.Contains(16));
+    ASSERT_FALSE(bitmap.Contains(19));
+
+    ASSERT_TRUE(bitmap.Contains(0));
+    ASSERT_TRUE(bitmap.Contains(5));
+    ASSERT_TRUE(bitmap.Contains(10));
+    ASSERT_TRUE(bitmap.Contains(15));
+    ASSERT_TRUE(bitmap.Contains(20));
+    ASSERT_TRUE(bitmap.Contains(25));
+
+    std::vector<Range> ranges = ToRangeList(bitmap);
+    ASSERT_EQ(ranges.size(), 3);
+    ASSERT_EQ(ranges[0], Range(0, 5));
+    ASSERT_EQ(ranges[1], Range(10, 15));
+    ASSERT_EQ(ranges[2], Range(20, 25));
+}
+
+TEST(RoaringBitmap64Test, TestAddRangeLargeValues) {
+    RoaringBitmap64 bitmap;
+    int64_t start = static_cast<int64_t>(INT_MAX) + 100L;
+    int64_t end = static_cast<int64_t>(INT_MAX) + 200L;
+    bitmap.AddRange(start, end + 1);  // half-open interval [start, end+1) == closed [start, end]
+
+    ASSERT_EQ(bitmap.Cardinality(), 101);
+    ASSERT_FALSE(bitmap.Contains(start - 1));
+    ASSERT_TRUE(bitmap.Contains(start));
+    ASSERT_TRUE(bitmap.Contains(start + 50));
+    ASSERT_TRUE(bitmap.Contains(end));
+    ASSERT_FALSE(bitmap.Contains(end + 1));
+
+    std::vector<int64_t> values;
+    for (auto it = bitmap.Begin(); it != bitmap.End(); ++it) {
+        values.push_back(*it);
+    }
+    ASSERT_EQ(values.size(), 101);
+    ASSERT_EQ(values[0], start);
+    ASSERT_EQ(values[100], end);
 }
 }  // namespace paimon::test

@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "gtest/gtest.h"
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/common/fs/resolving_file_system.h"
 #include "paimon/core/options/expire_config.h"
 #include "paimon/defs.h"
@@ -82,6 +83,8 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(std::nullopt, core_options.GetFieldsDefaultFunc());
     ASSERT_EQ(std::nullopt, core_options.GetFieldAggFunc("f0").value());
     ASSERT_FALSE(core_options.FieldAggIgnoreRetract("f1").value());
+    ASSERT_EQ(",", core_options.FieldListAggDelimiter("f1").value());
+    ASSERT_FALSE(core_options.FieldCollectAggDistinct("f1").value());
     ASSERT_FALSE(core_options.DeletionVectorsEnabled());
     ASSERT_FALSE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(2 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -93,6 +96,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
                                                /*deletion_vector=*/false, /*force_lookup=*/false};
     ASSERT_EQ(expected_lookup_strategy, core_options.GetLookupStrategy());
     ASSERT_TRUE(core_options.GetFieldsSequenceGroups().empty());
+    ASSERT_FALSE(core_options.AggregationRemoveRecordOnDelete());
     ASSERT_FALSE(core_options.PartialUpdateRemoveRecordOnDelete());
     ASSERT_TRUE(core_options.GetPartialUpdateRemoveRecordOnSequenceGroup().empty());
     ASSERT_EQ(std::nullopt, core_options.GetScanFallbackBranch());
@@ -132,6 +136,7 @@ TEST(CoreOptionsTest, TestDefaultValue) {
     ASSERT_EQ(INT64_MAX, core_options.GetLookupCacheMaxDiskSize());
     ASSERT_FALSE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), INT32_MIN);
+    ASSERT_EQ(BucketFunctionType::DEFAULT, core_options.GetBucketFunctionType());
 }
 
 TEST(CoreOptionsTest, TestFromMap) {
@@ -169,12 +174,15 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::FIELDS_DEFAULT_AGG_FUNC, "sum"},
         {"fields.f0.aggregate-function", "min"},
         {"fields.f1.ignore-retract", "true"},
+        {"fields.f2.list-agg-delimiter", " | "},
+        {"fields.f2.distinct", "true"},
         {Options::DELETION_VECTORS_ENABLED, "true"},
         {Options::DELETION_VECTOR_BITMAP64, "true"},
         {Options::DELETION_VECTOR_INDEX_FILE_TARGET_SIZE, "4MB"},
         {Options::CHANGELOG_PRODUCER, "full-compaction"},
         {Options::FORCE_LOOKUP, "true"},
         {"fields.g_1,g_3.sequence-group", "c,d"},
+        {Options::AGGREGATION_REMOVE_RECORD_ON_DELETE, "true"},
         {Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_DELETE, "true"},
         {Options::PARTIAL_UPDATE_REMOVE_RECORD_ON_SEQUENCE_GROUP, "a,b"},
         {Options::SCAN_FALLBACK_BRANCH, "fallback"},
@@ -222,7 +230,8 @@ TEST(CoreOptionsTest, TestFromMap) {
         {Options::LOOKUP_CACHE_FILE_RETENTION, "30min"},
         {Options::LOOKUP_CACHE_MAX_DISK_SIZE, "10GB"},
         {Options::LOOKUP_REMOTE_FILE_ENABLED, "True"},
-        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"}};
+        {Options::LOOKUP_REMOTE_LEVEL_THRESHOLD, "2"},
+        {Options::BUCKET_FUNCTION_TYPE, "mod"}};
 
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
     auto fs = core_options.GetFileSystem();
@@ -269,6 +278,8 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ("min", core_options.GetFieldAggFunc("f0").value().value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
     ASSERT_TRUE(core_options.FieldAggIgnoreRetract("f1").value());
+    ASSERT_EQ(" | ", core_options.FieldListAggDelimiter("f2").value());
+    ASSERT_TRUE(core_options.FieldCollectAggDistinct("f2").value());
     ASSERT_TRUE(core_options.DeletionVectorsEnabled());
     ASSERT_TRUE(core_options.DeletionVectorsBitmap64());
     ASSERT_EQ(4 * 1024 * 1024, core_options.DeletionVectorTargetFileSize());
@@ -283,6 +294,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     std::map<std::string, std::string> seq_grp;
     seq_grp["g_1,g_3"] = "c,d";
     ASSERT_EQ(core_options.GetFieldsSequenceGroups(), seq_grp);
+    ASSERT_TRUE(core_options.AggregationRemoveRecordOnDelete());
     ASSERT_TRUE(core_options.PartialUpdateRemoveRecordOnDelete());
     ASSERT_EQ(core_options.GetPartialUpdateRemoveRecordOnSequenceGroup(),
               std::vector<std::string>({"a", "b"}));
@@ -339,6 +351,7 @@ TEST(CoreOptionsTest, TestFromMap) {
     ASSERT_EQ(10L * 1024 * 1024 * 1024, core_options.GetLookupCacheMaxDiskSize());
     ASSERT_TRUE(core_options.LookupRemoteFileEnabled());
     ASSERT_EQ(core_options.GetLookupRemoteLevelThreshold(), 2);
+    ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
 }
 
 TEST(CoreOptionsTest, TestInvalidCase) {
@@ -361,6 +374,8 @@ TEST(CoreOptionsTest, TestInvalidCase) {
     ASSERT_NOK_WITH_MSG(
         CoreOptions::FromMap({{Options::LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO, "1.1"}}),
         "The high priority pool ratio should in the range [0, 1), while input is 1.1");
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::BUCKET_FUNCTION_TYPE, "invalid"}}),
+                        "invalid bucket function type: invalid");
 }
 
 TEST(CoreOptionsTest, TestLookupCompactMaxIntervalComputedValue) {
@@ -570,6 +585,7 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
         {Options::DATA_FILE_EXTERNAL_PATHS_STRATEGY, "ROUND-ROBIN"},
         {Options::LOOKUP_COMPACT, "GENTLE"},
         {Options::SCAN_MODE, "DEFAULT"},
+        {Options::BUCKET_FUNCTION_TYPE, "MOD"},
     };
     ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap(options));
 
@@ -580,5 +596,6 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
     ASSERT_EQ(SortEngine::MIN_HEAP, core_options.GetSortEngine());
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
+    ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
 }
 }  // namespace paimon::test

@@ -170,7 +170,7 @@ class ManifestFileMergerTest : public testing::Test {
 
 TEST_F(ManifestFileMergerTest, TestMergeWithoutCompaction) {
     std::vector<ManifestEntry> entries;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entries.push_back(MakeEntry(FileKind::Add(), std::to_string(i)));
     }
     std::vector<ManifestFileMeta> input;
@@ -200,9 +200,9 @@ TEST_F(ManifestFileMergerTest, TestMergeWithoutDeleteFile) {
     // entries are All Add().
     std::vector<ManifestFileMeta> input;
     // base
-    for (int j = 0; j < 6; j++) {
+    for (int32_t j = 0; j < 6; j++) {
         std::vector<ManifestEntry> entries;
-        for (int i = 1; i < 16; i++) {
+        for (int32_t i = 1; i < 16; i++) {
             entries.push_back(MakeEntry(FileKind::Add(), fmt::format("{}-{}", j, i), j));
         }
         input.push_back(MakeManifest(entries));
@@ -223,7 +223,7 @@ TEST_F(ManifestFileMergerTest, TestMergeWithoutDeleteFile) {
 
 TEST_F(ManifestFileMergerTest, TestTriggerMinorCompaction) {
     std::vector<ManifestEntry> entries;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entries.push_back(MakeEntry(FileKind::Add(), std::to_string(i)));
     }
     std::vector<ManifestFileMeta> input;
@@ -252,7 +252,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerMinorCompaction) {
     ASSERT_EQ(3, new_metas.size());
 
     std::vector<std::pair<std::string, FileKind>> entry_file_expected;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entry_file_expected.emplace_back(std::to_string(i), FileKind::Add());
     }
     entry_file_expected.emplace_back("A", FileKind::Add());
@@ -273,7 +273,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerMinorCompaction) {
 
 TEST_F(ManifestFileMergerTest, TestTriggerMinorCompactionWithLastBit) {
     std::vector<ManifestEntry> entries;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entries.push_back(MakeEntry(FileKind::Add(), std::to_string(i)));
     }
     std::vector<ManifestFileMeta> input;
@@ -302,7 +302,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerMinorCompactionWithLastBit) {
     ASSERT_EQ(2, new_metas.size());
 
     std::vector<std::pair<std::string, FileKind>> entry_file_expected;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entry_file_expected.emplace_back(std::to_string(i), FileKind::Add());
     }
     entry_file_expected.emplace_back("C", FileKind::Add());
@@ -320,7 +320,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerMinorCompactionWithLastBit) {
 
 TEST_F(ManifestFileMergerTest, TestTriggerFullCompaction) {
     std::vector<ManifestEntry> entries;
-    for (int i = 0; i < 16; i++) {
+    for (int32_t i = 0; i < 16; i++) {
         entries.push_back(MakeEntry(FileKind::Add(), std::to_string(i)));
     }
 
@@ -362,7 +362,7 @@ TEST_F(ManifestFileMergerTest, TestTriggerFullCompaction) {
     ASSERT_GT(new_metas.size(), 0);
 
     std::vector<std::pair<std::string, FileKind>> entry_file_expected;
-    for (int i = 0; i < 14; i++) {
+    for (int32_t i = 0; i < 14; i++) {
         entry_file_expected.emplace_back(std::to_string(i), FileKind::Add());
     }
     entry_file_expected.emplace_back("G", FileKind::Add());

@@ -12,8 +12,8 @@
 .. See the License for the specific language governing permissions and
 .. limitations under the License.
 
-Write And Prepare Commit
-========================
+Write
+=====
 Batch writing requires the compute engine to pre-bucket data (bucket), using the
 same bucketing strategy as Paimon to ensure correct ``Scan`` behavior, and to
 specify the target ``partition``. Data should be accumulated into ``RecordBatch``
@@ -42,6 +42,7 @@ Bucketing Modes
 
 - PK tables:
 
+  * Support ``bucket = -2`` (postpone bucket mode)
   * Support ``bucket > 0`` (fixed bucket mode)
 
 .. note::
@@ -111,15 +112,15 @@ The ``CommitMessage`` must encode all information required by the coordinator to
 produce a correct ``Snapshot``, which commonly includes (but is not limited to):
 
 - Partition and bucket identifiers associated with written data.
-- New data files, delete files, or changelog artifacts (as applicable to the table type).
+- New data files, delete files (as applicable to the table type).
 - File-level metadata required for manifest and index updates (e.g., row counts, min/max statistics where applicable).
 - Transactional markers and sequence numbers as required by table semantics.
 - Any per-writer state necessary for deduplication or idempotent commits.
 
 .. note::
 
-   Current C++ scope supports Append and PK tables. Changelog and index
-   artifacts are out of scope and should not be emitted in ``CommitMessage`` until
+   Current C++ scope supports Append and PK tables. Changelog is out of
+   scope and should not be emitted in ``CommitMessage`` until
    explicitly supported.
 
 Serialization and Deserialization

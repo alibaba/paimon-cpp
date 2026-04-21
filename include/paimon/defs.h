@@ -79,6 +79,12 @@ struct PAIMON_EXPORT Options {
     static const char DEFAULT_AGG_FUNCTION[];
     /// IGNORE_RETRACT is "ignore-retract"
     static const char IGNORE_RETRACT[];
+    /// "distinct" - Distinct option for aggregate functions like listagg. Default value is false.
+    /// Example: fields.f.distinct=true to deduplicate values during aggregation.
+    static const char DISTINCT[];
+    /// "list-agg-delimiter" - Delimiter for listagg aggregate function. Default value is ",".
+    /// Example: fields.f.list-agg-delimiter="-" to concatenate values with "-".
+    static const char LIST_AGG_DELIMITER[];
     /// SEQUENCE_GROUP is "sequence-group"
     static const char SEQUENCE_GROUP[];
     /// @}
@@ -341,6 +347,10 @@ struct PAIMON_EXPORT Options {
     /// "global-index.external-path" - Global index root directory, if not set, the global index
     /// files will be stored under the index directory.
     static const char GLOBAL_INDEX_EXTERNAL_PATH[];
+    /// "aggregation.remove-record-on-delete" - Whether to remove the whole row in aggregation
+    /// engine when delete records are received. Default value is "false".
+    static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
+
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This
@@ -414,6 +424,9 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache.high-priority-pool-ratio" - The fraction of cache memory that is reserved for
     /// high-priority data like index, filter. Default value is 0.25.
     static const char LOOKUP_CACHE_HIGH_PRIO_POOL_RATIO[];
+    /// "bucket-function.type" - The bucket function type for paimon bucket.
+    /// Values can be: "default", "mod", "hive". Default value is "default".
+    static const char BUCKET_FUNCTION_TYPE[];
     /// "lookup.cache-file-retention" - The cached files retention time for lookup.
     /// After the file expires, if there is a need for access, it will be re-read from the DFS
     /// to build an index on the local disk. Default value is 1 hour.
@@ -421,6 +434,24 @@ struct PAIMON_EXPORT Options {
     /// "lookup.cache-max-disk-size" - Max disk size for lookup cache, you can use this option
     /// to limit the use of local disks. Default value is unlimited (INT64_MAX).
     static const char LOOKUP_CACHE_MAX_DISK_SIZE[];
+    /// "btree-index.compression" - The compression algorithm to use for BTreeIndex.
+    /// Default value is "none".
+    static const char BTREE_INDEX_COMPRESSION[];
+    /// "btree-index.compression-level" - The compression level of the compression algorithm.
+    /// Default value is 1.
+    static const char BTREE_INDEX_COMPRESSION_LEVEL[];
+    /// "btree-index.block-size" - The block size to use for BTreeIndex.
+    /// Default value is 64 KB.
+    static const char BTREE_INDEX_BLOCK_SIZE[];
+    /// "btree-index.cache-size" - The cache size to use for BTreeIndex.
+    /// Default value is 128 MB.
+    static const char BTREE_INDEX_CACHE_SIZE[];
+    /// "btree-index.high-priority-pool-ratio" - The high priority pool ratio to use for BTreeIndex.
+    /// Default value is 0.1.
+    static const char BTREE_INDEX_HIGH_PRIORITY_POOL_RATIO[];
+    /// "btree-index.records-per-range" - The expected number of records per BTree Index File.
+    /// Default value is 1000000.
+    static const char BTREE_INDEX_RECORDS_PER_RANGE[];
 };
 
 static constexpr int64_t BATCH_WRITE_COMMIT_IDENTIFIER = std::numeric_limits<int64_t>::max();

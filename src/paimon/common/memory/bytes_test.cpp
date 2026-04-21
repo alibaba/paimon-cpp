@@ -89,6 +89,9 @@ TEST(BytesTest, TestCompare) {
     ASSERT_FALSE(*bytes1 == *bytes2);
     ASSERT_LT(*bytes1, *bytes2);
     ASSERT_FALSE(*bytes1 < *bytes1);
+    ASSERT_EQ(bytes1->compare(*bytes1), 0);
+    ASSERT_EQ(bytes1->compare(*bytes2), -1);
+    ASSERT_EQ(bytes2->compare(*bytes1), 1);
 }
 
 // Test to verify that move assignment correctly handles memory and prevents double-free.

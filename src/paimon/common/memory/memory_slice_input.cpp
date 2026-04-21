@@ -16,6 +16,7 @@
 
 #include "paimon/common/memory/memory_slice_input.h"
 
+#include "fmt/format.h"
 #include "paimon/common/utils/math.h"
 
 namespace paimon {
@@ -28,7 +29,7 @@ int32_t MemorySliceInput::Position() const {
 
 Status MemorySliceInput::SetPosition(int32_t position) {
     if (position < 0 || position > slice_.Length()) {
-        return Status::IndexError("position " + std::to_string(position) + " index out of bounds");
+        return Status::IndexError(fmt::format("position {} index out of bounds", position));
     }
     position_ = position;
     return Status::OK();
@@ -69,8 +70,8 @@ int64_t MemorySliceInput::ReadLong() {
 }
 
 Result<int32_t> MemorySliceInput::ReadVarLenInt() {
-    for (int offset = 0, result = 0; offset < 32; offset += 7) {
-        int b = ReadUnsignedByte();
+    for (int32_t offset = 0, result = 0; offset < 32; offset += 7) {
+        int32_t b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
         if ((b & 0x80) == 0) {
             return result;
@@ -81,7 +82,7 @@ Result<int32_t> MemorySliceInput::ReadVarLenInt() {
 
 Result<int64_t> MemorySliceInput::ReadVarLenLong() {
     int64_t result = 0;
-    for (int offset = 0; offset < 64; offset += 7) {
+    for (int32_t offset = 0; offset < 64; offset += 7) {
         int64_t b = ReadUnsignedByte();
         result |= (b & 0x7F) << offset;
         if ((b & 0x80) == 0) {

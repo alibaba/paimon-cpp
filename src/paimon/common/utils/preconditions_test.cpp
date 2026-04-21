@@ -35,13 +35,13 @@ TEST(PreconditionsTest, CheckStateInvalidCondition) {
 
 // Test case: Test CheckNotNull with a non-null reference
 TEST(PreconditionsTest, CheckNotNullNonNullReference) {
-    int x = 10;
+    int32_t x = 10;
     ASSERT_OK(Preconditions::CheckNotNull(x));
 }
 
 // Test case: Test CheckNotNull with a non-null reference with msg
 TEST(PreconditionsTest, CheckNotNullNonNullReference2) {
-    int x = 10;
+    int32_t x = 10;
     ASSERT_OK(Preconditions::CheckNotNull(x, "Condition failed"));
 }
 

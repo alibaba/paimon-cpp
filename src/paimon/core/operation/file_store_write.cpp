@@ -22,6 +22,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/types/data_field.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/disk/io_manager.h"
 #include "paimon/core/manifest/index_manifest_file.h"
@@ -36,7 +37,6 @@
 #include "paimon/core/schema/table_schema.h"
 #include "paimon/core/table/bucket_mode.h"
 #include "paimon/core/utils/field_mapping.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/core/utils/file_store_path_factory.h"
 #include "paimon/core/utils/primary_key_table_utils.h"
 #include "paimon/core/utils/snapshot_manager.h"

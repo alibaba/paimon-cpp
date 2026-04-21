@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/utils/bucket_id_calculator.h"
+#include "paimon/bucket/bucket_id_calculator.h"
 
 #include <cassert>
 #include <cmath>
@@ -44,6 +44,10 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/scope_guard.h"
+#include "paimon/core/bucket/bucket_function.h"
+#include "paimon/core/bucket/default_bucket_function.h"
+#include "paimon/core/bucket/hive_bucket_function.h"
+#include "paimon/core/bucket/mod_bucket_function.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/memory_pool.h"
@@ -236,8 +240,21 @@ static Result<WriteFunction> WriteBucketRow(int32_t col_id,
 }
 }  // namespace
 
+BucketIdCalculator::BucketIdCalculator(int32_t num_buckets,
+                                       std::unique_ptr<BucketFunction> bucket_function,
+                                       const std::shared_ptr<MemoryPool>& pool)
+    : num_buckets_(num_buckets), bucket_function_(std::move(bucket_function)), pool_(pool) {}
+
+BucketIdCalculator::~BucketIdCalculator() = default;
+
 Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
     bool is_pk_table, int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool) {
+    return Create(is_pk_table, num_buckets, std::make_unique<DefaultBucketFunction>(), pool);
+}
+
+Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
+    bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+    const std::shared_ptr<MemoryPool>& pool) {
     if (num_buckets == 0 || num_buckets < -2) {
         return Status::Invalid("num buckets must be -1 or -2 or greater than 0");
     }
@@ -249,12 +266,22 @@ Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(
     if (!is_pk_table && num_buckets == -2) {
         return Status::Invalid("Append table not support PostponeBucketMode");
     }
-    return std::unique_ptr<BucketIdCalculator>(new BucketIdCalculator(num_buckets, pool));
+    return std::unique_ptr<BucketIdCalculator>(
+        new BucketIdCalculator(num_buckets, std::move(bucket_function), pool));
 }
 
-Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::Create(bool is_pk_table,
-                                                                       int32_t num_buckets) {
-    return Create(is_pk_table, num_buckets, GetDefaultPool());
+Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::CreateMod(
+    bool is_pk_table, int32_t num_buckets, FieldType bucket_key_type,
+    const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(auto mod_func, ModBucketFunction::Create(bucket_key_type));
+    return Create(is_pk_table, num_buckets, std::move(mod_func), pool);
+}
+
+Result<std::unique_ptr<BucketIdCalculator>> BucketIdCalculator::CreateHive(
+    bool is_pk_table, int32_t num_buckets, const std::vector<HiveFieldInfo>& field_infos,
+    const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(auto hive_func, HiveBucketFunction::Create(field_infos));
+    return Create(is_pk_table, num_buckets, std::move(hive_func), pool);
 }
 
 Status BucketIdCalculator::CalculateBucketIds(ArrowArray* bucket_keys, ArrowSchema* bucket_schema,
@@ -298,7 +325,7 @@ Status BucketIdCalculator::CalculateBucketIds(ArrowArray* bucket_keys, ArrowSche
             write_functions[col](row, &row_writer);
         }
         row_writer.Complete();
-        bucket_ids[row] = std::abs(bucket_row.HashCode() % num_buckets_);
+        bucket_ids[row] = bucket_function_->Bucket(bucket_row, num_buckets_);
     }
     guard.Release();
     return Status::OK();

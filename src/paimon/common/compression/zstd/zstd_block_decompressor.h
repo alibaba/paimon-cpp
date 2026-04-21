@@ -30,7 +30,7 @@ class ZstdBlockDecompressor : public BlockDecompressor {
                                int32_t dst_length) override {
         int32_t decompressed_size = ZSTD_decompress(dst, dst_length, src, src_length);
         if (ZSTD_isError(decompressed_size)) {
-            return Status::IOError(
+            return Status::Invalid(
                 fmt::format("Input is corrupted with return code {}", decompressed_size));
         }
         return decompressed_size;

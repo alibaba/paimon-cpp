@@ -173,7 +173,7 @@ TEST_F(BitSliceIndexBitmapTest, TestRandomData) {
         std::make_shared<ByteArrayInputStream>(serialized->data(), serialized->size());
     ASSERT_OK_AND_ASSIGN(auto bitmap, BitSliceIndexBitmap::Create(input_stream, 0, pool_));
     // Test eq
-    for (int i = 0; i < kQueryCount; i++) {
+    for (int32_t i = 0; i < kQueryCount; i++) {
         int32_t code = value_dist(gen);
         // Compute expected result from source data
         RoaringBitmap32 expected;
@@ -186,7 +186,7 @@ TEST_F(BitSliceIndexBitmapTest, TestRandomData) {
         EXPECT_EQ(result.ToString(), expected.ToString());
     }
     // Test gt
-    for (int i = 0; i < kQueryCount; i++) {
+    for (int32_t i = 0; i < kQueryCount; i++) {
         int32_t code = value_dist(gen);
         // Compute expected result from source data
         RoaringBitmap32 expected;
@@ -199,7 +199,7 @@ TEST_F(BitSliceIndexBitmapTest, TestRandomData) {
         EXPECT_EQ(result.ToString(), expected.ToString());
     }
     // Test gte
-    for (int i = 0; i < kQueryCount; i++) {
+    for (int32_t i = 0; i < kQueryCount; i++) {
         int32_t code = value_dist(gen);
         // Compute expected result from source data
         RoaringBitmap32 expected;

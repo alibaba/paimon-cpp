@@ -29,6 +29,7 @@ User Guide
    user_guide/append_only_table
    user_guide/write
    user_guide/commit
+   user_guide/compaction
    user_guide/read
    user_guide/clean
    user_guide/prefetch

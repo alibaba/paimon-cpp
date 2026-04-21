@@ -34,7 +34,7 @@ namespace paimon {
 /// CacheCallback is invoked to notify the upper layer.
 ///
 /// @note Thread-safe: all public methods are protected by the underlying GenericLruCache lock.
-class LruCache : public Cache {
+class PAIMON_EXPORT LruCache : public Cache {
  public:
     explicit LruCache(int64_t max_weight);
 

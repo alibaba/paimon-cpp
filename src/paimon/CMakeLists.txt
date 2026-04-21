@@ -69,6 +69,7 @@ set(PAIMON_COMMON_SRCS
     common/io/cache/lru_cache.cpp
     common/logging/logging.cpp
     common/lookup/sort/sort_lookup_store_factory.cpp
+    common/lookup/sort/sort_lookup_store_footer.cpp
     common/lookup/lookup_store_factory.cpp
     common/memory/bytes.cpp
     common/memory/memory_pool.cpp
@@ -112,7 +113,6 @@ set(PAIMON_COMMON_SRCS
     common/reader/complete_row_kind_batch_reader.cpp
     common/reader/data_evolution_file_reader.cpp
     common/sst/block_handle.cpp
-    common/sst/block_footer.cpp
     common/sst/block_iterator.cpp
     common/sst/block_trailer.cpp
     common/sst/block_reader.cpp
@@ -132,10 +132,10 @@ set(PAIMON_COMMON_SRCS
     common/utils/bit_set.cpp
     common/utils/bloom_filter.cpp
     common/utils/bloom_filter64.cpp
-    common/utils/bucket_id_calculator.cpp
     common/utils/crc32c.cpp
     common/utils/decimal_utils.cpp
     common/utils/delta_varint_compressor.cpp
+    common/utils/fields_comparator.cpp
     common/utils/path_util.cpp
     common/utils/range.cpp
     common/utils/read_ahead_cache.cpp
@@ -151,6 +151,9 @@ set(PAIMON_CORE_SRCS
     core/mergetree/spill_writer.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
+    core/bucket/hive_bucket_function.cpp
+    core/bucket/mod_bucket_function.cpp
+    core/bucket/bucket_id_calculator.cpp
     core/casting/binary_to_string_cast_executor.cpp
     core/casting/boolean_to_decimal_cast_executor.cpp
     core/casting/boolean_to_numeric_cast_executor.cpp
@@ -304,7 +307,6 @@ set(PAIMON_CORE_SRCS
     core/table/source/data_evolution_batch_scan.cpp
     core/tag/tag.cpp
     core/utils/field_mapping.cpp
-    core/utils/fields_comparator.cpp
     core/utils/file_store_path_factory.cpp
     core/utils/file_utils.cpp
     core/utils/manifest_meta_reader.cpp
@@ -350,6 +352,7 @@ if(PAIMON_BUILD_TESTS)
                     common/memory/bytes_test.cpp
                     common/memory/memory_segment_test.cpp
                     common/memory/memory_segment_utils_test.cpp
+                    common/memory/memory_slice_test.cpp
                     STATIC_LINK_LIBS
                     paimon_shared
                     test_utils_static
@@ -405,12 +408,19 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp
                     common/global_index/bitmap/bitmap_global_index_test.cpp
+                    common/global_index/btree/btree_index_meta_test.cpp
+                    common/global_index/btree/btree_file_footer_test.cpp
+                    common/global_index/btree/btree_global_indexer_test.cpp
+                    common/global_index/btree/btree_global_index_writer_test.cpp
+                    common/global_index/btree/btree_global_index_integration_test.cpp
+                    common/global_index/btree/btree_compatibility_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
                     common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp
                     common/io/data_input_output_stream_test.cpp
                     common/io/buffered_input_stream_test.cpp
                     common/io/memory_segment_output_stream_test.cpp
+                    common/io/cache_input_stream_test.cpp
                     common/io/offset_input_stream_test.cpp
                     common/lookup/sort/sort_lookup_store_test.cpp
                     common/logging/logging_test.cpp
@@ -449,13 +459,13 @@ if(PAIMON_BUILD_TESTS)
                     common/utils/bloom_filter_test.cpp
                     common/utils/bloom_filter64_test.cpp
                     common/utils/xxhash_test.cpp
-                    common/utils/bucket_id_calculator_test.cpp
                     common/utils/binary_row_partition_computer_test.cpp
                     common/utils/bin_packing_test.cpp
                     common/utils/data_converter_utils_test.cpp
                     common/utils/date_time_utils_test.cpp
                     common/utils/delta_varint_compressor_test.cpp
                     common/utils/field_type_utils_test.cpp
+                    common/utils/fields_comparator_test.cpp
                     common/utils/internal_row_utils_test.cpp
                     common/utils/jsonizable_test.cpp
                     common/utils/linked_hash_map_test.cpp
@@ -516,6 +526,10 @@ if(PAIMON_BUILD_TESTS)
                     SOURCES
                     core/append/append_only_writer_test.cpp
                     core/append/bucketed_append_compact_manager_test.cpp
+                    core/bucket/default_bucket_function_test.cpp
+                    core/bucket/hive_bucket_function_test.cpp
+                    core/bucket/bucket_id_calculator_test.cpp
+                    core/bucket/mod_bucket_function_test.cpp
                     core/casting/cast_executor_factory_test.cpp
                     core/casting/cast_executor_test.cpp
                     core/casting/casted_row_test.cpp
@@ -579,6 +593,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/compact/aggregate/field_ignore_retract_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_non_null_value_agg_test.cpp
                     core/mergetree/compact/aggregate/field_last_value_agg_test.cpp
+                    core/mergetree/compact/aggregate/field_listagg_agg_test.cpp
                     core/mergetree/compact/aggregate/field_min_max_agg_test.cpp
                     core/mergetree/compact/aggregate/field_primary_key_agg_test.cpp
                     core/mergetree/compact/aggregate/field_sum_agg_test.cpp
@@ -658,7 +673,6 @@ if(PAIMON_BUILD_TESTS)
                     core/utils/branch_manager_test.cpp
                     core/utils/file_store_path_factory_cache_test.cpp
                     core/utils/field_mapping_test.cpp
-                    core/utils/fields_comparator_test.cpp
                     core/utils/file_store_path_factory_test.cpp
                     core/utils/file_utils_test.cpp
                     core/utils/manifest_meta_reader_test.cpp

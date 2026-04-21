@@ -50,7 +50,7 @@ namespace paimon {
 ///     +------------------------------------------------+
 /// </pre>
 ///
-class BlockWriter {
+class PAIMON_EXPORT BlockWriter {
  public:
     BlockWriter(int32_t size, const std::shared_ptr<MemoryPool>& pool, bool aligned = true)
         : size_(size), pool_(pool), aligned_(aligned) {
@@ -60,7 +60,7 @@ class BlockWriter {
 
     ~BlockWriter() = default;
 
-    void Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
+    Status Write(std::shared_ptr<Bytes>& key, std::shared_ptr<Bytes>& value);
 
     void Reset();
 
@@ -69,7 +69,7 @@ class BlockWriter {
     }
 
     int32_t Memory() const {
-        int memory = block_->Size() + 5;
+        int32_t memory = block_->Size() + 5;
         if (!aligned_) {
             memory += positions_.size() * 4;
         }

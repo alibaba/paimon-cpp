@@ -236,7 +236,7 @@ TEST_F(ChunkedDictionaryTest, TestMultiChunk) {
                              key_factory, 64, pool_));  // Small chunk size to force multiple chunks
 
     // Add many keys to force chunk splitting
-    for (int i = 0; i < 20; ++i) {
+    for (int32_t i = 0; i < 20; ++i) {
         ASSERT_OK(appender->AppendSorted(Literal(i * 10), i));
     }
 
@@ -627,6 +627,43 @@ TEST_P(ChunkedDictionaryParamTest, TestSizeLimitAndCardinalityDouble) {
     const int32_t cardinality = std::get<1>(GetParam());
     TestFloatingPointSizeLimitAndCardinality<double>(FieldType::DOUBLE, chunk_size_limit,
                                                      cardinality);
+}
+
+TEST_F(ChunkedDictionaryTest, TestChunkFindFirstKeyFastPath) {
+    ASSERT_OK_AND_ASSIGN(auto key_factory, KeyFactory::Create(FieldType::INT));
+    // Large chunk size so all keys land in one chunk
+    ASSERT_OK_AND_ASSIGN(auto appender,
+                         ChunkedDictionary::Appender::Create(key_factory, 1024 * 1024, pool_));
+
+    int32_t key_count = 10;
+    for (int32_t i = 0; i < key_count; i++) {
+        ASSERT_OK(appender->AppendSorted(Literal((i + 1) * 10), i));
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto bytes, appender->Serialize());
+    auto input_stream = std::make_shared<ByteArrayInputStream>(bytes->data(), bytes->size());
+    ASSERT_OK_AND_ASSIGN(auto dict,
+                         ChunkedDictionary::Create(FieldType::INT, input_stream, 0, pool_));
+
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(10)));
+        ASSERT_EQ(code, 0);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(Literal literal, dict->Find(0));
+        ASSERT_EQ(literal, Literal(10));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(50)));
+        ASSERT_EQ(code, 4);
+
+        ASSERT_OK_AND_ASSIGN(Literal literal, dict->Find(4));
+        ASSERT_EQ(literal, Literal(50));
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(int32_t code, dict->Find(Literal(15)));
+        ASSERT_LT(code, 0);
+    }
 }
 
 INSTANTIATE_TEST_SUITE_P(

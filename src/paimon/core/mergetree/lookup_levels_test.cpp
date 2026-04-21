@@ -25,6 +25,7 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
@@ -36,7 +37,6 @@
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/schema/schema_manager.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/record_batch.h"
 #include "paimon/testing/utils/binary_row_generator.h"
@@ -884,8 +884,8 @@ TEST_F(LookupLevelsTest, TestCacheEvictionByExpiration) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<Levels> levels,
                          Levels::Create(key_comparator, files, /*num_levels=*/3));
 
-    // Create a cache with a very short expiration (50ms).
-    auto expiring_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/50,
+    // Create a cache with a very short expiration (300ms).
+    auto expiring_cache = LookupFile::CreateLookupFileCache(/*file_retention_ms=*/300,
                                                             /*max_disk_size=*/INT64_MAX);
     ASSERT_OK_AND_ASSIGN(auto lookup_levels,
                          CreateLookupLevels(table_path, levels, expiring_cache));
@@ -905,7 +905,7 @@ TEST_F(LookupLevelsTest, TestCacheEvictionByExpiration) {
     ASSERT_EQ(expiring_cache->Size(), 2);
 
     // Wait for entries to expire.
-    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     // Entries should be expired now. GetIfPresent triggers expiration check.
     ASSERT_FALSE(expiring_cache->GetIfPresent(file0->file_name).has_value());

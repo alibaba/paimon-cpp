@@ -23,7 +23,7 @@
 #include "paimon/common/file_index/rangebitmap/dictionary/fixed_length_chunk.h"
 #include "paimon/common/file_index/rangebitmap/utils/literal_serialization_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
-#include "paimon/core/utils/fields_comparator.h"
+#include "paimon/common/utils/fields_comparator.h"
 
 namespace paimon {
 

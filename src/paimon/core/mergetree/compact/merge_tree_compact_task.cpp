@@ -92,7 +92,7 @@ Status MergeTreeCompactTask::Rewrite(std::vector<std::vector<SortedRun>>* candid
     if (candidate->size() == 1) {
         const auto& section = (*candidate)[0];
         if (section.empty()) {
-            return Status::OK();
+            return Status::Invalid("invalid section, section cannot be empty in candidate");
         }
         if (section.size() == 1) {
             for (const auto& file : section[0].Files()) {

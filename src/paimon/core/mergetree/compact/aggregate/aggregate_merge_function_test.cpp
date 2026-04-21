@@ -191,4 +191,134 @@ TEST(AggregateMergeFunctionTest, TestSequenceFields) {
     KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/4);
 }
 
+TEST(AggregateMergeFunctionTest, TestRemoveRecordOnDelete) {
+    arrow::FieldVector fields = {arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+    auto value_schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions core_options,
+        CoreOptions::FromMap({{Options::FIELDS_DEFAULT_AGG_FUNC, "sum"},
+                              {Options::AGGREGATION_REMOVE_RECORD_ON_DELETE, "true"}}));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<AggregateMergeFunction> merge_func,
+        AggregateMergeFunction::Create(value_schema, /*primary_keys=*/{"k0"}, core_options));
+
+    auto pool = GetDefaultPool();
+
+    // Case 1: INSERT + INSERT, then DELETE -> result should be RowKind::Delete
+    {
+        merge_func->Reset();
+        KeyValue kv1(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+        KeyValue kv2(RowKind::Insert(), /*sequence_number=*/1, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+        KeyValue kv3(RowKind::Delete(), /*sequence_number=*/2, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+        ASSERT_OK(merge_func->Add(std::move(kv1)));
+        ASSERT_OK(merge_func->Add(std::move(kv2)));
+        ASSERT_OK(merge_func->Add(std::move(kv3)));
+        auto result_kv = std::move(merge_func->GetResult().value().value());
+        // Should return DELETE row kind with the original values from the delete record
+        KeyValue expected(RowKind::Delete(), /*sequence_number=*/2,
+                          /*level=*/KeyValue::UNKNOWN_LEVEL,
+                          BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                          BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+        KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+    }
+
+    // Case 2: Only INSERT rows, no DELETE -> result should be RowKind::Insert with aggregated
+    // values
+    {
+        merge_func->Reset();
+        KeyValue kv1(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+        KeyValue kv2(RowKind::Insert(), /*sequence_number=*/1, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+        ASSERT_OK(merge_func->Add(std::move(kv1)));
+        ASSERT_OK(merge_func->Add(std::move(kv2)));
+        auto result_kv = std::move(merge_func->GetResult().value().value());
+        // Should return INSERT with sum aggregation: 100 + 200 = 300
+        KeyValue expected(RowKind::Insert(), /*sequence_number=*/1,
+                          /*level=*/KeyValue::UNKNOWN_LEVEL,
+                          BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                          BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+        KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+    }
+
+    // Case 3: DELETE only -> result should be RowKind::Delete
+    {
+        merge_func->Reset();
+        KeyValue kv1(RowKind::Delete(), /*sequence_number=*/0, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+        ASSERT_OK(merge_func->Add(std::move(kv1)));
+        auto result_kv = std::move(merge_func->GetResult().value().value());
+        KeyValue expected(RowKind::Delete(), /*sequence_number=*/0,
+                          /*level=*/KeyValue::UNKNOWN_LEVEL,
+                          BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                          BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+        KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+    }
+
+    // Case 4: INSERT + DELETE + INSERT -> DELETE resets row, then INSERT aggregates on top
+    {
+        merge_func->Reset();
+        KeyValue kv1(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 100}, pool.get()));
+        KeyValue kv2(RowKind::Delete(), /*sequence_number=*/1, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+        KeyValue kv3(RowKind::Insert(), /*sequence_number=*/2, /*level=*/0,
+                     BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                     BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+        ASSERT_OK(merge_func->Add(std::move(kv1)));
+        ASSERT_OK(merge_func->Add(std::move(kv2)));
+        ASSERT_OK(merge_func->Add(std::move(kv3)));
+        auto result_kv = std::move(merge_func->GetResult().value().value());
+        // DELETE resets row_ to {10, 200}, then INSERT aggregates: 200 + 300 = 500
+        // current_delete_row_ is false because last record is INSERT
+        KeyValue expected(RowKind::Insert(), /*sequence_number=*/2,
+                          /*level=*/KeyValue::UNKNOWN_LEVEL,
+                          BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                          BinaryRowGenerator::GenerateRowPtr({10, 500}, pool.get()));
+        KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+    }
+}
+
+TEST(AggregateMergeFunctionTest, TestDeleteWithoutRemoveRecordOnDelete) {
+    // Without removeRecordOnDelete, DELETE row should be treated as retract (subtract)
+    arrow::FieldVector fields = {arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+    auto value_schema = arrow::schema(fields);
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::FIELDS_DEFAULT_AGG_FUNC, "sum"}}));
+    ASSERT_OK_AND_ASSIGN(
+        std::unique_ptr<AggregateMergeFunction> merge_func,
+        AggregateMergeFunction::Create(value_schema, /*primary_keys=*/{"k0"}, core_options));
+
+    auto pool = GetDefaultPool();
+    merge_func->Reset();
+    KeyValue kv1(RowKind::Insert(), /*sequence_number=*/0, /*level=*/0,
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 BinaryRowGenerator::GenerateRowPtr({10, 200}, pool.get()));
+    KeyValue kv2(RowKind::Delete(), /*sequence_number=*/1, /*level=*/0,
+                 BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                 BinaryRowGenerator::GenerateRowPtr({10, 300}, pool.get()));
+    ASSERT_OK(merge_func->Add(std::move(kv1)));
+    ASSERT_OK(merge_func->Add(std::move(kv2)));
+    auto result_kv = std::move(merge_func->GetResult().value().value());
+    // Without removeRecordOnDelete, DELETE is retract: 200 - 300 = -100, result is INSERT
+    KeyValue expected(RowKind::Insert(), /*sequence_number=*/1,
+                      /*level=*/KeyValue::UNKNOWN_LEVEL,
+                      BinaryRowGenerator::GenerateRowPtr({10}, pool.get()),
+                      BinaryRowGenerator::GenerateRowPtr({10, -100}, pool.get()));
+    KeyValueChecker::CheckResult(expected, result_kv, /*key_arity=*/1, /*value_arity=*/2);
+}
+
 }  // namespace paimon::test

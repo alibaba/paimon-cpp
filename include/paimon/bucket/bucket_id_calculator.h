@@ -17,7 +17,9 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <vector>
 
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -27,6 +29,7 @@ struct ArrowSchema;
 struct ArrowArray;
 
 namespace paimon {
+class BucketFunction;
 class MemoryPool;
 
 /// Calculator for determining bucket ids based on the given bucket keys.
@@ -35,18 +38,40 @@ class MemoryPool;
 /// hash-based distribution to ensure even data distribution across buckets.
 class PAIMON_EXPORT BucketIdCalculator {
  public:
-    /// Create `BucketIdCalculator` with custom memory pool.
+    /// Create `BucketIdCalculator` with default bucket function.
     /// @param is_pk_table Whether this is for a primary key table.
     /// @param num_buckets Number of buckets.
     /// @param pool Memory pool for memory allocation.
     static Result<std::unique_ptr<BucketIdCalculator>> Create(
         bool is_pk_table, int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool);
 
-    /// Create `BucketIdCalculator` with default memory pool.
+    /// Create `BucketIdCalculator` with a custom bucket function.
     /// @param is_pk_table Whether this is for a primary key table.
     /// @param num_buckets Number of buckets.
-    static Result<std::unique_ptr<BucketIdCalculator>> Create(bool is_pk_table,
-                                                              int32_t num_buckets);
+    /// @param bucket_function The bucket function to use for bucket assignment.
+    /// @param pool Memory pool for memory allocation.
+    static Result<std::unique_ptr<BucketIdCalculator>> Create(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    /// Create `BucketIdCalculator` with MOD bucket function.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param bucket_key_type The type of the single bucket key field. Must be INT or BIGINT.
+    /// @param pool Memory pool for memory allocation.
+    static Result<std::unique_ptr<BucketIdCalculator>> CreateMod(
+        bool is_pk_table, int32_t num_buckets, FieldType bucket_key_type,
+        const std::shared_ptr<MemoryPool>& pool);
+
+    /// Create `BucketIdCalculator` with HIVE bucket function.
+    /// @param is_pk_table Whether this is for a primary key table.
+    /// @param num_buckets Number of buckets.
+    /// @param field_infos The detailed type info of all fields in the bucket key row.
+    /// @param pool Memory pool for memory allocation.
+    static Result<std::unique_ptr<BucketIdCalculator>> CreateHive(
+        bool is_pk_table, int32_t num_buckets, const std::vector<HiveFieldInfo>& field_infos,
+        const std::shared_ptr<MemoryPool>& pool);
+
     /// Calculate bucket ids for the given bucket keys.
     /// @param bucket_keys Arrow struct array containing the bucket key values.
     /// @param bucket_schema Arrow schema describing the structure of bucket_keys.
@@ -57,12 +82,16 @@ class PAIMON_EXPORT BucketIdCalculator {
     Status CalculateBucketIds(ArrowArray* bucket_keys, ArrowSchema* bucket_schema,
                               int32_t* bucket_ids) const;
 
+    /// Destructor
+    ~BucketIdCalculator();
+
  private:
-    BucketIdCalculator(int32_t num_buckets, const std::shared_ptr<MemoryPool>& pool)
-        : num_buckets_(num_buckets), pool_(pool) {}
+    BucketIdCalculator(int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+                       const std::shared_ptr<MemoryPool>& pool);
 
  private:
     int32_t num_buckets_;
+    std::unique_ptr<BucketFunction> bucket_function_;
     std::shared_ptr<MemoryPool> pool_;
 };
 }  // namespace paimon

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/utils/bucket_id_calculator.h"
+#include "paimon/bucket/bucket_id_calculator.h"
 
 #include <string>
 #include <utility>
@@ -31,6 +31,8 @@
 #include "gtest/gtest.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/date_time_utils.h"
+#include "paimon/core/bucket/default_bucket_function.h"
+#include "paimon/core/bucket/mod_bucket_function.h"
 #include "paimon/fs/local/local_file_system.h"
 #include "paimon/testing/utils/testharness.h"
 
@@ -47,8 +49,8 @@ class BucketIdCalculatorTest : public ::testing::Test {
         ::ArrowSchema c_bucket_schema;
         EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_bucket_schema).ok());
         std::vector<int32_t> bucket_ids(bucket_array->length());
-        EXPECT_OK_AND_ASSIGN(auto bucket_id_cal,
-                             BucketIdCalculator::Create(is_pk_table, num_buckets));
+        EXPECT_OK_AND_ASSIGN(auto bucket_id_cal, BucketIdCalculator::Create(
+                                                     is_pk_table, num_buckets, GetDefaultPool()));
         PAIMON_RETURN_NOT_OK(bucket_id_cal->CalculateBucketIds(
             /*bucket_keys=*/&c_bucket_array, /*bucket_schema=*/&c_bucket_schema,
             /*bucket_ids=*/bucket_ids.data()));
@@ -62,6 +64,34 @@ class BucketIdCalculatorTest : public ::testing::Test {
                                           arrow::ipc::internal::json::ArrayFromJSON(
                                               arrow::struct_(bucket_schema->fields()), data_str));
         return CalculateBucketIds(is_pk_table, num_buckets, bucket_schema, bucket_array);
+    }
+
+    Result<std::vector<int32_t>> CalculateBucketIds(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<arrow::Schema>& bucket_schema,
+        const std::shared_ptr<arrow::Array>& bucket_array) const {
+        ::ArrowArray c_bucket_array;
+        EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_bucket_array).ok());
+        ::ArrowSchema c_bucket_schema;
+        EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_bucket_schema).ok());
+        std::vector<int32_t> bucket_ids(bucket_array->length());
+        EXPECT_OK_AND_ASSIGN(auto bucket_id_cal, BucketIdCalculator::Create(
+                                                     is_pk_table, num_buckets,
+                                                     std::move(bucket_function), GetDefaultPool()));
+        PAIMON_RETURN_NOT_OK(bucket_id_cal->CalculateBucketIds(
+            /*bucket_keys=*/&c_bucket_array, /*bucket_schema=*/&c_bucket_schema,
+            /*bucket_ids=*/bucket_ids.data()));
+        return bucket_ids;
+    }
+
+    Result<std::vector<int32_t>> CalculateBucketIds(
+        bool is_pk_table, int32_t num_buckets, std::unique_ptr<BucketFunction> bucket_function,
+        const std::shared_ptr<arrow::Schema>& bucket_schema, const std::string& data_str) const {
+        PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(auto bucket_array,
+                                          arrow::ipc::internal::json::ArrayFromJSON(
+                                              arrow::struct_(bucket_schema->fields()), data_str));
+        return CalculateBucketIds(is_pk_table, num_buckets, std::move(bucket_function),
+                                  bucket_schema, bucket_array);
     }
 };
 
@@ -216,19 +246,21 @@ TEST_F(BucketIdCalculatorTest, TestCompatibleWithJavaWithTimestamp) {
 TEST_F(BucketIdCalculatorTest, TestInvalidCase) {
     {
         // test invalid bucket id
-        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/0),
-                            "num buckets must be -1 or -2 or greater than 0");
+        ASSERT_NOK_WITH_MSG(
+            BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/0, GetDefaultPool()),
+            "num buckets must be -1 or -2 or greater than 0");
     }
     {
         // test invalid bucket mode with pk table
         ASSERT_NOK_WITH_MSG(
-            BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/-1),
+            BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/-1, GetDefaultPool()),
             "DynamicBucketMode or CrossPartitionBucketMode cannot calculate bucket id");
     }
     {
         // test invalid bucket mode with append table
-        ASSERT_NOK_WITH_MSG(BucketIdCalculator::Create(/*is_pk_table=*/false, /*num_buckets=*/-2),
-                            "Append table not support PostponeBucketMode");
+        ASSERT_NOK_WITH_MSG(
+            BucketIdCalculator::Create(/*is_pk_table=*/false, /*num_buckets=*/-2, GetDefaultPool()),
+            "Append table not support PostponeBucketMode");
     }
     {
         // test invalid bucket_keys
@@ -304,4 +336,134 @@ TEST_F(BucketIdCalculatorTest, TestVariantType) {
         CalculateBucketIds(/*is_pk_table=*/true, 12345, bucket_schema, bucket_array));
     ASSERT_EQ(expected, result2);
 }
+
+TEST_F(BucketIdCalculatorTest, TestWithModBucketFunction) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    ASSERT_OK_AND_ASSIGN(auto mod_func, ModBucketFunction::Create(FieldType::INT));
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<int32_t> result,
+        CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, std::move(mod_func),
+                           bucket_schema, "[[10], [-1], [50], [-13], [0]]"));
+    // Java Math.floorMod semantics:
+    // floorMod(10, 10) = 0
+    // floorMod(-1, 10) = 9
+    // floorMod(50, 10) = 0
+    // floorMod(-13, 10) = 7
+    // floorMod(0, 10) = 0
+    std::vector<int32_t> expected = {0, 9, 0, 7, 0};
+    ASSERT_EQ(expected, result);
+}
+
+TEST_F(BucketIdCalculatorTest, TestWithDefaultBucketFunctionExplicit) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    // Calculate with explicit DefaultBucketFunction
+    auto default_func = std::make_unique<DefaultBucketFunction>();
+    ASSERT_OK_AND_ASSIGN(
+        std::vector<int32_t> result_explicit,
+        CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, std::move(default_func),
+                           bucket_schema, "[[10], [-1], [50], [-13], [0]]"));
+    // Calculate with default (no BucketFunction passed)
+    ASSERT_OK_AND_ASSIGN(std::vector<int32_t> result_default,
+                         CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10, bucket_schema,
+                                            "[[10], [-1], [50], [-13], [0]]"));
+    ASSERT_EQ(result_default, result_explicit);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithDefaultBucketFunction) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[10], [-1], [50], [-13], [0]]";
+
+    // Calculate with explicit DefaultBucketFunction via Create
+    auto default_func = std::make_unique<DefaultBucketFunction>();
+    ASSERT_OK_AND_ASSIGN(auto calc_explicit,
+                         BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                    std::move(default_func), GetDefaultPool()));
+
+    // Calculate with the default Create (no BucketFunction)
+    ASSERT_OK_AND_ASSIGN(
+        auto calc_default,
+        BucketIdCalculator::Create(/*is_pk_table=*/true, /*num_buckets=*/10, GetDefaultPool()));
+
+    auto bucket_array1 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array1;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array1, &c_array1).ok());
+    ::ArrowSchema c_schema1;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema1).ok());
+    std::vector<int32_t> result_explicit(bucket_array1->length());
+    ASSERT_OK(calc_explicit->CalculateBucketIds(&c_array1, &c_schema1, result_explicit.data()));
+
+    auto bucket_array2 =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array2;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array2, &c_array2).ok());
+    ::ArrowSchema c_schema2;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema2).ok());
+    std::vector<int32_t> result_default(bucket_array2->length());
+    ASSERT_OK(calc_default->CalculateBucketIds(&c_array2, &c_schema2, result_default.data()));
+
+    ASSERT_EQ(result_default, result_explicit);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithModBucketFunction) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[10], [-1], [50], [-13], [0]]";
+
+    // Calculate with CreateMod
+    ASSERT_OK_AND_ASSIGN(auto calc_mod,
+                         BucketIdCalculator::CreateMod(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                                       FieldType::INT, GetDefaultPool()));
+
+    // Calculate with explicit ModBucketFunction
+    ASSERT_OK_AND_ASSIGN(auto mod_func, ModBucketFunction::Create(FieldType::INT));
+    ASSERT_OK_AND_ASSIGN(std::vector<int32_t> result_explicit,
+                         CalculateBucketIds(/*is_pk_table=*/true, /*num_buckets=*/10,
+                                            std::move(mod_func), bucket_schema, data_str));
+
+    auto bucket_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_array).ok());
+    ::ArrowSchema c_schema;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema).ok());
+    std::vector<int32_t> result_mod(bucket_array->length());
+    ASSERT_OK(calc_mod->CalculateBucketIds(&c_array, &c_schema, result_mod.data()));
+
+    ASSERT_EQ(result_explicit, result_mod);
+    // Verify expected values (Java Math.floorMod semantics)
+    std::vector<int32_t> expected = {0, 9, 0, 7, 0};
+    ASSERT_EQ(expected, result_mod);
+}
+
+TEST_F(BucketIdCalculatorTest, TestCreateWithHiveBucketFunction) {
+    auto bucket_schema = arrow::schema(arrow::FieldVector({arrow::field("b0", arrow::int32())}));
+    std::string data_str = "[[42], [0], [100]]";
+
+    std::vector<HiveFieldInfo> field_infos = {HiveFieldInfo(FieldType::INT)};
+
+    // Calculate with CreateHive
+    ASSERT_OK_AND_ASSIGN(auto calc_hive,
+                         BucketIdCalculator::CreateHive(/*is_pk_table=*/true, /*num_buckets=*/5,
+                                                        field_infos, GetDefaultPool()));
+
+    auto bucket_array =
+        arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_(bucket_schema->fields()), data_str)
+            .ValueOrDie();
+    ::ArrowArray c_array;
+    EXPECT_TRUE(arrow::ExportArray(*bucket_array, &c_array).ok());
+    ::ArrowSchema c_schema;
+    EXPECT_TRUE(arrow::ExportSchema(*bucket_schema, &c_schema).ok());
+    std::vector<int32_t> result(bucket_array->length());
+    ASSERT_OK(calc_hive->CalculateBucketIds(&c_array, &c_schema, result.data()));
+
+    // Verify all bucket ids are in valid range
+    for (auto bucket_id : result) {
+        ASSERT_GE(bucket_id, 0);
+        ASSERT_LT(bucket_id, 5);
+    }
+}
+
 }  // namespace paimon::test

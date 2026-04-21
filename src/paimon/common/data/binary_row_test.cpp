@@ -413,7 +413,7 @@ TEST_F(BinaryRowTest, TestZeroOutPaddingString) {
     writer.Reset();
     writer.WriteString(0, BinaryString::FromString("wahahah", pool.get()));
     writer.Complete();
-    int hash1 = row.HashCode();
+    int32_t hash1 = row.HashCode();
 
     writer.Reset();
     for (int32_t i = 0; i < bytes_size; i++) {
@@ -423,7 +423,7 @@ TEST_F(BinaryRowTest, TestZeroOutPaddingString) {
     writer.Reset();
     writer.WriteString(0, BinaryString::FromString("wahahah", pool.get()));
     writer.Complete();
-    int hash2 = row.HashCode();
+    int32_t hash2 = row.HashCode();
 
     ASSERT_EQ(hash2, hash1);
 }

@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 
+#include "paimon/bucket/bucket_function_type.h"
 #include "paimon/core/options/changelog_producer.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/core/options/external_path_strategy.h"
@@ -108,6 +109,8 @@ class PAIMON_EXPORT CoreOptions {
     std::optional<std::string> GetFieldsDefaultFunc() const;
     Result<std::optional<std::string>> GetFieldAggFunc(const std::string& field_name) const;
     Result<bool> FieldAggIgnoreRetract(const std::string& field_name) const;
+    Result<std::string> FieldListAggDelimiter(const std::string& field_name) const;
+    Result<bool> FieldCollectAggDistinct(const std::string& field_name) const;
     bool DeletionVectorsEnabled() const;
     bool DeletionVectorsBitmap64() const;
     int64_t DeletionVectorTargetFileSize() const;
@@ -120,6 +123,7 @@ class PAIMON_EXPORT CoreOptions {
 
     std::map<std::string, std::string> GetFieldsSequenceGroups() const;
     bool PartialUpdateRemoveRecordOnDelete() const;
+    bool AggregationRemoveRecordOnDelete() const;
     std::vector<std::string> GetPartialUpdateRemoveRecordOnSequenceGroup() const;
 
     std::optional<std::string> GetScanFallbackBranch() const;
@@ -167,6 +171,8 @@ class PAIMON_EXPORT CoreOptions {
     int64_t GetLookupCacheMaxDiskSize() const;
 
     const std::map<std::string, std::string>& ToMap() const;
+
+    BucketFunctionType GetBucketFunctionType() const;
 
  private:
     std::optional<std::string> GetDataFileExternalPaths() const;

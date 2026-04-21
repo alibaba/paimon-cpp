@@ -251,7 +251,7 @@ TEST_F(MergeTreeCompactManagerFactoryStrategyTest,
 
     auto runs = CreateRuns({0, 0}, {1, 1});
     std::optional<CompactUnit> unit;
-    for (int i = 0; i < 6; ++i) {
+    for (int32_t i = 0; i < 6; ++i) {
         ASSERT_OK_AND_ASSIGN(unit, strategy->Pick(/*num_levels=*/3, runs));
         ASSERT_FALSE(unit);
     }

@@ -171,7 +171,7 @@ TEST_F(ResolvingFileSystemTest, ThreadSafety) {
 
     auto executor = CreateDefaultExecutor();
     std::vector<std::future<std::vector<std::shared_ptr<FileSystem>>>> futures;
-    for (int i = 0; i < num_threads; ++i) {
+    for (int32_t i = 0; i < num_threads; ++i) {
         futures.push_back(
             Via(executor.get(), [&resolving_fs, i]() -> std::vector<std::shared_ptr<FileSystem>> {
                 std::vector<std::shared_ptr<FileSystem>> fs_list;
@@ -204,7 +204,7 @@ TEST_F(ResolvingFileSystemTest, ThreadSafety2) {
 
     auto executor = CreateDefaultExecutor();
     std::vector<std::future<std::vector<std::shared_ptr<FileSystem>>>> futures;
-    for (int i = 0; i < num_threads; ++i) {
+    for (int32_t i = 0; i < num_threads; ++i) {
         futures.push_back(
             Via(executor.get(), [&resolving_fs, i]() -> std::vector<std::shared_ptr<FileSystem>> {
                 std::vector<std::shared_ptr<FileSystem>> fs_list;

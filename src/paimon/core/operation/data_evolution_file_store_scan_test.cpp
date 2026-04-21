@@ -46,7 +46,8 @@ class DataEvolutionFileStoreScanTest : public ::testing::Test {
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::InitSchema(schema_id, fields, /*highest_field_id=*/fields.size(),
                                     /*partition_keys=*/{},
-                                    /*primary_keys=*/{}, /*options=*/{}, /*time_millis=*/0));
+                                    /*primary_keys=*/{}, /*options=*/{}, /*comment=*/std::nullopt,
+                                    /*time_millis=*/0));
         return table_schema;
     }
     ManifestEntry CreateManifestEntry(
