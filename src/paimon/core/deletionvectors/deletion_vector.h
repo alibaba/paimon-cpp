@@ -84,9 +84,9 @@ class DeletionVector {
     /// This method combines the deletion positions from the other deletion vector
     /// with the current one, marking all positions deleted in either vector as deleted.
     ///
-    /// @param deletionVector The other DeletionVector to merge into this one.
+    /// @param deletion_vector The other DeletionVector to merge into this one.
     /// @return Status indicating success or failure of the merge operation.
-    virtual Status Merge(const std::shared_ptr<DeletionVector>& deletionVector) = 0;
+    virtual Status Merge(const std::shared_ptr<DeletionVector>& deletion_vector) = 0;
 
     /// Determines if the deletion vector is empty, indicating no deletions.
     ///
