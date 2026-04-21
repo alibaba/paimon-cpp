@@ -38,8 +38,7 @@ SortMergeReaderWithMinHeap::SortMergeReaderWithMinHeap(
 }
 
 Result<std::unique_ptr<SortMergeReader::Iterator>> SortMergeReaderWithMinHeap::NextBatch() {
-    for (size_t i = 0; i < next_batch_readers_.size(); i++) {
-        auto* reader = next_batch_readers_[i];
+    for (auto* reader : next_batch_readers_) {
         while (true) {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader::Iterator> iterator,
                                    reader->NextBatch());

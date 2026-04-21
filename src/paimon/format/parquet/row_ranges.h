@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,6 +109,14 @@ class RowRanges {
 
     /// Adds a range to the end of the list, maintaining sorted disjoint ranges.
     void Add(const Range& range);
+
+    /// Maps a filtered-result index to the original row index within the row group.
+    /// For example, if RowRanges = {[10,19], [50,59]}, then:
+    ///   MapFilteredIndexToOriginalRow(0)  = 10  (first row of first range)
+    ///   MapFilteredIndexToOriginalRow(9)  = 19  (last row of first range)
+    ///   MapFilteredIndexToOriginalRow(10) = 50  (first row of second range)
+    /// Returns nullopt if filtered_index is out of bounds.
+    std::optional<int64_t> MapFilteredIndexToOriginalRow(int64_t filtered_index) const;
 
     std::string ToString() const;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,6 +199,12 @@ Result<std::shared_ptr<arrow::RecordBatch>> PageFilteredRowGroupReader::ReadFilt
     const std::vector<::arrow::io::ReadRange>& page_ranges) {
     if (row_ranges.IsEmpty()) {
         std::vector<std::shared_ptr<arrow::Array>> empty_columns;
+        empty_columns.reserve(arrow_schema->num_fields());
+        for (int i = 0; i < arrow_schema->num_fields(); ++i) {
+            PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(
+                auto empty_array, arrow::MakeEmptyArray(arrow_schema->field(i)->type(), pool));
+            empty_columns.push_back(std::move(empty_array));
+        }
         return arrow::RecordBatch::Make(arrow_schema, 0, std::move(empty_columns));
     }
 

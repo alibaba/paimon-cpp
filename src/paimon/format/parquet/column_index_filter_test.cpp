@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -464,7 +464,7 @@ TEST_F(ColumnIndexFilterTest, OrCompound) {
     EXPECT_EQ(99, ranges.GetRanges()[1].to);
 }
 
-/// Predicate on unknown column (schema evolution) → all rows returned
+/// EQUAL on unknown column with non-null literal (schema evolution) → no rows returned
 TEST_F(ColumnIndexFilterTest, UnknownColumnReturnsAllRows) {
     auto pred = PredicateBuilder::Equal(0, "nonexistent", FieldType::INT,
                                         Literal(static_cast<int32_t>(42)));

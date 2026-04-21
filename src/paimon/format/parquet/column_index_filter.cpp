@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,53 +141,49 @@ Result<RowRanges> ColumnIndexFilter::VisitLeafPredicate(
 
     switch (function_type) {
         case Function::Type::IS_NULL:
-            matching_pages = FilterPagesByIsNull(column_index_ptr, offset_index_ptr);
+            matching_pages = FilterPagesByIsNull(column_index_ptr);
             break;
         case Function::Type::IS_NOT_NULL:
-            matching_pages = FilterPagesByIsNotNull(column_index_ptr, offset_index_ptr);
+            matching_pages = FilterPagesByIsNotNull(column_index_ptr);
             break;
         case Function::Type::EQUAL:
             if (!literals.empty()) {
-                matching_pages =
-                    FilterPagesByEqual(column_index_ptr, offset_index_ptr, literals[0], field_type);
+                matching_pages = FilterPagesByEqual(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::NOT_EQUAL:
             if (!literals.empty()) {
-                matching_pages = FilterPagesByNotEqual(column_index_ptr, offset_index_ptr,
-                                                       literals[0], field_type);
+                matching_pages = FilterPagesByNotEqual(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::LESS_THAN:
             if (!literals.empty()) {
-                matching_pages = FilterPagesByLessThan(column_index_ptr, offset_index_ptr,
-                                                       literals[0], field_type);
+                matching_pages = FilterPagesByLessThan(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::LESS_OR_EQUAL:
             if (!literals.empty()) {
-                matching_pages = FilterPagesByLessOrEqual(column_index_ptr, offset_index_ptr,
-                                                          literals[0], field_type);
+                matching_pages =
+                    FilterPagesByLessOrEqual(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::GREATER_THAN:
             if (!literals.empty()) {
-                matching_pages = FilterPagesByGreaterThan(column_index_ptr, offset_index_ptr,
-                                                          literals[0], field_type);
+                matching_pages =
+                    FilterPagesByGreaterThan(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::GREATER_OR_EQUAL:
             if (!literals.empty()) {
-                matching_pages = FilterPagesByGreaterOrEqual(column_index_ptr, offset_index_ptr,
-                                                             literals[0], field_type);
+                matching_pages =
+                    FilterPagesByGreaterOrEqual(column_index_ptr, literals[0], field_type);
             }
             break;
         case Function::Type::IN:
-            matching_pages =
-                FilterPagesByIn(column_index_ptr, offset_index_ptr, literals, field_type);
+            matching_pages = FilterPagesByIn(column_index_ptr, literals, field_type);
             break;
         case Function::Type::NOT_IN:
-            matching_pages = FilterPagesByNotIn(column_index_ptr, offset_index_ptr, literals);
+            matching_pages = FilterPagesByNotIn(column_index_ptr, literals);
             break;
         default:
             // Unsupported function type for column index filtering
@@ -258,8 +254,7 @@ Result<RowRanges> ColumnIndexFilter::VisitCompoundPredicate(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByEqual(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
@@ -297,8 +292,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByEqual(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByNotEqual(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
 
@@ -336,13 +330,11 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByNotEqual(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessThan(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
-    const auto& max_values = column_index->encoded_max_values();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
@@ -350,7 +342,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessThan(
             continue;
         }
 
-        if (PageMightContainLessThan(min_values[i], max_values[i], literal, field_type)) {
+        if (PageMightContainLessThan(min_values[i], literal, field_type)) {
             matching_pages.push_back(i);
         }
     }
@@ -359,13 +351,11 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessThan(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessOrEqual(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
-    const auto& max_values = column_index->encoded_max_values();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
@@ -373,7 +363,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessOrEqual(
             continue;
         }
 
-        if (PageMightContainLessOrEqual(min_values[i], max_values[i], literal, field_type)) {
+        if (PageMightContainLessOrEqual(min_values[i], literal, field_type)) {
             matching_pages.push_back(i);
         }
     }
@@ -382,12 +372,10 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessOrEqual(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterThan(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
-    const auto& min_values = column_index->encoded_min_values();
     const auto& max_values = column_index->encoded_max_values();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
 
@@ -396,7 +384,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterThan(
             continue;
         }
 
-        if (PageMightContainGreaterThan(min_values[i], max_values[i], literal, field_type)) {
+        if (PageMightContainGreaterThan(max_values[i], literal, field_type)) {
             matching_pages.push_back(i);
         }
     }
@@ -405,12 +393,10 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterThan(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterOrEqual(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
     FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
-    const auto& min_values = column_index->encoded_min_values();
     const auto& max_values = column_index->encoded_max_values();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
 
@@ -419,7 +405,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterOrEqual(
             continue;
         }
 
-        if (PageMightContainGreaterOrEqual(min_values[i], max_values[i], literal, field_type)) {
+        if (PageMightContainGreaterOrEqual(max_values[i], literal, field_type)) {
             matching_pages.push_back(i);
         }
     }
@@ -428,8 +414,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterOrEqual(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNull(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index) {
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& null_counts = column_index->null_counts();
@@ -453,8 +438,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNull(
 }
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNotNull(
-    const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index) {
+    const std::shared_ptr<::parquet::ColumnIndex>& column_index) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     int32_t num_pages = static_cast<int32_t>(null_pages.size());
@@ -470,7 +454,6 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNotNull(
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByIn(
     const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     const std::vector<Literal>& literals, FieldType field_type) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
@@ -519,7 +502,6 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIn(
 
 std::vector<int32_t> ColumnIndexFilter::FilterPagesByNotIn(
     const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-    const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     const std::vector<Literal>& literals) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
@@ -701,7 +683,6 @@ bool ColumnIndexFilter::PageMightContainEqual(const std::string& encoded_min,
 }
 
 bool ColumnIndexFilter::PageMightContainLessThan(const std::string& encoded_min,
-                                                 const std::string& encoded_max,
                                                  const Literal& literal, FieldType field_type) {
     if (literal.IsNull()) {
         return false;
@@ -714,7 +695,6 @@ bool ColumnIndexFilter::PageMightContainLessThan(const std::string& encoded_min,
 }
 
 bool ColumnIndexFilter::PageMightContainLessOrEqual(const std::string& encoded_min,
-                                                    const std::string& encoded_max,
                                                     const Literal& literal, FieldType field_type) {
     if (literal.IsNull()) {
         return false;
@@ -726,8 +706,7 @@ bool ColumnIndexFilter::PageMightContainLessOrEqual(const std::string& encoded_m
     return *cmp_min <= 0;
 }
 
-bool ColumnIndexFilter::PageMightContainGreaterThan(const std::string& encoded_min,
-                                                    const std::string& encoded_max,
+bool ColumnIndexFilter::PageMightContainGreaterThan(const std::string& encoded_max,
                                                     const Literal& literal, FieldType field_type) {
     if (literal.IsNull()) {
         return false;
@@ -739,8 +718,7 @@ bool ColumnIndexFilter::PageMightContainGreaterThan(const std::string& encoded_m
     return *cmp_max > 0;
 }
 
-bool ColumnIndexFilter::PageMightContainGreaterOrEqual(const std::string& encoded_min,
-                                                       const std::string& encoded_max,
+bool ColumnIndexFilter::PageMightContainGreaterOrEqual(const std::string& encoded_max,
                                                        const Literal& literal,
                                                        FieldType field_type) {
     if (literal.IsNull()) {

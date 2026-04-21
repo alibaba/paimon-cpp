@@ -224,10 +224,10 @@ Result<std::unique_ptr<BatchReader>> MergeFileSplitRead::CreateMergeReader(
     std::vector<std::unique_ptr<BatchReader>> batch_readers;
     batch_readers.reserve(sections.size());
     // no overlap through multiple sections
-    for (size_t si = 0; si < sections.size(); si++) {
+    for (const auto& section : sections) {
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BatchReader> projection_reader,
-                               CreateReaderForSection(sections[si], data_split->Partition(),
-                                                      dv_factory, data_file_path_factory));
+                               CreateReaderForSection(section, data_split->Partition(), dv_factory,
+                                                      data_file_path_factory));
         batch_readers.push_back(std::move(projection_reader));
     }
     auto concat_batch_reader = std::make_unique<ConcatBatchReader>(std::move(batch_readers), pool_);
@@ -433,11 +433,11 @@ Result<std::unique_ptr<SortMergeReader>> MergeFileSplitRead::CreateSortMergeRead
     // with overlap in one section
     std::vector<std::unique_ptr<KeyValueRecordReader>> record_readers;
     record_readers.reserve(section.size());
-    for (size_t ri = 0; ri < section.size(); ri++) {
+    for (const auto& run : section) {
         // no overlap in a run
-        PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<KeyValueRecordReader> run_reader,
-                               CreateReaderForRun(partition, section[ri], dv_factory, predicate,
-                                                  data_file_path_factory));
+        PAIMON_ASSIGN_OR_RAISE(
+            std::unique_ptr<KeyValueRecordReader> run_reader,
+            CreateReaderForRun(partition, run, dv_factory, predicate, data_file_path_factory));
         record_readers.emplace_back(std::move(run_reader));
     }
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortMergeReader> sort_merge_reader,

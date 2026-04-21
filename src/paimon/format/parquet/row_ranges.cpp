@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,18 +127,48 @@ void RowRanges::Add(const Range& range) {
         return;
     }
 
-    Range range_to_add = range;
-    for (int i = static_cast<int>(ranges_.size()) - 1; i >= 0; --i) {
-        Range& last = ranges_[i];
-        // The range to add should not be before the last range
-        auto u = UnionRanges(last, range_to_add);
-        if (!u.has_value()) {
-            break;
-        }
-        range_to_add = u.value();
-        ranges_.erase(ranges_.begin() + i);
+    // Find insertion point using binary search (sorted by 'from')
+    auto pos =
+        std::lower_bound(ranges_.begin(), ranges_.end(), range,
+                         [](const Range& r, const Range& target) { return r.from < target.from; });
+
+    // Scan backward and forward to find all ranges that overlap or are adjacent
+    Range merged = range;
+    auto merge_begin = pos;
+    auto merge_end = pos;
+
+    // Merge with preceding ranges
+    while (merge_begin != ranges_.begin()) {
+        auto prev = merge_begin - 1;
+        auto u = UnionRanges(*prev, merged);
+        if (!u.has_value()) break;
+        merged = u.value();
+        merge_begin = prev;
     }
-    ranges_.push_back(range_to_add);
+
+    // Merge with following ranges
+    while (merge_end != ranges_.end()) {
+        auto u = UnionRanges(*merge_end, merged);
+        if (!u.has_value()) break;
+        merged = u.value();
+        ++merge_end;
+    }
+
+    // Replace [merge_begin, merge_end) with the single merged range
+    auto it = ranges_.erase(merge_begin, merge_end);
+    ranges_.insert(it, merged);
+}
+
+std::optional<int64_t> RowRanges::MapFilteredIndexToOriginalRow(int64_t filtered_index) const {
+    int64_t accumulated = 0;
+    for (const auto& range : ranges_) {
+        int64_t count = range.Count();
+        if (filtered_index < accumulated + count) {
+            return range.from + (filtered_index - accumulated);
+        }
+        accumulated += count;
+    }
+    return std::nullopt;
 }
 
 std::string RowRanges::ToString() const {

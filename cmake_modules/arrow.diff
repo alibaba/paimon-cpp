@@ -284,10 +284,11 @@ index 4d3acb491e..3906ff3c59 100644
 +      position_ += buf->size();
 +      return buf->size();
 +    }
-+    // Cache miss: zero-fill (called from Advance for skipped pages)
-+    memset(out, 0, static_cast<size_t>(to_read));
-+    position_ += to_read;
-+    return to_read;
++    // Cache miss: fall back to real I/O from source
++    ARROW_ASSIGN_OR_RAISE(auto buf, source_->ReadAt(range.offset, range.length));
++    memcpy(out, buf->data(), static_cast<size_t>(buf->size()));
++    position_ += buf->size();
++    return buf->size();
 +  }
 +
 +  ::arrow::Result<std::shared_ptr<::arrow::Buffer>> Read(int64_t nbytes) override {
@@ -301,10 +302,9 @@ index 4d3acb491e..3906ff3c59 100644
 +      position_ += (*result)->size();
 +      return *result;
 +    }
-+    // Cache miss: return zero-filled buffer (called from Advance for skipped pages)
-+    ARROW_ASSIGN_OR_RAISE(auto buf, ::arrow::AllocateBuffer(to_read));
-+    memset(buf->mutable_data(), 0, static_cast<size_t>(to_read));
-+    position_ += to_read;
++    // Cache miss: fall back to real I/O from source
++    ARROW_ASSIGN_OR_RAISE(auto buf, source_->ReadAt(range.offset, range.length));
++    position_ += buf->size();
 +    return std::shared_ptr<::arrow::Buffer>(std::move(buf));
 +  }
 +

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,60 +86,50 @@ class ColumnIndexFilter {
 
     /// Filter pages based on column index statistics for EQUAL predicate.
     static std::vector<int32_t> FilterPagesByEqual(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for NOT_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByNotEqual(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for LESS_THAN predicate.
     static std::vector<int32_t> FilterPagesByLessThan(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for LESS_OR_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByLessOrEqual(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for GREATER_THAN predicate.
     static std::vector<int32_t> FilterPagesByGreaterThan(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for GREATER_OR_EQUAL predicate.
     static std::vector<int32_t> FilterPagesByGreaterOrEqual(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index, const Literal& literal,
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index, const Literal& literal,
         FieldType field_type);
 
     /// Filter pages based on column index statistics for IS_NULL predicate.
     static std::vector<int32_t> FilterPagesByIsNull(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index);
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index);
 
     /// Filter pages based on column index statistics for IS_NOT_NULL predicate.
     static std::vector<int32_t> FilterPagesByIsNotNull(
-        const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index);
+        const std::shared_ptr<::parquet::ColumnIndex>& column_index);
 
     /// Filter pages based on column index statistics for IN predicate.
     static std::vector<int32_t> FilterPagesByIn(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
         const std::vector<Literal>& literals, FieldType field_type);
 
     /// Filter pages based on column index statistics for NOT_IN predicate.
     static std::vector<int32_t> FilterPagesByNotIn(
         const std::shared_ptr<::parquet::ColumnIndex>& column_index,
-        const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
         const std::vector<Literal>& literals);
 
     /// Build row ranges from page indices (must be sorted in ascending order).
@@ -162,26 +152,22 @@ class ColumnIndexFilter {
 
     /// Check if a page might contain values less than the literal.
     /// Condition: min < literal
-    static bool PageMightContainLessThan(const std::string& encoded_min,
-                                         const std::string& encoded_max, const Literal& literal,
+    static bool PageMightContainLessThan(const std::string& encoded_min, const Literal& literal,
                                          FieldType field_type);
 
     /// Check if a page might contain values less than or equal to the literal.
     /// Condition: min <= literal
-    static bool PageMightContainLessOrEqual(const std::string& encoded_min,
-                                            const std::string& encoded_max, const Literal& literal,
+    static bool PageMightContainLessOrEqual(const std::string& encoded_min, const Literal& literal,
                                             FieldType field_type);
 
     /// Check if a page might contain values greater than the literal.
     /// Condition: max > literal
-    static bool PageMightContainGreaterThan(const std::string& encoded_min,
-                                            const std::string& encoded_max, const Literal& literal,
+    static bool PageMightContainGreaterThan(const std::string& encoded_max, const Literal& literal,
                                             FieldType field_type);
 
     /// Check if a page might contain values greater than or equal to the literal.
     /// Condition: max >= literal
-    static bool PageMightContainGreaterOrEqual(const std::string& encoded_min,
-                                               const std::string& encoded_max,
+    static bool PageMightContainGreaterOrEqual(const std::string& encoded_max,
                                                const Literal& literal, FieldType field_type);
 };
 

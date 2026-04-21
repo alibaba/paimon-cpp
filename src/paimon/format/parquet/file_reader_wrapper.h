@@ -181,6 +181,8 @@ class FileReaderWrapper {
     // Batched consumption of page-filtered RecordBatch (when batch exceeds batch_size_)
     std::shared_ptr<arrow::RecordBatch> current_filtered_batch_;
     int64_t filtered_batch_offset_ = 0;
+    RowRanges current_filtered_row_ranges_;   // RowRanges for current filtered batch
+    uint64_t current_filtered_rg_start_ = 0;  // Row-group start for current filtered batch
 
     // Page-level filtering state
     std::map<int32_t, RowRanges> row_group_row_ranges_;

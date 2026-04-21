@@ -194,8 +194,16 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
         int64_t remaining = current_filtered_batch_->num_rows() - filtered_batch_offset_;
         int64_t slice_len = (batch_size_ > 0 && remaining > batch_size_) ? batch_size_ : remaining;
         record_batch = current_filtered_batch_->Slice(filtered_batch_offset_, slice_len);
+
+        // Map the filtered batch offset to the original row index within the row group
+        auto original_row =
+            current_filtered_row_ranges_.MapFilteredIndexToOriginalRow(filtered_batch_offset_);
+        previous_first_row_ =
+            original_row.has_value()
+                ? current_filtered_rg_start_ + static_cast<uint64_t>(original_row.value())
+                : current_filtered_rg_start_;
+
         filtered_batch_offset_ += slice_len;
-        previous_first_row_ = next_row_to_read_;
 
         if (filtered_batch_offset_ >= current_filtered_batch_->num_rows()) {
             current_filtered_batch_.reset();
@@ -227,6 +235,10 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
             PageFilteredRowGroupReader::ReadFilteredRowGroup(
                 file_reader_->parquet_reader(), meta.rg_index, meta.row_ranges, meta.column_indices,
                 meta.read_schema, pool_, meta.cache_options, pre_buffered, meta.page_ranges));
+
+        // Save RowRanges and rg_start for previous_first_row_ computation
+        current_filtered_row_ranges_ = meta.row_ranges;
+        current_filtered_rg_start_ = target_row_groups_[current_row_group_idx_].first;
         pending_filtered_reads_.erase(pending_it);
 
         // If batch exceeds batch_size_, store and return first slice
@@ -244,7 +256,17 @@ Result<std::shared_ptr<arrow::RecordBatch>> FileReaderWrapper::Next() {
 
     if (record_batch) {
         int64_t num_rows = record_batch->num_rows();
-        previous_first_row_ = next_row_to_read_;
+
+        // For page-filtered batches, compute previous_first_row_ from RowRanges
+        if (page_filtered_indices_.count(current_row_group_idx_) > 0) {
+            auto original_row = current_filtered_row_ranges_.MapFilteredIndexToOriginalRow(0);
+            previous_first_row_ =
+                original_row.has_value()
+                    ? current_filtered_rg_start_ + static_cast<uint64_t>(original_row.value())
+                    : current_filtered_rg_start_;
+        } else {
+            previous_first_row_ = next_row_to_read_;
+        }
 
         // For page-filtered batches, advance to the next row group
         // (unless we're in batched mode with slices remaining)
@@ -340,9 +362,13 @@ Status FileReaderWrapper::PrepareForReading(const std::set<int32_t>& target_row_
                 for (int32_t col_idx : column_indices) {
                     const std::string& col_name = parquet_schema->Column(col_idx)->name();
                     auto field = schema->GetFieldByName(col_name);
-                    if (field) {
-                        fields.push_back(field);
+                    if (!field) {
+                        return Status::Invalid(fmt::format(
+                            "PrepareForReading: Parquet column {} ('{}') has no matching Arrow "
+                            "field in file schema",
+                            col_idx, col_name));
                     }
+                    fields.push_back(field);
                 }
                 read_schema = arrow::schema(fields);
             }

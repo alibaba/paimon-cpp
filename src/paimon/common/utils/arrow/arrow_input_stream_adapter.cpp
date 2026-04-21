@@ -58,12 +58,10 @@ ArrowInputStreamAdapter::~ArrowInputStreamAdapter() {
 
 void ArrowInputStreamAdapter::WaitForPendingAsyncReads() {
     std::lock_guard<std::mutex> lock(pending_futures_mutex_);
-    for (auto& fut : pending_futures_) {
-        if (!fut.is_finished()) {
-            (void)fut.result();  // Block until complete
-        }
+    if (!pending_futures_.empty()) {
+        (void)arrow::All(pending_futures_).result();
+        pending_futures_.clear();
     }
-    pending_futures_.clear();
 }
 
 arrow::Status ArrowInputStreamAdapter::Seek(int64_t position) {
