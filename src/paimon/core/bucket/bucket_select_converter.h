@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
-
 #include "paimon/bucket/bucket_function_type.h"
 #include "paimon/defs.h"
 #include "paimon/predicate/literal.h"
@@ -70,8 +69,7 @@ class BucketSelectConverter {
         const std::vector<std::string>& bucket_key_names);
 
     /// Write a Literal value to a BinaryRowWriter at the given position.
-    static Status WriteLiteralToRow(int32_t pos, const Literal& literal,
-                                    FieldType field_type,
+    static Status WriteLiteralToRow(int32_t pos, const Literal& literal, FieldType field_type,
                                     const std::shared_ptr<arrow::DataType>& arrow_type,
                                     BinaryRowWriter* writer);
 

@@ -2730,9 +2730,8 @@ TEST_P(ScanAndReadInteTest, TestWithPKBucketSelectByPredicate) {
                              "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
 
     // Predicate: f2 = 0 (bucket key). This should cause BucketSelectConverter to derive bucket 1.
-    auto predicate =
-        PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
-                                Literal(static_cast<int32_t>(0)));
+    auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
+                                             Literal(static_cast<int32_t>(0)));
 
     ScanContextBuilder scan_context_builder(table_path);
     scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");

@@ -17,7 +17,6 @@
 #include "paimon/core/bucket/bucket_select_converter.h"
 
 #include <cassert>
-
 #include <set>
 #include <string>
 #include <utility>
@@ -25,7 +24,6 @@
 #include "arrow/type.h"
 #include "arrow/util/checked_cast.h"
 #include "fmt/format.h"
-
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/common/utils/date_time_utils.h"
@@ -60,8 +58,7 @@ Result<std::optional<int32_t>> BucketSelectConverter::Convert(
     std::vector<FieldType> bucket_key_types;
     bucket_key_types.reserve(bucket_key_arrow_types.size());
     for (const auto& arrow_type : bucket_key_arrow_types) {
-        PAIMON_ASSIGN_OR_RAISE(FieldType ft,
-                               FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
+        PAIMON_ASSIGN_OR_RAISE(FieldType ft, FieldTypeUtils::ConvertToFieldType(arrow_type->id()));
         bucket_key_types.push_back(ft);
     }
 
@@ -87,9 +84,9 @@ Result<std::optional<int32_t>> BucketSelectConverter::Convert(
     writer.Complete();
 
     // Create the bucket function and compute the bucket
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BucketFunction> bucket_function,
-                           CreateBucketFunction(bucket_function_type, bucket_key_types,
-                                                bucket_key_arrow_types));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::unique_ptr<BucketFunction> bucket_function,
+        CreateBucketFunction(bucket_function_type, bucket_key_types, bucket_key_arrow_types));
     int32_t bucket = bucket_function->Bucket(row, num_buckets);
     return std::optional<int32_t>(bucket);
 }
@@ -131,9 +128,10 @@ std::optional<std::map<std::string, Literal>> BucketSelectConverter::ExtractEqua
     return result;
 }
 
-Status BucketSelectConverter::WriteLiteralToRow(
-    int32_t pos, const Literal& literal, FieldType field_type,
-    const std::shared_ptr<arrow::DataType>& arrow_type, BinaryRowWriter* writer) {
+Status BucketSelectConverter::WriteLiteralToRow(int32_t pos, const Literal& literal,
+                                                FieldType field_type,
+                                                const std::shared_ptr<arrow::DataType>& arrow_type,
+                                                BinaryRowWriter* writer) {
     switch (field_type) {
         case FieldType::BOOLEAN:
             writer->WriteBoolean(pos, literal.GetValue<bool>());

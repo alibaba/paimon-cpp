@@ -130,9 +130,9 @@ Status KeyValueFileStoreScan::SplitAndSetKeyValueFilter(
             }
             PAIMON_ASSIGN_OR_RAISE(
                 std::optional<int32_t> selected_bucket,
-                BucketSelectConverter::Convert(
-                    key_predicate, bucket_keys, bucket_key_arrow_types,
-                    core_options_.GetBucketFunctionType(), num_buckets, pool_.get()));
+                BucketSelectConverter::Convert(key_predicate, bucket_keys, bucket_key_arrow_types,
+                                               core_options_.GetBucketFunctionType(), num_buckets,
+                                               pool_.get()));
             if (selected_bucket.has_value()) {
                 SetBucketFilterIfAbsent(selected_bucket.value());
             }
