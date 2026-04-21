@@ -151,6 +151,8 @@ set(PAIMON_CORE_SRCS
     core/mergetree/spill_writer.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
+    core/append/append_compact_task.cpp
+    core/append/append_compact_coordinator.cpp
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
     core/bucket/bucket_id_calculator.cpp
@@ -525,6 +527,7 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(core_test
                     SOURCES
                     core/append/append_only_writer_test.cpp
+                    core/append/append_compact_coordinator_test.cpp
                     core/append/bucketed_append_compact_manager_test.cpp
                     core/bucket/default_bucket_function_test.cpp
                     core/bucket/hive_bucket_function_test.cpp
