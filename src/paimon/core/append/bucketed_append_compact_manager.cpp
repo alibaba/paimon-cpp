@@ -41,8 +41,7 @@ BucketedAppendCompactManager::BucketedAppendCompactManager(
           [](const std::shared_ptr<DataFileMeta>& lhs, const std::shared_ptr<DataFileMeta>& rhs) {
               return lhs->min_sequence_number > rhs->min_sequence_number;
           }),
-      cancellation_controller_(cancellation_controller),
-      logger_(Logger::GetLogger("BucketedAppendCompactManager")) {
+      cancellation_controller_(cancellation_controller) {
     assert(cancellation_controller_ != nullptr);
     for (const auto& file : restored) {
         to_compact_.push(file);
