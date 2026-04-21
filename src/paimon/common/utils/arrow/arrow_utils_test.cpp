@@ -445,4 +445,43 @@ TEST(ArrowUtilsTest, TestEqualsIgnoreNullable) {
         ASSERT_TRUE(ArrowUtils::EqualsIgnoreNullable(struct_type1, struct_type2));
     }
 }
+
+TEST(ArrowUtilsTest, TestGetCompressionType) {
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType(""));
+        ASSERT_EQ(type, arrow::Compression::UNCOMPRESSED);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("none"));
+        ASSERT_EQ(type, arrow::Compression::UNCOMPRESSED);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("uncompressed"));
+        ASSERT_EQ(type, arrow::Compression::UNCOMPRESSED);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("zstd"));
+        ASSERT_EQ(type, arrow::Compression::ZSTD);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("ZSTD"));
+        ASSERT_EQ(type, arrow::Compression::ZSTD);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("lz4"));
+        ASSERT_EQ(type, arrow::Compression::LZ4_FRAME);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("snappy"));
+        ASSERT_EQ(type, arrow::Compression::SNAPPY);
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto type, ArrowUtils::GetCompressionType("gzip"));
+        ASSERT_EQ(type, arrow::Compression::GZIP);
+    }
+    {
+        ASSERT_NOK(ArrowUtils::GetCompressionType("invalid_codec"));
+    }
+}
+
 }  // namespace paimon::test

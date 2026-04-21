@@ -35,7 +35,6 @@
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/core_options.h"
-#include "paimon/disk/io_manager.h"
 #include "paimon/file_store_write.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
@@ -47,7 +46,7 @@ namespace paimon::test {
 class KeyValueFileStoreWriteTest : public ::testing::Test {
  protected:
     Result<std::unique_ptr<FileStoreWrite>> CreateSingleStringFileStoreWrite(
-        const std::map<std::string, std::string>& table_options, bool with_io_manager) {
+        const std::map<std::string, std::string>& table_options, bool with_temp_directory) {
         auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
         arrow::Schema typed_schema(fields);
         ::ArrowSchema schema;
@@ -65,9 +64,8 @@ class KeyValueFileStoreWriteTest : public ::testing::Test {
                                                   /*ignore_if_exists=*/false));
 
         WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
-        if (with_io_manager) {
-            auto io_manager = IOManager::Create(dir->Str());
-            context_builder.WithIOManager(std::shared_ptr<IOManager>(std::move(io_manager)));
+        if (with_temp_directory) {
+            context_builder.WithTempDirectory(dir->Str());
         }
 
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context,
@@ -201,7 +199,7 @@ TEST_F(KeyValueFileStoreWriteTest, TestPrepareCommitShouldSucceedWhenLookupEnabl
     ASSERT_OK_AND_ASSIGN(
         auto file_store_write,
         CreateSingleStringFileStoreWrite({{"bucket", "1"}, {Options::FORCE_LOOKUP, "true"}},
-                                         /*with_io_manager=*/true));
+                                         /*with_temp_directory=*/true));
 
     ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
     ASSERT_OK_AND_ASSIGN(auto commit_messages,
@@ -211,8 +209,9 @@ TEST_F(KeyValueFileStoreWriteTest, TestPrepareCommitShouldSucceedWhenLookupEnabl
 
 TEST_F(KeyValueFileStoreWriteTest,
        TestPrepareCommitShouldSucceedWhenDefaultCompactRewriterPathEnabled) {
-    ASSERT_OK_AND_ASSIGN(auto file_store_write, CreateSingleStringFileStoreWrite(
-                                                    {{"bucket", "1"}}, /*with_io_manager=*/false));
+    ASSERT_OK_AND_ASSIGN(
+        auto file_store_write,
+        CreateSingleStringFileStoreWrite({{"bucket", "1"}}, /*with_temp_directory=*/false));
 
     ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, "k1"));
     ASSERT_OK_AND_ASSIGN(auto commit_messages,

@@ -146,10 +146,14 @@ set(PAIMON_COMMON_SRCS
     common/utils/string_utils.cpp)
 
 set(PAIMON_CORE_SRCS
-    core/disk/io_manager.cpp
+    core/disk/file_io_channel.cpp
+    core/mergetree/spill_reader.cpp
+    core/mergetree/spill_writer.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
     core/bucket/bucket_select_converter.cpp
+    core/append/append_compact_task.cpp
+    core/append/append_compact_coordinator.cpp
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
     core/bucket/bucket_id_calculator.cpp
@@ -524,6 +528,7 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(core_test
                     SOURCES
                     core/append/append_only_writer_test.cpp
+                    core/append/append_compact_coordinator_test.cpp
                     core/append/bucketed_append_compact_manager_test.cpp
                     core/bucket/bucket_select_converter_test.cpp
                     core/bucket/default_bucket_function_test.cpp
@@ -622,6 +627,8 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/merge_tree_writer_test.cpp
                     core/mergetree/write_buffer_test.cpp
                     core/mergetree/sorted_run_test.cpp
+                    core/mergetree/spill_channel_manager_test.cpp
+                    core/mergetree/spill_reader_writer_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp
                     core/operation/data_evolution_file_store_scan_test.cpp
