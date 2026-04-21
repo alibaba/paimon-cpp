@@ -17,6 +17,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/sst/block_handle.h"
@@ -54,7 +55,7 @@ class PAIMON_EXPORT SstFileWriter {
     Result<BlockHandle> WriteIndexBlock();
 
     // When bloom-filter is disabled, return nullptr.
-    Result<std::shared_ptr<BloomFilterHandle>> WriteBloomFilter();
+    Result<std::optional<BloomFilterHandle>> WriteBloomFilter();
 
     Status WriteSlice(const MemorySlice& slice);
 

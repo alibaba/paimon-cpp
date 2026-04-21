@@ -35,112 +35,108 @@ class BTreeFileFooterTest : public ::testing::Test {
 };
 
 TEST_F(BTreeFileFooterTest, ReadWriteRoundTrip) {
-    auto bloom_filter_handle = std::make_shared<BloomFilterHandle>(100, 50, 1000);
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
-    auto null_bitmap_handle = std::make_shared<BlockHandle>(300, 40);
+    BloomFilterHandle bloom_filter_handle(100, 50, 1000);
+    BlockHandle index_block_handle(200, 80);
+    BlockHandle null_bitmap_handle(300, 40);
 
     auto footer = std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle,
                                                     null_bitmap_handle);
 
     auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-    EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
+    ASSERT_EQ(serialized.Length(), BTreeFileFooter::kEncodingLength);
 
     auto input = serialized.ToInput();
     ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
-    auto bf_handle = deserialized_footer->GetBloomFilterHandle();
-    ASSERT_NE(bf_handle, nullptr);
-    EXPECT_EQ(bf_handle->Offset(), 100);
-    EXPECT_EQ(bf_handle->Size(), 50);
-    EXPECT_EQ(bf_handle->ExpectedEntries(), 1000);
+    const auto& bf_handle = deserialized_footer->GetBloomFilterHandle();
+    ASSERT_TRUE(bf_handle.has_value());
+    ASSERT_EQ(bf_handle->Offset(), 100);
+    ASSERT_EQ(bf_handle->Size(), 50);
+    ASSERT_EQ(bf_handle->ExpectedEntries(), 1000);
 
-    auto ib_handle = deserialized_footer->GetIndexBlockHandle();
-    ASSERT_NE(ib_handle, nullptr);
-    EXPECT_EQ(ib_handle->Offset(), 200);
-    EXPECT_EQ(ib_handle->Size(), 80);
+    const auto& ib_handle = deserialized_footer->GetIndexBlockHandle();
+    ASSERT_EQ(ib_handle.Offset(), 200);
+    ASSERT_EQ(ib_handle.Size(), 80);
 
-    auto nb_handle = deserialized_footer->GetNullBitmapHandle();
-    ASSERT_NE(nb_handle, nullptr);
-    EXPECT_EQ(nb_handle->Offset(), 300);
-    EXPECT_EQ(nb_handle->Size(), 40);
+    const auto& nb_handle = deserialized_footer->GetNullBitmapHandle();
+    ASSERT_TRUE(nb_handle.has_value());
+    ASSERT_EQ(nb_handle->Offset(), 300);
+    ASSERT_EQ(nb_handle->Size(), 40);
 }
 
 TEST_F(BTreeFileFooterTest, ReadWriteWithNullBloomFilter) {
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
-    auto null_bitmap_handle = std::make_shared<BlockHandle>(300, 40);
+    BlockHandle index_block_handle(200, 80);
+    BlockHandle null_bitmap_handle(300, 40);
 
     auto footer =
-        std::make_shared<BTreeFileFooter>(nullptr, index_block_handle, null_bitmap_handle);
+        std::make_shared<BTreeFileFooter>(std::nullopt, index_block_handle, null_bitmap_handle);
 
     auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-    EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
+    ASSERT_EQ(serialized.Length(), BTreeFileFooter::kEncodingLength);
 
     auto input = serialized.ToInput();
     ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
-    EXPECT_EQ(deserialized_footer->GetBloomFilterHandle(), nullptr);
+    ASSERT_FALSE(deserialized_footer->GetBloomFilterHandle().has_value());
 
-    auto ib_handle = deserialized_footer->GetIndexBlockHandle();
-    ASSERT_NE(ib_handle, nullptr);
-    EXPECT_EQ(ib_handle->Offset(), 200);
-    EXPECT_EQ(ib_handle->Size(), 80);
+    const auto& ib_handle = deserialized_footer->GetIndexBlockHandle();
+    ASSERT_EQ(ib_handle.Offset(), 200);
+    ASSERT_EQ(ib_handle.Size(), 80);
 
-    auto nb_handle = deserialized_footer->GetNullBitmapHandle();
-    ASSERT_NE(nb_handle, nullptr);
-    EXPECT_EQ(nb_handle->Offset(), 300);
-    EXPECT_EQ(nb_handle->Size(), 40);
+    const auto& nb_handle = deserialized_footer->GetNullBitmapHandle();
+    ASSERT_TRUE(nb_handle.has_value());
+    ASSERT_EQ(nb_handle->Offset(), 300);
+    ASSERT_EQ(nb_handle->Size(), 40);
 }
 
 TEST_F(BTreeFileFooterTest, ReadWriteWithNullNullBitmap) {
-    auto bloom_filter_handle = std::make_shared<BloomFilterHandle>(100, 50, 1000);
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
+    BloomFilterHandle bloom_filter_handle(100, 50, 1000);
+    BlockHandle index_block_handle(200, 80);
 
     auto footer =
-        std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle, nullptr);
+        std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle, std::nullopt);
 
     auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-    EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
+    ASSERT_EQ(serialized.Length(), BTreeFileFooter::kEncodingLength);
 
     auto input = serialized.ToInput();
     ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
-    auto bf_handle = deserialized_footer->GetBloomFilterHandle();
-    ASSERT_NE(bf_handle, nullptr);
-    EXPECT_EQ(bf_handle->Offset(), 100);
-    EXPECT_EQ(bf_handle->Size(), 50);
-    EXPECT_EQ(bf_handle->ExpectedEntries(), 1000);
+    const auto& bf_handle = deserialized_footer->GetBloomFilterHandle();
+    ASSERT_TRUE(bf_handle.has_value());
+    ASSERT_EQ(bf_handle->Offset(), 100);
+    ASSERT_EQ(bf_handle->Size(), 50);
+    ASSERT_EQ(bf_handle->ExpectedEntries(), 1000);
 
-    auto ib_handle = deserialized_footer->GetIndexBlockHandle();
-    ASSERT_NE(ib_handle, nullptr);
-    EXPECT_EQ(ib_handle->Offset(), 200);
-    EXPECT_EQ(ib_handle->Size(), 80);
+    const auto& ib_handle = deserialized_footer->GetIndexBlockHandle();
+    ASSERT_EQ(ib_handle.Offset(), 200);
+    ASSERT_EQ(ib_handle.Size(), 80);
 
-    EXPECT_EQ(deserialized_footer->GetNullBitmapHandle(), nullptr);
+    ASSERT_FALSE(deserialized_footer->GetNullBitmapHandle().has_value());
 }
 
 TEST_F(BTreeFileFooterTest, ReadWriteWithAllNullHandles) {
-    auto index_block_handle = std::make_shared<BlockHandle>(200, 80);
+    BlockHandle index_block_handle(200, 80);
 
-    auto footer = std::make_shared<BTreeFileFooter>(nullptr, index_block_handle, nullptr);
+    auto footer = std::make_shared<BTreeFileFooter>(std::nullopt, index_block_handle, std::nullopt);
 
     auto serialized = BTreeFileFooter::Write(footer, pool_.get());
-    EXPECT_EQ(serialized.Length(), BTreeFileFooter::ENCODED_LENGTH);
+    ASSERT_EQ(serialized.Length(), BTreeFileFooter::kEncodingLength);
 
     auto input = serialized.ToInput();
     ASSERT_OK_AND_ASSIGN(auto deserialized_footer, BTreeFileFooter::Read(&input));
 
-    EXPECT_EQ(deserialized_footer->GetBloomFilterHandle(), nullptr);
+    ASSERT_FALSE(deserialized_footer->GetBloomFilterHandle().has_value());
 
-    auto ib_handle = deserialized_footer->GetIndexBlockHandle();
-    ASSERT_NE(ib_handle, nullptr);
-    EXPECT_EQ(ib_handle->Offset(), 200);
-    EXPECT_EQ(ib_handle->Size(), 80);
+    const auto& ib_handle = deserialized_footer->GetIndexBlockHandle();
+    ASSERT_EQ(ib_handle.Offset(), 200);
+    ASSERT_EQ(ib_handle.Size(), 80);
 
-    EXPECT_EQ(deserialized_footer->GetNullBitmapHandle(), nullptr);
+    ASSERT_FALSE(deserialized_footer->GetNullBitmapHandle().has_value());
 }
 
 TEST_F(BTreeFileFooterTest, InvalidMagicNumber) {
-    MemorySliceOutput output(BTreeFileFooter::ENCODED_LENGTH, pool_.get());
+    MemorySliceOutput output(BTreeFileFooter::kEncodingLength, pool_.get());
 
     output.WriteValue(static_cast<int64_t>(0));
     output.WriteValue(static_cast<int32_t>(0));
@@ -159,7 +155,7 @@ TEST_F(BTreeFileFooterTest, InvalidMagicNumber) {
     auto input = serialized.ToInput();
 
     auto deserialized = BTreeFileFooter::Read(&input);
-    ASSERT_NOK_WITH_MSG(deserialized, "not a btree index file");
+    ASSERT_NOK_WITH_MSG(deserialized, "File is not a btree index file (expected magic number");
 }
 
 }  // namespace paimon::test

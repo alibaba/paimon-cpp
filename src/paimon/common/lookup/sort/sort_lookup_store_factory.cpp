@@ -36,8 +36,9 @@ Result<std::unique_ptr<LookupStoreReader>> SortLookupStoreFactory::CreateReader(
     const std::shared_ptr<paimon::FileSystem>& fs, const std::string& file_path,
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<SstFileReader> reader,
-                           SstFileReader::CreateFromStream(in, comparator_, cache_manager_, pool));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<SstFileReader> reader,
+        SstFileReader::CreateForSortLookupStore(in, comparator_, cache_manager_, pool));
     return std::make_unique<SortLookupStoreReader>(in, reader);
 }
 
@@ -48,7 +49,7 @@ Status SortLookupStoreReader::Close() {
 
 Status SortLookupStoreWriter::Close() {
     PAIMON_RETURN_NOT_OK(writer_->Flush());
-    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BloomFilterHandle> bloom_filter_handle,
+    PAIMON_ASSIGN_OR_RAISE(std::optional<BloomFilterHandle> bloom_filter_handle,
                            writer_->WriteBloomFilter());
     PAIMON_ASSIGN_OR_RAISE(BlockHandle index_block_handle, writer_->WriteIndexBlock());
     SortLookupStoreFooter footer(index_block_handle, bloom_filter_handle);

@@ -37,12 +37,6 @@ class SstFileUtils {
         return Status::Invalid(
             fmt::format("not support compression type code {}", static_cast<int32_t>(v)));
     }
-
-    static std::string ToHexString(int32_t crc32c) {
-        std::stringstream sstream;
-        sstream << std::hex << crc32c;
-        return sstream.str();
-    }
 };
 
 }  // namespace paimon

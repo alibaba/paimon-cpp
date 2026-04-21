@@ -26,9 +26,9 @@ Result<std::unique_ptr<SortLookupStoreFooter>> SortLookupStoreFooter::ReadSortLo
     auto offset = input->ReadLong();
     auto size = input->ReadInt();
     auto expected_entries = input->ReadLong();
-    std::shared_ptr<BloomFilterHandle> bloom_filter_handle = nullptr;
+    std::optional<BloomFilterHandle> bloom_filter_handle;
     if (offset || size || expected_entries) {
-        bloom_filter_handle = std::make_shared<BloomFilterHandle>(offset, size, expected_entries);
+        bloom_filter_handle.emplace(offset, size, expected_entries);
     }
     auto index_offset = input->ReadLong();
     auto index_size = input->ReadInt();
@@ -48,7 +48,7 @@ Result<std::unique_ptr<SortLookupStoreFooter>> SortLookupStoreFooter::ReadSortLo
 MemorySlice SortLookupStoreFooter::WriteSortLookupStoreFooter(MemoryPool* pool) {
     MemorySliceOutput output(ENCODED_LENGTH, pool);
     // 20 bytes
-    if (!bloom_filter_handle_.get()) {
+    if (!bloom_filter_handle_) {
         output.WriteValue(static_cast<int64_t>(0));
         output.WriteValue(static_cast<int32_t>(0));
         output.WriteValue(static_cast<int64_t>(0));

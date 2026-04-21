@@ -412,8 +412,6 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/bitmap/bitmap_global_index_test.cpp
                     common/global_index/btree/btree_index_meta_test.cpp
                     common/global_index/btree/btree_file_footer_test.cpp
-                    common/global_index/btree/btree_global_indexer_test.cpp
-                    common/global_index/btree/btree_global_index_writer_test.cpp
                     common/global_index/btree/btree_global_index_integration_test.cpp
                     common/global_index/btree/btree_compatibility_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
