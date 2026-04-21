@@ -202,7 +202,8 @@ Status ValidateTable(const std::shared_ptr<TableSchema>& table_schema,
             "with UNAWARE_BUCKET mode");
     }
     if (core_options.DeletionVectorsEnabled()) {
-        return Status::NotImplemented("not support for dv in UNAWARE_BUCKET mode");
+        return Status::NotImplemented(
+            "AppendCompactCoordinator not support for dv in UNAWARE_BUCKET mode");
     }
     return Status::OK();
 }
