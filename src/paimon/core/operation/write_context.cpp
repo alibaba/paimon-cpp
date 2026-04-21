@@ -33,10 +33,9 @@ WriteContext::WriteContext(const std::string& root_path, const std::string& comm
                            const std::string& branch, const std::vector<std::string>& write_schema,
                            const std::shared_ptr<MemoryPool>& memory_pool,
                            const std::shared_ptr<Executor>& executor,
-                           const std::shared_ptr<IOManager>& io_manager,
+                           const std::string& temp_directory,
                            const std::shared_ptr<FileSystem>& specific_file_system,
                            const std::map<std::string, std::string>& fs_scheme_to_identifier_map,
-
                            const std::map<std::string, std::string>& options)
     : root_path_(root_path),
       commit_user_(commit_user),
@@ -48,7 +47,7 @@ WriteContext::WriteContext(const std::string& root_path, const std::string& comm
       write_schema_(write_schema),
       memory_pool_(memory_pool),
       executor_(executor),
-      io_manager_(io_manager),
+      temp_directory_(temp_directory),
       specific_file_system_(specific_file_system),
       fs_scheme_to_identifier_map_(fs_scheme_to_identifier_map),
       options_(options) {}
@@ -66,7 +65,7 @@ class WriteContextBuilder::Impl {
         ignore_previous_files_ = false;
         memory_pool_ = GetDefaultPool();
         executor_ = CreateDefaultExecutor();
-        io_manager_.reset();
+        temp_directory_.clear();
         branch_ = BranchManager::DEFAULT_MAIN_BRANCH;
         write_schema_.clear();
         fs_scheme_to_identifier_map_.clear();
@@ -85,7 +84,7 @@ class WriteContextBuilder::Impl {
     std::vector<std::string> write_schema_;
     std::shared_ptr<MemoryPool> memory_pool_ = GetDefaultPool();
     std::shared_ptr<Executor> executor_ = CreateDefaultExecutor();
-    std::shared_ptr<IOManager> io_manager_;
+    std::string temp_directory_;
     std::map<std::string, std::string> fs_scheme_to_identifier_map_;
     std::shared_ptr<FileSystem> specific_file_system_;
     std::map<std::string, std::string> options_;
@@ -133,9 +132,8 @@ WriteContextBuilder& WriteContextBuilder::WithExecutor(const std::shared_ptr<Exe
     return *this;
 }
 
-WriteContextBuilder& WriteContextBuilder::WithIOManager(
-    const std::shared_ptr<IOManager>& io_manager) {
-    impl_->io_manager_ = io_manager;
+WriteContextBuilder& WriteContextBuilder::WithTempDirectory(const std::string& temp_dir) {
+    impl_->temp_directory_ = temp_dir;
     return *this;
 }
 
@@ -176,7 +174,7 @@ Result<std::unique_ptr<WriteContext>> WriteContextBuilder::Finish() {
         impl_->root_path_, impl_->commit_user_, impl_->is_streaming_mode_,
         impl_->ignore_num_bucket_check_, impl_->ignore_previous_files_, impl_->write_id_,
         impl_->branch_, impl_->write_schema_, impl_->memory_pool_, impl_->executor_,
-        impl_->io_manager_, impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_,
+        impl_->temp_directory_, impl_->specific_file_system_, impl_->fs_scheme_to_identifier_map_,
         impl_->options_);
     impl_->Reset();
     return ctx;

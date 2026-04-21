@@ -24,6 +24,7 @@
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/core_options.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/manifest/index_manifest_file.h"
 #include "paimon/core/mergetree/compact/lookup_merge_function.h"
 #include "paimon/core/mergetree/compact/merge_function.h"
@@ -100,6 +101,13 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
                                      options.IndexFileInDataFileDir(), ctx->GetMemoryPool()));
     auto snapshot_manager =
         std::make_shared<SnapshotManager>(options.GetFileSystem(), ctx->GetRootPath(), branch);
+
+    std::shared_ptr<IOManager> io_manager;
+    const auto& io_temp_dir = ctx->GetTempDirectory();
+    if (!io_temp_dir.empty()) {
+        io_manager = std::make_shared<IOManager>(io_temp_dir, options.GetFileSystem());
+    }
+
     bool ignore_previous_files = ctx->IgnorePreviousFiles();
     if (schema->PrimaryKeys().empty()) {
         // append table
@@ -146,7 +154,7 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return std::make_unique<AppendOnlyFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
             ctx->GetRootPath(), schema, arrow_schema, write_schema, partition_schema,
-            dv_maintainer_factory, ctx->GetIOManager(), options, ignore_previous_files,
+            dv_maintainer_factory, io_manager, options, ignore_previous_files,
             ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetExecutor(),
             ctx->GetMemoryPool());
     } else {
@@ -154,8 +162,8 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         if (options.GetBucket() == BucketModeDefine::POSTPONE_BUCKET) {
             return PostponeBucketFileStoreWrite::Create(
                 snapshot_manager, schema_manager, ctx->GetCommitUser(), ctx->GetRootPath(), schema,
-                arrow_schema, partition_schema, ctx->GetIOManager(), options,
-                ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
+                arrow_schema, partition_schema, io_manager, options, ctx->IsStreamingMode(),
+                ctx->IgnoreNumBucketCheck(), ctx->GetWriteId(),
                 ctx->GetFileSystemSchemeToIdentifierMap(), ctx->GetExecutor(), ctx->GetMemoryPool(),
                 ctx->GetSpecificFileSystem());
         }
@@ -203,8 +211,8 @@ Result<std::unique_ptr<FileStoreWrite>> FileStoreWrite::Create(std::unique_ptr<W
         return std::make_unique<KeyValueFileStoreWrite>(
             file_store_path_factory, snapshot_manager, schema_manager, ctx->GetCommitUser(),
             ctx->GetRootPath(), schema, arrow_schema, partition_schema, dv_maintainer_factory,
-            ctx->GetIOManager(), key_comparator, sequence_fields_comparator, merge_function_wrapper,
-            options, ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
+            io_manager, key_comparator, sequence_fields_comparator, merge_function_wrapper, options,
+            ignore_previous_files, ctx->IsStreamingMode(), ctx->IgnoreNumBucketCheck(),
             ctx->GetExecutor(), ctx->GetMemoryPool());
     }
 }
