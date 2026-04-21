@@ -52,6 +52,7 @@ class PAIMON_EXPORT AppendCompactCoordinator {
     /// @param partitions Partition filters; each element is a partition spec as key-value pairs.
     ///                   Empty vector means all partitions.
     /// @param file_system The file system to use. If nullptr, will be created from options.
+    /// @param pool The memory pool to use. If nullptr, will use default pool.
     /// @return Result containing a vector of commit messages from compaction tasks.
     static Result<std::vector<std::shared_ptr<CommitMessage>>> Run(
         const std::string& table_path, const std::map<std::string, std::string>& options,
