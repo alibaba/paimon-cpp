@@ -37,7 +37,6 @@
 #include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
-#include "paimon/disk/io_manager.h"
 #include "paimon/file_store_commit.h"
 #include "paimon/file_store_write.h"
 #include "paimon/fs/file_system.h"
@@ -158,10 +157,9 @@ class PkCompactionInteTest : public ::testing::Test,
         int32_t bucket, const std::shared_ptr<arrow::Array>& write_array, int64_t commit_identifier,
         bool is_streaming = true, const std::vector<RecordBatch::RowKind>& row_kinds = {},
         bool write_only = true) const {
-        auto io_manager = std::shared_ptr<IOManager>(
-            IOManager::Create(PathUtil::JoinPath(dir_->Str(), "tmp")).release());
         WriteContextBuilder write_builder(table_path, "commit_user_1");
-        write_builder.WithStreamingMode(is_streaming).WithIOManager(io_manager);
+        write_builder.WithStreamingMode(is_streaming)
+            .WithTempDirectory(PathUtil::JoinPath(dir_->Str(), "tmp"));
         if (write_only) {
             write_builder.AddOption(Options::WRITE_ONLY, "true");
         }
@@ -207,10 +205,9 @@ class PkCompactionInteTest : public ::testing::Test,
     Result<std::vector<std::shared_ptr<CommitMessage>>> CompactAndCommit(
         const std::string& table_path, const std::map<std::string, std::string>& partition,
         int32_t bucket, bool full_compaction, int64_t commit_identifier) {
-        auto io_manager = std::shared_ptr<IOManager>(
-            IOManager::Create(PathUtil::JoinPath(dir_->Str(), "tmp")).release());
         WriteContextBuilder write_builder(table_path, "commit_user_1");
-        write_builder.WithStreamingMode(true).WithIOManager(io_manager);
+        write_builder.WithStreamingMode(true).WithTempDirectory(
+            PathUtil::JoinPath(dir_->Str(), "tmp"));
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<WriteContext> write_context, write_builder.Finish());
         PAIMON_ASSIGN_OR_RAISE(auto file_store_write,
                                FileStoreWrite::Create(std::move(write_context)));
@@ -1388,10 +1385,9 @@ TEST_F(PkCompactionInteTest, ContinuousWriteWithBackgroundCompact) {
 
     // Step 1-4: Streaming writes with background compact in one FileStoreWrite.
     {
-        auto io_manager = std::shared_ptr<IOManager>(
-            IOManager::Create(PathUtil::JoinPath(dir_->Str(), "tmp")).release());
         WriteContextBuilder write_builder(table_path, "commit_user_1");
-        write_builder.WithStreamingMode(true).WithIOManager(io_manager);
+        write_builder.WithStreamingMode(true).WithTempDirectory(
+            PathUtil::JoinPath(dir_->Str(), "tmp"));
         ASSERT_OK_AND_ASSIGN(auto write_context, write_builder.Finish());
         ASSERT_OK_AND_ASSIGN(auto file_store_write,
                              FileStoreWrite::Create(std::move(write_context)));
@@ -1596,10 +1592,10 @@ TEST_F(PkCompactionInteTest, WriteAndCompactWithBranch) {
     auto data_type = arrow::struct_(fields);
 
     // Step 2: Write data to the branch-rt and compact.
-    auto io_manager = std::shared_ptr<IOManager>(
-        IOManager::Create(PathUtil::JoinPath(dir_->Str(), "tmp")).release());
     WriteContextBuilder write_builder(table_path, "commit_user_1");
-    write_builder.WithStreamingMode(true).WithIOManager(io_manager).WithBranch("rt");
+    write_builder.WithStreamingMode(true)
+        .WithTempDirectory(PathUtil::JoinPath(dir_->Str(), "tmp"))
+        .WithBranch("rt");
     ASSERT_OK_AND_ASSIGN(auto write_context, write_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
 

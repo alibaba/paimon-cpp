@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "arrow/api.h"
+#include "arrow/util/type_fwd.h"
 #include "fmt/format.h"
 #include "paimon/result.h"
 
@@ -48,6 +49,10 @@ class PAIMON_EXPORT ArrowUtils {
 
     static bool EqualsIgnoreNullable(const std::shared_ptr<arrow::DataType>& type,
                                      const std::shared_ptr<arrow::DataType>& other_type);
+
+    /// Normalize and resolve a compression string to an Arrow compression type.
+    /// Handles "none" and empty string by mapping them to "uncompressed".
+    static Result<arrow::Compression::type> GetCompressionType(const std::string& compression);
 
  private:
     static Status InnerCheckNullabilityMatch(const std::shared_ptr<arrow::Field>& field,
