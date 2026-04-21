@@ -17,8 +17,10 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/compression/block_compression_factory.h"
+#include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
+#include "paimon/common/utils/scope_guard.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/fs/file_system.h"
@@ -27,8 +29,8 @@
 #include "paimon/global_index/io/global_index_file_writer.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
+#include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 
 class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
@@ -101,25 +103,10 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
         ASSERT_TRUE(typed_result);
         ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
         ASSERT_TRUE(bitmap);
-        ASSERT_EQ(*(typed_result->GetBitmap().value()), RoaringBitmap64::From(expected))
+        ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected))
             << "result=" << (typed_result->GetBitmap().value())->ToString()
             << ", expected=" << RoaringBitmap64::From(expected).ToString();
     }
-
-    // // Helper to check if a row ID is in the result
-    // bool ContainsRowId(const std::shared_ptr<GlobalIndexResult>& result, int64_t row_id) {
-    //     auto iterator_result = result->CreateIterator();
-    //     if (!iterator_result.ok()) {
-    //         return false;
-    //     }
-    //     auto iterator = std::move(iterator_result).value();
-    //     while (iterator->HasNext()) {
-    //         if (iterator->Next() == row_id) {
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
 
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<BlockCompressionFactory> compression_factory_;
@@ -1786,5 +1773,65 @@ TEST_F(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
     ASSERT_NOK_WITH_MSG(writer->Finish(), "Should never write an empty btree index file");
 }
 
-// TODO(xinyu.lxy): IO exception test
+TEST_F(BTreeGlobalIndexIntegrationTest, TestIOException) {
+    bool run_complete = false;
+    auto io_hook = paimon::IOHook::GetInstance();
+    for (size_t i = 0; i < 200; i++) {
+        auto test_dir = UniqueTestDirectory::Create("local");
+        ASSERT_TRUE(test_dir);
+        auto local_fs = test_dir->GetFileSystem();
+        auto local_base = test_dir->Str();
+        paimon::ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, paimon::IOHook::Mode::RETURN_ERROR);
+
+        auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(local_fs, local_base);
+        auto field = arrow::field("int_field", arrow::int32());
+        auto c_schema = CreateArrowSchema(field);
+
+        std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+        auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+
+        // write
+        auto writer_result = indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_);
+        CHECK_HOOK_STATUS(writer_result.status(), i);
+        auto writer = std::move(writer_result).value();
+        auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+            [1], [2], [null], [3], [4], [5]
+        ])")
+                         .ValueOrDie();
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+        std::vector<int64_t> row_ids = {0, 1, 2, 3, 4, 5};
+
+        CHECK_HOOK_STATUS(btree_writer->AddBatch(&c_array, row_ids), i);
+        auto finish_result = writer->Finish();
+        CHECK_HOOK_STATUS(finish_result.status(), i);
+        auto metas = std::move(finish_result).value();
+
+        // read
+        auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(local_fs, local_base);
+        c_schema = CreateArrowSchema(field);
+        auto reader_result = indexer->CreateReader(c_schema.get(), file_reader, metas, pool_);
+        CHECK_HOOK_STATUS(reader_result.status(), i);
+        auto reader = std::move(reader_result).value();
+
+        auto equal_result = reader->VisitEqual(Literal(3));
+        CHECK_HOOK_STATUS(equal_result.status(), i);
+
+        auto typed_result =
+            std::dynamic_pointer_cast<BitmapGlobalIndexResult>(equal_result.value());
+        ASSERT_TRUE(typed_result);
+        auto bitmap_result = typed_result->GetBitmap();
+        CHECK_HOOK_STATUS(bitmap_result.status(), i);
+        ASSERT_TRUE(bitmap_result.value());
+        ASSERT_EQ(*bitmap_result.value(), RoaringBitmap64::From({3}));
+
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
+}
+
 }  // namespace paimon::test

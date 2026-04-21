@@ -156,13 +156,13 @@ Result<std::optional<BlockHandle>> BTreeGlobalIndexWriter::WriteNullBitmap(
 
     // Get current position for the block handle
     PAIMON_ASSIGN_OR_RAISE(int64_t offset, out->GetPos());
-    sst_writer_->WriteSlice(slice_out.ToSlice());
+    PAIMON_RETURN_NOT_OK(sst_writer_->WriteSlice(slice_out.ToSlice()));
     return std::optional<BlockHandle>(BlockHandle(offset, bitmap_bytes->size()));
 }
 
 Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     // write remaining row ids
-    Flush();
+    PAIMON_RETURN_NOT_OK(Flush());
 
     // Flush any remaining data in the data block writer
     PAIMON_RETURN_NOT_OK(sst_writer_->Flush());
@@ -181,7 +181,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     auto footer = std::make_shared<BTreeFileFooter>(bloom_filter_handle, index_block_handle,
                                                     null_bitmap_handle);
     auto footer_slice = BTreeFileFooter::Write(footer, pool_.get());
-    sst_writer_->WriteSlice(footer_slice);
+    PAIMON_RETURN_NOT_OK(sst_writer_->WriteSlice(footer_slice));
 
     PAIMON_RETURN_NOT_OK(output_stream_->Close());
 
