@@ -114,7 +114,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         auto meta_str = ReadFileAsString(meta_path);
         std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
-        int64_t file_size = static_cast<int64_t>(file_status->GetLen());
+        auto file_size = static_cast<int64_t>(file_status->GetLen());
 
         GlobalIndexIOMeta io_meta(bin_path, file_size, record_count - 1, meta_bytes);
         std::vector<GlobalIndexIOMeta> metas = {io_meta};
@@ -428,7 +428,7 @@ TEST_F(BTreeCompatibilityTest, AllNulls) {
 
     auto records = ParseCsvFile(csv_path);
     ASSERT_FALSE(records.empty());
-    int32_t count = static_cast<int32_t>(records.size());
+    auto count = static_cast<int32_t>(records.size());
 
     ASSERT_OK_AND_ASSIGN(auto reader,
                          CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
@@ -467,7 +467,7 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
 
     auto records = ParseCsvFile(csv_path);
     ASSERT_FALSE(records.empty());
-    int32_t count = static_cast<int32_t>(records.size());
+    auto count = static_cast<int32_t>(records.size());
 
     ASSERT_OK_AND_ASSIGN(auto reader,
                          CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
@@ -536,7 +536,7 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
 
     auto records = ParseCsvFile(csv_path);
     ASSERT_FALSE(records.empty());
-    int32_t count = static_cast<int32_t>(records.size());
+    auto count = static_cast<int32_t>(records.size());
 
     ASSERT_OK_AND_ASSIGN(auto reader,
                          CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
@@ -701,7 +701,7 @@ TEST_F(BTreeCompatibilityTest, RowCountConsistency) {
 
         auto records = ParseCsvFile(csv_path);
         ASSERT_FALSE(records.empty());
-        int32_t count = static_cast<int32_t>(records.size());
+        auto count = static_cast<int32_t>(records.size());
 
         ASSERT_OK_AND_ASSIGN(auto reader,
                              CreateReaderFromFiles(bin_path, meta_path, arrow_type, count));

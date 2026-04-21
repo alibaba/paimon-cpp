@@ -73,7 +73,7 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
             MemorySliceOutput output(4, pool);
             output.Reset();
             // TODO(xinyu): check java floatToIntBits
-            float fvalue = literal.GetValue<float>();
+            auto fvalue = literal.GetValue<float>();
             int32_t ivalue;
             memcpy(&ivalue, &fvalue, sizeof(float));
             output.WriteValue<int32_t>(ivalue);
@@ -83,14 +83,14 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
             MemorySliceOutput output(8, pool);
             output.Reset();
             // TODO(xinyu): check java doubleToLongBits
-            double dvalue = literal.GetValue<double>();
+            auto dvalue = literal.GetValue<double>();
             int64_t ivalue;
             memcpy(&ivalue, &dvalue, sizeof(double));
             output.WriteValue<int64_t>(ivalue);
             return output.ToSlice().CopyBytes(pool);
         }
         case FieldType::STRING: {
-            std::string svalue = literal.GetValue<std::string>();
+            auto svalue = literal.GetValue<std::string>();
             std::shared_ptr<Bytes> bytes = Bytes::AllocateBytes(svalue, pool);
             return bytes;
         }
@@ -100,7 +100,7 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
                            "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
             MemorySliceOutput output(8, pool);
             output.Reset();
-            Timestamp ts = literal.GetValue<Timestamp>();
+            auto ts = literal.GetValue<Timestamp>();
             if (Timestamp::IsCompact(DateTimeUtils::GetPrecisionFromType(ts_type))) {
                 output.WriteValue<int64_t>(ts.GetMillisecond());
             } else {
@@ -114,7 +114,7 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
             CHECK_NOT_NULL(decimal_type,
                            "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex");
 
-            Decimal decimal = literal.GetValue<Decimal>();
+            auto decimal = literal.GetValue<Decimal>();
             if (Decimal::IsCompact(decimal_type->precision())) {
                 MemorySliceOutput output(8, pool);
                 output.Reset();
