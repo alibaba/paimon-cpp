@@ -2721,4 +2721,57 @@ TEST_F(ScanAndReadInteTest, TestAvroWithPkTable) {
 ])");
 }
 
+TEST_P(ScanAndReadInteTest, TestWithPKBucketSelectByPredicate) {
+    auto [file_format, enable_prefetch] = GetParam();
+    // Verify BucketSelectConverter: an EQUAL predicate on bucket key f2 should automatically
+    // derive the target bucket, without explicitly calling SetBucketFilter.
+    // From the existing test  f2=0 maps to bucket 1, f2=1 maps to bucket 0.
+    std::string table_path = paimon::test::GetDataDir() + file_format +
+                             "/pk_table_scan_and_read_dv.db/pk_table_scan_and_read_dv/";
+
+    // Predicate: f2 = 0 (bucket key). This should cause BucketSelectConverter to derive bucket 1.
+    auto predicate = PredicateBuilder::Equal(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT,
+                                             Literal(static_cast<int32_t>(0)));
+
+    ScanContextBuilder scan_context_builder(table_path);
+    scan_context_builder.AddOption(Options::SCAN_SNAPSHOT_ID, "6");
+    scan_context_builder.SetPartitionFilter({{{"f1", "10"}}});
+    scan_context_builder.SetPredicate(predicate);
+    ASSERT_OK_AND_ASSIGN(auto scan_context, scan_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
+
+    ReadContextBuilder read_context_builder(table_path);
+    AddReadOptionsForPrefetch(&read_context_builder);
+    read_context_builder.SetPredicate(predicate);
+    ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
+
+    ASSERT_OK_AND_ASSIGN(auto result_plan, table_scan->CreatePlan());
+    ASSERT_EQ(result_plan->SnapshotId().value(), 6);
+
+    // Verify all returned splits are from bucket 1 (f2=0 hashes to bucket 1)
+    auto splits = result_plan->Splits();
+    ASSERT_FALSE(splits.empty());
+    for (const auto& split : splits) {
+        auto data_split = std::dynamic_pointer_cast<DataSplitImpl>(split);
+        ASSERT_TRUE(data_split);
+        ASSERT_EQ(data_split->Bucket(), 1);
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
+    ASSERT_OK_AND_ASSIGN(auto read_result, ReadResultCollector::CollectResult(batch_reader.get()));
+
+    // Only rows with f2=0 in partition f1=10 should be returned
+    auto expected = std::make_shared<arrow::ChunkedArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(arrow_data_type_, R"([
+[0, "Alex", 10, 0, 16.1],
+[0, "Bob", 10, 0, 12.1],
+[0, "David", 10, 0, 17.1],
+[0, "Emily", 10, 0, 13.1]
+   ])")
+            .ValueOrDie());
+    ASSERT_TRUE(expected);
+    ASSERT_TRUE(expected->Equals(read_result)) << read_result->ToString();
+}
+
 }  // namespace paimon::test
