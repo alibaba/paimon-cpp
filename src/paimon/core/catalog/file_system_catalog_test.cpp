@@ -28,6 +28,7 @@
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/fs/file_system_factory.h"
+#include "paimon/snapshot/snapshot_info.h"
 #include "paimon/testing/utils/testharness.h"
 
 namespace paimon::test {
@@ -677,6 +678,59 @@ TEST(FileSystemCatalogTest, TestDropTableWithMultipleExternalPaths) {
     ASSERT_FALSE(exists2);
 
     ArrowSchemaRelease(&schema);
+}
+
+TEST(FileSystemCatalogTest, TestListSnapshots) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+
+    std::string test_data_path = GetDataDir() + "/append_table_with_multiple_file_format.db";
+    std::string db_path = dir->Str() + "/test_db.db";
+    ASSERT_TRUE(TestUtil::CopyDirectory(test_data_path, db_path));
+
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+
+    Identifier id("test_db", "append_table_with_multiple_file_format");
+    ASSERT_OK_AND_ASSIGN(std::vector<SnapshotInfo> snapshots, catalog.ListSnapshots(id, ""));
+
+    ASSERT_EQ(snapshots.size(), 2);
+
+    ASSERT_EQ(snapshots[0].snapshot_id, 1);
+    ASSERT_EQ(snapshots[0].schema_id, 0);
+    ASSERT_EQ(snapshots[0].commit_kind, SnapshotInfo::CommitKind::APPEND);
+    ASSERT_EQ(snapshots[0].time_millis, 1755671728191);
+    ASSERT_EQ(snapshots[0].total_record_count, 5);
+    ASSERT_EQ(snapshots[0].delta_record_count, 5);
+    ASSERT_FALSE(snapshots[0].watermark.has_value());
+
+    ASSERT_EQ(snapshots[1].snapshot_id, 2);
+    ASSERT_EQ(snapshots[1].schema_id, 1);
+    ASSERT_EQ(snapshots[1].commit_kind, SnapshotInfo::CommitKind::APPEND);
+    ASSERT_EQ(snapshots[1].time_millis, 1755671956423);
+    ASSERT_EQ(snapshots[1].total_record_count, 7);
+    ASSERT_EQ(snapshots[1].delta_record_count, 2);
+    ASSERT_FALSE(snapshots[1].watermark.has_value());
+
+    // Verify ascending order by snapshot_id
+    ASSERT_LT(snapshots[0].snapshot_id, snapshots[1].snapshot_id);
+}
+
+TEST(FileSystemCatalogTest, TestListSnapshotsTableNotExist) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+
+    ASSERT_NOK_WITH_MSG(
+        catalog.ListSnapshots(Identifier("non_existent_db", "non_existent_table"), ""),
+        "does not exist");
 }
 
 }  // namespace paimon::test
