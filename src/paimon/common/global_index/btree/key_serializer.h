@@ -34,6 +34,7 @@ class KeySerializer {
     static Result<Literal> DeserializeKey(const MemorySlice& slice,
                                           const std::shared_ptr<arrow::DataType>& type,
                                           MemoryPool* pool);
+
     static MemorySlice::SliceComparator CreateComparator(
         const std::shared_ptr<arrow::DataType>& type, const std::shared_ptr<MemoryPool>& pool);
 };

@@ -16,6 +16,7 @@
 
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 
+#include "fmt/format.h"
 #include "paimon/common/global_index/btree/key_serializer.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
@@ -91,7 +92,7 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWi
         return std::make_shared<BitmapGlobalIndexResult>(
             [reader = shared_from_this(), prefix = prefix]() -> Result<RoaringBitmap64> {
                 return reader->RangeQuery(prefix, reader->max_key_, /*from_inclusive=*/true,
-                                          /*to_inclusive=*/false);
+                                          /*to_inclusive=*/true);
             });
     }
 

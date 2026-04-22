@@ -63,43 +63,43 @@ Result<std::shared_ptr<BTreeFileFooter>> BTreeFileFooter::Read(MemorySliceInput*
 MemorySlice BTreeFileFooter::Write(const std::shared_ptr<BTreeFileFooter>& footer,
                                    MemoryPool* pool) {
     MemorySliceOutput output(kEncodingLength, pool);
-    return BTreeFileFooter::Write(footer, output);
+    return BTreeFileFooter::Write(footer, &output);
 }
 
 MemorySlice BTreeFileFooter::Write(const std::shared_ptr<BTreeFileFooter>& footer,
-                                   MemorySliceOutput& output) {
+                                   MemorySliceOutput* output) {
     // write bloom filter handle
     const auto& bloom_filter_handle = footer->GetBloomFilterHandle();
     if (!bloom_filter_handle.has_value()) {
-        output.WriteValue(static_cast<int64_t>(0));
-        output.WriteValue(static_cast<int32_t>(0));
-        output.WriteValue(static_cast<int64_t>(0));
+        output->WriteValue(static_cast<int64_t>(0));
+        output->WriteValue(static_cast<int32_t>(0));
+        output->WriteValue(static_cast<int64_t>(0));
     } else {
-        output.WriteValue(bloom_filter_handle->Offset());
-        output.WriteValue(bloom_filter_handle->Size());
-        output.WriteValue(bloom_filter_handle->ExpectedEntries());
+        output->WriteValue(bloom_filter_handle->Offset());
+        output->WriteValue(bloom_filter_handle->Size());
+        output->WriteValue(bloom_filter_handle->ExpectedEntries());
     }
 
     // write index block handle
     const auto& index_block_handle = footer->GetIndexBlockHandle();
-    output.WriteValue(index_block_handle.Offset());
-    output.WriteValue(index_block_handle.Size());
+    output->WriteValue(index_block_handle.Offset());
+    output->WriteValue(index_block_handle.Size());
 
     // write null bitmap handle
     const auto& null_bitmap_handle = footer->GetNullBitmapHandle();
     if (!null_bitmap_handle.has_value()) {
-        output.WriteValue(static_cast<int64_t>(0));
-        output.WriteValue(static_cast<int32_t>(0));
+        output->WriteValue(static_cast<int64_t>(0));
+        output->WriteValue(static_cast<int32_t>(0));
     } else {
-        output.WriteValue(null_bitmap_handle->Offset());
-        output.WriteValue(null_bitmap_handle->Size());
+        output->WriteValue(null_bitmap_handle->Offset());
+        output->WriteValue(null_bitmap_handle->Size());
     }
 
     // write version and magic number
-    output.WriteValue(footer->GetVersion());
-    output.WriteValue(kMagicNumber);
+    output->WriteValue(footer->GetVersion());
+    output->WriteValue(kMagicNumber);
 
-    return output.ToSlice();
+    return output->ToSlice();
 }
 
 }  // namespace paimon

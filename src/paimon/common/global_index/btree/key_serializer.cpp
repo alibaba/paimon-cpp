@@ -182,7 +182,7 @@ Result<Literal> KeySerializer::DeserializeKey(const MemorySlice& slice,
         case arrow::Type::type::DECIMAL128: {
             auto decimal_type = std::dynamic_pointer_cast<arrow::Decimal128Type>(type);
             CHECK_NOT_NULL(decimal_type,
-                           "decimal type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
+                           "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex");
             if (Decimal::IsCompact(decimal_type->precision())) {
                 return Literal(Decimal::FromUnscaledLong(
                     slice.ReadLong(0), decimal_type->precision(), decimal_type->scale()));

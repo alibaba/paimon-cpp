@@ -53,8 +53,6 @@ class PAIMON_EXPORT SstFileReader {
         const std::shared_ptr<CacheManager>& cache_manager,
         const std::shared_ptr<MemoryPool>& pool);
 
-    // std::unique_ptr<SstFileIterator> CreateIterator();
-
     /// Create an iterator for the index block.
     std::unique_ptr<BlockIterator> CreateIndexIterator();
 

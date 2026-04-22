@@ -77,7 +77,8 @@ class FakeGlobalIndexFileReader : public GlobalIndexFileReader {
     std::string base_path_;
 };
 
-class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
+class BTreeGlobalIndexIntegrationTest : public ::testing::Test,
+                                        public ::testing::WithParamInterface<std::string> {
  protected:
     void SetUp() override {
         pool_ = GetDefaultPool();
@@ -104,7 +105,7 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
         ASSERT_TRUE(bitmap);
         ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected))
-            << "result=" << (typed_result->GetBitmap().value())->ToString()
+            << "result=" << bitmap->ToString()
             << ", expected=" << RoaringBitmap64::From(expected).ToString();
     }
 
@@ -115,12 +116,13 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
     std::string base_path_;
 };
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -268,12 +270,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("str_field", arrow::utf8());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("str_field", c_schema.get(), file_writer, pool_));
@@ -435,12 +438,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("bigint_field", arrow::int64());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("bigint_field", c_schema.get(), file_writer, pool_));
@@ -526,12 +530,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("float_field", arrow::float32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("float_field", c_schema.get(), file_writer, pool_));
@@ -616,12 +621,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("double_field", arrow::float64());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("double_field", c_schema.get(), file_writer, pool_));
@@ -706,12 +712,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -814,12 +821,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("bool_field", arrow::boolean());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("bool_field", c_schema.get(), file_writer, pool_));
@@ -890,12 +898,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("tinyint_field", arrow::int8());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("tinyint_field", c_schema.get(), file_writer, pool_));
@@ -971,12 +980,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("smallint_field", arrow::int16());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("smallint_field", c_schema.get(), file_writer, pool_));
@@ -1052,13 +1062,14 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
     // Compact timestamp: precision <= 3 (millisecond)
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("ts_field", arrow::timestamp(arrow::TimeUnit::MILLI));
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
@@ -1134,13 +1145,14 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
     // Non-compact timestamp: precision > 3 (microsecond, precision=6)
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("ts_field", arrow::timestamp(arrow::TimeUnit::MICRO));
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
@@ -1221,13 +1233,14 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
     // Compact decimal: precision <= 18
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("decimal_field", arrow::decimal128(10, 2));
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
@@ -1304,13 +1317,14 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
     // Non-compact decimal: precision > 18
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("decimal_field", arrow::decimal128(25, 3));
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
@@ -1388,12 +1402,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -1472,7 +1487,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
     // Use very small block size and cache size to force multiple block evictions
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
@@ -1623,9 +1638,10 @@ TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
     }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
 
     // Export a plain int32 type (not struct) as ArrowSchema
@@ -1637,12 +1653,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
                         "arrow schema must be struct type");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
 
     // Provide two fake metas
@@ -1654,7 +1671,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
                         "exist multiple metas");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
 
     // Create a schema with two fields
@@ -1663,7 +1680,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
     auto c_schema = std::make_unique<ArrowSchema>();
     ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
 
     GlobalIndexIOMeta meta("fake_path", 100, 10, nullptr);
@@ -1673,7 +1691,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
                         "supposed to have single field");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto type = arrow::struct_({arrow::field("existing_field", arrow::int32())});
     auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(type);
@@ -1684,12 +1702,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
         "not in arrow_array when Create BTreeGlobalIndexWriter");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNullArray) {
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNullArray) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -1700,12 +1719,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNullArray) {
     ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(nullptr, row_ids), "ArrowArray is null");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -1728,12 +1748,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
                         "row_ids length 2 mismatch arrow_array length 3 when AddBatch");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -1755,12 +1776,13 @@ TEST_F(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
                         "Users must keep written keys monotonically incremental");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
+TEST_P(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     auto field = arrow::field("int_field", arrow::int32());
     auto c_schema = CreateArrowSchema(field);
 
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
     auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
@@ -1771,7 +1793,7 @@ TEST_F(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
     ASSERT_NOK_WITH_MSG(writer->Finish(), "Should never write an empty btree index file");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, TestIOException) {
+TEST_P(BTreeGlobalIndexIntegrationTest, TestIOException) {
     bool run_complete = false;
     auto io_hook = paimon::IOHook::GetInstance();
     for (size_t i = 0; i < 200; i++) {
@@ -1786,7 +1808,9 @@ TEST_F(BTreeGlobalIndexIntegrationTest, TestIOException) {
         auto field = arrow::field("int_field", arrow::int32());
         auto c_schema = CreateArrowSchema(field);
 
-        std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"}};
+        std::map<std::string, std::string> options = {
+            {BtreeDefs::kBtreeIndexBlockSize, "128"},
+            {BtreeDefs::kBtreeIndexCompression, GetParam()}};
         auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
 
         // write
@@ -1831,5 +1855,8 @@ TEST_F(BTreeGlobalIndexIntegrationTest, TestIOException) {
     }
     ASSERT_TRUE(run_complete);
 }
+
+INSTANTIATE_TEST_SUITE_P(Compression, BTreeGlobalIndexIntegrationTest,
+                         ::testing::ValuesIn(std::vector<std::string>({"none", "zstd", "lz4"})));
 
 }  // namespace paimon::test
