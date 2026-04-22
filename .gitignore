@@ -16,6 +16,7 @@
 build
 build-release
 build-debug
+build-test
 output
 
 # IDE settings

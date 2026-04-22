@@ -16,146 +16,88 @@
 
 #include "paimon/core/mergetree/write_buffer.h"
 
-#include <cassert>
+#include <memory>
 #include <utility>
 
-#include "arrow/array/array_binary.h"
-#include "arrow/array/array_nested.h"
-#include "arrow/c/bridge.h"
-#include "arrow/c/helpers.h"
-#include "arrow/util/checked_cast.h"
-#include "fmt/format.h"
-#include "paimon/common/utils/arrow/status_utils.h"
-#include "paimon/core/io/key_value_in_memory_record_reader.h"
+#include "arrow/type.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/key_value_record_reader.h"
-#include "paimon/data/decimal.h"
+#include "paimon/core/io/merged_key_value_record_reader.h"
+#include "paimon/core/mergetree/binary_external_sort_buffer.h"
+#include "paimon/core/mergetree/binary_in_memory_sort_buffer.h"
 
 namespace paimon {
 
-WriteBuffer::WriteBuffer(
-    const std::shared_ptr<arrow::DataType>& value_type,
+Result<std::unique_ptr<WriteBuffer>> WriteBuffer::Create(
+    int64_t last_sequence_number, const std::shared_ptr<arrow::Schema>& value_schema,
     const std::vector<std::string>& trimmed_primary_keys,
     const std::vector<std::string>& user_defined_sequence_fields,
     const std::shared_ptr<FieldsComparator>& key_comparator,
+    const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
-    const std::shared_ptr<MemoryPool>& pool)
-    : pool_(pool),
-      value_type_(value_type),
-      trimmed_primary_keys_(trimmed_primary_keys),
-      user_defined_sequence_fields_(user_defined_sequence_fields),
+    const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
+    const std::shared_ptr<MemoryPool>& pool) {
+    auto value_type = arrow::struct_(value_schema->fields());
+    auto in_memory_buffer = std::make_unique<BinaryInMemorySortBuffer>(
+        last_sequence_number, value_type, trimmed_primary_keys, user_defined_sequence_fields,
+        options.SequenceFieldSortOrderIsAscending(), key_comparator, options.GetWriteBufferSize(),
+        pool);
+    std::unique_ptr<SortBuffer> sort_buffer;
+    if (!options.GetWriteBufferSpillable() || io_manager == nullptr) {
+        sort_buffer = std::move(in_memory_buffer);
+    } else {
+        PAIMON_ASSIGN_OR_RAISE(sort_buffer,
+                               BinaryExternalSortBuffer::Create(
+                                   std::move(in_memory_buffer), value_schema, trimmed_primary_keys,
+                                   user_defined_sequence_fields, key_comparator,
+                                   user_defined_seq_comparator, options, io_manager, pool));
+    }
+    return std::unique_ptr<WriteBuffer>(
+        new WriteBuffer(std::move(sort_buffer), key_comparator, merge_function_wrapper));
+}
+
+WriteBuffer::WriteBuffer(
+    std::unique_ptr<SortBuffer>&& sort_buffer,
+    const std::shared_ptr<FieldsComparator>& key_comparator,
+    const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper)
+    : sort_buffer_(std::move(sort_buffer)),
       key_comparator_(key_comparator),
       merge_function_wrapper_(merge_function_wrapper) {}
 
-Status WriteBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
-    if (ArrowArrayIsReleased(moved_batch->GetData())) {
-        return Status::Invalid("invalid batch: data is released");
-    }
-    std::unique_ptr<RecordBatch> batch = std::move(moved_batch);
-    PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> arrow_array,
-                                      arrow::ImportArray(batch->GetData(), value_type_));
-    auto value_struct_array = std::dynamic_pointer_cast<arrow::StructArray>(arrow_array);
-    if (value_struct_array == nullptr) {
-        return Status::Invalid("invalid RecordBatch: cannot cast to StructArray");
-    }
-    PAIMON_ASSIGN_OR_RAISE(int64_t memory_in_bytes, EstimateMemoryUse(value_struct_array));
-    current_memory_in_bytes_ += memory_in_bytes;
-
-    batch_vec_.push_back(std::move(value_struct_array));
-    row_kinds_vec_.push_back(batch->GetRowKind());
-    return Status::OK();
+Result<bool> WriteBuffer::Write(std::unique_ptr<RecordBatch>&& batch) {
+    return sort_buffer_->Write(std::move(batch));
 }
 
-Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::DrainToReaders(
-    int64_t* last_sequence_number) {
-    std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
-    if (batch_vec_.empty()) {
-        return readers;
+Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> WriteBuffer::DrainToReaders() {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
+                           sort_buffer_->SortedIterator());
+    std::vector<std::unique_ptr<KeyValueRecordReader>> merged_readers;
+    merged_readers.reserve(readers.size());
+    for (auto& reader : readers) {
+        merged_readers.push_back(std::make_unique<MergedKeyValueRecordReader>(
+            std::move(reader), key_comparator_, merge_function_wrapper_));
     }
-
-    readers.reserve(batch_vec_.size());
-    for (size_t i = 0; i < batch_vec_.size(); ++i) {
-        int64_t sequence_number = *last_sequence_number;
-        *last_sequence_number += batch_vec_[i]->length();
-        auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-            sequence_number, std::move(batch_vec_[i]), std::move(row_kinds_vec_[i]),
-            trimmed_primary_keys_, user_defined_sequence_fields_, key_comparator_,
-            merge_function_wrapper_, pool_);
-        readers.push_back(std::move(in_memory_reader));
-    }
-
-    Clear();
-    return readers;
+    return merged_readers;
 }
 
-void WriteBuffer::Clear() {
-    batch_vec_.clear();
-    row_kinds_vec_.clear();
-    current_memory_in_bytes_ = 0;
+Result<bool> WriteBuffer::FlushMemory() {
+    return sort_buffer_->FlushMemory();
 }
 
-// TODO(jinli.zjw): Consider making the memory estimation more accurate.
-// https://github.com/alibaba/paimon-cpp/pull/206#discussion_r3021325389
+uint64_t WriteBuffer::GetMemoryUsage() const {
+    return sort_buffer_->GetMemorySize();
+}
+
+bool WriteBuffer::IsEmpty() const {
+    return !sort_buffer_->HasData();
+}
+
+Status WriteBuffer::Clear() {
+    return sort_buffer_->Clear();
+}
+
 Result<int64_t> WriteBuffer::EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array) {
-    arrow::Type::type type = array->type()->id();
-    int64_t null_bits_size_in_bytes = (array->length() + 7) / 8;
-    switch (type) {
-        case arrow::Type::type::BOOL:
-            return null_bits_size_in_bytes + array->length() * sizeof(bool);
-        case arrow::Type::type::INT8:
-            return null_bits_size_in_bytes + array->length() * sizeof(int8_t);
-        case arrow::Type::type::INT16:
-            return null_bits_size_in_bytes + array->length() * sizeof(int16_t);
-        case arrow::Type::type::INT32:
-            return null_bits_size_in_bytes + array->length() * sizeof(int32_t);
-        case arrow::Type::type::DATE32:
-            return null_bits_size_in_bytes + array->length() * sizeof(int32_t);
-        case arrow::Type::type::INT64:
-            return null_bits_size_in_bytes + array->length() * sizeof(int64_t);
-        case arrow::Type::type::FLOAT:
-            return null_bits_size_in_bytes + array->length() * sizeof(float);
-        case arrow::Type::type::DOUBLE:
-            return null_bits_size_in_bytes + array->length() * sizeof(double);
-        case arrow::Type::type::TIMESTAMP:
-            return null_bits_size_in_bytes + array->length() * sizeof(int64_t);
-        case arrow::Type::type::DECIMAL:
-            return null_bits_size_in_bytes + array->length() * sizeof(Decimal::int128_t);
-        case arrow::Type::type::STRING:
-        case arrow::Type::type::BINARY: {
-            auto binary_array =
-                arrow::internal::checked_cast<const arrow::BinaryArray*>(array.get());
-            assert(binary_array);
-            int64_t value_length = binary_array->total_values_length();
-            int64_t offset_length = array->length() * sizeof(int32_t);
-            return null_bits_size_in_bytes + value_length + offset_length;
-        }
-        case arrow::Type::type::LIST: {
-            auto list_array = arrow::internal::checked_cast<const arrow::ListArray*>(array.get());
-            assert(list_array);
-            PAIMON_ASSIGN_OR_RAISE(int64_t value_mem, EstimateMemoryUse(list_array->values()));
-            return null_bits_size_in_bytes + value_mem;
-        }
-        case arrow::Type::type::MAP: {
-            auto map_array = arrow::internal::checked_cast<const arrow::MapArray*>(array.get());
-            assert(map_array);
-            PAIMON_ASSIGN_OR_RAISE(int64_t key_mem, EstimateMemoryUse(map_array->keys()));
-            PAIMON_ASSIGN_OR_RAISE(int64_t item_mem, EstimateMemoryUse(map_array->items()));
-            return null_bits_size_in_bytes + key_mem + item_mem;
-        }
-        case arrow::Type::type::STRUCT: {
-            auto struct_array =
-                arrow::internal::checked_cast<const arrow::StructArray*>(array.get());
-            assert(struct_array);
-            int64_t struct_mem = 0;
-            for (const auto& field : struct_array->fields()) {
-                PAIMON_ASSIGN_OR_RAISE(int64_t field_mem, EstimateMemoryUse(field));
-                struct_mem += field_mem;
-            }
-            return null_bits_size_in_bytes + struct_mem;
-        }
-        default:
-            return Status::Invalid(fmt::format("Do not support type {} in EstimateMemoryUse",
-                                               array->type()->ToString()));
-    }
+    return BinaryInMemorySortBuffer::EstimateMemoryUse(array);
 }
 
 }  // namespace paimon

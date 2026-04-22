@@ -44,12 +44,10 @@
 #include "paimon/core/mergetree/lookup_levels.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/schema/schema_manager.h"
-#include "paimon/core/table/source/data_split_impl.h"
 #include "paimon/format/file_format_factory.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/record_batch.h"
 #include "paimon/scan_context.h"
-#include "paimon/table/source/table_scan.h"
 #include "paimon/testing/mock/mock_index_path_factory.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/io_exception_helper.h"
@@ -96,12 +94,14 @@ class LookupMergeTreeCompactRewriterTest : public ::testing::TestWithParam<std::
         if (!latest_schema) {
             return Status::Invalid("cannot find latest schema");
         }
-        auto writer = std::make_shared<MergeTreeWriter>(
-            /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
-            data_path_factory, key_comparator,
-            /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper,
-            /*schema_id=*/latest_schema.value()->Id(), arrow_schema_, options,
-            std::make_shared<NoopCompactManager>(), pool_);
+
+        PAIMON_ASSIGN_OR_RAISE(
+            auto writer,
+            MergeTreeWriter::Create(
+                /*last_sequence_number=*/last_sequence_number, std::vector<std::string>({"key"}),
+                data_path_factory, key_comparator, /*user_defined_seq_comparator=*/nullptr,
+                merge_function_wrapper, /*schema_id=*/latest_schema.value()->Id(), arrow_schema_,
+                options, std::make_shared<NoopCompactManager>(), /*io_manager=*/nullptr, pool_));
 
         // write data
         ArrowArray c_src_array;

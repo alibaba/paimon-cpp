@@ -16,11 +16,8 @@
 
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_loser_tree.h"
 
-#include <cassert>
-#include <cstdint>
-
-#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/key_value_record_reader.h"
+#include "paimon/core/utils/merge_utils.h"
 
 namespace paimon {
 SortMergeReaderWithLoserTree::SortMergeReaderWithLoserTree(
@@ -33,37 +30,9 @@ SortMergeReaderWithLoserTree::SortMergeReaderWithLoserTree(
     // first_comparator returns 0, it means that second_comparator must be used to compare
     // again.
     // lhs and rhs are swapped when compare to generate loser tree pop smallest first
-    auto first_comparator = [user_key_comparator](const std::optional<KeyValue>& lhs,
-                                                  const std::optional<KeyValue>& rhs) -> int32_t {
-        if (lhs == std::nullopt) {
-            return -1;
-        }
-        if (rhs == std::nullopt) {
-            return 1;
-        }
-        return user_key_comparator->CompareTo(*(rhs.value().key), *(lhs.value().key));
-    };
-    auto second_comparator = [user_defined_seq_comparator](
-                                 const std::optional<KeyValue>& lhs,
-                                 const std::optional<KeyValue>& rhs) -> int32_t {
-        if (lhs == std::nullopt) {
-            return -1;
-        }
-        if (rhs == std::nullopt) {
-            return 1;
-        }
-        if (user_defined_seq_comparator != nullptr) {
-            int32_t result =
-                user_defined_seq_comparator->CompareTo(*(rhs.value().value), *(lhs.value().value));
-            if (result != 0) {
-                return result;
-            }
-        }
-        assert(lhs.value().sequence_number != rhs.value().sequence_number);
-        return rhs.value().sequence_number < lhs.value().sequence_number ? -1 : 1;
-    };
-    loser_tree_ =
-        std::make_unique<LoserTree>(std::move(readers), first_comparator, second_comparator);
+    loser_tree_ = std::make_unique<LoserTree>(
+        std::move(readers), MergeUtils::CreateKeyComparator(user_key_comparator),
+        MergeUtils::CreateSequenceComparator(user_defined_seq_comparator));
 }
 
 Result<bool> SortMergeReaderWithLoserTree::Iterator::HasNext() {

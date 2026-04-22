@@ -22,6 +22,9 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
+#include "paimon/core/core_options.h"
+#include "paimon/core/mergetree/binary_in_memory_sort_buffer.h"
+#include "paimon/core/mergetree/sort_buffer.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 #include "paimon/status.h"
@@ -29,11 +32,13 @@
 namespace arrow {
 class Array;
 class DataType;
+class Schema;
 class StructArray;
 }  // namespace arrow
 
 namespace paimon {
-
+class FileSystem;
+class IOManager;
 class KeyValueRecordReader;
 class FieldsComparator;
 class MemoryPool;
@@ -41,57 +46,53 @@ struct KeyValue;
 template <typename T>
 class MergeFunctionWrapper;
 
-/// WriteBuffer manages the in-memory batch buffer for MergeTreeWriter.
-/// It is responsible for importing Arrow data, estimating memory usage,
-/// and flushing buffered batches into KeyValueRecordReaders.
+/// WriteBuffer manages the batch buffer for MergeTreeWriter.
+/// It delegates to a SortBuffer implementation (BinaryInMemorySortBuffer or
+/// BinaryExternalSortBuffer) based on the spillable configuration.
 class WriteBuffer {
  public:
-    WriteBuffer(const std::shared_ptr<arrow::DataType>& value_type,
-                const std::vector<std::string>& trimmed_primary_keys,
-                const std::vector<std::string>& user_defined_sequence_fields,
-                const std::shared_ptr<FieldsComparator>& key_comparator,
-                const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
-                const std::shared_ptr<MemoryPool>& pool);
+    static Result<std::unique_ptr<WriteBuffer>> Create(
+        int64_t last_sequence_number, const std::shared_ptr<arrow::Schema>& value_schema,
+        const std::vector<std::string>& trimmed_primary_keys,
+        const std::vector<std::string>& user_defined_sequence_fields,
+        const std::shared_ptr<FieldsComparator>& key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
+        const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
+        const std::shared_ptr<MemoryPool>& pool);
 
     /// Import a RecordBatch into the buffer.
-    /// Does NOT check memory thresholds or trigger flush.
-    Status Write(std::unique_ptr<RecordBatch>&& batch);
+    /// Return false when the caller should fall back to FlushWriteBuffer.
+    Result<bool> Write(std::unique_ptr<RecordBatch>&& batch);
 
-    /// Drain all buffered batches into KeyValueInMemoryRecordReaders and clear the buffer.
-    /// @param[in,out] last_sequence_number current sequence number, updated after draining
-    /// @return list of KeyValueRecordReaders built from buffered data
-    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> DrainToReaders(
-        int64_t* last_sequence_number);
+    /// Drain all buffered batches into KeyValueRecordReaders.
+    /// The caller should invoke Clear() after consuming the readers.
+    Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> DrainToReaders();
 
-    /// Return current memory usage in bytes.
-    int64_t GetMemoryUsage() const {
-        return current_memory_in_bytes_;
-    }
+    /// Try to spill current buffered data. Return false when caller should fall back to
+    /// FlushWriteBuffer.
+    Result<bool> FlushMemory();
 
-    /// Return whether the buffer is empty.
-    bool IsEmpty() const {
-        return batch_vec_.empty();
-    }
+    uint64_t GetMemoryUsage() const;
 
-    /// Clear the buffer without building readers (for error paths or Close).
-    void Clear();
+    bool IsEmpty() const;
 
- private:
-    /// Estimate memory usage of an Arrow Array.
+    /// Clear all buffered data: both in-memory batches and on-disk spill files.
+    /// Called after FlushWriteBuffer writes out the final data files (regardless of success or
+    /// failure) to completely reset the buffer state.
+    Status Clear();
+
+    /// Estimate memory usage of an Arrow array. Exposed for testing.
     static Result<int64_t> EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array);
 
-    // Immutable configuration
-    const std::shared_ptr<MemoryPool> pool_;
-    const std::shared_ptr<arrow::DataType> value_type_;
-    const std::vector<std::string> trimmed_primary_keys_;
-    const std::vector<std::string> user_defined_sequence_fields_;
-    const std::shared_ptr<FieldsComparator> key_comparator_;
-    const std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
+ private:
+    WriteBuffer(std::unique_ptr<SortBuffer>&& sort_buffer,
+                const std::shared_ptr<FieldsComparator>& key_comparator,
+                const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper);
 
-    // Mutable buffer state
-    std::vector<std::shared_ptr<arrow::StructArray>> batch_vec_;
-    std::vector<std::vector<RecordBatch::RowKind>> row_kinds_vec_;
-    int64_t current_memory_in_bytes_ = 0;
+    std::unique_ptr<SortBuffer> sort_buffer_;
+    std::shared_ptr<FieldsComparator> key_comparator_;
+    std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
 };
 
 }  // namespace paimon

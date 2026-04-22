@@ -25,7 +25,6 @@
 #include "arrow/array/array_base.h"
 #include "arrow/array/builder_binary.h"
 #include "arrow/array/builder_nested.h"
-#include "arrow/array/builder_primitive.h"
 #include "arrow/c/abi.h"
 #include "arrow/c/bridge.h"
 #include "arrow/c/helpers.h"
@@ -34,8 +33,8 @@
 #include "paimon/catalog/catalog.h"
 #include "paimon/catalog/identifier.h"
 #include "paimon/common/utils/path_util.h"
-#include "paimon/core/core_options.h"
 #include "paimon/file_store_write.h"
+#include "paimon/fs/file_system.h"
 #include "paimon/record_batch.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
@@ -45,6 +44,29 @@ namespace paimon::test {
 
 class KeyValueFileStoreWriteTest : public ::testing::Test {
  protected:
+    int64_t CountChannelFiles(const std::shared_ptr<FileSystem>& file_system,
+                              const std::string& root_path) {
+        std::vector<std::unique_ptr<FileStatus>> file_statuses;
+        EXPECT_OK(file_system->ListFileStatus(root_path, &file_statuses));
+
+        int64_t channel_file_count = 0;
+        for (const auto& file_status : file_statuses) {
+            const std::string path = file_status->GetPath();
+            if (file_status->IsDir()) {
+                channel_file_count += CountChannelFiles(file_system, path);
+                continue;
+            }
+            if (path.size() < std::string(".channel").size()) {
+                continue;
+            }
+            if (path.compare(path.size() - std::string(".channel").size(),
+                             std::string(".channel").size(), ".channel") == 0) {
+                ++channel_file_count;
+            }
+        }
+        return channel_file_count;
+    }
+
     Result<std::unique_ptr<FileStoreWrite>> CreateSingleStringFileStoreWrite(
         const std::map<std::string, std::string>& table_options, bool with_temp_directory) {
         auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
@@ -217,6 +239,42 @@ TEST_F(KeyValueFileStoreWriteTest,
     ASSERT_OK_AND_ASSIGN(auto commit_messages,
                          file_store_write->PrepareCommit(/*wait_compaction=*/true));
     ASSERT_EQ(commit_messages.size(), 1);
+}
+
+TEST_F(KeyValueFileStoreWriteTest,
+       TestWriteShouldSpillLargestWriterWhenGlobalMemoryLimitIsExceeded) {
+    auto fields = {arrow::field("f0", arrow::utf8(), /*nullable=*/false)};
+    arrow::Schema typed_schema(fields);
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(typed_schema, &schema).ok());
+
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    ASSERT_OK_AND_ASSIGN(auto catalog, Catalog::Create(dir->Str(), {}));
+    ASSERT_OK(catalog->CreateDatabase("foo", {}, /*ignore_if_exists=*/false));
+    ASSERT_OK(catalog->CreateTable(Identifier("foo", "bar"), &schema,
+                                   /*partition_keys=*/{}, /*primary_keys=*/{"f0"},
+                                   {{Options::BUCKET, "2"},
+                                    {Options::WRITE_BUFFER_SIZE, "64"},
+                                    {Options::WRITE_BUFFER_SPILLABLE, "true"}},
+                                   /*ignore_if_exists=*/false));
+
+    WriteContextBuilder context_builder(PathUtil::JoinPath(dir->Str(), "foo.db/bar"), "test");
+    context_builder.WithTempDirectory(dir->Str());
+
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<WriteContext> write_context, context_builder.Finish());
+    ASSERT_OK_AND_ASSIGN(auto file_store_write, FileStoreWrite::Create(std::move(write_context)));
+
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/0, std::string(48, 'a')));
+    ASSERT_EQ(CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+
+    ASSERT_OK(WriteSingleStringRow(file_store_write.get(), /*bucket=*/1, std::string(48, 'b')));
+    ASSERT_GT(CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
+
+    ASSERT_OK_AND_ASSIGN(auto commit_messages,
+                         file_store_write->PrepareCommit(/*wait_compaction=*/true));
+    ASSERT_EQ(commit_messages.size(), 2);
+    ASSERT_EQ(CountChannelFiles(dir->GetFileSystem(), dir->Str()), 0);
 }
 
 }  // namespace paimon::test

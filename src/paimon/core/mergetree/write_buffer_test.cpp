@@ -27,6 +27,8 @@
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/core/core_options.h"
+#include "paimon/core/disk/io_manager.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
@@ -48,10 +50,15 @@ class WriteBufferTest : public ::testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
+        tmp_dir_ = UniqueTestDirectory::Create();
+        ASSERT_TRUE(tmp_dir_);
+        io_manager_ =
+            std::make_shared<IOManager>(tmp_dir_->Str() + "/tmp", tmp_dir_->GetFileSystem());
         value_fields_ = {DataField(0, arrow::field("f0", arrow::utf8())),
                          DataField(1, arrow::field("f1", arrow::int32())),
                          DataField(2, arrow::field("f2", arrow::int32())),
                          DataField(3, arrow::field("f3", arrow::float64()))};
+        value_schema_ = DataField::ConvertDataFieldsToArrowSchema(value_fields_);
         value_type_ = DataField::ConvertDataFieldsToArrowStructType(value_fields_);
         primary_keys_ = {"f0"};
         ASSERT_OK_AND_ASSIGN(key_comparator_,
@@ -61,6 +68,17 @@ class WriteBufferTest : public ::testing::Test {
         auto merge_function = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
         merge_function_wrapper_ =
             std::make_shared<ReducerMergeFunctionWrapper>(std::move(merge_function));
+    }
+
+    std::unique_ptr<WriteBuffer> CreateWriteBuffer(int64_t last_sequence_number,
+                                                   const CoreOptions& options) const {
+        EXPECT_OK_AND_ASSIGN(
+            auto write_buffer,
+            WriteBuffer::Create(last_sequence_number, value_schema_, primary_keys_,
+                                /*user_defined_sequence_fields=*/{}, key_comparator_,
+                                /*user_defined_seq_comparator=*/nullptr, merge_function_wrapper_,
+                                options, io_manager_, pool_));
+        return write_buffer;
     }
 
     std::unique_ptr<RecordBatch> CreateBatch(
@@ -88,7 +106,10 @@ class WriteBufferTest : public ::testing::Test {
 
  protected:
     std::shared_ptr<MemoryPool> pool_;
+    std::unique_ptr<UniqueTestDirectory> tmp_dir_;
+    std::shared_ptr<IOManager> io_manager_;
     std::vector<DataField> value_fields_;
+    std::shared_ptr<arrow::Schema> value_schema_;
     std::shared_ptr<arrow::DataType> value_type_;
     std::vector<std::string> primary_keys_;
     std::shared_ptr<FieldsComparator> key_comparator_;
@@ -96,8 +117,8 @@ class WriteBufferTest : public ::testing::Test {
 };
 
 TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
-    WriteBuffer write_buffer(value_type_, primary_keys_, /*user_defined_sequence_fields=*/{},
-                             key_comparator_, merge_function_wrapper_, pool_);
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(/*options_map=*/{}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/9, options);
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -111,18 +132,20 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ])")
             .ValueOrDie();
 
-    ASSERT_OK(write_buffer.Write(CreateBatch(array1, /*row_kinds=*/{})));
-    ASSERT_OK(write_buffer.Write(CreateBatch(array2, /*row_kinds=*/{})));
-    ASSERT_FALSE(write_buffer.IsEmpty());
-    ASSERT_GT(write_buffer.GetMemoryUsage(), 0);
+    ASSERT_OK_AND_ASSIGN(bool buffered1,
+                         write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered1);
+    ASSERT_OK_AND_ASSIGN(bool buffered2,
+                         write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered2);
+    ASSERT_FALSE(write_buffer->IsEmpty());
+    ASSERT_GT(write_buffer->GetMemoryUsage(), 0);
 
-    int64_t last_sequence_number = 10;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->DrainToReaders());
 
     ASSERT_EQ(readers.size(), 2);
-    ASSERT_TRUE(write_buffer.IsEmpty());
-    ASSERT_EQ(write_buffer.GetMemoryUsage(), 0);
-    ASSERT_EQ(last_sequence_number, 13);
+    ASSERT_TRUE(write_buffer->IsEmpty());
+    ASSERT_EQ(write_buffer->GetMemoryUsage(), 0);
 
     ASSERT_OK_AND_ASSIGN(auto first_result, ReadReaderResult(readers[0].get()));
     ASSERT_EQ(first_result.sequence_numbers, (std::vector<int64_t>{10, 11}));
@@ -137,8 +160,8 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
 }
 
 TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
-    WriteBuffer write_buffer(value_type_, primary_keys_, /*user_defined_sequence_fields=*/{},
-                             key_comparator_, merge_function_wrapper_, pool_);
+    ASSERT_OK_AND_ASSIGN(CoreOptions options, CoreOptions::FromMap(/*options_map=*/{}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -155,12 +178,11 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
         RecordBatch::RowKind::DELETE,
     };
 
-    ASSERT_OK(write_buffer.Write(CreateBatch(array, row_kinds)));
+    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, row_kinds)));
+    ASSERT_TRUE(buffered);
 
-    int64_t last_sequence_number = 0;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->DrainToReaders());
     ASSERT_EQ(readers.size(), 1);
-    ASSERT_EQ(last_sequence_number, 4);
 
     ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
 
@@ -169,6 +191,125 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
                   RowKind::Insert()->ToByteValue(), RowKind::UpdateBefore()->ToByteValue(),
                   RowKind::UpdateAfter()->ToByteValue(), RowKind::Delete()->ToByteValue()}));
     ASSERT_EQ(reader_result.sequence_numbers, (std::vector<int64_t>{0, 1, 2, 3}));
+}
+
+TEST_F(WriteBufferTest, TestWriteRequestsFlushWriteBufferWhenSpillDisabled) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_BUFFER_SPILLABLE, "false"}}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
+
+    std::shared_ptr<arrow::Array> array =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+      ["Alice", 10, 0, 13.1]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_FALSE(buffered);
+    ASSERT_FALSE(write_buffer->IsEmpty());
+    ASSERT_GT(write_buffer->GetMemoryUsage(), 0);
+}
+
+TEST_F(WriteBufferTest, TestDrainToReadersMergesSingleInMemoryReaderLocally) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::WRITE_BUFFER_SPILLABLE, "false"}}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
+
+    std::shared_ptr<arrow::Array> array =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Alice", 10, 0, 13.1],
+        ["Alice", 20, 1, 14.1]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(bool buffered, write_buffer->Write(CreateBatch(array, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered);
+
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->DrainToReaders());
+    ASSERT_EQ(readers.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
+    ASSERT_EQ(reader_result.sequence_numbers, (std::vector<int64_t>{1}));
+    ASSERT_EQ(reader_result.row_kind_values,
+              (std::vector<int8_t>{RowKind::Insert()->ToByteValue()}));
+}
+
+TEST_F(WriteBufferTest, TestDrainToReadersMergesSingleSpillReaderLocally) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_BUFFER_SPILLABLE, "true"}}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
+
+    std::shared_ptr<arrow::Array> array1 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Alice", 10, 0, 13.1]
+    ])")
+            .ValueOrDie();
+    std::shared_ptr<arrow::Array> array2 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Alice", 20, 1, 14.1]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(bool buffered1,
+                         write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered1);
+    ASSERT_OK_AND_ASSIGN(bool buffered2,
+                         write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered2);
+
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->DrainToReaders());
+    ASSERT_EQ(readers.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
+    ASSERT_EQ(reader_result.sequence_numbers, (std::vector<int64_t>{1}));
+    ASSERT_EQ(reader_result.row_kind_values,
+              (std::vector<int8_t>{RowKind::Insert()->ToByteValue()}));
+}
+
+TEST_F(WriteBufferTest, TestDrainToReadersPreservesAllRowsAcrossSpillWriteBatches) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions options,
+                         CoreOptions::FromMap({{Options::WRITE_BUFFER_SIZE, "1"},
+                                               {Options::WRITE_BUFFER_SPILLABLE, "true"},
+                                               {Options::WRITE_BATCH_SIZE, "1"}}));
+    auto write_buffer = CreateWriteBuffer(/*last_sequence_number=*/-1, options);
+
+    std::shared_ptr<arrow::Array> array1 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Alice", 10, 0, 13.1]
+    ])")
+            .ValueOrDie();
+    std::shared_ptr<arrow::Array> array2 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Bob", 20, 1, 14.1]
+    ])")
+            .ValueOrDie();
+    std::shared_ptr<arrow::Array> array3 =
+        arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
+        ["Charlie", 30, 2, 15.1]
+    ])")
+            .ValueOrDie();
+
+    ASSERT_OK_AND_ASSIGN(bool buffered1,
+                         write_buffer->Write(CreateBatch(array1, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered1);
+    ASSERT_OK_AND_ASSIGN(bool buffered2,
+                         write_buffer->Write(CreateBatch(array2, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered2);
+    ASSERT_OK_AND_ASSIGN(bool buffered3,
+                         write_buffer->Write(CreateBatch(array3, /*row_kinds=*/{})));
+    ASSERT_TRUE(buffered3);
+
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer->DrainToReaders());
+    ASSERT_EQ(readers.size(), 1);
+
+    ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
+    ASSERT_EQ(reader_result.sequence_numbers, (std::vector<int64_t>{0, 1, 2}));
+    ASSERT_EQ(
+        reader_result.row_kind_values,
+        (std::vector<int8_t>{RowKind::Insert()->ToByteValue(), RowKind::Insert()->ToByteValue(),
+                             RowKind::Insert()->ToByteValue()}));
 }
 
 TEST_F(WriteBufferTest, TestEstimateMemoryUse) {

@@ -34,6 +34,7 @@
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
+#include "paimon/core/mergetree/compact/raw_sort_merge_reader_with_min_heap.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_loser_tree.h"
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_min_heap.h"
@@ -61,6 +62,47 @@ class SortMergeReaderTest : public testing::Test {
             data_fields.emplace_back(/*id=*/0, field);
         }
         return data_fields;
+    }
+
+    static std::string FormatKeyValue(const KeyValue& kv) {
+        const auto format_row = [](const InternalRow& row) {
+            std::string result = "[";
+            for (int32_t i = 0; i < row.GetFieldCount(); ++i) {
+                if (i > 0) {
+                    result += ", ";
+                }
+                result += row.IsNullAt(i) ? "null" : std::to_string(row.GetInt(i));
+            }
+            result += "]";
+            return result;
+        };
+
+        return "{seq=" + std::to_string(kv.sequence_number) + ", key=" + format_row(*kv.key) +
+               ", value=" + format_row(*kv.value) + "}";
+    }
+
+    static std::string FormatKeyValueBatch(const std::vector<KeyValue>& batch) {
+        std::string result = "[";
+        for (size_t i = 0; i < batch.size(); ++i) {
+            if (i > 0) {
+                result += ", ";
+            }
+            result += FormatKeyValue(batch[i]);
+        }
+        result += "]";
+        return result;
+    }
+
+    static std::string FormatKeyValueBatches(const std::vector<std::vector<KeyValue>>& batches) {
+        std::string result = "[";
+        for (size_t i = 0; i < batches.size(); ++i) {
+            if (i > 0) {
+                result += ", ";
+            }
+            result += FormatKeyValueBatch(batches[i]);
+        }
+        result += "]";
+        return result;
     }
 
     void CheckResult(const std::vector<std::shared_ptr<arrow::StructArray>>& src_array_vec,
@@ -103,6 +145,51 @@ class SortMergeReaderTest : public testing::Test {
         return std::make_unique<SortMergeReaderType>(std::move(concat_readers), user_key_comparator,
                                                      user_defined_seq_comparator,
                                                      merge_function_wrapper);
+    }
+
+    std::unique_ptr<SortMergeReader> CreateRawSortMergeReader(
+        const std::vector<std::shared_ptr<arrow::StructArray>>& src_array_vec,
+        const std::shared_ptr<FieldsComparator>& user_key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<arrow::Schema>& key_schema,
+        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size) const {
+        std::vector<std::unique_ptr<KeyValueRecordReader>> concat_readers;
+        for (const auto& src_array : src_array_vec) {
+            auto file_batch_reader = std::make_unique<MockFileBatchReader>(
+                src_array, src_array->type(), /*batch_size=*/batch_size);
+            auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+                std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
+            std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
+            readers.push_back(std::move(record_reader));
+            concat_readers.push_back(
+                std::make_unique<ConcatKeyValueRecordReader>(std::move(readers)));
+        }
+
+        return std::make_unique<RawSortMergeReaderWithMinHeap>(
+            std::move(concat_readers), user_key_comparator, user_defined_seq_comparator);
+    }
+
+    std::unique_ptr<SortMergeReader> CreateRawSortMergeReaderWithMinHeap(
+        const std::vector<std::shared_ptr<arrow::StructArray>>& src_array_vec,
+        const std::shared_ptr<FieldsComparator>& user_key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<arrow::Schema>& key_schema,
+        const std::shared_ptr<arrow::Schema>& value_schema, int32_t batch_size) const {
+        std::vector<std::unique_ptr<KeyValueRecordReader>> concat_readers;
+        for (const auto& src_array : src_array_vec) {
+            auto file_batch_reader = std::make_unique<MockFileBatchReader>(
+                src_array, src_array->type(), /*batch_size=*/batch_size);
+            file_batch_reader->EnableRandomizeBatchSize(false);
+            auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+                std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
+            std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
+            readers.push_back(std::move(record_reader));
+            concat_readers.push_back(
+                std::make_unique<ConcatKeyValueRecordReader>(std::move(readers)));
+        }
+
+        return std::make_unique<RawSortMergeReaderWithMinHeap>(
+            std::move(concat_readers), user_key_comparator, user_defined_seq_comparator);
     }
 
     template <typename SortMergeReaderType>
@@ -264,6 +351,469 @@ TEST_F(SortMergeReaderTest, TestSimpleWithThreeSameKeys2) {
     CheckSortMergeResult<SortMergeReaderWithLoserTree>(
         {src_array1, src_array2, src_array3, src_array4}, user_key_comparator, nullptr, key_schema,
         value_schema, expected);
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortMergeKeepsDuplicateKeys) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [2, 0, 2, 30]
+    ])")
+            .ValueOrDie());
+
+    auto src_array3 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 5, 50]
+    ])")
+            .ValueOrDie());
+
+    auto src_array4 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 2, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 1}, {{2}, {2}, {2}, {5}}, {{2, 10}, {2, 30}, {2, 30}, {5, 50}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto sort_merge_reader = CreateRawSortMergeReader(
+            {src_array1, src_array2, src_array3, src_array4}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortMergeKeepsDuplicateKeysWithinEachReader) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [2, 0, 2, 12],
+        [6, 0, 6, 60]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 3, 30],
+        [3, 0, 3, 32],
+        [7, 0, 7, 70]
+    ])")
+            .ValueOrDie());
+
+    auto src_array3 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [4, 0, 4, 40],
+        [5, 0, 4, 41]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 2, 1, 3, 4, 5, 6, 7}, {{2}, {2}, {3}, {3}, {4}, {4}, {6}, {7}},
+        {{2, 10}, {2, 12}, {3, 30}, {3, 32}, {4, 40}, {4, 41}, {6, 60}, {7, 70}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto sort_merge_reader = CreateRawSortMergeReader(
+            {src_array1, src_array2, src_array3}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestRawAndMergedSortMergeMatchForDuplicateKeysWithinSingleReader) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [2, 0, 2, 12],
+        [3, 0, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 2, 3}, {{2}, {2}, {3}}, {{2, 10}, {2, 12}, {3, 30}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto raw_sort_merge_reader = CreateRawSortMergeReader(
+            {src_array1}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> raw_results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                raw_sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, raw_results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+
+        auto sort_merge_reader = CreateSortMergeReader<SortMergeReaderWithLoserTree>(
+            {src_array1}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> merged_results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, merged_results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestRawAndMergedSortMergeDifferForDuplicateKeysAcrossReaders) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [4, 0, 4, 40]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 2, 12],
+        [3, 0, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> raw_expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 3, 4}, {{2}, {2}, {3}, {4}}, {{2, 10}, {2, 12}, {3, 30}, {4, 40}}, pool_);
+    std::vector<KeyValue> merged_expected = KeyValueChecker::GenerateKeyValues(
+        {1, 3, 4}, {{2}, {3}, {4}}, {{2, 12}, {3, 30}, {4, 40}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto raw_sort_merge_reader = CreateRawSortMergeReader(
+            {src_array1, src_array2}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> raw_results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                raw_sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(raw_expected, raw_results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+
+        auto sort_merge_reader = CreateSortMergeReader<SortMergeReaderWithLoserTree>(
+            {src_array1, src_array2}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> merged_results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(merged_expected, merged_results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestSortMergeMergesDuplicateKeysAcrossReadersRoundByRound) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [2, 0, 2, 20],
+        [4, 0, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 2, 11],
+        [3, 0, 2, 21],
+        [5, 0, 4, 40]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {1, 3, 4, 5}, {{2}, {2}, {3}, {4}}, {{2, 11}, {2, 21}, {3, 30}, {4, 40}}, pool_);
+
+    CheckSortMergeResult<SortMergeReaderWithLoserTree>(
+        {src_array1, src_array2}, user_key_comparator,
+        /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, expected);
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortMergeReadsDuplicateKeysAcrossReadersRoundByRound) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [1, 0, 2, 11],
+        [4, 0, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [2, 0, 2, 20],
+        [3, 0, 2, 21],
+        [5, 0, 4, 40]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 3, 4, 5}, {{2}, {2}, {2}, {2}, {3}, {4}},
+        {{2, 10}, {2, 11}, {2, 20}, {2, 21}, {3, 30}, {4, 40}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto sort_merge_reader = CreateRawSortMergeReader(
+            {src_array1, src_array2}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortMergeWithMinHeapReadsDuplicateKeysAcrossReadersInOrder) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 2, 10],
+        [1, 0, 2, 11],
+        [4, 0, 3, 30]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [2, 0, 2, 20],
+        [3, 0, 2, 21],
+        [5, 0, 4, 40]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    std::vector<KeyValue> expected = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 3, 4, 5}, {{2}, {2}, {2}, {2}, {3}, {4}},
+        {{2, 10}, {2, 11}, {2, 20}, {2, 21}, {3, 30}, {4, 40}}, pool_);
+
+    for (auto batch_size : {1, 2, 3, 4, 100}) {
+        auto sort_merge_reader = CreateRawSortMergeReaderWithMinHeap(
+            {src_array1, src_array2}, user_key_comparator,
+            /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema, batch_size);
+        ASSERT_OK_AND_ASSIGN(
+            std::vector<KeyValue> results,
+            (ReadResultCollector::CollectKeyValueResult<SortMergeReader, SortMergeReader::Iterator>(
+                sort_merge_reader.get())));
+        KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                     value_schema->num_fields());
+    }
+}
+
+TEST_F(SortMergeReaderTest, TestRawSortMergeWithMinHeapKeepsGlobalOrderAcrossReaderBatches) {
+    arrow::FieldVector fields = {arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+                                 arrow::field("_VALUE_KIND", arrow::int8()),
+                                 arrow::field("k0", arrow::int32()),
+                                 arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 0, 0],
+        [2, 0, 2, 2],
+        [3, 0, 3, 3],
+        [4, 0, 4, 4],
+        [5, 0, 5, 5],
+        [9, 0, 9, 9]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [1, 0, 1, 1],
+        [6, 0, 6, 6],
+        [7, 0, 7, 7],
+        [8, 0, 8, 8],
+        [10, 0, 10, 10],
+        [11, 0, 11, 11]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+
+    auto sort_merge_reader = CreateRawSortMergeReaderWithMinHeap(
+        {src_array1, src_array2}, user_key_comparator,
+        /*user_defined_seq_comparator=*/nullptr, key_schema, value_schema,
+        /*batch_size=*/100);
+
+    std::vector<std::vector<KeyValue>> actual_batches;
+    while (true) {
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<SortMergeReader::Iterator> iterator,
+                             sort_merge_reader->NextBatch());
+        if (!iterator) {
+            break;
+        }
+
+        std::vector<KeyValue> batch_results;
+        while (true) {
+            ASSERT_OK_AND_ASSIGN(bool has_next, iterator->HasNext());
+            if (!has_next) {
+                break;
+            }
+            batch_results.emplace_back(iterator->Next());
+        }
+        actual_batches.push_back(std::move(batch_results));
+    }
+
+    std::vector<std::vector<KeyValue>> expected_batches;
+    expected_batches.push_back(KeyValueChecker::GenerateKeyValues({0, 1, 2}, {{0}, {1}, {2}},
+                                                                  {{0, 0}, {1, 1}, {2, 2}}, pool_));
+    expected_batches.push_back(KeyValueChecker::GenerateKeyValues({3, 4, 5}, {{3}, {4}, {5}},
+                                                                  {{3, 3}, {4, 4}, {5, 5}}, pool_));
+    expected_batches.push_back(KeyValueChecker::GenerateKeyValues({6, 7, 8}, {{6}, {7}, {8}},
+                                                                  {{6, 6}, {7, 7}, {8, 8}}, pool_));
+    expected_batches.push_back(KeyValueChecker::GenerateKeyValues(
+        {9, 10, 11}, {{9}, {10}, {11}}, {{9, 9}, {10, 10}, {11, 11}}, pool_));
+
+    const std::string expected_batches_str = FormatKeyValueBatches(expected_batches);
+    const std::string actual_batches_str = FormatKeyValueBatches(actual_batches);
+
+    std::cout << "expected_batches=" << expected_batches_str << std::endl;
+    std::cout << "actual_batches=" << actual_batches_str << std::endl;
+
+    ASSERT_EQ(expected_batches.size(), actual_batches.size())
+        << "\nexpected_batches=" << expected_batches_str
+        << "\nactual_batches=" << actual_batches_str;
+    std::vector<KeyValue> flattened_results;
+    for (size_t i = 0; i < actual_batches.size(); ++i) {
+        SCOPED_TRACE("expected_batch=" + FormatKeyValueBatch(expected_batches[i]) +
+                     " actual_batch=" + FormatKeyValueBatch(actual_batches[i]));
+        KeyValueChecker::CheckResult(expected_batches[i], actual_batches[i],
+                                     key_schema->num_fields(), value_schema->num_fields());
+        for (auto& kv : actual_batches[i]) {
+            flattened_results.push_back(std::move(kv));
+        }
+    }
+
+    std::vector<KeyValue> expected_all = KeyValueChecker::GenerateKeyValues(
+        {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},
+        {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}},
+        {{0, 0},
+         {1, 1},
+         {2, 2},
+         {3, 3},
+         {4, 4},
+         {5, 5},
+         {6, 6},
+         {7, 7},
+         {8, 8},
+         {9, 9},
+         {10, 10},
+         {11, 11}},
+        pool_);
+    KeyValueChecker::CheckResult(expected_all, flattened_results, key_schema->num_fields(),
+                                 value_schema->num_fields());
 }
 
 TEST_F(SortMergeReaderTest, TestSortMergeIn2Ways) {

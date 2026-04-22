@@ -19,7 +19,7 @@
 #include <memory>
 #include <string>
 
-#include "arrow/ipc/api.h"
+#include "arrow/ipc/writer.h"
 #include "paimon/core/disk/file_io_channel.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/result.h"

@@ -213,6 +213,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_data_file_record_reader.cpp
     core/io/key_value_data_file_writer.cpp
     core/io/key_value_in_memory_record_reader.cpp
+    core/io/merged_key_value_record_reader.cpp
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
@@ -241,12 +242,16 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/merge_tree_compact_rewriter.cpp
     core/mergetree/compact/merge_tree_compact_task.cpp
     core/mergetree/compact/partial_update_merge_function.cpp
+    core/mergetree/compact/raw_sort_merge_reader_with_min_heap.cpp
     core/mergetree/compact/sort_merge_reader_with_loser_tree.cpp
     core/mergetree/compact/sort_merge_reader_with_min_heap.cpp
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/binary_in_memory_sort_buffer.cpp
+    core/mergetree/binary_external_sort_buffer.cpp
     core/mergetree/write_buffer.cpp
+    core/mergetree/writer_memory_manager.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
     core/mergetree/lookup_levels.cpp
@@ -564,6 +569,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/key_value_data_file_record_reader_test.cpp
                     core/io/key_value_projection_reader_test.cpp
                     core/io/key_value_in_memory_record_reader_test.cpp
+                    core/io/merged_key_value_record_reader_test.cpp
                     core/io/complete_row_tracking_fields_reader_test.cpp
                     core/io/data_file_meta_test.cpp
                     core/io/file_index_evaluator_test.cpp
@@ -624,6 +630,7 @@ if(PAIMON_BUILD_TESTS)
                     core/mergetree/sorted_run_test.cpp
                     core/mergetree/spill_channel_manager_test.cpp
                     core/mergetree/spill_reader_writer_test.cpp
+                    core/mergetree/writer_memory_manager_test.cpp
                     core/migrate/file_meta_utils_test.cpp
                     core/operation/metrics/compaction_metrics_test.cpp
                     core/operation/data_evolution_file_store_scan_test.cpp

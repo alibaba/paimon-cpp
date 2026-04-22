@@ -19,7 +19,7 @@
 #include <memory>
 
 #include "arrow/array/array_primitive.h"
-#include "arrow/ipc/api.h"
+#include "arrow/ipc/reader.h"
 #include "paimon/common/data/columnar/columnar_batch_context.h"
 #include "paimon/core/disk/file_io_channel.h"
 #include "paimon/core/io/key_value_record_reader.h"

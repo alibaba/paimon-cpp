@@ -178,6 +178,23 @@ struct PAIMON_EXPORT Options {
     /// on-disk file. The default value is 256 mb
     static const char WRITE_BUFFER_SIZE[];
 
+    /// "write-buffer-spillable" - Whether the write buffer can be spillable. Default value is true.
+    static const char WRITE_BUFFER_SPILLABLE[];
+
+    /// "write-buffer-spill.max-disk-size" - The max disk to use for write buffer spill. This only
+    /// work when the write buffer spill is enabled. Default value is unlimited.
+    static const char WRITE_BUFFER_SPILL_MAX_DISK_SIZE[];
+
+    /// "local-sort.max-num-file-handles" - The maximal fan-in for external merge sort. It limits
+    /// the number of file handles. If it is too small, may cause intermediate merging. But if it is
+    /// too large, it will cause too many files opened at the same time, consume memory and lead to
+    /// random reading. Default value is 128.
+    static const char LOCAL_SORT_MAX_NUM_FILE_HANDLES[];
+
+    /// "spill-compression" - Compression for spill.
+    /// Default value is zstd.
+    static const char SPILL_COMPRESSION[];
+
     /// "snapshot.num-retained.min" - The minimum number of completed snapshots to retain. Should be
     /// greater than or equal to 1. Default value is 10
     static const char SNAPSHOT_NUM_RETAINED_MIN[];
