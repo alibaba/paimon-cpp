@@ -13,631 +13,413 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <arrow/c/bridge.h>
-#include <gtest/gtest.h>
-
 #include <algorithm>
-#include <fstream>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#include "arrow/c/helpers.h"
+#include "arrow/c/bridge.h"
+#include "gtest/gtest.h"
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
 #include "paimon/common/global_index/btree/btree_index_meta.h"
+#include "paimon/common/global_index/btree/key_serializer.h"
 #include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/string_utils.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/fs/file_system_factory.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
+class BTreeCompatibilityTest : public ::testing::Test {
+ protected:
+    struct CsvRecord {
+        int64_t row_id;
+        std::string key;  // "NULL" if is_null
+        bool is_null;
+    };
 
-// ---------------------------------------------------------------------------
-// Test data directory (relative to project root)
-// ---------------------------------------------------------------------------
-static constexpr char kTestDataDir[] = "test/test_data/global_index/btree/btree_compatibility_data";
+    void SetUp() override {
+        pool_ = GetDefaultPool();
+        ASSERT_OK_AND_ASSIGN(fs_, FileSystemFactory::Get("local", "/", {}));
+        data_dir_ = GetDataDir() + "/global_index/btree/btree_compatibility_data";
+    }
 
-// ---------------------------------------------------------------------------
-// CSV record parsed from the Java-generated CSV files
-// ---------------------------------------------------------------------------
-struct CsvRecord {
-    int64_t row_id;
-    std::string key;  // "NULL" if is_null
-    bool is_null;
-};
+    std::string ReadFileAsString(const std::string& path) const {
+        EXPECT_OK_AND_ASSIGN(auto input, fs_->Open(path));
+        EXPECT_OK_AND_ASSIGN(auto length, input->Length());
+        std::string buffer(static_cast<size_t>(length), '\0');
+        EXPECT_OK_AND_ASSIGN([[maybe_unused]] auto bytes_read,
+                             input->Read(buffer.data(), static_cast<uint32_t>(length)));
+        return buffer;
+    }
 
-// ---------------------------------------------------------------------------
-// Helper: parse a CSV file into a vector of CsvRecord
-// ---------------------------------------------------------------------------
-static std::vector<CsvRecord> ParseCsvFile(const std::string& csv_path) {
-    std::vector<CsvRecord> records;
-    std::ifstream ifs(csv_path);
-    if (!ifs.is_open()) {
+    // Parse a CSV file into a vector of CsvRecord
+    std::vector<CsvRecord> ParseCsvFile(const std::string& csv_path) const {
+        std::vector<CsvRecord> records;
+        std::string content = ReadFileAsString(csv_path);
+        if (content.empty()) {
+            return records;
+        }
+
+        std::istringstream iss(content);
+        std::string line;
+        // Skip header line: "row_id,key,is_null"
+        std::getline(iss, line);
+
+        while (std::getline(iss, line)) {
+            if (line.empty()) {
+                continue;
+            }
+            std::istringstream ss(line);
+            std::string row_id_str, key_str, is_null_str;
+            std::getline(ss, row_id_str, ',');
+            std::getline(ss, key_str, ',');
+            std::getline(ss, is_null_str, ',');
+
+            CsvRecord rec;
+            rec.row_id = std::stoll(row_id_str);
+            rec.key = key_str;
+            rec.is_null = (is_null_str == "true");
+            records.push_back(rec);
+        }
         return records;
     }
 
-    std::string line;
-    // Skip header line: "row_id,key,is_null"
-    std::getline(ifs, line);
-
-    while (std::getline(ifs, line)) {
-        if (line.empty()) continue;
-        std::istringstream ss(line);
-        std::string row_id_str, key_str, is_null_str;
-        std::getline(ss, row_id_str, ',');
-        std::getline(ss, key_str, ',');
-        std::getline(ss, is_null_str, ',');
-
-        CsvRecord rec;
-        rec.row_id = std::stoll(row_id_str);
-        rec.key = key_str;
-        rec.is_null = (is_null_str == "true");
-        records.push_back(rec);
-    }
-    return records;
-}
-
-// ---------------------------------------------------------------------------
-// Helper: read a binary file into a Bytes object
-// ---------------------------------------------------------------------------
-static std::shared_ptr<Bytes> ReadBinaryFile(const std::string& path, MemoryPool* pool) {
-    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
-    if (!ifs.is_open()) return nullptr;
-    auto size = ifs.tellg();
-    ifs.seekg(0, std::ios::beg);
-    auto bytes = std::make_shared<Bytes>(static_cast<size_t>(size), pool);
-    ifs.read(bytes->data(), size);
-    return bytes;
-}
-
-// ---------------------------------------------------------------------------
-// Helper: get file size
-// ---------------------------------------------------------------------------
-static int64_t GetFileSize(const std::string& path) {
-    std::ifstream ifs(path, std::ios::binary | std::ios::ate);
-    if (!ifs.is_open()) return -1;
-    return static_cast<int64_t>(ifs.tellg());
-}
-
-// ---------------------------------------------------------------------------
-// Fake GlobalIndexFileReader that reads from local filesystem
-// ---------------------------------------------------------------------------
-class LocalGlobalIndexFileReader : public GlobalIndexFileReader {
- public:
-    explicit LocalGlobalIndexFileReader(const std::shared_ptr<FileSystem>& fs) : fs_(fs) {}
-
-    Result<std::unique_ptr<InputStream>> GetInputStream(
-        const std::string& file_path) const override {
-        return fs_->Open(file_path);
-    }
-
- private:
-    std::shared_ptr<FileSystem> fs_;
-};
-
-// ---------------------------------------------------------------------------
-// Collect all row IDs from a GlobalIndexResult into a set
-// ---------------------------------------------------------------------------
-static std::set<int64_t> CollectRowIds(const std::shared_ptr<GlobalIndexResult>& result) {
-    std::set<int64_t> ids;
-    auto iter_result = result->CreateIterator();
-    if (!iter_result.ok()) return ids;
-    auto iter = std::move(iter_result).value();
-    while (iter->HasNext()) {
-        ids.insert(iter->Next());
-    }
-    return ids;
-}
-
-// ---------------------------------------------------------------------------
-// Test fixture
-// ---------------------------------------------------------------------------
-class BTreeCompatibilityTest : public ::testing::Test {
- protected:
-    void SetUp() override {
-        pool_ = GetDefaultPool();
-        // Use UniqueTestDirectory to get a FileSystem that can read local files
-        test_dir_ = UniqueTestDirectory::Create("local");
-        fs_ = test_dir_->GetFileSystem();
-
-        // Resolve the absolute path to test data
-        // The test data is at project_root/test/test_data/...
-        // We need to find the project root. Use the current working directory.
-        char cwd[4096];
-        if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-            project_root_ = std::string(cwd);
+    std::set<int64_t> CollectRowIds(const std::shared_ptr<GlobalIndexResult>& result) const {
+        std::set<int64_t> ids;
+        EXPECT_OK_AND_ASSIGN(auto iter, result->CreateIterator());
+        while (iter->HasNext()) {
+            ids.insert(iter->Next());
         }
-        data_dir_ = project_root_ + "/" + kTestDataDir;
+        return ids;
     }
 
-    // Create a BTreeGlobalIndexReader from Java-generated .bin and .bin.meta files
+    std::set<int64_t> CollectMatchingRows(const std::vector<CsvRecord>& records,
+                                          std::function<bool(const CsvRecord&)> predicate) const {
+        std::set<int64_t> ids;
+        for (const auto& rec : records) {
+            if (predicate(rec)) {
+                ids.insert(rec.row_id);
+            }
+        }
+        return ids;
+    }
+
     Result<std::shared_ptr<GlobalIndexReader>> CreateReaderFromFiles(
         const std::string& bin_path, const std::string& meta_path,
-        const std::shared_ptr<arrow::DataType>& arrow_type, int64_t record_count) {
-        // Read meta bytes
-        auto meta_bytes = ReadBinaryFile(meta_path, pool_.get());
-        if (!meta_bytes) {
-            return Status::IOError("Failed to read meta file: " + meta_path);
-        }
+        const std::shared_ptr<arrow::DataType>& arrow_type, int64_t record_count) const {
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
+        PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
+        auto file_size = static_cast<int64_t>(file_status->GetLen());
 
-        // Get file size
-        int64_t file_size = GetFileSize(bin_path);
-        if (file_size < 0) {
-            return Status::IOError("Failed to get file size: " + bin_path);
-        }
-
-        // Build GlobalIndexIOMeta
-        // range_end = record_count - 1 (inclusive)
         GlobalIndexIOMeta io_meta(bin_path, file_size, record_count - 1, meta_bytes);
         std::vector<GlobalIndexIOMeta> metas = {io_meta};
 
-        // Create ArrowSchema
         auto schema = arrow::schema({arrow::field("testField", arrow_type)});
         auto c_schema = std::make_unique<ArrowSchema>();
-        auto export_status = arrow::ExportSchema(*schema, c_schema.get());
-        if (!export_status.ok()) {
-            return Status::Invalid("Failed to export ArrowSchema: " + export_status.ToString());
-        }
+        PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportSchema(*schema, c_schema.get()));
 
-        // Create reader
         auto file_reader = std::make_shared<LocalGlobalIndexFileReader>(fs_);
         std::map<std::string, std::string> options;
         BTreeGlobalIndexer indexer(options);
-
-        auto reader_result = indexer.CreateReader(c_schema.get(), file_reader, metas, pool_);
-        ArrowSchemaRelease(c_schema.get());
-        return reader_result;
+        return indexer.CreateReader(c_schema.get(), file_reader, metas, pool_);
     }
 
-    // Helper: build expected row IDs for null rows from CSV records
-    std::set<int64_t> GetNullRowIds(const std::vector<CsvRecord>& records) {
-        std::set<int64_t> ids;
-        for (const auto& rec : records) {
-            if (rec.is_null) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    // Helper: build expected row IDs for non-null rows from CSV records
-    std::set<int64_t> GetNonNullRowIds(const std::vector<CsvRecord>& records) {
-        std::set<int64_t> ids;
-        for (const auto& rec : records) {
-            if (!rec.is_null) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    // Helper: build expected row IDs for rows with a specific int key
-    std::set<int64_t> GetRowIdsForIntKey(const std::vector<CsvRecord>& records, int32_t key) {
-        std::set<int64_t> ids;
-        std::string key_str = std::to_string(key);
-        for (const auto& rec : records) {
-            if (!rec.is_null && rec.key == key_str) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    // Helper: build expected row IDs for rows with a specific string key
-    std::set<int64_t> GetRowIdsForStringKey(const std::vector<CsvRecord>& records,
-                                            const std::string& key) {
-        std::set<int64_t> ids;
-        for (const auto& rec : records) {
-            if (!rec.is_null && rec.key == key) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    // Helper: build expected row IDs for int keys in range [lower, upper]
-    std::set<int64_t> GetRowIdsForIntRange(const std::vector<CsvRecord>& records, int32_t lower,
-                                           int32_t upper, bool lower_inclusive,
-                                           bool upper_inclusive) {
-        std::set<int64_t> ids;
-        for (const auto& rec : records) {
-            if (rec.is_null) continue;
-            int32_t val = std::stoi(rec.key);
-            bool above_lower = lower_inclusive ? (val >= lower) : (val > lower);
-            bool below_upper = upper_inclusive ? (val <= upper) : (val < upper);
-            if (above_lower && below_upper) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    // Helper: build expected row IDs for string keys in range
-    std::set<int64_t> GetRowIdsForStringRange(const std::vector<CsvRecord>& records,
-                                              const std::string& lower, const std::string& upper,
-                                              bool lower_inclusive, bool upper_inclusive) {
-        std::set<int64_t> ids;
-        for (const auto& rec : records) {
-            if (rec.is_null) continue;
-            bool above_lower = lower_inclusive ? (rec.key >= lower) : (rec.key > lower);
-            bool below_upper = upper_inclusive ? (rec.key <= upper) : (rec.key < upper);
-            if (above_lower && below_upper) ids.insert(rec.row_id);
-        }
-        return ids;
-    }
-
-    std::shared_ptr<MemoryPool> pool_;
-    std::unique_ptr<UniqueTestDirectory> test_dir_;
-    std::shared_ptr<FileSystem> fs_;
-    std::string project_root_;
-    std::string data_dir_;
-};
-
-// ===========================================================================
-// Test: Read int type data with various record counts
-// ===========================================================================
-class BTreeCompatibilityIntTest : public BTreeCompatibilityTest,
-                                  public ::testing::WithParamInterface<int> {};
-
-TEST_P(BTreeCompatibilityIntTest, ReadAndQueryIntData) {
-    int count = GetParam();
-    std::string prefix = "btree_test_int_" + std::to_string(count);
-    std::string bin_path = data_dir_ + "/" + prefix + ".bin";
-    std::string meta_path = bin_path + ".meta";
-    std::string csv_path = data_dir_ + "/" + prefix + ".csv";
-
-    // Parse CSV to get expected data
-    auto records = ParseCsvFile(csv_path);
-    ASSERT_EQ(static_cast<int>(records.size()), count)
-        << "CSV record count mismatch for " << prefix;
-
-    // Create reader
-    auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count);
-    ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-    auto reader = reader_result.value();
-
-    // ---- Test 1: VisitIsNull ----
-    {
-        auto result = reader->VisitIsNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNull mismatch";
-    }
-
-    // ---- Test 2: VisitIsNotNull ----
-    {
-        auto result = reader->VisitIsNotNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNotNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNonNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNotNull mismatch";
-    }
-
-    // ---- Test 3: VisitEqual for a known key ----
-    // Find the first non-null key in the CSV
-    for (const auto& rec : records) {
-        if (!rec.is_null) {
-            int32_t key_val = std::stoi(rec.key);
-            Literal literal(key_val);
-            auto result = reader->VisitEqual(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForIntKey(records, key_val);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitEqual(" << key_val << ") mismatch";
-            break;
-        }
-    }
-
-    // ---- Test 4: VisitEqual for the last non-null key ----
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
-        if (!it->is_null) {
-            int32_t key_val = std::stoi(it->key);
-            Literal literal(key_val);
-            auto result = reader->VisitEqual(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForIntKey(records, key_val);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitEqual(" << key_val << ") mismatch (last key)";
-            break;
-        }
-    }
-
-    // ---- Test 5: VisitEqual for a non-existent key (should return empty) ----
-    {
-        Literal literal(static_cast<int32_t>(-999));
-        auto result = reader->VisitEqual(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitEqual(-999) failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitEqual(-999) should be empty";
-    }
-
-    // ---- Test 6: VisitLessThan for a mid-range key ----
-    {
-        // Find a key roughly in the middle
-        std::vector<int32_t> non_null_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(std::stoi(rec.key));
-        }
-        if (!non_null_keys.empty()) {
-            std::sort(non_null_keys.begin(), non_null_keys.end());
-            int32_t mid_key = non_null_keys[non_null_keys.size() / 2];
-            Literal literal(mid_key);
-            auto result = reader->VisitLessThan(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitLessThan(" << mid_key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
+    void RunIntQueries(const std::shared_ptr<GlobalIndexReader>& reader,
+                       const std::vector<CsvRecord>& records) const {
+        // VisitIsNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+            auto actual_ids = CollectRowIds(result);
             auto expected_ids =
-                GetRowIdsForIntRange(records, non_null_keys.front(), mid_key, true, false);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitLessThan(" << mid_key << ") mismatch";
+                CollectMatchingRows(records, [](const CsvRecord& r) { return r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
         }
-    }
 
-    // ---- Test 7: VisitGreaterOrEqual for a mid-range key ----
-    {
-        std::vector<int32_t> non_null_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(std::stoi(rec.key));
-        }
-        if (!non_null_keys.empty()) {
-            std::sort(non_null_keys.begin(), non_null_keys.end());
-            int32_t mid_key = non_null_keys[non_null_keys.size() / 2];
-            Literal literal(mid_key);
-            auto result = reader->VisitGreaterOrEqual(literal);
-            ASSERT_OK(result.status())
-                << prefix << ": VisitGreaterOrEqual(" << mid_key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
+        // VisitIsNotNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+            auto actual_ids = CollectRowIds(result);
             auto expected_ids =
-                GetRowIdsForIntRange(records, mid_key, non_null_keys.back(), true, true);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitGreaterOrEqual(" << mid_key << ") mismatch";
+                CollectMatchingRows(records, [](const CsvRecord& r) { return !r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
         }
-    }
 
-    // ---- Test 8: VisitBetween ----
-    {
-        std::vector<int32_t> non_null_keys;
+        // VisitEqual for the first non-null key
         for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(std::stoi(rec.key));
+            if (!rec.is_null) {
+                int32_t key_val = std::stoi(rec.key);
+                Literal literal(key_val);
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stoi(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
         }
-        if (non_null_keys.size() >= 4) {
+
+        // VisitEqual for the last non-null key
+        for (auto it = records.rbegin(); it != records.rend(); ++it) {
+            if (!it->is_null) {
+                int32_t key_val = std::stoi(it->key);
+                Literal literal(key_val);
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stoi(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+
+        // VisitEqual for a non-existent key
+        {
+            Literal literal(static_cast<int32_t>(-999));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            ASSERT_TRUE(actual_ids.empty());
+        }
+
+        int32_t mid_key = -1;
+        {
+            std::vector<int32_t> non_null_keys;
+            for (const auto& rec : records) {
+                if (!rec.is_null) {
+                    non_null_keys.push_back(std::stoi(rec.key));
+                }
+            }
+            ASSERT_FALSE(non_null_keys.empty());
             std::sort(non_null_keys.begin(), non_null_keys.end());
-            int32_t lower = non_null_keys[non_null_keys.size() / 4];
-            int32_t upper = non_null_keys[non_null_keys.size() * 3 / 4];
-            Literal lit_lower(lower);
-            Literal lit_upper(upper);
-            auto result = reader->VisitBetween(lit_lower, lit_upper);
-            ASSERT_OK(result.status())
-                << prefix << ": VisitBetween(" << lower << ", " << upper << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForIntRange(records, lower, upper, true, true);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitBetween(" << lower << ", " << upper << ") mismatch";
+            mid_key = non_null_keys[non_null_keys.size() / 2];
         }
-    }
+        // VisitLessThan for a mid-range key
+        {
+            Literal literal(mid_key);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [mid_key](const CsvRecord& r) {
+                return !r.is_null && std::stoi(r.key) < mid_key;
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
 
-    // ---- Test 9: VisitIn for multiple keys ----
-    {
-        std::set<int32_t> unique_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) unique_keys.insert(std::stoi(rec.key));
+        // VisitGreaterOrEqual for a mid-range key
+        {
+            Literal literal(mid_key);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [mid_key](const CsvRecord& r) {
+                return !r.is_null && std::stoi(r.key) >= mid_key;
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
         }
-        if (unique_keys.size() >= 3) {
+
+        // VisitIn for multiple keys
+        {
+            std::set<int32_t> unique_keys;
+            for (const auto& rec : records) {
+                if (!rec.is_null) {
+                    unique_keys.insert(std::stoi(rec.key));
+                }
+            }
+            ASSERT_GE(unique_keys.size(), 3);
             auto it = unique_keys.begin();
             int32_t k1 = *it++;
             int32_t k2 = *it++;
             int32_t k3 = *it++;
             std::vector<Literal> in_literals = {Literal(k1), Literal(k2), Literal(k3)};
-            auto result = reader->VisitIn(in_literals);
-            ASSERT_OK(result.status())
-                << prefix << ": VisitIn({" << k1 << "," << k2 << "," << k3 << "}) failed";
-            auto actual_ids = CollectRowIds(result.value());
-
-            std::set<int64_t> expected_ids;
-            for (auto id : GetRowIdsForIntKey(records, k1)) expected_ids.insert(id);
-            for (auto id : GetRowIdsForIntKey(records, k2)) expected_ids.insert(id);
-            for (auto id : GetRowIdsForIntKey(records, k3)) expected_ids.insert(id);
-            EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIn mismatch";
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [k1, k2, k3](const CsvRecord& r) {
+                if (r.is_null) {
+                    return false;
+                }
+                int32_t v = std::stoi(r.key);
+                return v == k1 || v == k2 || v == k3;
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
         }
-    }
 
-    // ---- Test 10: VisitNotEqual ----
-    {
+        // VisitNotEqual for the first non-null key
         for (const auto& rec : records) {
             if (!rec.is_null) {
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
-                auto result = reader->VisitNotEqual(literal);
-                ASSERT_OK(result.status()) << prefix << ": VisitNotEqual(" << key_val << ") failed";
-                auto actual_ids = CollectRowIds(result.value());
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stoi(r.key) != key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+    }
 
-                // Expected: all non-null rows except those with this key
-                std::set<int64_t> expected_ids;
-                for (const auto& r : records) {
-                    if (!r.is_null && std::stoi(r.key) != key_val) {
-                        expected_ids.insert(r.row_id);
-                    }
+    // Run string-type queries against a reader with CSV records as ground truth
+    void RunStringQueries(const std::shared_ptr<GlobalIndexReader>& reader,
+                          const std::vector<CsvRecord>& records) const {
+        // VisitIsNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids =
+                CollectMatchingRows(records, [](const CsvRecord& r) { return r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitIsNotNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids =
+                CollectMatchingRows(records, [](const CsvRecord& r) { return !r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitEqual for the first non-null key
+        for (const auto& rec : records) {
+            if (!rec.is_null) {
+                Literal literal(FieldType::STRING, rec.key.c_str(),
+                                static_cast<int32_t>(rec.key.size()));
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(
+                    records, [&rec](const CsvRecord& r) { return !r.is_null && r.key == rec.key; });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+
+        // VisitEqual for the last non-null key
+        for (auto it = records.rbegin(); it != records.rend(); ++it) {
+            if (!it->is_null) {
+                Literal literal(FieldType::STRING, it->key.c_str(),
+                                static_cast<int32_t>(it->key.size()));
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(
+                    records, [&it](const CsvRecord& r) { return !r.is_null && r.key == it->key; });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+
+        // VisitEqual for a non-existent key
+        {
+            std::string non_existent = "zzz_non_existent_key";
+            Literal literal(FieldType::STRING, non_existent.c_str(),
+                            static_cast<int32_t>(non_existent.size()));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            ASSERT_TRUE(actual_ids.empty());
+        }
+
+        std::string mid_key;
+        {
+            std::vector<std::string> non_null_keys;
+            for (const auto& rec : records) {
+                if (!rec.is_null) {
+                    non_null_keys.push_back(rec.key);
                 }
-                EXPECT_EQ(actual_ids, expected_ids)
-                    << prefix << ": VisitNotEqual(" << key_val << ") mismatch";
-                break;  // Test with just the first non-null key
             }
+            ASSERT_FALSE(non_null_keys.empty());
+            std::sort(non_null_keys.begin(), non_null_keys.end());
+            mid_key = non_null_keys[non_null_keys.size() / 2];
         }
+        // VisitLessThan for a mid-range key
+        {
+            Literal literal(FieldType::STRING, mid_key.c_str(),
+                            static_cast<int32_t>(mid_key.size()));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [&mid_key](const CsvRecord& r) { return !r.is_null && r.key < mid_key; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitGreaterOrEqual for a mid-range key
+        {
+            Literal literal(FieldType::STRING, mid_key.c_str(),
+                            static_cast<int32_t>(mid_key.size()));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [&mid_key](const CsvRecord& r) { return !r.is_null && r.key >= mid_key; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitStartsWith
+        {
+            std::string prefix_str = "test_000";
+            Literal literal(FieldType::STRING, prefix_str.c_str(),
+                            static_cast<int32_t>(prefix_str.size()));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitStartsWith(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [&prefix_str](const CsvRecord& r) {
+                return !r.is_null && StringUtils::StartsWith(r.key, prefix_str);
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+    }
+
+    class LocalGlobalIndexFileReader : public GlobalIndexFileReader {
+     public:
+        explicit LocalGlobalIndexFileReader(const std::shared_ptr<FileSystem>& fs) : fs_(fs) {}
+
+        Result<std::unique_ptr<InputStream>> GetInputStream(
+            const std::string& file_path) const override {
+            return fs_->Open(file_path);
+        }
+
+     private:
+        std::shared_ptr<FileSystem> fs_;
+    };
+
+    std::shared_ptr<MemoryPool> pool_;
+    std::shared_ptr<FileSystem> fs_;
+    std::string data_dir_;
+};
+
+TEST_F(BTreeCompatibilityTest, ReadAndQueryIntData) {
+    for (int32_t count : {50, 100, 500, 1000, 5000}) {
+        std::string prefix = "btree_test_int_" + std::to_string(count);
+        std::string bin_path = data_dir_ + "/" + prefix + ".bin";
+        std::string meta_path = bin_path + ".meta";
+        std::string csv_path = data_dir_ + "/" + prefix + ".csv";
+
+        auto records = ParseCsvFile(csv_path);
+        ASSERT_EQ(static_cast<int32_t>(records.size()), count);
+
+        ASSERT_OK_AND_ASSIGN(auto reader,
+                             CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
+        RunIntQueries(reader, records);
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(IntDataSizes, BTreeCompatibilityIntTest,
-                         ::testing::Values(50, 100, 500, 1000, 5000));
+TEST_F(BTreeCompatibilityTest, ReadAndQueryStringData) {
+    for (int32_t count : {50, 100, 500, 1000, 5000}) {
+        std::string prefix = "btree_test_string_" + std::to_string(count);
+        std::string bin_path = data_dir_ + "/" + prefix + ".bin";
+        std::string meta_path = bin_path + ".meta";
+        std::string csv_path = data_dir_ + "/" + prefix + ".csv";
 
-// ===========================================================================
-// Test: Read varchar type data with various record counts
-// ===========================================================================
-class BTreeCompatibilityVarcharTest : public BTreeCompatibilityTest,
-                                      public ::testing::WithParamInterface<int> {};
+        auto records = ParseCsvFile(csv_path);
+        ASSERT_EQ(static_cast<int32_t>(records.size()), count);
 
-TEST_P(BTreeCompatibilityVarcharTest, ReadAndQueryVarcharData) {
-    int count = GetParam();
-    std::string prefix = "btree_test_varchar_" + std::to_string(count);
-    std::string bin_path = data_dir_ + "/" + prefix + ".bin";
-    std::string meta_path = bin_path + ".meta";
-    std::string csv_path = data_dir_ + "/" + prefix + ".csv";
-
-    // Parse CSV
-    auto records = ParseCsvFile(csv_path);
-    ASSERT_EQ(static_cast<int>(records.size()), count)
-        << "CSV record count mismatch for " << prefix;
-
-    // Create reader (varchar -> arrow::utf8())
-    auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow::utf8(), count);
-    ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-    auto reader = reader_result.value();
-
-    // ---- Test 1: VisitIsNull ----
-    {
-        auto result = reader->VisitIsNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNull mismatch";
-    }
-
-    // ---- Test 2: VisitIsNotNull ----
-    {
-        auto result = reader->VisitIsNotNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNotNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNonNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNotNull mismatch";
-    }
-
-    // ---- Test 3: VisitEqual for a known key ----
-    for (const auto& rec : records) {
-        if (!rec.is_null) {
-            Literal literal(FieldType::STRING, rec.key.c_str(),
-                            static_cast<int32_t>(rec.key.size()));
-            auto result = reader->VisitEqual(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << rec.key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForStringKey(records, rec.key);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitEqual(" << rec.key << ") mismatch";
-            break;
-        }
-    }
-
-    // ---- Test 4: VisitEqual for the last non-null key ----
-    for (auto it = records.rbegin(); it != records.rend(); ++it) {
-        if (!it->is_null) {
-            Literal literal(FieldType::STRING, it->key.c_str(),
-                            static_cast<int32_t>(it->key.size()));
-            auto result = reader->VisitEqual(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << it->key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForStringKey(records, it->key);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitEqual(" << it->key << ") mismatch (last key)";
-            break;
-        }
-    }
-
-    // ---- Test 5: VisitEqual for a non-existent key ----
-    {
-        std::string non_existent = "zzz_non_existent_key";
-        Literal literal(FieldType::STRING, non_existent.c_str(),
-                        static_cast<int32_t>(non_existent.size()));
-        auto result = reader->VisitEqual(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitEqual(non_existent) failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitEqual(non_existent) should be empty";
-    }
-
-    // ---- Test 6: VisitLessThan for a mid-range key ----
-    {
-        std::vector<std::string> non_null_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(rec.key);
-        }
-        if (!non_null_keys.empty()) {
-            std::sort(non_null_keys.begin(), non_null_keys.end());
-            std::string mid_key = non_null_keys[non_null_keys.size() / 2];
-            Literal literal(FieldType::STRING, mid_key.c_str(),
-                            static_cast<int32_t>(mid_key.size()));
-            auto result = reader->VisitLessThan(literal);
-            ASSERT_OK(result.status()) << prefix << ": VisitLessThan(" << mid_key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids =
-                GetRowIdsForStringRange(records, non_null_keys.front(), mid_key, true, false);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitLessThan(" << mid_key << ") mismatch";
-        }
-    }
-
-    // ---- Test 7: VisitGreaterOrEqual for a mid-range key ----
-    {
-        std::vector<std::string> non_null_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(rec.key);
-        }
-        if (!non_null_keys.empty()) {
-            std::sort(non_null_keys.begin(), non_null_keys.end());
-            std::string mid_key = non_null_keys[non_null_keys.size() / 2];
-            Literal literal(FieldType::STRING, mid_key.c_str(),
-                            static_cast<int32_t>(mid_key.size()));
-            auto result = reader->VisitGreaterOrEqual(literal);
-            ASSERT_OK(result.status())
-                << prefix << ": VisitGreaterOrEqual(" << mid_key << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids =
-                GetRowIdsForStringRange(records, mid_key, non_null_keys.back(), true, true);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitGreaterOrEqual(" << mid_key << ") mismatch";
-        }
-    }
-
-    // ---- Test 8: VisitStartsWith ----
-    {
-        std::string prefix_str = "test_000";
-        Literal literal(FieldType::STRING, prefix_str.c_str(),
-                        static_cast<int32_t>(prefix_str.size()));
-        auto result = reader->VisitStartsWith(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitStartsWith(" << prefix_str << ") failed";
-        auto actual_ids = CollectRowIds(result.value());
-
-        // Expected: all non-null rows whose key starts with "test_000"
-        std::set<int64_t> expected_ids;
-        for (const auto& rec : records) {
-            if (!rec.is_null && rec.key.substr(0, prefix_str.size()) == prefix_str) {
-                expected_ids.insert(rec.row_id);
-            }
-        }
-        EXPECT_EQ(actual_ids, expected_ids)
-            << prefix << ": VisitStartsWith(" << prefix_str << ") mismatch";
-    }
-
-    // ---- Test 9: VisitBetween ----
-    {
-        std::vector<std::string> non_null_keys;
-        for (const auto& rec : records) {
-            if (!rec.is_null) non_null_keys.push_back(rec.key);
-        }
-        if (non_null_keys.size() >= 4) {
-            std::sort(non_null_keys.begin(), non_null_keys.end());
-            std::string lower = non_null_keys[non_null_keys.size() / 4];
-            std::string upper = non_null_keys[non_null_keys.size() * 3 / 4];
-            Literal lit_lower(FieldType::STRING, lower.c_str(), static_cast<int32_t>(lower.size()));
-            Literal lit_upper(FieldType::STRING, upper.c_str(), static_cast<int32_t>(upper.size()));
-            auto result = reader->VisitBetween(lit_lower, lit_upper);
-            ASSERT_OK(result.status())
-                << prefix << ": VisitBetween(" << lower << ", " << upper << ") failed";
-            auto actual_ids = CollectRowIds(result.value());
-            auto expected_ids = GetRowIdsForStringRange(records, lower, upper, true, true);
-            EXPECT_EQ(actual_ids, expected_ids)
-                << prefix << ": VisitBetween(" << lower << ", " << upper << ") mismatch";
-        }
+        ASSERT_OK_AND_ASSIGN(auto reader,
+                             CreateReaderFromFiles(bin_path, meta_path, arrow::utf8(), count));
+        RunStringQueries(reader, records);
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(VarcharDataSizes, BTreeCompatibilityVarcharTest,
-                         ::testing::Values(50, 100, 500, 1000, 5000));
-
-// ===========================================================================
-// Test: Edge case - all nulls
-// ===========================================================================
 TEST_F(BTreeCompatibilityTest, AllNulls) {
     std::string prefix = "btree_test_int_all_nulls";
     std::string bin_path = data_dir_ + "/" + prefix + ".bin";
@@ -645,47 +427,38 @@ TEST_F(BTreeCompatibilityTest, AllNulls) {
     std::string csv_path = data_dir_ + "/" + prefix + ".csv";
 
     auto records = ParseCsvFile(csv_path);
-    ASSERT_FALSE(records.empty()) << "Failed to parse CSV for " << prefix;
-    int count = static_cast<int>(records.size());
+    ASSERT_FALSE(records.empty());
+    auto count = static_cast<int32_t>(records.size());
 
-    auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count);
-    ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-    auto reader = reader_result.value();
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
 
     // All rows should be null
     {
-        auto result = reader->VisitIsNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_EQ(static_cast<int>(actual_ids.size()), count)
-            << prefix << ": VisitIsNull should return all rows";
-        // Verify each row ID
-        for (int i = 0; i < count; ++i) {
-            EXPECT_TRUE(actual_ids.count(i)) << prefix << ": Missing row_id " << i;
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_EQ(static_cast<int32_t>(actual_ids.size()), count);
+        for (int32_t i = 0; i < count; ++i) {
+            ASSERT_TRUE(actual_ids.count(i));
         }
     }
 
     // No rows should be non-null
     {
-        auto result = reader->VisitIsNotNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNotNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitIsNotNull should be empty";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_TRUE(actual_ids.empty());
     }
 
     // VisitEqual should return empty for any key
     {
         Literal literal(static_cast<int32_t>(42));
-        auto result = reader->VisitEqual(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitEqual(42) failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitEqual should be empty for all-nulls";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_TRUE(actual_ids.empty());
     }
 }
 
-// ===========================================================================
-// Test: Edge case - no nulls
-// ===========================================================================
 TEST_F(BTreeCompatibilityTest, NoNulls) {
     std::string prefix = "btree_test_int_no_nulls";
     std::string bin_path = data_dir_ + "/" + prefix + ".bin";
@@ -693,31 +466,27 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
     std::string csv_path = data_dir_ + "/" + prefix + ".csv";
 
     auto records = ParseCsvFile(csv_path);
-    ASSERT_FALSE(records.empty()) << "Failed to parse CSV for " << prefix;
-    int count = static_cast<int>(records.size());
+    ASSERT_FALSE(records.empty());
+    auto count = static_cast<int32_t>(records.size());
 
-    auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count);
-    ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-    auto reader = reader_result.value();
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
 
     // No rows should be null
     {
-        auto result = reader->VisitIsNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitIsNull should be empty";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_TRUE(actual_ids.empty());
     }
 
     // All rows should be non-null
     {
-        auto result = reader->VisitIsNotNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNotNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_EQ(static_cast<int>(actual_ids.size()), count)
-            << prefix << ": VisitIsNotNull should return all rows";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_EQ(static_cast<int32_t>(actual_ids.size()), count);
     }
 
-    // VisitEqual for each unique key should return correct row IDs
+    // VisitEqual for each unique key
     {
         std::set<std::string> tested_keys;
         for (const auto& rec : records) {
@@ -725,47 +494,40 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
                 tested_keys.insert(rec.key);
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
-                auto result = reader->VisitEqual(literal);
-                ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
-                auto actual_ids = CollectRowIds(result.value());
-                auto expected_ids = GetRowIdsForIntKey(records, key_val);
-                EXPECT_EQ(actual_ids, expected_ids)
-                    << prefix << ": VisitEqual(" << key_val << ") mismatch";
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stoi(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
             }
+        }
+    }
+
+    int32_t max_key = 0;
+    for (const auto& rec : records) {
+        if (!rec.is_null) {
+            max_key = std::max(max_key, std::stoi(rec.key));
         }
     }
 
     // VisitLessOrEqual for the max key should return all rows
     {
-        int32_t max_key = 0;
-        for (const auto& rec : records) {
-            if (!rec.is_null) max_key = std::max(max_key, std::stoi(rec.key));
-        }
         Literal literal(max_key);
-        auto result = reader->VisitLessOrEqual(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitLessOrEqual(" << max_key << ") failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_EQ(static_cast<int>(actual_ids.size()), count)
-            << prefix << ": VisitLessOrEqual(max) should return all rows";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(literal));
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_EQ(static_cast<int32_t>(actual_ids.size()), count);
     }
 
     // VisitGreaterThan for the max key should return empty
     {
-        int32_t max_key = 0;
-        for (const auto& rec : records) {
-            if (!rec.is_null) max_key = std::max(max_key, std::stoi(rec.key));
-        }
         Literal literal(max_key);
-        auto result = reader->VisitGreaterThan(literal);
-        ASSERT_OK(result.status()) << prefix << ": VisitGreaterThan(" << max_key << ") failed";
-        auto actual_ids = CollectRowIds(result.value());
-        EXPECT_TRUE(actual_ids.empty()) << prefix << ": VisitGreaterThan(max) should be empty";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(literal));
+        auto actual_ids = CollectRowIds(result);
+        ASSERT_TRUE(actual_ids.empty());
     }
 }
 
-// ===========================================================================
-// Test: Edge case - duplicate keys
-// ===========================================================================
 TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
     std::string prefix = "btree_test_int_duplicates";
     std::string bin_path = data_dir_ + "/" + prefix + ".bin";
@@ -773,33 +535,31 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
     std::string csv_path = data_dir_ + "/" + prefix + ".csv";
 
     auto records = ParseCsvFile(csv_path);
-    ASSERT_FALSE(records.empty()) << "Failed to parse CSV for " << prefix;
-    int count = static_cast<int>(records.size());
+    ASSERT_FALSE(records.empty());
+    auto count = static_cast<int32_t>(records.size());
 
-    auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count);
-    ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-    auto reader = reader_result.value();
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
 
-    // ---- Test: VisitIsNull ----
+    // VisitIsNull
     {
-        auto result = reader->VisitIsNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNull mismatch";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        auto actual_ids = CollectRowIds(result);
+        auto expected_ids =
+            CollectMatchingRows(records, [](const CsvRecord& r) { return r.is_null; });
+        ASSERT_EQ(actual_ids, expected_ids);
     }
 
-    // ---- Test: VisitIsNotNull ----
+    // VisitIsNotNull
     {
-        auto result = reader->VisitIsNotNull();
-        ASSERT_OK(result.status()) << prefix << ": VisitIsNotNull failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetNonNullRowIds(records);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIsNotNull mismatch";
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        auto actual_ids = CollectRowIds(result);
+        auto expected_ids =
+            CollectMatchingRows(records, [](const CsvRecord& r) { return !r.is_null; });
+        ASSERT_EQ(actual_ids, expected_ids);
     }
 
-    // ---- Test: VisitEqual for each unique key ----
-    // Duplicate keys: key = i/10, so keys are 0,0,...,0,1,1,...,1,...,9,9,...,9
+    // VisitEqual for each unique key
     {
         std::set<std::string> tested_keys;
         for (const auto& rec : records) {
@@ -807,151 +567,130 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
                 tested_keys.insert(rec.key);
                 int32_t key_val = std::stoi(rec.key);
                 Literal literal(key_val);
-                auto result = reader->VisitEqual(literal);
-                ASSERT_OK(result.status()) << prefix << ": VisitEqual(" << key_val << ") failed";
-                auto actual_ids = CollectRowIds(result.value());
-                auto expected_ids = GetRowIdsForIntKey(records, key_val);
-                EXPECT_EQ(actual_ids, expected_ids)
-                    << prefix << ": VisitEqual(" << key_val << ") mismatch";
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stoi(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
             }
         }
     }
 
-    // ---- Test: VisitIn for keys 0, 5, 9 ----
+    // VisitIn for keys 0, 5, 9
     {
         std::vector<Literal> in_literals = {Literal(static_cast<int32_t>(0)),
                                             Literal(static_cast<int32_t>(5)),
                                             Literal(static_cast<int32_t>(9))};
-        auto result = reader->VisitIn(in_literals);
-        ASSERT_OK(result.status()) << prefix << ": VisitIn({0,5,9}) failed";
-        auto actual_ids = CollectRowIds(result.value());
-
-        std::set<int64_t> expected_ids;
-        for (auto id : GetRowIdsForIntKey(records, 0)) expected_ids.insert(id);
-        for (auto id : GetRowIdsForIntKey(records, 5)) expected_ids.insert(id);
-        for (auto id : GetRowIdsForIntKey(records, 9)) expected_ids.insert(id);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitIn({0,5,9}) mismatch";
-    }
-
-    // ---- Test: VisitBetween for keys [2, 7] ----
-    {
-        Literal lit_lower(static_cast<int32_t>(2));
-        Literal lit_upper(static_cast<int32_t>(7));
-        auto result = reader->VisitBetween(lit_lower, lit_upper);
-        ASSERT_OK(result.status()) << prefix << ": VisitBetween(2, 7) failed";
-        auto actual_ids = CollectRowIds(result.value());
-        auto expected_ids = GetRowIdsForIntRange(records, 2, 7, true, true);
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitBetween(2, 7) mismatch";
-    }
-
-    // ---- Test: VisitNotBetween for keys [2, 7] ----
-    {
-        Literal lit_lower(static_cast<int32_t>(2));
-        Literal lit_upper(static_cast<int32_t>(7));
-        auto result = reader->VisitNotBetween(lit_lower, lit_upper);
-        ASSERT_OK(result.status()) << prefix << ": VisitNotBetween(2, 7) failed";
-        auto actual_ids = CollectRowIds(result.value());
-
-        // Expected: non-null rows with key < 2 or key > 7
-        std::set<int64_t> expected_ids;
-        for (const auto& rec : records) {
-            if (!rec.is_null) {
-                int32_t val = std::stoi(rec.key);
-                if (val < 2 || val > 7) expected_ids.insert(rec.row_id);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        auto actual_ids = CollectRowIds(result);
+        auto expected_ids = CollectMatchingRows(records, [](const CsvRecord& r) {
+            if (r.is_null) {
+                return false;
             }
-        }
-        EXPECT_EQ(actual_ids, expected_ids) << prefix << ": VisitNotBetween(2, 7) mismatch";
+            int32_t v = std::stoi(r.key);
+            return v == 0 || v == 5 || v == 9;
+        });
+        ASSERT_EQ(actual_ids, expected_ids);
     }
 }
 
-// ===========================================================================
-// Test: BTreeIndexMeta deserialization from Java-generated meta files
-// ===========================================================================
 TEST_F(BTreeCompatibilityTest, MetaDeserialization) {
     // Test int_50 meta
     {
         std::string meta_path = data_dir_ + "/btree_test_int_50.bin.meta";
-        auto meta_bytes = ReadBinaryFile(meta_path, pool_.get());
-        ASSERT_NE(meta_bytes, nullptr) << "Failed to read meta file";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
 
         auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
-        ASSERT_NE(meta, nullptr) << "Failed to deserialize meta";
+        ASSERT_TRUE(meta);
 
-        // The int_50 data has nulls (row_id 1, 18, 48, 49)
-        EXPECT_TRUE(meta->HasNulls()) << "int_50 should have nulls";
+        ASSERT_TRUE(meta->HasNulls());
+        ASSERT_FALSE(meta->OnlyNulls());
 
-        // First key should be "3" (first non-null key in sorted order)
-        ASSERT_NE(meta->FirstKey(), nullptr) << "int_50 first key should not be null";
-        std::string first_key(meta->FirstKey()->data(), meta->FirstKey()->size());
-        // Java writes int keys as string representation
-        // The first non-null key in sorted order is 3
-        EXPECT_FALSE(first_key.empty()) << "int_50 first key should not be empty";
+        ASSERT_TRUE(meta->FirstKey());
+        ASSERT_OK_AND_ASSIGN(auto min_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->FirstKey()),
+                                                           arrow::int32(), pool_.get()));
+        ASSERT_EQ(min_key, Literal(3));
 
-        // Last key should be "143" (last non-null key in sorted order)
-        ASSERT_NE(meta->LastKey(), nullptr) << "int_50 last key should not be null";
-        std::string last_key(meta->LastKey()->data(), meta->LastKey()->size());
-        EXPECT_FALSE(last_key.empty()) << "int_50 last key should not be empty";
+        ASSERT_TRUE(meta->LastKey());
+        ASSERT_OK_AND_ASSIGN(auto max_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
+                                                           arrow::int32(), pool_.get()));
+        ASSERT_EQ(max_key, Literal(143));
     }
 
     // Test all_nulls meta
     {
         std::string meta_path = data_dir_ + "/btree_test_int_all_nulls.bin.meta";
-        auto meta_bytes = ReadBinaryFile(meta_path, pool_.get());
-        ASSERT_NE(meta_bytes, nullptr) << "Failed to read all_nulls meta file";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
 
         auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
-        ASSERT_NE(meta, nullptr) << "Failed to deserialize all_nulls meta";
+        ASSERT_TRUE(meta);
 
-        EXPECT_TRUE(meta->HasNulls()) << "all_nulls should have nulls";
-        // For all-nulls data, first_key and last_key should be null
-        EXPECT_TRUE(meta->OnlyNulls()) << "all_nulls should report OnlyNulls()";
+        ASSERT_TRUE(meta->HasNulls());
+        ASSERT_TRUE(meta->OnlyNulls());
+        ASSERT_FALSE(meta->FirstKey());
+        ASSERT_FALSE(meta->LastKey());
     }
 
     // Test no_nulls meta
     {
         std::string meta_path = data_dir_ + "/btree_test_int_no_nulls.bin.meta";
-        auto meta_bytes = ReadBinaryFile(meta_path, pool_.get());
-        ASSERT_NE(meta_bytes, nullptr) << "Failed to read no_nulls meta file";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
 
         auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
-        ASSERT_NE(meta, nullptr) << "Failed to deserialize no_nulls meta";
+        ASSERT_TRUE(meta);
 
-        EXPECT_FALSE(meta->HasNulls()) << "no_nulls should not have nulls";
-        EXPECT_FALSE(meta->OnlyNulls()) << "no_nulls should not report OnlyNulls()";
-        ASSERT_NE(meta->FirstKey(), nullptr) << "no_nulls first key should not be null";
-        ASSERT_NE(meta->LastKey(), nullptr) << "no_nulls last key should not be null";
+        ASSERT_TRUE(meta->FirstKey());
+        ASSERT_OK_AND_ASSIGN(auto min_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->FirstKey()),
+                                                           arrow::int32(), pool_.get()));
+        ASSERT_EQ(min_key, Literal(4));
+
+        ASSERT_TRUE(meta->LastKey());
+        ASSERT_OK_AND_ASSIGN(auto max_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
+                                                           arrow::int32(), pool_.get()));
+        ASSERT_EQ(max_key, Literal(158));
     }
 
-    // Test varchar_50 meta
+    // Test string_50 meta
     {
-        std::string meta_path = data_dir_ + "/btree_test_varchar_50.bin.meta";
-        auto meta_bytes = ReadBinaryFile(meta_path, pool_.get());
-        ASSERT_NE(meta_bytes, nullptr) << "Failed to read varchar_50 meta file";
+        std::string meta_path = data_dir_ + "/btree_test_string_50.bin.meta";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
 
         auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
-        ASSERT_NE(meta, nullptr) << "Failed to deserialize varchar_50 meta";
+        ASSERT_TRUE(meta);
 
-        // varchar_50 has 1 null (row_id=24 based on 5% null ratio with seed 42)
-        ASSERT_NE(meta->FirstKey(), nullptr) << "varchar_50 first key should not be null";
-        ASSERT_NE(meta->LastKey(), nullptr) << "varchar_50 last key should not be null";
+        ASSERT_TRUE(meta->HasNulls());
+        ASSERT_FALSE(meta->OnlyNulls());
 
-        std::string first_key(meta->FirstKey()->data(), meta->FirstKey()->size());
-        std::string last_key(meta->LastKey()->data(), meta->LastKey()->size());
-        // Keys are "test_00000" to "test_00049" (excluding nulls)
-        EXPECT_EQ(first_key, "test_00000") << "varchar_50 first key mismatch";
-        EXPECT_EQ(last_key, "test_00049") << "varchar_50 last key mismatch";
+        ASSERT_TRUE(meta->FirstKey());
+        ASSERT_OK_AND_ASSIGN(auto min_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->FirstKey()),
+                                                           arrow::utf8(), pool_.get()));
+        std::string min_key_str = "test_00000";
+        ASSERT_EQ(min_key, Literal(FieldType::STRING, min_key_str.data(), min_key_str.size()));
+
+        ASSERT_TRUE(meta->LastKey());
+        ASSERT_OK_AND_ASSIGN(auto max_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
+                                                           arrow::utf8(), pool_.get()));
+        std::string max_key_str = "test_00049";
+        ASSERT_EQ(max_key, Literal(FieldType::STRING, max_key_str.data(), max_key_str.size()));
     }
 }
 
-// ===========================================================================
-// Test: Verify total row count consistency
-// ===========================================================================
 TEST_F(BTreeCompatibilityTest, RowCountConsistency) {
-    // For each test data set, verify that null_count + non_null_count == total_count
     std::vector<std::pair<std::string, std::shared_ptr<arrow::DataType>>> test_cases = {
         {"btree_test_int_50", arrow::int32()},       {"btree_test_int_100", arrow::int32()},
-        {"btree_test_int_500", arrow::int32()},      {"btree_test_varchar_50", arrow::utf8()},
-        {"btree_test_varchar_100", arrow::utf8()},   {"btree_test_int_all_nulls", arrow::int32()},
+        {"btree_test_int_500", arrow::int32()},      {"btree_test_string_50", arrow::utf8()},
+        {"btree_test_string_100", arrow::utf8()},    {"btree_test_int_all_nulls", arrow::int32()},
         {"btree_test_int_no_nulls", arrow::int32()}, {"btree_test_int_duplicates", arrow::int32()},
     };
 
@@ -961,30 +700,25 @@ TEST_F(BTreeCompatibilityTest, RowCountConsistency) {
         std::string csv_path = data_dir_ + "/" + prefix + ".csv";
 
         auto records = ParseCsvFile(csv_path);
-        ASSERT_FALSE(records.empty()) << "Failed to parse CSV for " << prefix;
-        int count = static_cast<int>(records.size());
+        ASSERT_FALSE(records.empty());
+        auto count = static_cast<int32_t>(records.size());
 
-        auto reader_result = CreateReaderFromFiles(bin_path, meta_path, arrow_type, count);
-        ASSERT_OK(reader_result.status()) << "Failed to create reader for " << prefix;
-        auto reader = reader_result.value();
+        ASSERT_OK_AND_ASSIGN(auto reader,
+                             CreateReaderFromFiles(bin_path, meta_path, arrow_type, count));
 
-        auto null_result = reader->VisitIsNull();
-        ASSERT_OK(null_result.status()) << prefix << ": VisitIsNull failed";
-        auto null_ids = CollectRowIds(null_result.value());
+        ASSERT_OK_AND_ASSIGN(auto null_result, reader->VisitIsNull());
+        auto null_ids = CollectRowIds(null_result);
 
-        auto non_null_result = reader->VisitIsNotNull();
-        ASSERT_OK(non_null_result.status()) << prefix << ": VisitIsNotNull failed";
-        auto non_null_ids = CollectRowIds(non_null_result.value());
+        ASSERT_OK_AND_ASSIGN(auto non_null_result, reader->VisitIsNotNull());
+        auto non_null_ids = CollectRowIds(non_null_result);
 
         // Null and non-null should be disjoint
         for (auto id : null_ids) {
-            EXPECT_EQ(non_null_ids.count(id), 0u)
-                << prefix << ": row_id " << id << " is in both null and non-null sets";
+            ASSERT_EQ(non_null_ids.count(id), 0u);
         }
 
         // Total should equal record count
-        EXPECT_EQ(static_cast<int>(null_ids.size() + non_null_ids.size()), count)
-            << prefix << ": null_count + non_null_count != total_count";
+        ASSERT_EQ(static_cast<int32_t>(null_ids.size() + non_null_ids.size()), count);
     }
 }
 

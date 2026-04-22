@@ -22,11 +22,11 @@
 #include <string>
 
 #include "arrow/api.h"
+#include "fmt/format.h"
 #include "paimon/common/data/binary_array.h"
 #include "paimon/common/data/binary_row.h"
 #include "paimon/common/data/binary_row_writer.h"
 #include "paimon/result.h"
-
 namespace arrow {
 class ArrayBuilder;
 }  // namespace arrow
@@ -71,9 +71,7 @@ class SimpleStats {
     static Result<SimpleStats> FromRow(const InternalRow* row, MemoryPool* pool);
 
     std::string ToString() const {
-        std::stringstream ss;
-        ss << std::hex << static_cast<uint32_t>(HashCode());
-        return "SimpleStats@" + ss.str();
+        return fmt::format("SimpleStats@{:#x}", static_cast<uint32_t>(HashCode()));
     }
 
     int32_t HashCode() const;

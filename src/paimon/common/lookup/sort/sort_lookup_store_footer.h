@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <memory>
+#include <optional>
 
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/sst/block_handle.h"
@@ -34,7 +34,7 @@ class PAIMON_EXPORT SortLookupStoreFooter {
 
  public:
     SortLookupStoreFooter(const BlockHandle& index_block_handle,
-                          const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle)
+                          const std::optional<BloomFilterHandle>& bloom_filter_handle)
         : index_block_handle_(index_block_handle), bloom_filter_handle_(bloom_filter_handle) {}
 
     ~SortLookupStoreFooter() = default;
@@ -42,7 +42,7 @@ class PAIMON_EXPORT SortLookupStoreFooter {
     const BlockHandle& GetIndexBlockHandle() const {
         return index_block_handle_;
     }
-    std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
+    const std::optional<BloomFilterHandle>& GetBloomFilterHandle() const {
         return bloom_filter_handle_;
     }
 
@@ -55,6 +55,6 @@ class PAIMON_EXPORT SortLookupStoreFooter {
 
  private:
     BlockHandle index_block_handle_;
-    std::shared_ptr<BloomFilterHandle> bloom_filter_handle_;
+    std::optional<BloomFilterHandle> bloom_filter_handle_;
 };
 }  // namespace paimon

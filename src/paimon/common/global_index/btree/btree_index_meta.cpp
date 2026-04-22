@@ -34,7 +34,7 @@ std::shared_ptr<BTreeIndexMeta> BTreeIndexMeta::Deserialize(const std::shared_pt
     if (last_key_len) {
         last_key = input.ReadSlice(last_key_len).CopyBytes(pool);
     }
-    auto has_nulls = static_cast<int8_t>(input.ReadByte()) == 1;
+    auto has_nulls = input.ReadByte() == static_cast<int8_t>(1);
     return std::make_shared<BTreeIndexMeta>(first_key, last_key, has_nulls);
 }
 

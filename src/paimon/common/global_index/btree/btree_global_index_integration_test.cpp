@@ -13,22 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "arrow/c/bridge.h"
-#include "arrow/c/helpers.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/compression/block_compression_factory.h"
+#include "paimon/common/factories/io_hook.h"
 #include "paimon/common/global_index/btree/btree_global_index_writer.h"
 #include "paimon/common/global_index/btree/btree_global_indexer.h"
-#include "paimon/common/utils/arrow/status_utils.h"
+#include "paimon/common/utils/scope_guard.h"
+#include "paimon/data/decimal.h"
+#include "paimon/data/timestamp.h"
 #include "paimon/fs/file_system.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
+#include "paimon/testing/utils/io_exception_helper.h"
 #include "paimon/testing/utils/testharness.h"
-
 namespace paimon::test {
 
 class FakeGlobalIndexFileWriter : public GlobalIndexFileWriter {
@@ -75,7 +77,8 @@ class FakeGlobalIndexFileReader : public GlobalIndexFileReader {
     std::string base_path_;
 };
 
-class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
+class BTreeGlobalIndexIntegrationTest : public ::testing::Test,
+                                        public ::testing::WithParamInterface<std::string> {
  protected:
     void SetUp() override {
         pool_ = GetDefaultPool();
@@ -88,27 +91,23 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
     void TearDown() override {}
 
     // Helper to create ArrowSchema from arrow type
-    std::unique_ptr<ArrowSchema> CreateArrowSchema(const std::shared_ptr<arrow::DataType>& type,
-                                                   const std::string& field_name) {
-        auto schema = arrow::schema({arrow::field(field_name, type)});
+    std::unique_ptr<ArrowSchema> CreateArrowSchema(
+        const std::shared_ptr<arrow::Field>& field) const {
+        auto schema = arrow::schema({field});
         auto c_schema = std::make_unique<ArrowSchema>();
         EXPECT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
         return c_schema;
     }
 
-    // Helper to check if a row ID is in the result
-    bool ContainsRowId(const std::shared_ptr<GlobalIndexResult>& result, int64_t row_id) {
-        auto iterator_result = result->CreateIterator();
-        if (!iterator_result.ok()) {
-            return false;
-        }
-        auto iterator = std::move(iterator_result).value();
-        while (iterator->HasNext()) {
-            if (iterator->Next() == row_id) {
-                return true;
-            }
-        }
-        return false;
+    void CheckResult(const std::shared_ptr<GlobalIndexResult>& result,
+                     const std::vector<int64_t>& expected) const {
+        auto typed_result = std::dynamic_pointer_cast<BitmapGlobalIndexResult>(result);
+        ASSERT_TRUE(typed_result);
+        ASSERT_OK_AND_ASSIGN(const RoaringBitmap64* bitmap, typed_result->GetBitmap());
+        ASSERT_TRUE(bitmap);
+        ASSERT_EQ(*bitmap, RoaringBitmap64::From(expected))
+            << "result=" << bitmap->ToString()
+            << ", expected=" << RoaringBitmap64::From(expected).ToString();
     }
 
     std::shared_ptr<MemoryPool> pool_;
@@ -118,317 +117,1747 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test {
     std::string base_path_;
 };
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
-    // Create file writer
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
 
-    // Create ArrowSchema
-    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create the BTree global index writer
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
-                                                        compression_factory_, pool_, 4096));
-
-    // Create an Arrow array with int values
-    // Row IDs: 0->1, 1->2, 2->3, 3->2, 4->1, 5->4, 6->5, 7->5, 8->5
-    auto array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 2, 1, 4, 5, 5, 5]")
-            .ValueOrDie();
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+    // Data layout (row_id -> value):
+    //   0->1, 1->1, 2->null, 3->2, 4->2, 5->null, 6->3, 7->4, 8->5, 9->5, 10->5, 11->null
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1],
+        [1],
+        [null],
+        [2],
+        [2],
+        [null],
+        [3],
+        [4],
+        [5],
+        [5],
+        [5],
+        [null]
+    ])")
+                     .ValueOrDie();
 
     ArrowArray c_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-
-    // Add batch
-    ASSERT_OK(writer->AddBatch(&c_array));
-
-    // Finish writing
-    auto result = writer->Finish();
-    ASSERT_OK(result.status());
-    auto metas = result.value();
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
-
-    // Release ArrowArray
-    ArrowArrayRelease(&c_array);
 
     // Now read back
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    std::map<std::string, std::string> options;
-    BTreeGlobalIndexer indexer(options);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
 
-    // Create a new ArrowSchema for reading (the original was consumed by the writer)
-    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
+    // All non-null row ids: {0,1,3,4,6,7,8,9,10}
+    // Null row ids: {2,5,11}
 
-    // Create reader
-    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
-    ASSERT_OK(reader_result.status());
-    auto reader = reader_result.value();
+    // --- VisitIsNull ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {2, 5, 11});
+    }
 
-    // Test VisitEqual for value 1 (should return row IDs 0 and 4)
-    Literal literal_1(static_cast<int32_t>(1));
-    auto equal_result = reader->VisitEqual(literal_1);
-    ASSERT_OK(equal_result.status());
-    EXPECT_TRUE(ContainsRowId(equal_result.value(), 0));
-    EXPECT_TRUE(ContainsRowId(equal_result.value(), 4));
-    EXPECT_FALSE(ContainsRowId(equal_result.value(), 1));
+    // --- VisitIsNotNull ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8, 9, 10});
+    }
 
-    // Test VisitEqual for value 5 (should return row IDs 6, 7, 8)
-    Literal literal_5(static_cast<int32_t>(5));
-    auto equal_result_5 = reader->VisitEqual(literal_5);
-    ASSERT_OK(equal_result_5.status());
-    EXPECT_TRUE(ContainsRowId(equal_result_5.value(), 6));
-    EXPECT_TRUE(ContainsRowId(equal_result_5.value(), 7));
-    EXPECT_TRUE(ContainsRowId(equal_result_5.value(), 8));
+    // --- VisitEqual ---
+    {
+        // Equal to 1 -> rows 0,1
+        Literal literal_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal_1));
+        CheckResult(result, {0, 1});
 
-    // Release ArrowSchema
-    ArrowSchemaRelease(c_schema.get());
-    ArrowSchemaRelease(c_schema_read.get());
+        // Equal to 3 -> row 6
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitEqual(literal_3));
+        CheckResult(result, {6});
+
+        // Equal to 5 -> rows 8,9,10
+        Literal literal_5(5);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitEqual(literal_5));
+        CheckResult(result, {8, 9, 10});
+
+        // Equal to 99 (not present) -> empty
+        Literal literal_99(99);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitEqual(literal_99));
+        CheckResult(result, {});
+    }
+
+    // --- VisitNotEqual ---
+    {
+        // NotEqual to 3 -> all non-null except row 6
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(literal_3));
+        CheckResult(result, {0, 1, 3, 4, 7, 8, 9, 10});
+    }
+
+    // --- VisitLessThan ---
+    {
+        // LessThan 3 -> values 1,2 -> rows 0,1,3,4
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(literal_3));
+        CheckResult(result, {0, 1, 3, 4});
+
+        // LessThan 1 -> empty (no value < 1)
+        Literal literal_1(1);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitLessThan(literal_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitLessOrEqual ---
+    {
+        // LessOrEqual 3 -> values 1,2,3 -> rows 0,1,3,4,6
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(literal_3));
+        CheckResult(result, {0, 1, 3, 4, 6});
+    }
+
+    // --- VisitGreaterThan ---
+    {
+        // GreaterThan 3 -> values 4,5 -> rows 7,8,9,10
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(literal_3));
+        CheckResult(result, {7, 8, 9, 10});
+
+        // GreaterThan 5 -> empty (no value > 5)
+        Literal literal_5(5);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitGreaterThan(literal_5));
+        CheckResult(result, {});
+    }
+
+    // --- VisitGreaterOrEqual ---
+    {
+        // GreaterOrEqual 3 -> values 3,4,5 -> rows 6,7,8,9,10
+        Literal literal_3(3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(literal_3));
+        CheckResult(result, {6, 7, 8, 9, 10});
+    }
+
+    // --- VisitIn ---
+    {
+        // In {1, 4} -> rows 0,1,7
+        std::vector<Literal> in_literals = {Literal(1), Literal(4)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 1, 7});
+
+        // In {99} (not present) -> empty
+        std::vector<Literal> in_missing = {Literal(99)};
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitIn(in_missing));
+        CheckResult(result, {});
+    }
+
+    // --- VisitNotIn ---
+    {
+        // NotIn {1, 5} -> all non-null except rows 0,1,8,9,10 -> rows 3,4,6,7
+        std::vector<Literal> not_in_literals = {Literal(1), Literal(5)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {3, 4, 6, 7});
+    }
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
-    // Create file writer
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("str_field", arrow::utf8());
+    auto c_schema = CreateArrowSchema(field);
 
-    // Create ArrowSchema
-    auto c_schema = CreateArrowSchema(arrow::utf8(), "string_field");
-
-    // Create the BTree global index writer
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         BTreeGlobalIndexWriter::Create("string_field", c_schema.get(), file_writer,
-                                                        compression_factory_, pool_, 4096));
+                         indexer->CreateWriter("str_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
 
-    // Create an Arrow array with string values
-    auto array = arrow::ipc::internal::json::ArrayFromJSON(
-                     arrow::utf8(), R"(["apple", "banana", "cherry", "apple", "banana"])")
+    // Data layout (row_id -> value):
+    //   0->"apple", 1->"apricot", 2->null, 3->"banana", 4->"blueberry",
+    //   5->null, 6->"cherry", 7->"cherry", 8->"date"
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        ["apple"],
+        ["apricot"],
+        [null],
+        ["banana"],
+        ["blueberry"],
+        [null],
+        ["cherry"],
+        ["cherry"],
+        ["date"]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,1,3,4,6,7,8}, Null rows: {2,5}
+
+    // --- VisitIsNull / VisitIsNotNull ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {2, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+    }
+
+    // --- VisitEqual ---
+    {
+        Literal lit_cherry(FieldType::STRING, "cherry", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_cherry));
+        CheckResult(result, {6, 7});
+
+        Literal lit_missing(FieldType::STRING, "fig", 3);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitEqual(lit_missing));
+        CheckResult(result, {});
+    }
+
+    // --- VisitNotEqual ---
+    {
+        Literal lit_banana(FieldType::STRING, "banana", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_banana));
+        CheckResult(result, {0, 1, 4, 6, 7, 8});
+    }
+
+    // --- VisitLessThan ---
+    {
+        // LessThan "cherry" -> "apple","apricot","banana","blueberry" -> rows 0,1,3,4
+        Literal lit_cherry(FieldType::STRING, "cherry", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_cherry));
+        CheckResult(result, {0, 1, 3, 4});
+    }
+
+    // --- VisitLessOrEqual ---
+    {
+        Literal lit_banana(FieldType::STRING, "banana", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_banana));
+        CheckResult(result, {0, 1, 3});
+    }
+
+    // --- VisitGreaterThan ---
+    {
+        Literal lit_cherry(FieldType::STRING, "cherry", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_cherry));
+        CheckResult(result, {8});
+    }
+
+    // --- VisitGreaterOrEqual ---
+    {
+        Literal lit_cherry(FieldType::STRING, "cherry", 6);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_cherry));
+        CheckResult(result, {6, 7, 8});
+    }
+
+    // --- VisitIn ---
+    {
+        std::vector<Literal> in_literals = {Literal(FieldType::STRING, "apple", 5),
+                                            Literal(FieldType::STRING, "date", 4)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 8});
+    }
+
+    // --- VisitNotIn ---
+    {
+        std::vector<Literal> not_in_literals = {Literal(FieldType::STRING, "apple", 5),
+                                                Literal(FieldType::STRING, "cherry", 6)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {1, 3, 4, 8});
+    }
+
+    // --- VisitStartsWith ---
+    {
+        // StartsWith "ap" -> "apple","apricot" -> rows 0,1
+        Literal lit_ap(FieldType::STRING, "ap", 2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitStartsWith(lit_ap));
+        CheckResult(result, {0, 1});
+
+        // StartsWith "bl" -> "blueberry" -> row 4
+        Literal lit_bl(FieldType::STRING, "bl", 2);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitStartsWith(lit_bl));
+        CheckResult(result, {4});
+
+        // StartsWith "z" -> no match
+        Literal lit_z(FieldType::STRING, "z", 1);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitStartsWith(lit_z));
+        CheckResult(result, {});
+    }
+
+    // --- VisitEndsWith (falls back to AllNonNullRows) ---
+    {
+        Literal lit_ry(FieldType::STRING, "ry", 2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEndsWith(lit_ry));
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+    }
+
+    // --- VisitContains (falls back to AllNonNullRows) ---
+    {
+        Literal lit_an(FieldType::STRING, "an", 2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitContains(lit_an));
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+    }
+
+    // --- VisitLike ---
+    {
+        // "ap%" is a prefix pattern -> delegates to VisitStartsWith("ap") -> rows 0,1
+        Literal lit_ap_pct(FieldType::STRING, "ap%", 3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLike(lit_ap_pct));
+        CheckResult(result, {0, 1});
+
+        // "%erry" is not a prefix pattern -> falls back to AllNonNullRows
+        Literal lit_suffix(FieldType::STRING, "%erry", 5);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitLike(lit_suffix));
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+
+        // "b_nana" contains '_' before '%' -> falls back to AllNonNullRows
+        Literal lit_underscore(FieldType::STRING, "b_nana", 6);
+        ASSERT_OK_AND_ASSIGN(result, reader->VisitLike(lit_underscore));
+        CheckResult(result, {0, 1, 3, 4, 6, 7, 8});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("bigint_field", arrow::int64());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("bigint_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value):
+    //   0->100, 1->null, 2->200, 3->200, 4->300, 5->null, 6->400
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [100],
+        [null],
+        [200],
+        [200],
+        [300],
+        [null],
+        [400]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_200(static_cast<int64_t>(200));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_200));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_200(static_cast<int64_t>(200));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_200));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_300(static_cast<int64_t>(300));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_300));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_300(static_cast<int64_t>(300));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_300));
+        CheckResult(result, {0, 2, 3, 4});
+    }
+    {
+        Literal lit_200(static_cast<int64_t>(200));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_200));
+        CheckResult(result, {4, 6});
+    }
+    {
+        Literal lit_200(static_cast<int64_t>(200));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_200));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(static_cast<int64_t>(100)),
+                                            Literal(static_cast<int64_t>(400))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(static_cast<int64_t>(200))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("float_field", arrow::float32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("float_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value):
+    //   0->1.0, 1->null, 2->2.5, 3->2.5, 4->3.0, 5->null, 6->4.5
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1.0],
+        [null],
+        [2.5],
+        [2.5],
+        [3.0],
+        [null],
+        [4.5]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_2_5(2.5f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_2_5));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_2_5(2.5f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_2_5));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_3_0(3.0f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_3_0));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_3_0(3.0f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_3_0));
+        CheckResult(result, {0, 2, 3, 4});
+    }
+    {
+        Literal lit_2_5(2.5f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_2_5));
+        CheckResult(result, {4, 6});
+    }
+    {
+        Literal lit_2_5(2.5f);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_2_5));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(1.0f), Literal(4.5f)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(2.5f)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("double_field", arrow::float64());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("double_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value):
+    //   0->1.1, 1->null, 2->2.2, 3->2.2, 4->3.3, 5->null, 6->4.4
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1.1],
+        [null],
+        [2.2],
+        [2.2],
+        [3.3],
+        [null],
+        [4.4]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_2_2(2.2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_2_2));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_2_2(2.2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_2_2));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_3_3(3.3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_3_3));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_3_3(3.3);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_3_3));
+        CheckResult(result, {0, 2, 3, 4});
+    }
+    {
+        Literal lit_2_2(2.2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_2_2));
+        CheckResult(result, {4, 6});
+    }
+    {
+        Literal lit_2_2(2.2);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_2_2));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(1.1), Literal(4.4)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(2.2)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // All values are non-null
+    // Data layout (row_id -> value): 0->10, 1->20, 2->20, 3->30, 4->40, 5->50
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [10],
+        [20],
+        [20],
+        [30],
+        [40],
+        [50]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // All rows: {0,1,2,3,4,5}, No null rows
+
+    // --- VisitIsNull -> empty ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {});
+    }
+
+    // --- VisitIsNotNull -> all rows ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 1, 2, 3, 4, 5});
+    }
+
+    // --- VisitEqual ---
+    {
+        Literal lit_20(20);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_20));
+        CheckResult(result, {1, 2});
+    }
+
+    // --- VisitNotEqual ---
+    {
+        Literal lit_20(20);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_20));
+        CheckResult(result, {0, 3, 4, 5});
+    }
+
+    // --- VisitLessThan ---
+    {
+        Literal lit_30(30);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_30));
+        CheckResult(result, {0, 1, 2});
+    }
+
+    // --- VisitLessOrEqual ---
+    {
+        Literal lit_30(30);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessOrEqual(lit_30));
+        CheckResult(result, {0, 1, 2, 3});
+    }
+
+    // --- VisitGreaterThan ---
+    {
+        Literal lit_30(30);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterThan(lit_30));
+        CheckResult(result, {4, 5});
+    }
+
+    // --- VisitGreaterOrEqual ---
+    {
+        Literal lit_30(30);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_30));
+        CheckResult(result, {3, 4, 5});
+    }
+
+    // --- VisitIn ---
+    {
+        std::vector<Literal> in_literals = {Literal(10), Literal(50)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 5});
+    }
+
+    // --- VisitNotIn ---
+    {
+        std::vector<Literal> not_in_literals = {Literal(10), Literal(20)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {3, 4, 5});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("bool_field", arrow::boolean());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("bool_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value), sorted by key (false < true):
+    //   0->false, 1->false, 2->null, 3->false, 4->true, 5->null, 6->true, 7->true
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [false],
+        [false],
+        [null],
+        [false],
+        [true],
+        [null],
+        [true],
+        [true]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,1,3,4,6,7}, Null rows: {2,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {2, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 1, 3, 4, 6, 7});
+    }
+    {
+        Literal lit_true(true);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_true));
+        CheckResult(result, {4, 6, 7});
+    }
+    {
+        Literal lit_false(false);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_false));
+        CheckResult(result, {0, 1, 3});
+    }
+    {
+        Literal lit_true(true);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_true));
+        CheckResult(result, {0, 1, 3});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(true)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {4, 6, 7});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(true)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 1, 3});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("tinyint_field", arrow::int8());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, indexer->CreateWriter("tinyint_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value):
+    //   0->-10, 1->null, 2->0, 3->10, 4->10, 5->null, 6->20
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [-10],
+        [null],
+        [0],
+        [10],
+        [10],
+        [null],
+        [20]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_10(static_cast<int8_t>(10));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_10));
+        CheckResult(result, {3, 4});
+    }
+    {
+        Literal lit_10(static_cast<int8_t>(10));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_10));
+        CheckResult(result, {0, 2, 6});
+    }
+    {
+        Literal lit_10(static_cast<int8_t>(10));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_10));
+        CheckResult(result, {0, 2});
+    }
+    {
+        Literal lit_10(static_cast<int8_t>(10));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_10));
+        CheckResult(result, {3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(static_cast<int8_t>(-10)),
+                                            Literal(static_cast<int8_t>(20))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(static_cast<int8_t>(10))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 2, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("smallint_field", arrow::int16());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, indexer->CreateWriter("smallint_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value):
+    //   0->-100, 1->null, 2->0, 3->100, 4->100, 5->null, 6->200
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [-100],
+        [null],
+        [0],
+        [100],
+        [100],
+        [null],
+        [200]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_100(static_cast<int16_t>(100));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_100));
+        CheckResult(result, {3, 4});
+    }
+    {
+        Literal lit_100(static_cast<int16_t>(100));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_100));
+        CheckResult(result, {0, 2, 6});
+    }
+    {
+        Literal lit_100(static_cast<int16_t>(100));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_100));
+        CheckResult(result, {0, 2});
+    }
+    {
+        Literal lit_100(static_cast<int16_t>(100));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_100));
+        CheckResult(result, {3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(static_cast<int16_t>(-100)),
+                                            Literal(static_cast<int16_t>(200))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(static_cast<int16_t>(100))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 2, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
+    // Compact timestamp: precision <= 3 (millisecond)
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("ts_field", arrow::timestamp(arrow::TimeUnit::MILLI));
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value in millis):
+    //   0->1000, 1->null, 2->2000, 3->2000, 4->3000, 5->null, 6->4000
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1000],
+        [null],
+        [2000],
+        [2000],
+        [3000],
+        [null],
+        [4000]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_2000(Timestamp::FromEpochMillis(2000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_2000));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_2000(Timestamp::FromEpochMillis(2000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_2000));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_3000(Timestamp::FromEpochMillis(3000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_3000));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_2000(Timestamp::FromEpochMillis(2000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_2000));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(Timestamp::FromEpochMillis(1000)),
+                                            Literal(Timestamp::FromEpochMillis(4000))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(Timestamp::FromEpochMillis(2000))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
+    // Non-compact timestamp: precision > 3 (microsecond, precision=6)
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("ts_field", arrow::timestamp(arrow::TimeUnit::MICRO));
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value in micros):
+    //   0->1000000 (1s), 1->null, 2->2000123 (2s+123us), 3->2000123, 4->3000456, 5->null,
+    //   6->4000789
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1000000],
+        [null],
+        [2000123],
+        [2000123],
+        [3000456],
+        [null],
+        [4000789]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+    // micros: 1000000 -> millis=1000, nanos_of_millis=0
+    //         2000123 -> millis=2000, nanos_of_millis=123000
+    //         3000456 -> millis=3000, nanos_of_millis=456000
+    //         4000789 -> millis=4000, nanos_of_millis=789000
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_ts(Timestamp(2000, 123000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_ts));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_ts(Timestamp(2000, 123000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_ts));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_ts(Timestamp(3000, 456000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_ts));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_ts(Timestamp(2000, 123000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_ts));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(Timestamp(1000, 0)),
+                                            Literal(Timestamp(4000, 789000))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(Timestamp(2000, 123000))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
+    // Compact decimal: precision <= 18
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("decimal_field", arrow::decimal128(10, 2));
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> value, stored as unscaled int with scale=2):
+    //   0->1.00, 1->null, 2->2.50, 3->2.50, 4->3.00,
+    //   5->null, 6->4.50
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        ["1.00"],
+        [null],
+        ["2.50"],
+        ["2.50"],
+        ["3.00"],
+        [null],
+        ["4.50"]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_250(Decimal::FromUnscaledLong(250, 10, 2));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_250));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_250(Decimal::FromUnscaledLong(250, 10, 2));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_250));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_300(Decimal::FromUnscaledLong(300, 10, 2));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_300));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_250(Decimal::FromUnscaledLong(250, 10, 2));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_250));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(Decimal::FromUnscaledLong(100, 10, 2)),
+                                            Literal(Decimal::FromUnscaledLong(450, 10, 2))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(Decimal::FromUnscaledLong(250, 10, 2))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
+    // Non-compact decimal: precision > 18
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("decimal_field", arrow::decimal128(25, 3));
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(
+        auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Data layout (row_id -> unscaled value with scale=3):
+    //   0->1.000, 1->null, 2->2.500, 3->2.500,
+    //   4->3.000, 5->null, 6->4.500
+    // For non-compact decimal (precision=25), Arrow JSON uses string representation of unscaled
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        ["1.000"],
+        [null],
+        ["2.500"],
+        ["2.500"],
+        ["3.000"],
+        [null],
+        ["4.500"]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Non-null rows: {0,2,3,4,6}, Null rows: {1,5}
+
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {1, 5});
+    }
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {0, 2, 3, 4, 6});
+    }
+    {
+        Literal lit_2500(Decimal(25, 3, 2500));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_2500));
+        CheckResult(result, {2, 3});
+    }
+    {
+        Literal lit_2500(Decimal(25, 3, 2500));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_2500));
+        CheckResult(result, {0, 4, 6});
+    }
+    {
+        Literal lit_3000(Decimal(25, 3, 3000));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_3000));
+        CheckResult(result, {0, 2, 3});
+    }
+    {
+        Literal lit_2500(Decimal(25, 3, 2500));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_2500));
+        CheckResult(result, {2, 3, 4, 6});
+    }
+    {
+        std::vector<Literal> in_literals = {Literal(Decimal(25, 3, 1000)),
+                                            Literal(Decimal(25, 3, 4500))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {0, 6});
+    }
+    {
+        std::vector<Literal> not_in_literals = {Literal(Decimal(25, 3, 2500))};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {0, 4, 6});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // All values are null
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [null],
+        [null],
+        [null],
+        [null]
+    ])")
+                     .ValueOrDie();
+
+    ArrowArray c_array;
+    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+    std::vector<int64_t> row_ids(array->length());
+    std::iota(row_ids.begin(), row_ids.end(), 0);
+    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // All rows are null: {0,1,2,3}, No non-null rows
+
+    // --- VisitIsNull -> all rows ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, {0, 1, 2, 3});
+    }
+
+    // --- VisitIsNotNull -> empty ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, {});
+    }
+
+    // --- VisitEqual -> empty ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitNotEqual -> empty (no non-null rows) ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitLessThan -> empty ---
+    {
+        Literal lit_1(1);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_1));
+        CheckResult(result, {});
+    }
+
+    // --- VisitIn -> empty ---
+    {
+        std::vector<Literal> in_literals = {Literal(1), Literal(2)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result, {});
+    }
+
+    // --- VisitNotIn -> empty ---
+    {
+        std::vector<Literal> not_in_literals = {Literal(1)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotIn(not_in_literals));
+        CheckResult(result, {});
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
+    // Use very small block size and cache size to force multiple block evictions
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {
+        {BtreeDefs::kBtreeIndexBlockSize, "256"},
+        {BtreeDefs::kBtreeIndexCacheSize, "1024"},
+    };
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    // Generate 50000 sorted int values with some nulls and duplicates.
+    // Pattern: every 100th row is null, values increase by 1 every 3 rows (duplicates).
+    // Data is written in multiple batches of 1000 rows each.
+    constexpr int32_t total_rows = 50000;
+    constexpr int32_t batch_size = 1000;
+
+    std::vector<int64_t> null_row_ids;
+    std::vector<int64_t> non_null_row_ids;
+    int32_t current_value = 0;
+
+    for (int32_t batch_start = 0; batch_start < total_rows; batch_start += batch_size) {
+        int32_t batch_end = std::min(batch_start + batch_size, total_rows);
+        int32_t batch_len = batch_end - batch_start;
+
+        arrow::Int32Builder value_builder;
+        ASSERT_TRUE(value_builder.Reserve(batch_len).ok());
+
+        std::vector<int64_t> batch_row_ids;
+        batch_row_ids.reserve(batch_len);
+
+        for (int32_t i = batch_start; i < batch_end; ++i) {
+            batch_row_ids.push_back(i);
+            if (i % 100 == 99) {
+                ASSERT_TRUE(value_builder.AppendNull().ok());
+                null_row_ids.push_back(i);
+            } else {
+                ASSERT_TRUE(value_builder.Append(current_value).ok());
+                non_null_row_ids.push_back(i);
+                if (i % 3 == 2) {
+                    ++current_value;
+                }
+            }
+        }
+
+        std::shared_ptr<arrow::Array> value_array;
+        ASSERT_TRUE(value_builder.Finish(&value_array).ok());
+        auto struct_array = arrow::StructArray::Make({value_array}, {field}).ValueOrDie();
+
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*struct_array, &c_array).ok());
+        ASSERT_OK(btree_writer->AddBatch(&c_array, batch_row_ids));
+    }
+
+    ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
+    ASSERT_EQ(metas.size(), 1);
+
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    c_schema = CreateArrowSchema(field);
+    ASSERT_OK_AND_ASSIGN(auto reader,
+                         indexer->CreateReader(c_schema.get(), file_reader, metas, pool_));
+
+    // Helper lambda: given a predicate on value, collect matching row ids
+    auto collect_rows = [total_rows = total_rows](std::function<bool(int32_t)> predicate) {
+        std::vector<int64_t> result;
+        int32_t val = 0;
+        for (int32_t i = 0; i < total_rows; ++i) {
+            if (i % 100 == 99) {
+                continue;
+            }
+            if (predicate(val)) {
+                result.push_back(i);
+            }
+            if (i % 3 == 2) {
+                ++val;
+            }
+        }
+        return result;
+    };
+
+    // --- VisitIsNull ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+        CheckResult(result, null_row_ids);
+    }
+
+    // --- VisitIsNotNull ---
+    {
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+        CheckResult(result, non_null_row_ids);
+    }
+
+    // --- VisitEqual for value 0 ---
+    {
+        Literal lit_0(0);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_0));
+        CheckResult(result, collect_rows([](int32_t v) { return v == 0; }));
+    }
+
+    // --- VisitEqual for a value in the middle ---
+    {
+        Literal lit_100(100);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_100));
+        CheckResult(result, collect_rows([](int32_t v) { return v == 100; }));
+    }
+
+    // --- VisitEqual for non-existent value ---
+    {
+        Literal lit_neg(static_cast<int32_t>(-1));
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(lit_neg));
+        CheckResult(result, {});
+    }
+
+    // --- VisitLessThan for value 5 ---
+    {
+        Literal lit_5(5);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(lit_5));
+        CheckResult(result, collect_rows([](int32_t v) { return v < 5; }));
+    }
+
+    // --- VisitGreaterOrEqual for a high value near max ---
+    {
+        int32_t max_val =
+            static_cast<int32_t>(collect_rows([](int32_t) { return true; }).size()) / 3;
+        int32_t threshold = max_val - 2;
+        Literal lit_threshold(threshold);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(lit_threshold));
+        CheckResult(result, collect_rows([threshold](int32_t v) { return v >= threshold; }));
+    }
+
+    // --- VisitIn for scattered values ---
+    {
+        std::vector<Literal> in_literals = {Literal(0), Literal(500), Literal(10000)};
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+        CheckResult(result,
+                    collect_rows([](int32_t v) { return v == 0 || v == 500 || v == 10000; }));
+    }
+
+    // --- VisitNotEqual for value 0 ---
+    {
+        Literal lit_0(0);
+        ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(lit_0));
+        CheckResult(result, collect_rows([](int32_t v) { return v != 0; }));
+    }
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+
+    // Export a plain int32 type (not struct) as ArrowSchema
+    auto plain_type = arrow::int32();
+    ArrowSchema c_schema;
+    ASSERT_TRUE(arrow::ExportType(*plain_type, &c_schema).ok());
+
+    ASSERT_NOK_WITH_MSG(indexer->CreateWriter("int_field", &c_schema, file_writer, pool_),
+                        "arrow schema must be struct type");
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+
+    // Provide two fake metas
+    GlobalIndexIOMeta meta1("fake_path_1", 100, 10, nullptr);
+    GlobalIndexIOMeta meta2("fake_path_2", 200, 20, nullptr);
+    std::vector<GlobalIndexIOMeta> metas = {meta1, meta2};
+
+    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
+                        "exist multiple metas");
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
+    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
+
+    // Create a schema with two fields
+    auto schema = arrow::schema(
+        {arrow::field("field1", arrow::int32()), arrow::field("field2", arrow::int64())});
+    auto c_schema = std::make_unique<ArrowSchema>();
+    ASSERT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+
+    GlobalIndexIOMeta meta("fake_path", 100, 10, nullptr);
+    std::vector<GlobalIndexIOMeta> metas = {meta};
+
+    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
+                        "supposed to have single field");
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithMissingField) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto type = arrow::struct_({arrow::field("existing_field", arrow::int32())});
+    auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(type);
+    ASSERT_TRUE(struct_type);
+    ASSERT_NOK_WITH_MSG(
+        BTreeGlobalIndexWriter::Create("nonexistent_field", struct_type, file_writer, 4096,
+                                       compression_factory_, pool_),
+        "not in arrow_array when Create BTreeGlobalIndexWriter");
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNullArray) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    std::vector<int64_t> row_ids = {0, 1, 2};
+    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(nullptr, row_ids), "ArrowArray is null");
+}
+
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
+    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
+
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto writer,
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
+
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [1],
+        [2],
+        [3]
+    ])")
                      .ValueOrDie();
 
     ArrowArray c_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
 
-    // Add batch
-    ASSERT_OK(writer->AddBatch(&c_array));
-
-    // Finish writing
-    auto result = writer->Finish();
-    ASSERT_OK(result.status());
-    auto metas = result.value();
-    ASSERT_EQ(metas.size(), 1);
-
-    // Release ArrowArray
-    ArrowArrayRelease(&c_array);
-
-    // Now read back
-    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    std::map<std::string, std::string> options;
-    BTreeGlobalIndexer indexer(options);
-
-    // Create a new ArrowSchema for reading (the original was consumed by the writer)
-    auto c_schema_read = CreateArrowSchema(arrow::utf8(), "string_field");
-
-    // Create reader
-    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
-    ASSERT_OK(reader_result.status());
-    auto reader = reader_result.value();
-
-    // Test VisitEqual for "apple" (should return row IDs 0 and 3)
-    Literal literal_apple(FieldType::STRING, "apple", 5);
-    auto equal_result = reader->VisitEqual(literal_apple);
-    ASSERT_OK(equal_result.status());
-    EXPECT_TRUE(ContainsRowId(equal_result.value(), 0));
-    EXPECT_TRUE(ContainsRowId(equal_result.value(), 3));
-
-    // Release ArrowSchema
-    ArrowSchemaRelease(c_schema.get());
-    ArrowSchemaRelease(c_schema_read.get());
+    // Provide wrong number of row_ids (2 instead of 3)
+    std::vector<int64_t> row_ids = {0, 1};
+    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(&c_array, row_ids),
+                        "row_ids length 2 mismatch arrow_array length 3 when AddBatch");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadWithNulls) {
-    // Create file writer
+TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
 
-    // Create ArrowSchema
-    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create the BTree global index writer
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
-                                                        compression_factory_, pool_, 4096));
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
 
-    // Create an Arrow array with null values
-    // Row IDs: 0->1, 1->null, 2->3, 3->null, 4->5
-    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, null, 3, null, 5]")
+    // Write decreasing keys: 3, 2, 1
+    auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+        [3],
+        [2],
+        [1]
+    ])")
                      .ValueOrDie();
 
     ArrowArray c_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-
-    // Add batch
-    ASSERT_OK(writer->AddBatch(&c_array));
-
-    // Finish writing
-    auto result = writer->Finish();
-    ASSERT_OK(result.status());
-    auto metas = result.value();
-    ASSERT_EQ(metas.size(), 1);
-
-    // Release ArrowArray
-    ArrowArrayRelease(&c_array);
-
-    // Now read back
-    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    std::map<std::string, std::string> options;
-    BTreeGlobalIndexer indexer(options);
-
-    // Create a new ArrowSchema for reading (the original was consumed by the writer)
-    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create reader
-    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
-    ASSERT_OK(reader_result.status());
-    auto reader = reader_result.value();
-
-    // Test VisitIsNull (should return row IDs 1 and 3)
-    auto is_null_result = reader->VisitIsNull();
-    ASSERT_OK(is_null_result.status());
-    EXPECT_TRUE(ContainsRowId(is_null_result.value(), 1));
-    EXPECT_TRUE(ContainsRowId(is_null_result.value(), 3));
-    EXPECT_FALSE(ContainsRowId(is_null_result.value(), 0));
-
-    // Test VisitIsNotNull (should return row IDs 0, 2, 4)
-    auto is_not_null_result = reader->VisitIsNotNull();
-    ASSERT_OK(is_not_null_result.status());
-    EXPECT_TRUE(ContainsRowId(is_not_null_result.value(), 0));
-    EXPECT_TRUE(ContainsRowId(is_not_null_result.value(), 2));
-    EXPECT_TRUE(ContainsRowId(is_not_null_result.value(), 4));
-    EXPECT_FALSE(ContainsRowId(is_not_null_result.value(), 1));
-
-    // Release ArrowSchema
-    ArrowSchemaRelease(c_schema.get());
-    ArrowSchemaRelease(c_schema_read.get());
+    std::vector<int64_t> row_ids = {0, 1, 2};
+    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(&c_array, row_ids),
+                        "Users must keep written keys monotonically incremental");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadRangeQuery) {
-    // Create file writer
+TEST_P(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+    auto field = arrow::field("int_field", arrow::int32());
+    auto c_schema = CreateArrowSchema(field);
 
-    // Create ArrowSchema
-    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create the BTree global index writer
+    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
+                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
     ASSERT_OK_AND_ASSIGN(auto writer,
-                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
-                                                        compression_factory_, pool_, 4096));
+                         indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
+    auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
+    ASSERT_TRUE(btree_writer);
 
-    // Create an Arrow array with int values
-    auto array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 4, 5]").ValueOrDie();
-
-    ArrowArray c_array;
-    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
-
-    // Add batch
-    ASSERT_OK(writer->AddBatch(&c_array));
-
-    // Finish writing
-    auto result = writer->Finish();
-    ASSERT_OK(result.status());
-    auto metas = result.value();
-
-    // Release ArrowArray
-    ArrowArrayRelease(&c_array);
-
-    // Now read back
-    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    std::map<std::string, std::string> options;
-    BTreeGlobalIndexer indexer(options);
-
-    // Create a new ArrowSchema for reading (the original was consumed by the writer)
-    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create reader
-    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
-    ASSERT_OK(reader_result.status());
-    auto reader = reader_result.value();
-
-    // Test VisitLessThan for value 3 (should return row IDs 0, 1)
-    Literal literal_3(static_cast<int32_t>(3));
-    auto lt_result = reader->VisitLessThan(literal_3);
-    ASSERT_OK(lt_result.status());
-    EXPECT_TRUE(ContainsRowId(lt_result.value(), 0));
-    EXPECT_TRUE(ContainsRowId(lt_result.value(), 1));
-    EXPECT_FALSE(ContainsRowId(lt_result.value(), 2));
-
-    // Test VisitGreaterOrEqual for value 3 (should return row IDs 2, 3, 4)
-    auto gte_result = reader->VisitGreaterOrEqual(literal_3);
-    ASSERT_OK(gte_result.status());
-    EXPECT_TRUE(ContainsRowId(gte_result.value(), 2));
-    EXPECT_TRUE(ContainsRowId(gte_result.value(), 3));
-    EXPECT_TRUE(ContainsRowId(gte_result.value(), 4));
-    EXPECT_FALSE(ContainsRowId(gte_result.value(), 1));
-
-    // Release ArrowSchema
-    ArrowSchemaRelease(c_schema.get());
-    ArrowSchemaRelease(c_schema_read.get());
+    // Finish without adding any data
+    ASSERT_NOK_WITH_MSG(writer->Finish(), "Should never write an empty btree index file");
 }
 
-TEST_F(BTreeGlobalIndexIntegrationTest, WriteAndReadInQuery) {
-    // Create file writer
-    auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
+TEST_P(BTreeGlobalIndexIntegrationTest, TestIOException) {
+    bool run_complete = false;
+    auto io_hook = paimon::IOHook::GetInstance();
+    for (size_t i = 0; i < 200; i++) {
+        auto test_dir = UniqueTestDirectory::Create("local");
+        ASSERT_TRUE(test_dir);
+        auto local_fs = test_dir->GetFileSystem();
+        auto local_base = test_dir->Str();
+        paimon::ScopeGuard guard([&io_hook]() { io_hook->Clear(); });
+        io_hook->Reset(i, paimon::IOHook::Mode::RETURN_ERROR);
 
-    // Create ArrowSchema
-    auto c_schema = CreateArrowSchema(arrow::int32(), "int_field");
+        auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(local_fs, local_base);
+        auto field = arrow::field("int_field", arrow::int32());
+        auto c_schema = CreateArrowSchema(field);
 
-    // Create the BTree global index writer
-    ASSERT_OK_AND_ASSIGN(auto writer,
-                         BTreeGlobalIndexWriter::Create("int_field", c_schema.get(), file_writer,
-                                                        compression_factory_, pool_, 4096));
+        std::map<std::string, std::string> options = {
+            {BtreeDefs::kBtreeIndexBlockSize, "128"},
+            {BtreeDefs::kBtreeIndexCompression, GetParam()}};
+        auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
 
-    // Create an Arrow array with int values
-    auto array =
-        arrow::ipc::internal::json::ArrayFromJSON(arrow::int32(), "[1, 2, 3, 4, 5]").ValueOrDie();
+        // write
+        auto writer_result = indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_);
+        CHECK_HOOK_STATUS(writer_result.status(), i);
+        auto writer = std::move(writer_result).value();
+        auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
 
-    ArrowArray c_array;
-    ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+        auto array = arrow::ipc::internal::json::ArrayFromJSON(arrow::struct_({field}), R"([
+            [1], [2], [null], [3], [4], [5]
+        ])")
+                         .ValueOrDie();
+        ArrowArray c_array;
+        ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
+        std::vector<int64_t> row_ids = {0, 1, 2, 3, 4, 5};
 
-    // Add batch
-    ASSERT_OK(writer->AddBatch(&c_array));
+        CHECK_HOOK_STATUS(btree_writer->AddBatch(&c_array, row_ids), i);
+        auto finish_result = writer->Finish();
+        CHECK_HOOK_STATUS(finish_result.status(), i);
+        auto metas = std::move(finish_result).value();
 
-    // Finish writing
-    auto result = writer->Finish();
-    ASSERT_OK(result.status());
-    auto metas = result.value();
+        // read
+        auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(local_fs, local_base);
+        c_schema = CreateArrowSchema(field);
+        auto reader_result = indexer->CreateReader(c_schema.get(), file_reader, metas, pool_);
+        CHECK_HOOK_STATUS(reader_result.status(), i);
+        auto reader = std::move(reader_result).value();
 
-    // Release ArrowArray
-    ArrowArrayRelease(&c_array);
+        auto equal_result = reader->VisitEqual(Literal(3));
+        CHECK_HOOK_STATUS(equal_result.status(), i);
 
-    // Now read back
-    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    std::map<std::string, std::string> options;
-    BTreeGlobalIndexer indexer(options);
+        auto typed_result =
+            std::dynamic_pointer_cast<BitmapGlobalIndexResult>(equal_result.value());
+        ASSERT_TRUE(typed_result);
+        auto bitmap_result = typed_result->GetBitmap();
+        CHECK_HOOK_STATUS(bitmap_result.status(), i);
+        ASSERT_TRUE(bitmap_result.value());
+        ASSERT_EQ(*bitmap_result.value(), RoaringBitmap64::From({3}));
 
-    // Create a new ArrowSchema for reading (the original was consumed by the writer)
-    auto c_schema_read = CreateArrowSchema(arrow::int32(), "int_field");
-
-    // Create reader
-    auto reader_result = indexer.CreateReader(c_schema_read.get(), file_reader, metas, pool_);
-    ASSERT_OK(reader_result.status());
-    auto reader = reader_result.value();
-
-    // Test VisitIn for values 1, 3, 5 (should return row IDs 0, 2, 4)
-    std::vector<Literal> in_literals = {Literal(static_cast<int32_t>(1)),
-                                        Literal(static_cast<int32_t>(3)),
-                                        Literal(static_cast<int32_t>(5))};
-    auto in_result = reader->VisitIn(in_literals);
-    ASSERT_OK(in_result.status());
-    EXPECT_TRUE(ContainsRowId(in_result.value(), 0));
-    EXPECT_TRUE(ContainsRowId(in_result.value(), 2));
-    EXPECT_TRUE(ContainsRowId(in_result.value(), 4));
-    EXPECT_FALSE(ContainsRowId(in_result.value(), 1));
-    EXPECT_FALSE(ContainsRowId(in_result.value(), 3));
-
-    // Release ArrowSchema
-    ArrowSchemaRelease(c_schema.get());
-    ArrowSchemaRelease(c_schema_read.get());
+        run_complete = true;
+        break;
+    }
+    ASSERT_TRUE(run_complete);
 }
+
+INSTANTIATE_TEST_SUITE_P(Compression, BTreeGlobalIndexIntegrationTest,
+                         ::testing::ValuesIn(std::vector<std::string>({"none", "zstd", "lz4"})));
 
 }  // namespace paimon::test

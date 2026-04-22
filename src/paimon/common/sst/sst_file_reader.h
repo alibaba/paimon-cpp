@@ -41,19 +41,17 @@ class PAIMON_EXPORT SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
         const std::shared_ptr<InputStream>& input, const BlockHandle& index_block_handle,
-        const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+        const std::optional<BloomFilterHandle>& bloom_filter_handle,
         MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
         const std::shared_ptr<MemoryPool>& pool);
 
     /// Create an SstFileReader by reading the SortLookupStoreFooter from the given InputStream.
     /// This method encapsulates the common pattern of reading the footer, parsing it, and
     /// creating the reader, which avoids code duplication across callers.
-    static Result<std::shared_ptr<SstFileReader>> CreateFromStream(
+    static Result<std::shared_ptr<SstFileReader>> CreateForSortLookupStore(
         const std::shared_ptr<InputStream>& input, MemorySlice::SliceComparator comparator,
         const std::shared_ptr<CacheManager>& cache_manager,
         const std::shared_ptr<MemoryPool>& pool);
-
-    std::unique_ptr<SstFileIterator> CreateIterator();
 
     /// Create an iterator for the index block.
     std::unique_ptr<BlockIterator> CreateIndexIterator();
@@ -91,20 +89,6 @@ class PAIMON_EXPORT SstFileReader {
     std::shared_ptr<BloomFilter> bloom_filter_;
     std::shared_ptr<BlockReader> index_block_reader_;
     MemorySlice::SliceComparator comparator_;
-};
-
-class PAIMON_EXPORT SstFileIterator {
- public:
-    SstFileIterator(SstFileReader* reader, std::unique_ptr<BlockIterator> index_iterator);
-
-    /// Seek to the position of the record whose key is exactly equal to or greater than the
-    /// specified key.
-    Status SeekTo(const std::shared_ptr<Bytes>& key);
-
- private:
-    SstFileReader* reader_;
-    std::unique_ptr<BlockIterator> index_iterator_;
-    std::unique_ptr<BlockIterator> data_iterator_;
 };
 
 }  // namespace paimon

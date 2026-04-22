@@ -51,7 +51,7 @@ class PAIMON_EXPORT Cache {
 
 class CacheValue {
  public:
-    explicit CacheValue(const MemorySegment& segment, CacheCallback callback)
+    CacheValue(const MemorySegment& segment, CacheCallback callback)
         : segment_(segment), callback_(std::move(callback)) {}
 
     const MemorySegment& GetSegment() const {

@@ -54,7 +54,7 @@ TEST(CommitMessageImplTest, TestToString) {
     auto msg_impl = std::dynamic_pointer_cast<CommitMessageImpl>(commit_messages[0]);
     ASSERT_TRUE(msg_impl);
     std::string expect =
-        "FileCommittable {partition = BinaryRow@9c67b85d, bucket = 0, totalBuckets = null, "
+        "FileCommittable {partition = BinaryRow@0x9c67b85d, bucket = 0, totalBuckets = null, "
         "newFilesIncrement = "
         "DataIncrement {newFiles = data-64d93fc3-eaf2-4253-9cff-a9faa701e207-0.orc, deletedFiles = "
         ", changelogFiles = , newIndexFiles = , deletedIndexFiles = }, compactIncrement = "
