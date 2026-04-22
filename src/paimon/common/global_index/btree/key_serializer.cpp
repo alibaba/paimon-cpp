@@ -24,6 +24,7 @@
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
+#include "paimon/status.h"
 namespace paimon {
 Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
     const Literal& literal, const std::shared_ptr<arrow::DataType>& type, MemoryPool* pool) {
@@ -91,7 +92,7 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
         case FieldType::TIMESTAMP: {
             auto ts_type = std::dynamic_pointer_cast<arrow::TimestampType>(type);
             PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
-                ts_type, "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
+                ts_type, "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex"));
             MemorySliceOutput output(8, pool);
             output.Reset();
             auto ts = literal.GetValue<Timestamp>();
