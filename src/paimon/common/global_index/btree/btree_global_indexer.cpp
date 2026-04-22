@@ -31,19 +31,12 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/options_utils.h"
+#include "paimon/common/utils/preconditions.h"
 #include "paimon/core/options/compress_options.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/roaring_bitmap64.h"
-
 namespace paimon {
-#define CHECK_NOT_NULL(pointer, error_msg)     \
-    do {                                       \
-        if (!(pointer)) {                      \
-            return Status::Invalid(error_msg); \
-        }                                      \
-    } while (0)
-
 Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
     const std::string& field_name, ::ArrowSchema* arrow_schema,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
@@ -52,8 +45,8 @@ Result<std::shared_ptr<GlobalIndexWriter>> BTreeGlobalIndexer::CreateWriter(
                                       arrow::ImportType(arrow_schema));
     // check data type
     auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(arrow_type);
-    CHECK_NOT_NULL(struct_type,
-                   "arrow schema must be struct type when create BTreeGlobalIndexWriter");
+    PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+        struct_type, "arrow schema must be struct type when create BTreeGlobalIndexWriter"));
 
     // parse options
     PAIMON_ASSIGN_OR_RAISE(

@@ -34,6 +34,10 @@ class PAIMON_EXPORT BlockCache {
                const std::shared_ptr<MemoryPool>& pool)
         : pool_(pool), file_path_(file_path), in_(in), cache_manager_(cache_manager) {}
 
+    ~BlockCache() {
+        Close();
+    }
+
     Result<MemorySegment> GetBlock(
         int64_t position, int32_t length, bool is_index,
         std::function<Result<MemorySegment>(const MemorySegment&)> decompress_func) {

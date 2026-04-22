@@ -91,7 +91,8 @@ class BTreeGlobalIndexIntegrationTest : public ::testing::Test,
     void TearDown() override {}
 
     // Helper to create ArrowSchema from arrow type
-    std::unique_ptr<ArrowSchema> CreateArrowSchema(const std::shared_ptr<arrow::Field>& field) {
+    std::unique_ptr<ArrowSchema> CreateArrowSchema(
+        const std::shared_ptr<arrow::Field>& field) const {
         auto schema = arrow::schema({field});
         auto c_schema = std::make_unique<ArrowSchema>();
         EXPECT_TRUE(arrow::ExportSchema(*schema, c_schema.get()).ok());

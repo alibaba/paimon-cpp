@@ -21,16 +21,10 @@
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/common/utils/preconditions.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 namespace paimon {
-#define CHECK_NOT_NULL(pointer, error_msg)     \
-    do {                                       \
-        if (!(pointer)) {                      \
-            return Status::Invalid(error_msg); \
-        }                                      \
-    } while (0)
-
 Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
     const Literal& literal, const std::shared_ptr<arrow::DataType>& type, MemoryPool* pool) {
     if (literal.IsNull()) {
@@ -96,8 +90,8 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
         }
         case FieldType::TIMESTAMP: {
             auto ts_type = std::dynamic_pointer_cast<arrow::TimestampType>(type);
-            CHECK_NOT_NULL(ts_type,
-                           "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
+            PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+                ts_type, "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
             MemorySliceOutput output(8, pool);
             output.Reset();
             auto ts = literal.GetValue<Timestamp>();
@@ -111,8 +105,9 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
         }
         case FieldType::DECIMAL: {
             auto decimal_type = std::dynamic_pointer_cast<arrow::Decimal128Type>(type);
-            CHECK_NOT_NULL(decimal_type,
-                           "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex");
+            PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+                decimal_type,
+                "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex"));
 
             auto decimal = literal.GetValue<Decimal>();
             if (Decimal::IsCompact(decimal_type->precision())) {
@@ -168,8 +163,8 @@ Result<Literal> KeySerializer::DeserializeKey(const MemorySlice& slice,
         }
         case arrow::Type::type::TIMESTAMP: {
             auto ts_type = std::dynamic_pointer_cast<arrow::TimestampType>(type);
-            CHECK_NOT_NULL(ts_type,
-                           "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex");
+            PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+                ts_type, "ts type cannot cast to arrow::TimestampType in BTreeGlobalIndex"));
             if (Timestamp::IsCompact(DateTimeUtils::GetPrecisionFromType(ts_type))) {
                 return Literal(Timestamp::FromEpochMillis(slice.ReadLong(0)));
             } else {
@@ -181,8 +176,9 @@ Result<Literal> KeySerializer::DeserializeKey(const MemorySlice& slice,
         }
         case arrow::Type::type::DECIMAL128: {
             auto decimal_type = std::dynamic_pointer_cast<arrow::Decimal128Type>(type);
-            CHECK_NOT_NULL(decimal_type,
-                           "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex");
+            PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+                decimal_type,
+                "decimal type cannot cast to arrow::Decimal128Type in BTreeGlobalIndex"));
             if (Decimal::IsCompact(decimal_type->precision())) {
                 return Literal(Decimal::FromUnscaledLong(
                     slice.ReadLong(0), decimal_type->precision(), decimal_type->scale()));

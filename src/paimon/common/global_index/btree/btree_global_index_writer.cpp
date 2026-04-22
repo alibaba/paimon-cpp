@@ -27,24 +27,18 @@
 #include "paimon/common/predicate/literal_converter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/crc32c.h"
+#include "paimon/common/utils/preconditions.h"
 #include "paimon/memory/bytes.h"
 namespace paimon {
-#define CHECK_NOT_NULL(pointer, error_msg)     \
-    do {                                       \
-        if (!(pointer)) {                      \
-            return Status::Invalid(error_msg); \
-        }                                      \
-    } while (0)
-
 Result<std::shared_ptr<BTreeGlobalIndexWriter>> BTreeGlobalIndexWriter::Create(
     const std::string& field_name, const std::shared_ptr<arrow::StructType>& arrow_type,
     const std::shared_ptr<GlobalIndexFileWriter>& file_writer, int32_t block_size,
     const std::shared_ptr<paimon::BlockCompressionFactory>& compression_factory,
     const std::shared_ptr<MemoryPool>& pool) {
     auto key_field = arrow_type->GetFieldByName(field_name);
-    CHECK_NOT_NULL(
+    PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
         key_field,
-        fmt::format("field {} not in arrow_array when Create BTreeGlobalIndexWriter", field_name));
+        fmt::format("field {} not in arrow_array when Create BTreeGlobalIndexWriter", field_name)));
     PAIMON_ASSIGN_OR_RAISE(std::string index_file_name,
                            file_writer->NewFileName(BtreeDefs::kIdentifier));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<OutputStream> output_stream,
@@ -85,13 +79,13 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
                         row_ids.size(), array->length()));
     }
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
-    CHECK_NOT_NULL(struct_array,
-                   "arrow array must be struct array when AddBatch to BTreeGlobalIndexWriter");
+    PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
+        struct_array, "arrow array must be struct array when AddBatch to BTreeGlobalIndexWriter"));
     auto value_array = struct_array->GetFieldByName(field_name_);
-    CHECK_NOT_NULL(
+    PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
         value_array,
         fmt::format("field {} not in arrow_array when AddBatch to BTreeGlobalIndexWriter",
-                    field_name_));
+                    field_name_)));
 
     // Process each element in the array
     PAIMON_ASSIGN_OR_RAISE(std::vector<Literal> literals,

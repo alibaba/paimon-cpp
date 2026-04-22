@@ -47,7 +47,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         data_dir_ = GetDataDir() + "/global_index/btree/btree_compatibility_data";
     }
 
-    std::string ReadFileAsString(const std::string& path) {
+    std::string ReadFileAsString(const std::string& path) const {
         EXPECT_OK_AND_ASSIGN(auto input, fs_->Open(path));
         EXPECT_OK_AND_ASSIGN(auto length, input->Length());
         std::string buffer(static_cast<size_t>(length), '\0');
@@ -57,7 +57,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
     }
 
     // Parse a CSV file into a vector of CsvRecord
-    std::vector<CsvRecord> ParseCsvFile(const std::string& csv_path) {
+    std::vector<CsvRecord> ParseCsvFile(const std::string& csv_path) const {
         std::vector<CsvRecord> records;
         std::string content = ReadFileAsString(csv_path);
         if (content.empty()) {
@@ -88,7 +88,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         return records;
     }
 
-    std::set<int64_t> CollectRowIds(const std::shared_ptr<GlobalIndexResult>& result) {
+    std::set<int64_t> CollectRowIds(const std::shared_ptr<GlobalIndexResult>& result) const {
         std::set<int64_t> ids;
         EXPECT_OK_AND_ASSIGN(auto iter, result->CreateIterator());
         while (iter->HasNext()) {
@@ -98,7 +98,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
     }
 
     std::set<int64_t> CollectMatchingRows(const std::vector<CsvRecord>& records,
-                                          std::function<bool(const CsvRecord&)> predicate) {
+                                          std::function<bool(const CsvRecord&)> predicate) const {
         std::set<int64_t> ids;
         for (const auto& rec : records) {
             if (predicate(rec)) {
@@ -110,7 +110,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
 
     Result<std::shared_ptr<GlobalIndexReader>> CreateReaderFromFiles(
         const std::string& bin_path, const std::string& meta_path,
-        const std::shared_ptr<arrow::DataType>& arrow_type, int64_t record_count) {
+        const std::shared_ptr<arrow::DataType>& arrow_type, int64_t record_count) const {
         auto meta_str = ReadFileAsString(meta_path);
         std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
@@ -130,7 +130,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
     }
 
     void RunIntQueries(const std::shared_ptr<GlobalIndexReader>& reader,
-                       const std::vector<CsvRecord>& records) {
+                       const std::vector<CsvRecord>& records) const {
         // VisitIsNull
         {
             ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
@@ -265,7 +265,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
 
     // Run string-type queries against a reader with CSV records as ground truth
     void RunStringQueries(const std::shared_ptr<GlobalIndexReader>& reader,
-                          const std::vector<CsvRecord>& records) {
+                          const std::vector<CsvRecord>& records) const {
         // VisitIsNull
         {
             ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
