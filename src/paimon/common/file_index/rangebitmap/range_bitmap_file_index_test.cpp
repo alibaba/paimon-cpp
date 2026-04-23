@@ -151,7 +151,7 @@ Result<std::shared_ptr<RangeBitmapFileIndexReader>> RangeBitmapFileIndexTest::Cr
 
 // Test with all NULL values
 TEST_F(RangeBitmapFileIndexTest, TestAllNullValues) {
-    constexpr int num_rows = 10;
+    constexpr int32_t num_rows = 10;
     std::vector<int32_t> test_data(num_rows, 0);  // placeholders, all will be NULL
     std::set<int32_t> null_indices;
     for (int32_t i = 0; i < num_rows; ++i) {
@@ -578,6 +578,65 @@ TEST_F(RangeBitmapFileIndexTest, TestWriteAndReadRangeBitmapIndexDate) {
     std::vector<int32_t> all_positions = {0, 1, 2, 3, 4, 5, 6};
     ASSERT_OK_AND_ASSIGN(auto is_not_null_result, reader->VisitIsNotNull());
     CheckResult(is_not_null_result, all_positions);
+}
+
+TEST_F(RangeBitmapFileIndexTest, TestRangeBitmapEdgeCases) {
+    // Scope 1: All values identical
+    {
+        std::vector<int32_t> same_values = {42, 42, 42, 42, 42};
+        const auto& arrow_type = arrow::int32();
+        PAIMON_UNIQUE_PTR<Bytes> serialized_bytes;
+        ASSERT_OK_AND_ASSIGN(auto reader, (CreateReaderForTest<arrow::Int32Builder, int32_t>(
+                                              arrow_type, same_values, &serialized_bytes)));
+
+        ASSERT_OK_AND_ASSIGN(auto eq_42_result,
+                             reader->VisitEqual(Literal(static_cast<int32_t>(42))));
+        CheckResult(eq_42_result, {0, 1, 2, 3, 4});
+
+        ASSERT_OK_AND_ASSIGN(auto lt_100_result,
+                             reader->VisitLessThan(Literal(static_cast<int32_t>(100))));
+        CheckResult(lt_100_result, {0, 1, 2, 3, 4});
+
+        ASSERT_OK_AND_ASSIGN(auto gt_10_result,
+                             reader->VisitGreaterThan(Literal(static_cast<int32_t>(10))));
+        CheckResult(gt_10_result, {0, 1, 2, 3, 4});
+
+        ASSERT_OK_AND_ASSIGN(auto gt_42_result,
+                             reader->VisitGreaterThan(Literal(static_cast<int32_t>(42))));
+        CheckResult(gt_42_result, {});
+
+        ASSERT_OK_AND_ASSIGN(auto gt_100_result,
+                             reader->VisitGreaterThan(Literal(static_cast<int32_t>(100))));
+        CheckResult(gt_100_result, {});
+
+        ASSERT_OK_AND_ASSIGN(auto neq_42_result,
+                             reader->VisitNotEqual(Literal(static_cast<int32_t>(42))));
+        CheckResult(neq_42_result, {});
+    }
+
+    // Scope 2: Empty data (cardinality == 0)
+    {
+        std::vector<int32_t> empty_data;
+        const auto& arrow_type = arrow::int32();
+        PAIMON_UNIQUE_PTR<Bytes> serialized_bytes;
+        ASSERT_OK_AND_ASSIGN(auto reader, (CreateReaderForTest<arrow::Int32Builder, int32_t>(
+                                              arrow_type, empty_data, &serialized_bytes)));
+
+        // Neq with cardinality <= 0
+        ASSERT_OK_AND_ASSIGN(auto neq_result,
+                             reader->VisitNotEqual(Literal(static_cast<int32_t>(1))));
+        CheckResult(neq_result, {});
+
+        // In with cardinality <= 0
+        std::vector<Literal> in_values = {Literal(static_cast<int32_t>(1)),
+                                          Literal(static_cast<int32_t>(2))};
+        ASSERT_OK_AND_ASSIGN(auto in_result, reader->VisitIn(in_values));
+        CheckResult(in_result, {});
+
+        // NotIn with cardinality <= 0
+        ASSERT_OK_AND_ASSIGN(auto not_in_result, reader->VisitNotIn(in_values));
+        CheckResult(not_in_result, {});
+    }
 }
 
 }  // namespace paimon::test

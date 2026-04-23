@@ -16,12 +16,17 @@
 
 #include "paimon/common/file_index/bitmap/bitmap_file_index_meta.h"
 
+#include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "paimon/common/file_index/bitmap/bitmap_file_index.h"
 #include "paimon/common/file_index/bitmap/bitmap_file_index_meta_v1.h"
 #include "paimon/common/file_index/bitmap/bitmap_file_index_meta_v2.h"
+#include "paimon/common/io/memory_segment_output_stream.h"
+#include "paimon/common/memory/memory_segment_utils.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/io/byte_array_input_stream.h"
@@ -108,6 +113,72 @@ TEST(BitmapFileIndexMetaTest, TestInvalidType) {
     BitmapFileIndexMetaV2 index_meta(FieldType::DECIMAL, index_bytes.size(), GetDefaultPool());
     ASSERT_NOK_WITH_MSG(index_meta.Deserialize(input_stream),
                         "not support field type DECIMAL in BitmapIndex");
+}
+
+// Test that when block_size is set small enough, entries overflow a single block and new blocks
+// are created during serialization.
+TEST(BitmapFileIndexMetaTest, TestSmallBlockSizeForcesMultipleBlocks) {
+    auto pool = GetDefaultPool();
+
+    int32_t entry_count = 5;
+    int32_t row_count = 100;
+
+    std::vector<BitmapFileIndexMeta::Entry> write_entries;
+    write_entries.reserve(entry_count);
+    for (int32_t i = 0; i < entry_count; i++) {
+        Literal key(FieldType::INT, i);
+        write_entries.emplace_back(key, /*offset=*/i * 10, /*length=*/10);
+    }
+
+    // Set a very small block size to force block overflow
+    std::map<std::string, std::string> options;
+    options[BitmapFileIndex::INDEX_BLOCK_SIZE] = "20";
+
+    BitmapFileIndexMeta::Entry null_entry(Literal(FieldType::INT), /*offset=*/0, /*length=*/5);
+
+    BitmapFileIndexMetaV2 write_meta(FieldType::INT, row_count, /*has_null_value=*/true, null_entry,
+                                     std::move(write_entries), options, pool);
+
+    // Serialize
+    auto output_stream = std::make_shared<MemorySegmentOutputStream>(/*segment_size=*/1024, pool);
+    ASSERT_OK(write_meta.Serialize(output_stream));
+
+    // Copy serialized data to a byte buffer
+    auto serialized_bytes = MemorySegmentUtils::CopyToBytes(
+        output_stream->Segments(), 0, output_stream->CurrentSize(), pool.get());
+    ASSERT_TRUE(serialized_bytes != nullptr);
+
+    // Deserialize from the serialized bytes
+    auto input_stream =
+        std::make_shared<ByteArrayInputStream>(serialized_bytes->data(), serialized_bytes->size());
+    BitmapFileIndexMetaV2 read_meta(FieldType::INT, serialized_bytes->size(), pool);
+    ASSERT_OK(read_meta.Deserialize(input_stream));
+
+    ASSERT_EQ(read_meta.GetRowCount(), row_count);
+
+    // Verify null entry lookup
+    Literal null_literal(FieldType::INT);
+    ASSERT_OK_AND_ASSIGN(const BitmapFileIndexMeta::Entry* found_null,
+                         read_meta.FindEntry(null_literal));
+    ASSERT_TRUE(found_null != nullptr);
+    ASSERT_EQ(found_null->offset, 0);
+    ASSERT_EQ(found_null->length, 5);
+
+    // Verify all non-null entries can be found with correct offset/length
+    for (int32_t i = 0; i < entry_count; i++) {
+        Literal key(FieldType::INT, i);
+        ASSERT_OK_AND_ASSIGN(const BitmapFileIndexMeta::Entry* found_entry,
+                             read_meta.FindEntry(key));
+        ASSERT_TRUE(found_entry != nullptr);
+        ASSERT_EQ(found_entry->offset, i * 10);
+        ASSERT_EQ(found_entry->length, 10);
+    }
+
+    // Verify non-existent key returns nullptr
+    Literal missing_key(FieldType::INT, 999);
+    ASSERT_OK_AND_ASSIGN(const BitmapFileIndexMeta::Entry* missing_entry,
+                         read_meta.FindEntry(missing_key));
+    ASSERT_FALSE(missing_entry);
 }
 
 }  // namespace paimon::test

@@ -31,7 +31,7 @@ class CacheValue;
 /// Callback invoked when a cache entry is evicted by the LRU policy.
 using CacheCallback = std::function<void(const std::shared_ptr<CacheKey>&)>;
 
-class Cache {
+class PAIMON_EXPORT Cache {
  public:
     virtual ~Cache() = default;
     virtual Result<std::shared_ptr<CacheValue>> Get(

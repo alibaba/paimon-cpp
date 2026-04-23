@@ -79,6 +79,7 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
     const std::shared_ptr<MemoryPool>& pool) {
     ReadContextBuilder read_context_builder(table_path);
     read_context_builder.SetOptions(core_options.ToMap())
+        .WithFileSystem(core_options.GetFileSystem())
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
         .SetReadSchema({field_name});

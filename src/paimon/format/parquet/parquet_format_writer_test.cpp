@@ -225,6 +225,40 @@ TEST_F(ParquetFormatWriterTest, TestWriteWithVariousBatchSize) {
     }
 }
 
+TEST_F(ParquetFormatWriterTest, TestWriteWithV1Version) {
+    auto schema_pair = PrepareArrowSchema();
+    const auto& arrow_schema = schema_pair.first;
+    const auto& struct_type = schema_pair.second;
+    std::map<std::string, std::string> options;
+    auto record_batch_size = 10;
+    auto batch_capacity = 5;
+    std::string file_name = "test.parquet";
+    std::string file_path = PathUtil::JoinPath(dir_->Str(), file_name);
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<OutputStream> out,
+                         fs_->Create(file_path, /*overwrite=*/false));
+    ::parquet::WriterProperties::Builder builder;
+    builder.write_batch_size(batch_capacity);
+    builder.version(::parquet::ParquetVersion::type::PARQUET_1_0);
+    auto writer_properties = builder.build();
+    ASSERT_OK_AND_ASSIGN(
+        auto format_writer,
+        ParquetFormatWriter::Create(out, arrow_schema, writer_properties,
+                                    DEFAULT_PARQUET_WRITER_MAX_MEMORY_USE, arrow_pool_));
+    auto array = PrepareArray(struct_type, record_batch_size);
+    auto arrow_array = std::make_unique<ArrowArray>();
+    ASSERT_TRUE(arrow::ExportArray(*array, arrow_array.get()).ok());
+
+    auto batch = std::make_shared<RecordBatch>(
+        /*partition=*/std::map<std::string, std::string>(), /*bucket=*/-1,
+        /*row_kinds=*/std::vector<RecordBatch::RowKind>(), arrow_array.get());
+    ASSERT_OK(format_writer->AddBatch(batch->GetData()));
+    ASSERT_OK(format_writer->Flush());
+    ASSERT_OK(format_writer->Finish());
+    ASSERT_OK(out->Flush());
+    ASSERT_OK(out->Close());
+    CheckResult(file_path, record_batch_size, /*row_group_count=*/1);
+}
+
 TEST_F(ParquetFormatWriterTest, TestWriteMultipleTimes) {
     // arrow array length = 6 + 10 + 15 + 6 = 37
     // parquet batch capacity = 10

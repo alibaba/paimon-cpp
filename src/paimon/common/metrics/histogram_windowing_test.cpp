@@ -99,7 +99,7 @@ TEST(HistogramWindowingImplTest, TestMinNumPerWindow100Case) {
                              /*min_num_per_window=*/100);
 
     // Fill current window but keep it below min_num.
-    for (int i = 0; i < 99; ++i) {
+    for (int32_t i = 0; i < 99; ++i) {
         h.Add(1);
     }
 

@@ -54,13 +54,13 @@ TEST(HistogramImplTest, TestLargeDatasetExactMoments) {
     std::mt19937 rng(12345);
     std::uniform_int_distribution<int> dist(-100, 5000);
 
-    const int n = 20000;
+    const int32_t n = 20000;
     double sum = 0;
     double sum_squares = 0;
     double minv = std::numeric_limits<double>::infinity();
     double maxv = -std::numeric_limits<double>::infinity();
 
-    for (int i = 0; i < n; ++i) {
+    for (int32_t i = 0; i < n; ++i) {
         const auto v = static_cast<double>(dist(rng));
         h.Add(v);
         sum += v;
@@ -95,11 +95,11 @@ TEST(HistogramImplTest, TestLargeDatasetExactMoments) {
 TEST(HistogramImplTest, TestMergeMatchesSingleHistogram) {
     std::mt19937 rng(7);
     std::uniform_int_distribution<int> dist(0, 100000);
-    const int n = 50000;
+    const int32_t n = 50000;
 
     std::vector<double> values;
     values.reserve(n);
-    for (int i = 0; i < n; ++i) {
+    for (int32_t i = 0; i < n; ++i) {
         values.push_back(static_cast<double>(dist(rng)));
     }
 
@@ -107,7 +107,7 @@ TEST(HistogramImplTest, TestMergeMatchesSingleHistogram) {
     HistogramImpl right;
     HistogramImpl all;
 
-    for (int i = 0; i < n; ++i) {
+    for (int32_t i = 0; i < n; ++i) {
         all.Add(values[i]);
         if (i % 2 == 0) {
             left.Add(values[i]);

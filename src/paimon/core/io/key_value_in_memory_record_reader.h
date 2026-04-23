@@ -25,10 +25,10 @@
 #include "arrow/array/array_nested.h"
 #include "arrow/array/array_primitive.h"
 #include "paimon/common/metrics/metrics_impl.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/key_value.h"
 #include "paimon/core/mergetree/compact/merge_function_wrapper.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 

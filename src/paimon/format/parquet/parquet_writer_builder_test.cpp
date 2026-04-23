@@ -82,11 +82,13 @@ TEST(ParquetWriterBuilderTest, PrepareWriterPropertiesWithZstdLevelPriority) {
         std::map<std::string, std::string> options;
         options[Options::FILE_COMPRESSION_ZSTD_LEVEL] = "4";
         options[PARQUET_COMPRESSION_CODEC_ZSTD_LEVEL] = "3";
+        options[PARQUET_WRITER_VERSION] = "PARQUET_1_0";
         options[Options::FILE_FORMAT] = "parquet";
         options[Options::MANIFEST_FORMAT] = "parquet";
         ParquetWriterBuilder builder(schema, /*batch_size=*/1024 * 1024, options);
         ASSERT_OK_AND_ASSIGN(auto properties, builder.PrepareWriterProperties("zstd"));
         ASSERT_EQ(3, properties->default_column_properties().compression_level());
+        ASSERT_EQ(::parquet::ParquetVersion::PARQUET_1_0, properties->version());
     }
     {
         std::map<std::string, std::string> options;

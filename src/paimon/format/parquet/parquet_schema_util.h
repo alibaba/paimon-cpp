@@ -49,7 +49,7 @@ namespace paimon::parquet {
 
 ::arrow::Result<std::shared_ptr<::arrow::DataType>> GetArrowType(
     ::parquet::Type::type physical_type, const ::parquet::LogicalType& logical_type,
-    int type_length, ::arrow::TimeUnit::type int96_arrow_time_unit = ::arrow::TimeUnit::NANO);
+    int32_t type_length, ::arrow::TimeUnit::type int96_arrow_time_unit = ::arrow::TimeUnit::NANO);
 
 ::arrow::Result<std::shared_ptr<::arrow::DataType>> GetArrowType(
     const ::parquet::schema::PrimitiveNode& primitive,

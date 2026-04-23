@@ -16,23 +16,24 @@
 
 #pragma once
 
-#include <cstdint>
+#include <map>
 #include <memory>
 #include <string>
 
-#include "paimon/result.h"
-#include "paimon/visibility.h"
+#include "paimon/global_index/global_indexer_factory.h"
 
 namespace paimon {
-/// The facade for the provided disk I/O services.
-class PAIMON_EXPORT IOManager {
+/// Factory for creating btree global indexers.
+class BTreeGlobalIndexerFactory : public GlobalIndexerFactory {
  public:
-    virtual ~IOManager() = default;
-    static std::unique_ptr<IOManager> Create(const std::string& tmp_dir);
+    static const char IDENTIFIER[];
 
-    /// @return Temp directory path.
-    virtual const std::string& GetTempDir() const = 0;
+    const char* Identifier() const override {
+        return IDENTIFIER;
+    }
 
-    virtual Result<std::string> GenerateTempFilePath(const std::string& prefix) const = 0;
+    Result<std::unique_ptr<GlobalIndexer>> Create(
+        const std::map<std::string, std::string>& options) const override;
 };
+
 }  // namespace paimon

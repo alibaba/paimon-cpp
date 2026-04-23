@@ -25,6 +25,7 @@
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/catalog/catalog.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/core/compact/noop_compact_manager.h"
 #include "paimon/core/core_options.h"
@@ -36,7 +37,6 @@
 #include "paimon/core/mergetree/lookup/positioned_key_value.h"
 #include "paimon/core/mergetree/merge_tree_writer.h"
 #include "paimon/core/schema/schema_manager.h"
-#include "paimon/core/utils/fields_comparator.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/record_batch.h"
 #include "paimon/testing/utils/binary_row_generator.h"
@@ -145,7 +145,7 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
-        auto io_manager = IOManager::Create(tmp_dir_->Str());
+        auto io_manager = std::make_shared<IOManager>(tmp_dir_->Str(), tmp_dir_->GetFileSystem());
         auto processor_factory =
             std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();

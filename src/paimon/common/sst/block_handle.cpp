@@ -45,10 +45,10 @@ std::string BlockHandle::ToString() const {
            "}";
 }
 
-MemorySlice BlockHandle::WriteBlockHandle(MemoryPool* pool) {
+Result<MemorySlice> BlockHandle::WriteBlockHandle(MemoryPool* pool) {
     MemorySliceOutput output(MAX_ENCODED_LENGTH, pool);
-    output.WriteVarLenLong(offset_);
-    output.WriteVarLenInt(size_);
+    PAIMON_RETURN_NOT_OK(output.WriteVarLenLong(offset_));
+    PAIMON_RETURN_NOT_OK(output.WriteVarLenInt(size_));
     return output.ToSlice();
 }
 }  // namespace paimon

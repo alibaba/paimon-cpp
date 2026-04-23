@@ -462,10 +462,10 @@ TEST_F(LuminaGlobalIndexTest, TestHighCardinalityAndMultiThreadSearch) {
     };
 
     std::vector<std::thread> threads;
-    for (int i = 0; i < 5; ++i) {
+    for (int32_t i = 0; i < 5; ++i) {
         threads.emplace_back(search);
     }
-    for (int i = 0; i < 5; ++i) {
+    for (int32_t i = 0; i < 5; ++i) {
         threads.emplace_back(search_with_filter);
     }
 

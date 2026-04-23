@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/disk/io_manager.h"
+#include "paimon/core/disk/io_manager.h"
 
 #include <memory>
 #include <string>
@@ -29,7 +29,7 @@ namespace paimon::test {
 TEST(IOManagerTest, CreateShouldReturnManagerWithGivenTempDir) {
     auto tmp_dir = UniqueTestDirectory::Create();
 
-    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
+    auto manager = std::make_unique<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
     ASSERT_NE(manager, nullptr);
     ASSERT_EQ(manager->GetTempDir(), tmp_dir->Str());
 }
@@ -38,7 +38,7 @@ TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
     auto tmp_dir = UniqueTestDirectory::Create();
     const std::string prefix = "spill";
 
-    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
+    auto manager = std::make_unique<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
     ASSERT_OK_AND_ASSIGN(std::string temp_path, manager->GenerateTempFilePath(prefix));
 
     std::string expected_prefix = PathUtil::JoinPath(tmp_dir->Str(), "");
@@ -55,12 +55,53 @@ TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
 
 TEST(IOManagerTest, GenerateTempFilePathShouldBeDifferentAcrossCalls) {
     auto tmp_dir = UniqueTestDirectory::Create();
-    std::unique_ptr<IOManager> manager = IOManager::Create(tmp_dir->Str());
+    auto manager = std::make_unique<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
 
     ASSERT_OK_AND_ASSIGN(std::string path1, manager->GenerateTempFilePath("spill"));
     ASSERT_OK_AND_ASSIGN(std::string path2, manager->GenerateTempFilePath("spill"));
 
     ASSERT_NE(path1, path2);
+}
+
+TEST(IOManagerTest, CreateChannelShouldReturnValidAndUniquePaths) {
+    auto tmp_dir = UniqueTestDirectory::Create();
+    auto manager = std::make_shared<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
+    const std::string prefix = "spill";
+
+    ASSERT_OK_AND_ASSIGN(auto channel1, manager->CreateChannel());
+    ASSERT_TRUE(StringUtils::StartsWith(channel1.GetPath(), tmp_dir->Str() + "/paimon-io-"));
+    ASSERT_TRUE(StringUtils::EndsWith(channel1.GetPath(), ".channel"));
+    ASSERT_EQ(PathUtil::GetName(channel1.GetPath()).size(), 32 + std::string(".channel").size());
+
+    ASSERT_OK_AND_ASSIGN(auto channel2, manager->CreateChannel(prefix));
+    ASSERT_TRUE(StringUtils::StartsWith(PathUtil::GetName(channel2.GetPath()), prefix + "-"));
+}
+
+TEST(IOManagerTest, CreateChannelEnumeratorShouldReturnSequentialAndUniquePaths) {
+    auto tmp_dir = UniqueTestDirectory::Create();
+    auto manager = std::make_shared<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
+
+    ASSERT_OK_AND_ASSIGN(auto enumerator, manager->CreateChannelEnumerator());
+
+    for (int i = 0; i < 10; ++i) {
+        auto channel_id = enumerator->Next();
+        ASSERT_TRUE(StringUtils::StartsWith(channel_id.GetPath(), tmp_dir->Str() + "/paimon-io-"));
+        std::string counter_str = std::to_string(i);
+        std::string padded_counter = std::string(6 - counter_str.size(), '0') + counter_str;
+        ASSERT_TRUE(StringUtils::EndsWith(channel_id.GetPath(), "." + padded_counter + ".channel"));
+    }
+}
+
+TEST(IOManagerTest, GetSpillDirShouldReturnPaimonIoSubdirectory) {
+    auto tmp_dir = UniqueTestDirectory::Create();
+    auto manager = std::make_shared<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
+
+    ASSERT_OK_AND_ASSIGN(std::string spill_dir, manager->GetSpillDir());
+    ASSERT_TRUE(StringUtils::StartsWith(spill_dir, tmp_dir->Str() + "/paimon-io-"));
+    ASSERT_FALSE(StringUtils::EndsWith(spill_dir, "/"));
+
+    ASSERT_OK_AND_ASSIGN(auto channel, manager->CreateChannel());
+    ASSERT_TRUE(StringUtils::StartsWith(channel.GetPath(), spill_dir + "/"));
 }
 
 }  // namespace paimon::test

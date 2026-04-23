@@ -18,6 +18,7 @@
 
 #include <cstdint>
 
+#include "fmt/format.h"
 #include "paimon/common/data/binary_data_read_utils.h"
 #include "paimon/common/memory/memory_segment.h"
 #include "paimon/common/memory/memory_segment_utils.h"
@@ -298,6 +299,10 @@ int32_t BinaryRow::HashCode() const {
         return 0;
     }
     return MemorySegmentUtils::HashByWords({segment_}, offset_, size_in_bytes_, nullptr);
+}
+
+std::string BinaryRow::ToString() const {
+    return fmt::format("BinaryRow@{:#x}", static_cast<uint32_t>(HashCode()));
 }
 
 }  // namespace paimon

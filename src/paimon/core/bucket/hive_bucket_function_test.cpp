@@ -43,7 +43,7 @@ class HiveBucketFunctionTest : public ::testing::Test {
         writer.WriteInt(0, int_val);
 
         // Field 1: STRING
-        writer.WriteStringView(1, std::string_view(str_val));
+        writer.WriteStringView(1, std::string_view{str_val});
 
         // Field 2: BINARY
         writer.WriteStringView(2, std::string_view(binary_val.data(), binary_val.size()));

@@ -68,7 +68,7 @@ class BucketedAppendCompactManagerTest : public testing::Test {
                    bool expected_present,
                    const std::vector<std::shared_ptr<DataFileMeta>>& expected_compact_before,
                    const std::vector<std::shared_ptr<DataFileMeta>>& to_compact_after_pick) {
-        int min_file_num = 4;
+        int32_t min_file_num = 4;
         int64_t target_file_size = 1024;
         int64_t threshold = target_file_size / 10 * 7;
         BucketedAppendCompactManager manager(

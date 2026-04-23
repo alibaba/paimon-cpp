@@ -65,7 +65,7 @@ Result<std::unique_ptr<TableSchema>> TableSchema::Create(
         data_fields.push_back(data_field);
     }
     return InitSchema(schema_id, data_fields, field_id - 1, partition_keys, primary_keys, options,
-                      DateTimeUtils::GetCurrentUTCTimeUs() / 1000);
+                      /*comment=*/std::nullopt, DateTimeUtils::GetCurrentUTCTimeUs() / 1000);
 }
 
 Result<std::shared_ptr<arrow::KeyValueMetadata>> TableSchema::MakeMetaDataWithFieldId(
@@ -142,19 +142,20 @@ rapidjson::Value TableSchema::ToJson(rapidjson::Document::AllocatorType* allocat
                   RapidJsonUtil::SerializeValue(primary_keys_, allocator).Move(), *allocator);
     obj.AddMember(rapidjson::StringRef("options"),
                   RapidJsonUtil::SerializeValue(options_, allocator).Move(), *allocator);
-    obj.AddMember(rapidjson::StringRef("timeMillis"),
-                  RapidJsonUtil::SerializeValue(time_millis_, allocator).Move(), *allocator);
     if (comment_) {
         obj.AddMember(rapidjson::StringRef("comment"),
                       RapidJsonUtil::SerializeValue(comment_, allocator).Move(), *allocator);
     }
+    obj.AddMember(rapidjson::StringRef("timeMillis"),
+                  RapidJsonUtil::SerializeValue(time_millis_, allocator).Move(), *allocator);
     return obj;
 }
 
 TableSchema::TableSchema(int32_t version, int64_t id, const std::vector<DataField>& fields,
                          int32_t highest_field_id, const std::vector<std::string>& partition_keys,
                          const std::vector<std::string>& primary_keys,
-                         const std::map<std::string, std::string>& options, int64_t time_millis)
+                         const std::map<std::string, std::string>& options,
+                         const std::optional<std::string>& comment, int64_t time_millis)
     : version_(version),
       id_(id),
       fields_(fields),
@@ -162,6 +163,7 @@ TableSchema::TableSchema(int32_t version, int64_t id, const std::vector<DataFiel
       partition_keys_(partition_keys),
       primary_keys_(primary_keys),
       options_(options),
+      comment_(comment),
       time_millis_(time_millis) {}
 
 bool TableSchema::operator==(const TableSchema& other) const {
@@ -226,20 +228,21 @@ Result<std::unique_ptr<TableSchema>> TableSchema::CreateFromJson(const std::stri
     PAIMON_ASSIGN_OR_RAISE(TableSchema table_schema, TableSchema::FromJsonString(json_str));
     return InitSchema(table_schema.id_, table_schema.fields_, table_schema.highest_field_id_,
                       table_schema.partition_keys_, table_schema.primary_keys_,
-                      table_schema.options_, table_schema.time_millis_);
+                      table_schema.options_, table_schema.comment_, table_schema.time_millis_);
 }
 
 Result<std::unique_ptr<TableSchema>> TableSchema::InitSchema(
     int64_t schema_id, const std::vector<DataField>& fields, int32_t highest_field_id,
     const std::vector<std::string>& partition_keys, const std::vector<std::string>& primary_keys,
-    const std::map<std::string, std::string>& options, int64_t time_millis) {
+    const std::map<std::string, std::string>& options, const std::optional<std::string>& comment,
+    int64_t time_millis) {
     // validate schema first
     auto arrow_schema = DataField::ConvertDataFieldsToArrowSchema(fields);
     PAIMON_RETURN_NOT_OK(ArrowSchemaValidator::ValidateSchemaWithFieldId(*arrow_schema));
 
     auto table_schema = std::unique_ptr<TableSchema>(
         new TableSchema(TableSchema::CURRENT_VERSION, schema_id, fields, highest_field_id,
-                        partition_keys, primary_keys, options, time_millis));
+                        partition_keys, primary_keys, options, comment, time_millis));
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::string> keys, table_schema->TrimmedPrimaryKeys());
 
     // Try to validate bucket keys

@@ -27,12 +27,16 @@
 #include "paimon/result.h"
 namespace paimon {
 
-class BlockCache {
+class PAIMON_EXPORT BlockCache {
  public:
     BlockCache(const std::string& file_path, const std::shared_ptr<InputStream>& in,
                const std::shared_ptr<CacheManager>& cache_manager,
                const std::shared_ptr<MemoryPool>& pool)
         : pool_(pool), file_path_(file_path), in_(in), cache_manager_(cache_manager) {}
+
+    ~BlockCache() {
+        Close();
+    }
 
     Result<MemorySegment> GetBlock(
         int64_t position, int32_t length, bool is_index,
@@ -80,11 +84,13 @@ class BlockCache {
         for (const auto& [key, _] : copied_blocks) {
             cache_manager_->InvalidPage(key);
         }
-        assert(blocks_.empty());
+        // Some entries may remain in blocks_ if they were already evicted from the
+        // LRU cache (InvalidPage is a no-op for missing keys), so clear explicitly.
+        blocks_.clear();
     }
 
  private:
-    Result<MemorySegment> ReadFrom(int64_t offset, int length) {
+    Result<MemorySegment> ReadFrom(int64_t offset, int32_t length) {
         PAIMON_RETURN_NOT_OK(in_->Seek(offset, SeekOrigin::FS_SEEK_SET));
         auto segment = MemorySegment::AllocateHeapMemory(length, pool_.get());
         PAIMON_RETURN_NOT_OK(in_->Read(segment.GetHeapMemory()->data(), length));

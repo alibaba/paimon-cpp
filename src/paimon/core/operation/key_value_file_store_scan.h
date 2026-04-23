@@ -73,7 +73,6 @@ class KeyValueFileStoreScan : public FileStoreScan {
 
  private:
     KeyValueFileStoreScan* WithKeyFilter(const std::shared_ptr<PredicateFilter>& predicate) {
-        // TODO(xinyu.lxy): support bucket select converter
         key_filter_ = predicate;
         return this;
     }

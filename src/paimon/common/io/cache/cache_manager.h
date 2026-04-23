@@ -27,7 +27,7 @@
 #include "paimon/result.h"
 
 namespace paimon {
-class CacheManager {
+class PAIMON_EXPORT CacheManager {
  public:
     /// Refreshing the cache comes with some costs, so not every time we visit the CacheManager, but
     /// every 10 visits, refresh the LRU strategy.

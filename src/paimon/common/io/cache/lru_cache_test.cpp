@@ -84,6 +84,7 @@ TEST_F(LruCacheTest, TestGetCacheHitAndMiss) {
     ASSERT_EQ(supplier_call_count, 1);
     ASSERT_EQ(value2->GetSegment().Get(0), 'A');
     ASSERT_EQ(cache.Size(), 1);
+    ASSERT_EQ(cache.GetMaxWeight(), 1024);
 }
 
 /// Verifies Put inserts new entries and updates existing ones.

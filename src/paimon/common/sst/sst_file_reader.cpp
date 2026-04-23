@@ -16,33 +16,25 @@
 #include "paimon/common/sst/sst_file_reader.h"
 
 #include "fmt/format.h"
+#include "paimon/common/lookup/sort/sort_lookup_store_footer.h"
 #include "paimon/common/sst/sst_file_utils.h"
 #include "paimon/common/utils/crc32c.h"
 #include "paimon/common/utils/murmurhash_utils.h"
 namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
-    const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
-    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
+    const std::shared_ptr<InputStream>& in, const BlockHandle& index_block_handle,
+    const std::optional<BloomFilterHandle>& bloom_filter_handle,
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+    const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
 
-    // read footer
-    PAIMON_ASSIGN_OR_RAISE(
-        MemorySegment segment,
-        block_cache->GetBlock(file_len - BlockFooter::ENCODED_LENGTH, BlockFooter::ENCODED_LENGTH,
-                              /*is_index=*/true, /*decompress_func=*/nullptr));
-    auto slice = MemorySlice::Wrap(segment);
-    auto input = slice.ToInput();
-    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockFooter> footer,
-                           BlockFooter::ReadBlockFooter(&input));
-
     // read bloom filter directly now
-    auto bloom_filter_handle = footer->GetBloomFilterHandle();
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
-    if (bloom_filter_handle && (bloom_filter_handle->ExpectedEntries() ||
-                                bloom_filter_handle->Size() || bloom_filter_handle->Offset())) {
+    if (bloom_filter_handle.has_value() &&
+        (bloom_filter_handle->ExpectedEntries() || bloom_filter_handle->Size() ||
+         bloom_filter_handle->Offset())) {
         bloom_filter = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
                                                      bloom_filter_handle->Size());
         PAIMON_ASSIGN_OR_RAISE(
@@ -53,7 +45,6 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     }
 
     // create index block reader
-    auto index_block_handle = footer->GetIndexBlockHandle();
     PAIMON_ASSIGN_OR_RAISE(
         MemorySegment trailer_data,
         block_cache->GetBlock(index_block_handle.Offset() + index_block_handle.Size(),
@@ -71,22 +62,40 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BlockReader> reader,
                            BlockReader::Create(MemorySlice::Wrap(block_data), comparator));
     return std::shared_ptr<SstFileReader>(
-        new SstFileReader(block_cache, bloom_filter, reader, comparator, pool));
+        new SstFileReader(pool, block_cache, bloom_filter, reader, comparator));
 }
 
-SstFileReader::SstFileReader(const std::shared_ptr<BlockCache>& block_cache,
+Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
+    const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
+    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
+    PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
+    PAIMON_RETURN_NOT_OK(
+        in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
+    auto footer_bytes = Bytes::AllocateBytes(SortLookupStoreFooter::ENCODED_LENGTH, pool.get());
+    PAIMON_RETURN_NOT_OK(in->Read(footer_bytes->data(), footer_bytes->size()));
+    auto footer_segment = MemorySegment::Wrap(std::move(footer_bytes));
+    auto footer_slice = MemorySlice::Wrap(footer_segment);
+    auto footer_input = footer_slice.ToInput();
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortLookupStoreFooter> read_footer,
+                           SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
+    return SstFileReader::Create(in, read_footer->GetIndexBlockHandle(),
+                                 read_footer->GetBloomFilterHandle(), std::move(comparator),
+                                 cache_manager, pool);
+}
+
+SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,
+                             const std::shared_ptr<BlockCache>& block_cache,
                              const std::shared_ptr<BloomFilter>& bloom_filter,
                              const std::shared_ptr<BlockReader>& index_block_reader,
-                             MemorySlice::SliceComparator comparator,
-                             const std::shared_ptr<MemoryPool>& pool)
+                             MemorySlice::SliceComparator comparator)
     : pool_(pool),
       block_cache_(block_cache),
       bloom_filter_(bloom_filter),
       index_block_reader_(index_block_reader),
       comparator_(std::move(comparator)) {}
 
-std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {
-    return std::make_unique<SstFileIterator>(this, index_block_reader_->Iterator());
+std::unique_ptr<BlockIterator> SstFileReader::CreateIndexIterator() {
+    return index_block_reader_->Iterator();
 }
 
 Result<std::shared_ptr<Bytes>> SstFileReader::Lookup(const std::shared_ptr<Bytes>& key) {
@@ -149,9 +158,8 @@ Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compre
         static_cast<char>(static_cast<int32_t>(trailer->CompressionType()) & 0xFF);
     crc32c_code = CRC32C::calculate(&compression_val, 1, crc32c_code);
     if (trailer->Crc32c() != static_cast<int32_t>(crc32c_code)) {
-        return Status::IOError("Expected crc32c(" + SstFileUtils::ToHexString(trailer->Crc32c()) +
-                               ") but found crc32c(" + SstFileUtils::ToHexString(crc32c_code) +
-                               ")");
+        return Status::Invalid(fmt::format("Expected crc32c({:#x}) but found crc32c({:#x})",
+                                           trailer->Crc32c(), crc32c_code));
     }
 
     // decompress data
@@ -187,24 +195,4 @@ Status SstFileReader::Close() {
     return Status::OK();
 }
 
-SstFileIterator::SstFileIterator(SstFileReader* reader,
-                                 std::unique_ptr<BlockIterator> index_iterator)
-    : reader_(reader), index_iterator_(std::move(index_iterator)) {}
-
-Status SstFileIterator::SeekTo(const std::shared_ptr<Bytes>& key) {
-    auto key_slice = MemorySlice::Wrap(key);
-    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool index_success, index_iterator_->SeekTo(key_slice));
-    if (index_iterator_->HasNext()) {
-        PAIMON_ASSIGN_OR_RAISE(data_iterator_, reader_->GetNextBlock(index_iterator_));
-        // The index block entry key is the last key of the corresponding data block.
-        // If there is some index entry key >= target key, the related data block must
-        // also contain some key >= target key, which means seeked_data_block.HasNext()
-        // must be true
-        PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool data_success,
-                               data_iterator_->SeekTo(key_slice));
-    } else {
-        data_iterator_.reset();
-    }
-    return Status::OK();
-}
 }  // namespace paimon

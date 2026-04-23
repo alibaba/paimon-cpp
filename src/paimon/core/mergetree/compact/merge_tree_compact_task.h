@@ -21,13 +21,13 @@
 #include <memory>
 #include <vector>
 
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/compact/compact_deletion_file.h"
 #include "paimon/core/compact/compact_task.h"
 #include "paimon/core/compact/compact_unit.h"
 #include "paimon/core/mergetree/compact/compact_rewriter.h"
 #include "paimon/core/mergetree/compact/interval_partition.h"
 #include "paimon/core/mergetree/sorted_run.h"
-#include "paimon/core/utils/fields_comparator.h"
 
 namespace paimon {
 
