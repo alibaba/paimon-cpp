@@ -416,6 +416,7 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/btree/key_serializer_test.cpp
                     common/global_index/btree/btree_global_index_integration_test.cpp
                     common/global_index/btree/btree_compatibility_test.cpp
+                    common/global_index/btree/btree_file_meta_selector_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
                     common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp

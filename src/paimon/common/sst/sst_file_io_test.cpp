@@ -144,8 +144,9 @@ TEST_P(SstFileIOTest, TestSimple) {
 
     // test read
     ASSERT_OK_AND_ASSIGN(in, fs_->Open(index_path));
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::CreateForSortLookupStore(
-                                          in, comparator_, cache_manager_, pool_));
+    auto block_cache = std::make_shared<BlockCache>(index_path, in, cache_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto reader, SstFileReader::CreateForSortLookupStore(in, comparator_, block_cache, pool_));
 
     // not exist key
     std::string k0 = "k0";
@@ -178,8 +179,9 @@ TEST_P(SstFileIOTest, TestJavaCompatibility) {
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<InputStream> in, fs_->Open(file));
 
     // test read
-    ASSERT_OK_AND_ASSIGN(auto reader, SstFileReader::CreateForSortLookupStore(
-                                          in, comparator_, cache_manager_, pool_));
+    auto block_cache = std::make_shared<BlockCache>(file, in, cache_manager_, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto reader, SstFileReader::CreateForSortLookupStore(in, comparator_, block_cache, pool_));
     // not exist key
     std::string k0 = "10000";
     ASSERT_FALSE(reader->Lookup(std::make_shared<Bytes>(k0, pool_.get())).value());
@@ -270,8 +272,9 @@ TEST_F(SstFileIOTest, TestIOException) {
         CHECK_HOOK_STATUS(in_result.status(), i);
         std::shared_ptr<InputStream> in = std::move(in_result).value();
 
+        auto block_cache = std::make_shared<BlockCache>(index_path, in, cache_manager_, pool_);
         auto reader_result =
-            SstFileReader::CreateForSortLookupStore(in, comparator_, cache_manager_, pool_);
+            SstFileReader::CreateForSortLookupStore(in, comparator_, block_cache, pool_);
         CHECK_HOOK_STATUS(reader_result.status(), i);
         std::shared_ptr<SstFileReader> reader = std::move(reader_result).value();
 

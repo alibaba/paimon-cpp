@@ -115,12 +115,11 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
     }
 
  private:
-    LuceneGlobalIndexReader(const std::wstring& wfield_name, int64_t range_end,
+    LuceneGlobalIndexReader(const std::wstring& wfield_name,
                             const Lucene::IndexSearcherPtr& searcher,
                             const std::string& tokenize_mode,
                             const std::shared_ptr<cppjieba::Jieba>& jieba)
-        : range_end_(range_end),
-          wfield_name_(wfield_name),
+        : wfield_name_(wfield_name),
           searcher_(searcher),
           tokenize_mode_(tokenize_mode),
           jieba_(jieba) {}
@@ -128,7 +127,7 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
     std::vector<std::wstring> TokenizeQuery(const std::string& query) const;
 
     std::shared_ptr<GlobalIndexResult> CreateAllResult() const {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return nullptr;
     }
 
     Lucene::QueryPtr ConstructMatchQuery(
@@ -152,7 +151,6 @@ class LuceneGlobalIndexReader : public GlobalIndexReader {
         const std::shared_ptr<FullTextSearch>& full_text_search) const noexcept(false);
 
  private:
-    int64_t range_end_;
     std::wstring wfield_name_;
     Lucene::IndexSearcherPtr searcher_;
     std::string tokenize_mode_;

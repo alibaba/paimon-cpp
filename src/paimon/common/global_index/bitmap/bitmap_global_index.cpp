@@ -42,9 +42,9 @@ Result<std::shared_ptr<GlobalIndexReader>> BitmapGlobalIndex::CreateReader(
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<FileIndexReader> reader,
         index_->CreateReader(arrow_schema, /*start=*/0, meta.file_size, in, pool));
-    auto transform = [range_end = meta.range_end](const std::shared_ptr<FileIndexResult>& result)
+    auto transform = [](const std::shared_ptr<FileIndexResult>& result)
         -> Result<std::shared_ptr<GlobalIndexResult>> {
-        return FileIndexReaderWrapper::ToGlobalIndexResult(range_end, result);
+        return FileIndexReaderWrapper::ToGlobalIndexResult(result);
     };
     return std::make_shared<BitmapGlobalIndexReader>(reader, transform);
 }

@@ -36,9 +36,10 @@ Result<std::unique_ptr<LookupStoreReader>> SortLookupStoreFactory::CreateReader(
     const std::shared_ptr<paimon::FileSystem>& fs, const std::string& file_path,
     const std::shared_ptr<MemoryPool>& pool) const {
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> in, fs->Open(file_path));
+    auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager_, pool);
     PAIMON_ASSIGN_OR_RAISE(
         std::shared_ptr<SstFileReader> reader,
-        SstFileReader::CreateForSortLookupStore(in, comparator_, cache_manager_, pool));
+        SstFileReader::CreateForSortLookupStore(in, comparator_, block_cache, pool));
     return std::make_unique<SortLookupStoreReader>(in, reader);
 }
 

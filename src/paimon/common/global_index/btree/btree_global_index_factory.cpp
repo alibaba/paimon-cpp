@@ -25,7 +25,7 @@ const char BTreeGlobalIndexerFactory::IDENTIFIER[] = "btree-global";
 
 Result<std::unique_ptr<GlobalIndexer>> BTreeGlobalIndexerFactory::Create(
     const std::map<std::string, std::string>& options) const {
-    return std::make_unique<BTreeGlobalIndexer>(options);
+    return BTreeGlobalIndexer::Create(options);
 }
 
 REGISTER_PAIMON_FACTORY(BTreeGlobalIndexerFactory);

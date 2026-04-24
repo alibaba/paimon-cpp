@@ -82,14 +82,15 @@ class LuminaGlobalIndexTest : public ::testing::Test {
 
         ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array));
+        std::vector<int64_t> row_ids(array->length(), 0);
+        std::iota(row_ids.begin(), row_ids.end(), 0);
+        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
         EXPECT_EQ(result_metas.size(), 1);
         auto file_name = PathUtil::GetName(result_metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "lumina-global-index-"));
         EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-        EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_TRUE(result_metas[0].metadata);
         return result_metas[0];
     }
@@ -208,7 +209,7 @@ TEST_F(LuminaGlobalIndexTest, TestSimple) {
     {
         // visit equal will return all rows
         ASSERT_OK_AND_ASSIGN(auto is_null_result, reader->VisitIsNull());
-        ASSERT_EQ(is_null_result->ToString(), "{0,1,2,3}");
+        ASSERT_FALSE(is_null_result);
     }
 }
 
@@ -363,13 +364,6 @@ TEST_F(LuminaGlobalIndexTest, TestInvalidInputs) {
             ASSERT_NOK_WITH_MSG(
                 CreateGlobalIndexReader(index_root, data_type_, options_, fake_meta),
                 "non-exist-file\' not exists");
-        }
-        {
-            auto fake_meta = meta;
-            fake_meta.range_end = 50;
-            ASSERT_NOK_WITH_MSG(
-                CreateGlobalIndexReader(index_root, data_type_, options_, fake_meta),
-                "lumina index row count 4 mismatch row count 51 in io meta");
         }
         {
             ASSERT_OK_AND_ASSIGN(auto reader,

@@ -80,14 +80,15 @@ class LuceneGlobalIndexTest : public ::testing::Test,
 
         ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array));
+        std::vector<int64_t> row_ids(array->length(), 0);
+        std::iota(row_ids.begin(), row_ids.end(), 0);
+        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
         EXPECT_EQ(result_metas.size(), 1);
         auto file_name = PathUtil::GetName(result_metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "lucene-fts-global-index-"));
         EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-        EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_TRUE(result_metas[0].metadata);
         return result_metas[0];
     }

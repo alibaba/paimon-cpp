@@ -42,7 +42,7 @@ class DataEvolutionBatchScan : public AbstractTableScan {
     Result<std::shared_ptr<Plan>> WrapToIndexedSplits(
         const std::shared_ptr<Plan>& data_plan, const std::vector<Range>& row_ranges,
         const std::map<int64_t, float>& id_to_score) const;
-    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> EvalGlobalIndex() const;
+    Result<std::shared_ptr<GlobalIndexResult>> EvalGlobalIndex() const;
 
  private:
     std::shared_ptr<MemoryPool> pool_;

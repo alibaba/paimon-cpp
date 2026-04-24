@@ -124,7 +124,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "4096"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -151,7 +151,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadIntData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -278,7 +278,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("str_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -304,7 +304,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadStringData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -446,7 +446,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("bigint_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -469,7 +469,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBigIntData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -538,7 +538,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("float_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -561,7 +561,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadFloatData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -629,7 +629,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("double_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -652,7 +652,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDoubleData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -720,7 +720,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -742,7 +742,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNonNull) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -829,7 +829,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("bool_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -853,7 +853,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadBoolData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -906,7 +906,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("tinyint_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -929,7 +929,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTinyIntData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -988,7 +988,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("smallint_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1011,7 +1011,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadSmallIntData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1071,7 +1071,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1094,7 +1094,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampCompactData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1154,7 +1154,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("ts_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1178,7 +1178,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadTimestampNonCompactData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1242,7 +1242,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1266,7 +1266,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalCompactData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1326,7 +1326,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(
         auto writer, indexer->CreateWriter("decimal_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1351,7 +1351,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadDecimalNonCompactData) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1410,7 +1410,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1429,7 +1429,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadAllNull) {
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids(array->length());
     std::iota(row_ids.begin(), row_ids.end(), 0);
-    ASSERT_OK(btree_writer->AddBatch(&c_array, row_ids));
+    ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(row_ids)));
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
     ASSERT_EQ(metas.size(), 1);
 
@@ -1498,7 +1498,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
         {BtreeDefs::kBtreeIndexBlockSize, "256"},
         {BtreeDefs::kBtreeIndexCacheSize, "1024"},
     };
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1544,7 +1544,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, WriteAndReadLargeDataWithSmallBlocks) {
 
         ArrowArray c_array;
         ASSERT_TRUE(arrow::ExportArray(*struct_array, &c_array).ok());
-        ASSERT_OK(btree_writer->AddBatch(&c_array, batch_row_ids));
+        ASSERT_OK(btree_writer->AddBatch(&c_array, std::move(batch_row_ids)));
     }
 
     ASSERT_OK_AND_ASSIGN(auto metas, writer->Finish());
@@ -1643,7 +1643,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
     auto file_writer = std::make_shared<FakeGlobalIndexFileWriter>(fs_, base_path_);
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
     // Export a plain int32 type (not struct) as ArrowSchema
     auto plain_type = arrow::int32();
@@ -1661,11 +1661,11 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
     // Provide two fake metas
-    GlobalIndexIOMeta meta1("fake_path_1", 100, 10, nullptr);
-    GlobalIndexIOMeta meta2("fake_path_2", 200, 20, nullptr);
+    GlobalIndexIOMeta meta1("fake_path_1", 100, nullptr);
+    GlobalIndexIOMeta meta2("fake_path_2", 200, nullptr);
     std::vector<GlobalIndexIOMeta> metas = {meta1, meta2};
 
     ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
@@ -1683,9 +1683,9 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
-    GlobalIndexIOMeta meta("fake_path", 100, 10, nullptr);
+    GlobalIndexIOMeta meta("fake_path", 100, nullptr);
     std::vector<GlobalIndexIOMeta> metas = {meta};
 
     ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
@@ -1710,14 +1710,15 @@ TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNullArray) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
     ASSERT_TRUE(btree_writer);
 
     std::vector<int64_t> row_ids = {0, 1, 2};
-    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(nullptr, row_ids), "ArrowArray is null");
+    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(nullptr, std::move(row_ids)),
+                        "CheckRelativeRowIds failed: null c_arrow_array");
 }
 
 TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
@@ -1727,7 +1728,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1745,8 +1746,9 @@ TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithMismatchedRowIds) {
 
     // Provide wrong number of row_ids (2 instead of 3)
     std::vector<int64_t> row_ids = {0, 1};
-    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(&c_array, row_ids),
-                        "row_ids length 2 mismatch arrow_array length 3 when AddBatch");
+    ASSERT_NOK_WITH_MSG(
+        btree_writer->AddBatch(&c_array, std::move(row_ids)),
+        "relative_row_ids length 2 mismatch arrow_array length 3 in CheckRelativeRowIds");
 }
 
 TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
@@ -1756,7 +1758,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1773,7 +1775,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, AddBatchWithNonMonotonicKeys) {
     ArrowArray c_array;
     ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
     std::vector<int64_t> row_ids = {0, 1, 2};
-    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(&c_array, row_ids),
+    ASSERT_NOK_WITH_MSG(btree_writer->AddBatch(&c_array, std::move(row_ids)),
                         "Users must keep written keys monotonically incremental");
 }
 
@@ -1784,7 +1786,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, FinishWithEmptyData) {
 
     std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
                                                   {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
     ASSERT_OK_AND_ASSIGN(auto writer,
                          indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_));
     auto btree_writer = std::dynamic_pointer_cast<BTreeGlobalIndexWriter>(writer);
@@ -1812,7 +1814,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, TestIOException) {
         std::map<std::string, std::string> options = {
             {BtreeDefs::kBtreeIndexBlockSize, "128"},
             {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-        auto indexer = std::make_shared<BTreeGlobalIndexer>(options);
+        ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
 
         // write
         auto writer_result = indexer->CreateWriter("int_field", c_schema.get(), file_writer, pool_);
@@ -1828,7 +1830,7 @@ TEST_P(BTreeGlobalIndexIntegrationTest, TestIOException) {
         ASSERT_TRUE(arrow::ExportArray(*array, &c_array).ok());
         std::vector<int64_t> row_ids = {0, 1, 2, 3, 4, 5};
 
-        CHECK_HOOK_STATUS(btree_writer->AddBatch(&c_array, row_ids), i);
+        CHECK_HOOK_STATUS(btree_writer->AddBatch(&c_array, std::move(row_ids)), i);
         auto finish_result = writer->Finish();
         CHECK_HOOK_STATUS(finish_result.status(), i);
         auto metas = std::move(finish_result).value();

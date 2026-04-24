@@ -138,14 +138,9 @@ class FileIndexReaderWrapper : public GlobalIndexReader {
     /// Converts a `FileIndexResult` to a `GlobalIndexResult` by mapping 32-bit row IDs
     /// to 64-bit global row IDs.
     static Result<std::shared_ptr<GlobalIndexResult>> ToGlobalIndexResult(
-        int64_t range_end, const std::shared_ptr<FileIndexResult>& result) {
+        const std::shared_ptr<FileIndexResult>& result) {
         if (auto remain = std::dynamic_pointer_cast<Remain>(result)) {
-            return std::make_shared<BitmapGlobalIndexResult>(
-                [range_end]() -> Result<RoaringBitmap64> {
-                    RoaringBitmap64 bitmap;
-                    bitmap.AddRange(0, range_end + 1);
-                    return bitmap;
-                });
+            return std::shared_ptr<GlobalIndexResult>();
         } else if (auto skip = std::dynamic_pointer_cast<Skip>(result)) {
             return std::make_shared<BitmapGlobalIndexResult>(
                 []() -> Result<RoaringBitmap64> { return RoaringBitmap64(); });
