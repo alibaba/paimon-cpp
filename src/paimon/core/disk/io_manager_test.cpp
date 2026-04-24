@@ -34,35 +34,6 @@ TEST(IOManagerTest, CreateShouldReturnManagerWithGivenTempDir) {
     ASSERT_EQ(manager->GetTempDir(), tmp_dir->Str());
 }
 
-TEST(IOManagerTest, GenerateTempFilePathShouldContainPrefixAndSuffix) {
-    auto tmp_dir = UniqueTestDirectory::Create();
-    const std::string prefix = "spill";
-
-    auto manager = std::make_unique<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
-    ASSERT_OK_AND_ASSIGN(std::string temp_path, manager->GenerateTempFilePath(prefix));
-
-    std::string expected_prefix = PathUtil::JoinPath(tmp_dir->Str(), "");
-    ASSERT_TRUE(StringUtils::StartsWith(temp_path, expected_prefix));
-
-    std::string file_name = PathUtil::GetName(temp_path);
-    std::string file_prefix = prefix + "-";
-    ASSERT_TRUE(StringUtils::StartsWith(file_name, file_prefix));
-
-    const std::string suffix = ".channel";
-    ASSERT_GE(file_name.size(), file_prefix.size() + suffix.size() + 1);
-    ASSERT_TRUE(StringUtils::EndsWith(file_name, suffix));
-}
-
-TEST(IOManagerTest, GenerateTempFilePathShouldBeDifferentAcrossCalls) {
-    auto tmp_dir = UniqueTestDirectory::Create();
-    auto manager = std::make_unique<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());
-
-    ASSERT_OK_AND_ASSIGN(std::string path1, manager->GenerateTempFilePath("spill"));
-    ASSERT_OK_AND_ASSIGN(std::string path2, manager->GenerateTempFilePath("spill"));
-
-    ASSERT_NE(path1, path2);
-}
-
 TEST(IOManagerTest, CreateChannelShouldReturnValidAndUniquePaths) {
     auto tmp_dir = UniqueTestDirectory::Create();
     auto manager = std::make_shared<IOManager>(tmp_dir->Str(), tmp_dir->GetFileSystem());

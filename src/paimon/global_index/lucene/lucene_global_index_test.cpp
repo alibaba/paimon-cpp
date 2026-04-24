@@ -134,7 +134,8 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
 
     std::map<std::string, std::string> options = {
         {"lucene-fts.write.omit-term-freq-and-position", "false"},
-        {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)}};
+        {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)},
+        {"lucene-fts.write.tmp.directory", "/tmp/"}};
     std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
                                                                                     R"([
         ["This is an test document."],
@@ -148,8 +149,9 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
     ASSERT_OK_AND_ASSIGN(auto meta,
                          WriteGlobalIndex(test_root, data_type_, options, array, Range(0, 3)));
     if (read_buffer_size == 10) {
-        ASSERT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
-                  R"({"read.buffer-size":"10","write.omit-term-freq-and-position":"false"})");
+        ASSERT_EQ(
+            std::string(meta.metadata->data(), meta.metadata->size()),
+            R"({"read.buffer-size":"10","write.omit-term-freq-and-position":"false","write.tmp.directory":"/tmp/"})");
     }
 
     // create reader
@@ -298,7 +300,7 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
         {"lucene-fts.write.omit-term-freq-and-position", "false"},
         {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)},
         {"lucene-fts.jieba.tokenize-mode", "query"},
-    };
+        {"lucene-fts.write.tmp.directory", "/tmp/"}};
 
     std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
                                                                                     R"([
@@ -316,7 +318,7 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
     if (read_buffer_size == 10) {
         ASSERT_EQ(
             std::string(meta.metadata->data(), meta.metadata->size()),
-            R"({"jieba.tokenize-mode":"query","read.buffer-size":"10","write.omit-term-freq-and-position":"false"})");
+            R"({"jieba.tokenize-mode":"query","read.buffer-size":"10","write.omit-term-freq-and-position":"false","write.tmp.directory":"/tmp/"})");
     }
 
     // create reader
