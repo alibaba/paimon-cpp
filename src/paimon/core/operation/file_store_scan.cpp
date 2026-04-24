@@ -282,17 +282,9 @@ Result<bool> FileStoreScan::FilterManifestFileMeta(const ManifestFileMeta& manif
         if (only_read_real_buckets_ && max_bucket.value() < 0) {
             return false;
         }
-        if (bucket_filter_) {
-            bool any_in_range = false;
-            for (int32_t b : bucket_filter_.value()) {
-                if (b >= min_bucket.value() && b <= max_bucket.value()) {
-                    any_in_range = true;
-                    break;
-                }
-            }
-            if (!any_in_range) {
-                return false;
-            }
+        if (bucket_filter_ && (bucket_filter_.value() < min_bucket.value() ||
+                               bucket_filter_.value() > max_bucket.value())) {
+            return false;
         }
     }
     // filter by partition filter
@@ -319,7 +311,7 @@ Status FileStoreScan::ReadManifestFileMeta(const ManifestFileMeta& manifest,
         if (only_read_real_buckets_ && entry.Bucket() < 0) {
             return false;
         }
-        if (bucket_filter_ && bucket_filter_->find(entry.Bucket()) == bucket_filter_->end()) {
+        if (bucket_filter_ != std::nullopt && entry.Bucket() != bucket_filter_.value()) {
             return false;
         }
         if (level_filter_ != nullptr && !level_filter_(entry.Level())) {
@@ -373,9 +365,7 @@ Status FileStoreScan::SplitAndSetFilter(const std::vector<std::string>& partitio
             predicates_ = predicate;
         }
     }
-    if (scan_filters->GetBucketFilter()) {
-        bucket_filter_ = std::set<int32_t>{scan_filters->GetBucketFilter().value()};
-    }
+    bucket_filter_ = scan_filters->GetBucketFilter();
     if (!scan_filters->GetPartitionFilters().empty()) {
         PAIMON_ASSIGN_OR_RAISE(
             partition_filter_,

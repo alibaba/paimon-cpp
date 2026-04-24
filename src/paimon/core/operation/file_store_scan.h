@@ -23,7 +23,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -267,14 +266,6 @@ class FileStoreScan {
     ScanMode scan_mode_ = ScanMode::ALL;
     CoreOptions core_options_;
 
-    void SetBucketFilter(std::set<int32_t> buckets) {
-        bucket_filter_ = std::move(buckets);
-    }
-
-    bool HasBucketFilter() const {
-        return bucket_filter_.has_value();
-    }
-
  private:
     mutable std::mutex lock_;
     bool only_read_real_buckets_ = false;
@@ -284,7 +275,7 @@ class FileStoreScan {
     std::shared_ptr<arrow::Schema> partition_schema_;
     std::shared_ptr<PredicateFilter> partition_filter_;
     std::shared_ptr<Executor> executor_;
-    std::optional<std::set<int32_t>> bucket_filter_;
+    std::optional<int32_t> bucket_filter_;
     std::function<bool(int32_t)> level_filter_;
     std::optional<Snapshot> specified_snapshot_;
     std::shared_ptr<Metrics> metrics_;
