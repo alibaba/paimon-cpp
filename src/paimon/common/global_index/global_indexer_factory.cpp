@@ -28,7 +28,9 @@ const char GlobalIndexerFactory::GLOBAL_INDEX_IDENTIFIER_SUFFIX[] = "-global";
 
 Result<std::unique_ptr<GlobalIndexer>> GlobalIndexerFactory::Get(
     const std::string& identifier, const std::map<std::string, std::string>& options) {
-    std::string global_index_identifier = identifier + GLOBAL_INDEX_IDENTIFIER_SUFFIX;
+    // Compatibility: "lumina-vector-ann" was the old identifier for lumina global index.
+    std::string final_identifier = (identifier == "lumina-vector-ann" ? "lumina" : identifier);
+    std::string global_index_identifier = final_identifier + GLOBAL_INDEX_IDENTIFIER_SUFFIX;
     auto factory_creator = FactoryCreator::GetInstance();
     if (factory_creator == nullptr) {
         assert(false);
