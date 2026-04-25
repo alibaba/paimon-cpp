@@ -157,8 +157,7 @@ class RowCompactedSerializer {
 
      private:
         Result<int32_t> ReadUnsignedInt() {
-            const auto* bytes = segment_.GetArray();
-            return VarLengthIntUtils::DecodeInt(bytes, &position_);
+            return VarLengthIntUtils::DecodeInt(segment_.Data(), &position_);
         }
 
      private:

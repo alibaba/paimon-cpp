@@ -74,6 +74,10 @@ class PAIMON_EXPORT RoaringBitmap64 {
     /// @param x value added to bitmap
     void Add(int64_t x);
 
+    /// Batch-add multiple values to bitmap.
+    /// @param values pointer to array of values
+    /// @param count number of values to add
+
     /// @param x value added to bitmap
     /// @return false if contain x; true if not contain x
     bool CheckedAdd(int64_t x);

@@ -26,7 +26,7 @@ bool BlockIterator::HasNext() const {
     return polled_position_ >= 0 || input_.IsReadable();
 }
 
-Result<std::unique_ptr<BlockEntry>> BlockIterator::Next() {
+Result<BlockEntry> BlockIterator::Next() {
     if (!HasNext()) {
         return Status::Invalid("no such element");
     }
@@ -38,12 +38,12 @@ Result<std::unique_ptr<BlockEntry>> BlockIterator::Next() {
     return ReadEntry();
 }
 
-Result<std::unique_ptr<BlockEntry>> BlockIterator::ReadEntry() {
+Result<BlockEntry> BlockIterator::ReadEntry() {
     PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
     auto key = input_.ReadSlice(key_length);
     PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
     auto value = input_.ReadSlice(value_length);
-    return std::make_unique<BlockEntry>(key, value);
+    return BlockEntry(key, value);
 }
 
 Result<MemorySlice> BlockIterator::ReadKeyAndSkipValue() {

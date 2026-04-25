@@ -38,7 +38,7 @@ class PersistPositionProcessor : public PersistProcessor<FilePosition> {
                                                  int64_t row_position) const override {
         auto bytes = std::make_shared<Bytes>(VarLengthIntUtils::kMaxVarLongSize, pool_.get());
         PAIMON_ASSIGN_OR_RAISE(int64_t len,
-                               VarLengthIntUtils::EncodeLong(row_position, bytes.get()));
+                               VarLengthIntUtils::EncodeLong(row_position, bytes->data()));
         std::shared_ptr<Bytes> copy_bytes = Bytes::CopyOf(*bytes, len, pool_.get());
         return copy_bytes;
     }
@@ -46,8 +46,9 @@ class PersistPositionProcessor : public PersistProcessor<FilePosition> {
     Result<FilePosition> ReadFromDisk(std::shared_ptr<InternalRow> key, int32_t level,
                                       const std::shared_ptr<Bytes>& value_bytes,
                                       const std::string& file_name) const override {
+        int32_t decode_offset = 0;
         PAIMON_ASSIGN_OR_RAISE(int64_t row_position,
-                               VarLengthIntUtils::DecodeLong(value_bytes.get(), /*index=*/0));
+                               VarLengthIntUtils::DecodeLong(value_bytes->data(), &decode_offset));
         return FilePosition{file_name, row_position};
     }
 

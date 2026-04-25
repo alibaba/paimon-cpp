@@ -273,10 +273,10 @@ TEST_F(MemorySliceTest, TestSliceCopyBytes) {
     ASSERT_NE(bytes->data(), copied->data());
 }
 
-TEST_F(MemorySliceTest, TestSliceGetHeapMemory) {
+TEST_F(MemorySliceTest, TestSliceGetOrCreateHeapMemory) {
     auto bytes = std::make_shared<Bytes>("test", pool_.get());
     MemorySlice slice = MemorySlice::Wrap(bytes);
-    ASSERT_EQ(bytes, slice.GetHeapMemory());
+    ASSERT_EQ(bytes, slice.GetOrCreateHeapMemory());
 }
 
 TEST_F(MemorySliceTest, TestSliceToInput) {

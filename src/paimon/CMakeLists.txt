@@ -76,7 +76,6 @@ set(PAIMON_COMMON_SRCS
     common/memory/memory_segment.cpp
     common/memory/memory_segment_utils.cpp
     common/memory/memory_slice.cpp
-    common/memory/memory_slice_input.cpp
     common/memory/memory_slice_output.cpp
     common/metrics/metrics_impl.cpp
     common/metrics/histogram.cpp

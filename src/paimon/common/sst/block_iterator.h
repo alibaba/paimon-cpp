@@ -28,9 +28,9 @@ class PAIMON_EXPORT BlockIterator {
 
     bool HasNext() const;
 
-    Result<std::unique_ptr<BlockEntry>> Next();
+    Result<BlockEntry> Next();
 
-    Result<std::unique_ptr<BlockEntry>> ReadEntry();
+    Result<BlockEntry> ReadEntry();
 
     Result<bool> SeekTo(const MemorySlice& target_key);
 

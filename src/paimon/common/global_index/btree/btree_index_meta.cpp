@@ -62,7 +62,7 @@ std::shared_ptr<Bytes> BTreeIndexMeta::Serialize(paimon::MemoryPool* pool) const
     // Write has_nulls
     output.WriteValue(static_cast<int8_t>(has_nulls_ ? 1 : 0));
 
-    return output.ToSlice().GetHeapMemory();
+    return output.ToSlice().GetOrCreateHeapMemory();
 }
 
 }  // namespace paimon

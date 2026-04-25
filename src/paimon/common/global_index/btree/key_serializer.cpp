@@ -195,6 +195,16 @@ Result<Literal> KeySerializer::DeserializeKey(const MemorySlice& slice,
 
 MemorySlice::SliceComparator KeySerializer::CreateComparator(
     const std::shared_ptr<arrow::DataType>& type, const std::shared_ptr<MemoryPool>& pool) {
+    // Fast path for STRING/UTF8: direct byte comparison without deserialization.
+    // UTF-8 lexicographic order is identical to byte order, so memcmp is correct.
+    if (type->id() == arrow::Type::type::STRING) {
+        return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
+            std::string_view sv_a = a.ReadStringView();
+            std::string_view sv_b = b.ReadStringView();
+            int32_t cmp = sv_a.compare(sv_b);
+            return cmp == 0 ? 0 : (cmp > 0 ? 1 : -1);
+        };
+    }
     return
         [pool = pool, type = type](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
             PAIMON_ASSIGN_OR_RAISE(Literal la, DeserializeKey(a, type, pool.get()));
