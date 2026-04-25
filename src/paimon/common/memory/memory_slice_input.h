@@ -36,7 +36,7 @@ class MemoryPool;
 class PAIMON_EXPORT MemorySliceInput {
  public:
     explicit MemorySliceInput(const MemorySlice& slice)
-        : slice_(slice), data_(slice.Data()), length_(slice.Length()), position_(0) {}
+        : slice_(slice), data_(slice.Data()), length_(slice.Length()) {}
 
     inline int32_t Position() const {
         return position_;
@@ -117,7 +117,7 @@ class PAIMON_EXPORT MemorySliceInput {
     MemorySlice slice_;  // Keeps the underlying memory alive (owning reference).
     const char* data_;   // Cached raw pointer for fast access.
     int32_t length_;     // Cached length.
-    int32_t position_;
+    int32_t position_ = 0;
 
     ByteOrder byte_order_ = SystemByteOrder();
 };

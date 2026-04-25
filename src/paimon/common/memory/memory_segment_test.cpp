@@ -655,7 +655,7 @@ TEST(MemorySegmentTest, TestNonOwningWrapView) {
     std::string source_data = "Hello, WrapView MemorySegment!";
     auto owning_bytes = std::make_shared<Bytes>(source_data, pool.get());
     const char* raw_ptr = owning_bytes->data();
-    int32_t raw_size = static_cast<int32_t>(owning_bytes->size());
+    auto raw_size = static_cast<int32_t>(owning_bytes->size());
 
     // Create non-owning segment via WrapView
     auto seg = MemorySegment::WrapView(raw_ptr, raw_size);
