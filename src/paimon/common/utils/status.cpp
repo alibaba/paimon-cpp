@@ -105,6 +105,12 @@ std::string Status::CodeAsString(StatusCode code) {
         case StatusCode::SerializationError:
             type = "Serialization error";
             break;
+        case StatusCode::NotExist:
+            type = "Not exist";
+            break;
+        case StatusCode::Exist:
+            type = "Exist";
+            break;
         default:
             type = "Unknown";
             break;
