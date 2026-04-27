@@ -299,7 +299,7 @@ Result<RoaringBitmap64> LazyFilteredBTreeReader::ReadNullBitmap(
     auto slice_input = slice.ToInput();
 
     // Read null bitmap data
-    auto null_bitmap_bytes = slice_input.ReadSlice(block_handle->Size()).CopyBytes(pool_.get());
+    auto null_bitmap_bytes = slice_input.ReadSliceView(block_handle->Size()).CopyBytes(pool_.get());
 
     // Calculate and verify CRC32C checksum
     uint32_t calculated_crc =
