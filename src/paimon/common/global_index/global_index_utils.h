@@ -16,9 +16,11 @@
 
 #pragma once
 #include "arrow/c/abi.h"
+#include "arrow/c/helpers.h"
 #include "fmt/format.h"
 #include "paimon/common/utils/scope_guard.h"
 #include "paimon/status.h"
+
 namespace paimon {
 class GlobalIndexUtils {
  public:
@@ -32,19 +34,27 @@ class GlobalIndexUtils {
             return Status::Invalid("CheckRelativeRowIds failed: null c_arrow_array");
         }
         int64_t length = c_arrow_array->length;
+        ScopeGuard guard([c_arrow_array]() -> void { ArrowArrayRelease(c_arrow_array); });
         if (length == 0) {
+            if (!relative_row_ids.empty()) {
+                return Status::Invalid(
+                    fmt::format("relative_row_ids length {} mismatch arrow_array length 0 in "
+                                "CheckRelativeRowIds",
+                                relative_row_ids.size()));
+            }
+            guard.Release();
             return Status::OK();
         }
-        ScopeGuard guard([c_arrow_array]() -> void { ArrowArrayRelease(c_arrow_array); });
         if (static_cast<int64_t>(relative_row_ids.size()) != length) {
             return Status::Invalid(fmt::format(
                 "relative_row_ids length {} mismatch arrow_array length {} in CheckRelativeRowIds",
                 relative_row_ids.size(), length));
         }
         if (expected_next_row_id && relative_row_ids[0] != expected_next_row_id.value()) {
-            return Status::Invalid(fmt::format(
-                "first relative_row_ids {} mismatch inner count {} in CheckRelativeRowIds",
-                relative_row_ids[0], expected_next_row_id.value()));
+            return Status::Invalid(
+                fmt::format("first relative_row_ids {} mismatch inner expected_next_row_id {} in "
+                            "CheckRelativeRowIds",
+                            relative_row_ids[0], expected_next_row_id.value()));
         }
         guard.Release();
         return Status::OK();

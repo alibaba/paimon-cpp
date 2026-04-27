@@ -531,8 +531,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
                 ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(literal));
                 auto actual_ids = CollectRowIds(result);
                 auto expected_ids = CollectMatchingRows(
-                    records,
-                    [key_val, rec](const CsvRecord& r) { return !r.is_null && r.key != rec.key; });
+                    records, [rec](const CsvRecord& r) { return !r.is_null && r.key != rec.key; });
                 ASSERT_EQ(actual_ids, expected_ids);
                 break;
             }
@@ -718,7 +717,6 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
 
     auto records = ParseCsvFile(csv_path);
     ASSERT_FALSE(records.empty());
-    auto count = static_cast<int32_t>(records.size());
 
     ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow::int32()));
 
@@ -800,6 +798,31 @@ TEST_F(BTreeCompatibilityTest, MetaDeserialization) {
                              KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
                                                            arrow::int32(), pool_.get()));
         ASSERT_EQ(max_key, Literal(143));
+    }
+
+    // Test float_50 meta
+    {
+        std::string meta_path = data_dir_ + "/btree_test_float_50.bin.meta";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
+
+        auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
+        ASSERT_TRUE(meta);
+
+        ASSERT_TRUE(meta->HasNulls());
+        ASSERT_FALSE(meta->OnlyNulls());
+
+        ASSERT_TRUE(meta->FirstKey());
+        ASSERT_OK_AND_ASSIGN(auto min_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->FirstKey()),
+                                                           arrow::float32(), pool_.get()));
+        ASSERT_EQ(min_key, Literal(static_cast<float>(-INFINITY)));
+
+        ASSERT_TRUE(meta->LastKey());
+        ASSERT_OK_AND_ASSIGN(auto max_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
+                                                           arrow::float32(), pool_.get()));
+        ASSERT_EQ(max_key, Literal(static_cast<float>(std::nan(""))));
     }
 
     // Test all_nulls meta

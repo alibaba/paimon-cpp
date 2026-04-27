@@ -40,7 +40,7 @@ class SstFileIterator;
 class PAIMON_EXPORT SstFileReader {
  public:
     static Result<std::shared_ptr<SstFileReader>> Create(
-        const std::shared_ptr<InputStream>& input, const BlockHandle& index_block_handle,
+        const BlockHandle& index_block_handle,
         const std::optional<BloomFilterHandle>& bloom_filter_handle,
         MemorySlice::SliceComparator comparator, const std::shared_ptr<BlockCache>& block_cache,
         const std::shared_ptr<MemoryPool>& pool);

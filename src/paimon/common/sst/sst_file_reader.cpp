@@ -23,11 +23,10 @@
 namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
-    const std::shared_ptr<InputStream>& in, const BlockHandle& index_block_handle,
+    const BlockHandle& index_block_handle,
     const std::optional<BloomFilterHandle>& bloom_filter_handle,
     MemorySlice::SliceComparator comparator, const std::shared_ptr<BlockCache>& block_cache,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
     // read bloom filter directly now
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
     if (bloom_filter_handle.has_value() &&
@@ -76,7 +75,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
     auto footer_input = footer_slice.ToInput();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortLookupStoreFooter> read_footer,
                            SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
-    return SstFileReader::Create(in, read_footer->GetIndexBlockHandle(),
+    return SstFileReader::Create(read_footer->GetIndexBlockHandle(),
                                  read_footer->GetBloomFilterHandle(), std::move(comparator),
                                  block_cache, pool);
 }

@@ -33,6 +33,7 @@
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/core/options/compress_options.h"
+#include "paimon/executor.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -96,8 +97,10 @@ Result<std::shared_ptr<GlobalIndexReader>> BTreeGlobalIndexer::CreateReader(
             "invalid schema for BTreeGlobalIndexReader, supposed to have single field.");
     }
     auto key_type = schema->field(0)->type();
+    // TODO(lisizhuo.lsz): Allow users to specify an executor
+    std::shared_ptr<Executor> executor = CreateDefaultExecutor();
     return std::make_shared<LazyFilteredBTreeReader>(files, key_type, file_reader, cache_manager_,
-                                                     pool);
+                                                     pool, executor);
 }
 
 }  // namespace paimon

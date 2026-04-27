@@ -29,6 +29,7 @@
 #include "paimon/common/io/cache/cache_manager.h"
 #include "paimon/common/sst/block_cache.h"
 #include "paimon/common/sst/block_handle.h"
+#include "paimon/executor.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/utils/roaring_bitmap64.h"
@@ -40,7 +41,8 @@ class LazyFilteredBTreeReader : public GlobalIndexReader {
                             const std::shared_ptr<arrow::DataType>& key_type,
                             const std::shared_ptr<GlobalIndexFileReader>& file_reader,
                             const std::shared_ptr<CacheManager>& cache_manager,
-                            const std::shared_ptr<MemoryPool>& pool);
+                            const std::shared_ptr<MemoryPool>& pool,
+                            const std::shared_ptr<Executor>& executor);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNull() override;
@@ -75,8 +77,8 @@ class LazyFilteredBTreeReader : public GlobalIndexReader {
 
  private:
     using SelectAction = std::function<Result<std::vector<GlobalIndexIOMeta>>()>;
-    using ReaderAction =
-        std::function<Result<std::shared_ptr<GlobalIndexResult>>(GlobalIndexReader&)>;
+    using ReaderAction = std::function<Result<std::shared_ptr<GlobalIndexResult>>(
+        const std::shared_ptr<GlobalIndexReader>&)>;
 
     Result<std::shared_ptr<GlobalIndexResult>> DispatchVisit(SelectAction select_files,
                                                              ReaderAction action);
@@ -86,13 +88,13 @@ class LazyFilteredBTreeReader : public GlobalIndexReader {
                                            const std::optional<BlockHandle>& block_handle);
 
  private:
-    // TODO(lisizhuo.lsz): add ut
     std::shared_ptr<MemoryPool> pool_;
     BTreeFileMetaSelector file_selector_;
     std::shared_ptr<arrow::DataType> key_type_;
     std::shared_ptr<GlobalIndexFileReader> file_reader_;
     std::shared_ptr<CacheManager> cache_manager_;
     std::map<std::string, std::shared_ptr<GlobalIndexReader>> reader_cache_;
+    std::shared_ptr<Executor> executor_;
 };
 
 }  // namespace paimon

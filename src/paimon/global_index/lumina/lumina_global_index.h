@@ -84,7 +84,7 @@ class LuminaIndexWriter : public GlobalIndexWriter {
                       const std::map<std::string, std::string>& lumina_options,
                       const std::shared_ptr<LuminaMemoryPool>& pool);
 
-    Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& releative_row_ids) override;
+    Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& relative_row_ids) override;
 
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 

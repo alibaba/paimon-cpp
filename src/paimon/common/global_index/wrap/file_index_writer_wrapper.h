@@ -45,8 +45,9 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
     Status AddBatch(::ArrowArray* c_arrow_array, std::vector<int64_t>&& relative_row_ids) override {
         PAIMON_RETURN_NOT_OK(
             GlobalIndexUtils::CheckRelativeRowIds(c_arrow_array, relative_row_ids, count_));
+        auto length = c_arrow_array->length;
         PAIMON_RETURN_NOT_OK(writer_->AddBatch(c_arrow_array));
-        count_ += c_arrow_array->length;
+        count_ += length;
         return Status::OK();
     }
 

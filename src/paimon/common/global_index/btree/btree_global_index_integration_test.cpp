@@ -1654,24 +1654,6 @@ TEST_P(BTreeGlobalIndexIntegrationTest, CreateWriterWithNonStructSchema) {
                         "arrow schema must be struct type");
 }
 
-TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultipleMetas) {
-    auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
-    auto field = arrow::field("int_field", arrow::int32());
-    auto c_schema = CreateArrowSchema(field);
-
-    std::map<std::string, std::string> options = {{BtreeDefs::kBtreeIndexBlockSize, "128"},
-                                                  {BtreeDefs::kBtreeIndexCompression, GetParam()}};
-    ASSERT_OK_AND_ASSIGN(auto indexer, BTreeGlobalIndexer::Create(options));
-
-    // Provide two fake metas
-    GlobalIndexIOMeta meta1("fake_path_1", 100, nullptr);
-    GlobalIndexIOMeta meta2("fake_path_2", 200, nullptr);
-    std::vector<GlobalIndexIOMeta> metas = {meta1, meta2};
-
-    ASSERT_NOK_WITH_MSG(indexer->CreateReader(c_schema.get(), file_reader, metas, pool_),
-                        "exist multiple metas");
-}
-
 TEST_P(BTreeGlobalIndexIntegrationTest, CreateReaderWithMultiFieldSchema) {
     auto file_reader = std::make_shared<FakeGlobalIndexFileReader>(fs_, base_path_);
 
