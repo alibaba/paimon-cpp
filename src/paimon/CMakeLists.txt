@@ -285,6 +285,7 @@ set(PAIMON_CORE_SRCS
     core/schema/schema_validation.cpp
     core/schema/table_schema.cpp
     core/snapshot.cpp
+    core/snapshot_info.cpp
     core/stats/simple_stats_collector.cpp
     core/stats/simple_stats_converter.cpp
     core/stats/simple_stats.cpp
