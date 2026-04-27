@@ -32,7 +32,6 @@
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/core_options.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
-#include "paimon/core/io/key_value_in_memory_record_reader.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/io/merged_key_value_record_reader.h"
 #include "paimon/core/key_value.h"
@@ -147,16 +146,14 @@ class SortMergeReaderTest : public testing::Test {
                 std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
             std::vector<std::unique_ptr<KeyValueRecordReader>> merged_readers;
 
-            int64_t last_seq = 0;
             std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
             for (const auto& src_array : src_array_vec) {
-                auto in_memory_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-                    last_seq, src_array, std::vector<RecordBatch::RowKind>{}, primary_keys,
-                    user_defined_sequence_fields, /*sequence_fields_ascending=*/true,
-                    user_key_comparator, pool_);
-                last_seq += src_array->length();
+                auto file_batch_reader = std::make_unique<MockFileBatchReader>(
+                    src_array, src_array->type(), /*batch_size=*/batch_size);
+                auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+                    std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
                 merged_readers.push_back(std::make_unique<MergedKeyValueRecordReader>(
-                    std::move(in_memory_reader), user_key_comparator, merge_function_wrapper));
+                    std::move(record_reader), user_key_comparator, merge_function_wrapper));
             }
 
             auto sort_merge_reader = std::make_unique<SortMergeReaderType>(
@@ -651,44 +648,46 @@ TEST_F(SortMergeReaderTest, TestSortMergeWithAggMergeFunction) {
     // key=1: k0=1, ts=last_value(1,2,3,4,5,6)=6, v0=sum(1,2,3,4,5,6)=21, seq=7
     // key=2: k0=2, ts=last_value(1,2,3,4,5,6)=6, v0=sum(10,20,30,40,50,60)=210, seq=11
 
-    arrow::FieldVector fields = {arrow::field("k0", arrow::int32()),
-                                 arrow::field("ts", arrow::int32()),
-                                 arrow::field("v0", arrow::int32())};
+    arrow::FieldVector fields = {
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("_VALUE_KIND", arrow::int8()), arrow::field("k0", arrow::int32()),
+        arrow::field("ts", arrow::int32()), arrow::field("v0", arrow::int32())};
 
     auto data_fields = CreateDataField(fields);
-    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[0]}));
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
     std::shared_ptr<arrow::Schema> value_schema =
-        arrow::schema(arrow::FieldVector({fields[0], fields[1], fields[2]}));
+        arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4]}));
     std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
 
     auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
-        [1, 1, 1],
-        [1, 2, 2],
-        [1, 3, 3],
-        [1, 4, 4],
-        [2, 4, 40],
-        [2, 5, 50]
+        [0, 0, 1, 1, 1],
+        [1, 0, 1, 2, 2],
+        [2, 0, 1, 3, 3],
+        [3, 0, 1, 4, 4],
+        [4, 0, 2, 4, 40],
+        [5, 0, 2, 5, 50]
     ])")
             .ValueOrDie());
 
     auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
         arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
-        [1, 5, 5],
-        [1, 6, 6],
-        [2, 1, 10],
-        [2, 2, 20],
-        [2, 3, 30],
-        [2, 6, 60]
+        [6, 0, 1, 5, 5],
+        [7, 0, 1, 6, 6],
+        [8, 0, 2, 1, 10],
+        [9, 0, 2, 2, 20],
+        [10, 0, 2, 3, 30],
+        [11, 0, 2, 6, 60]
     ])")
             .ValueOrDie());
 
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
-                         FieldsComparator::Create({data_fields[0]}, std::vector<int32_t>({0}),
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
                                                   /*is_ascending_order=*/true));
     // user_defined_seq_comparator based on ts field (index 1 in value schema {k0, ts, v0})
     ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
-                         FieldsComparator::Create(data_fields, std::vector<int32_t>({1}),
+                         FieldsComparator::Create({data_fields[2], data_fields[3], data_fields[4]},
+                                                  std::vector<int32_t>({1}),
                                                   /*is_ascending_order=*/true));
     // Configure sum aggregation for all non-primary-key fields
     std::string user_defined_sequence_field = "ts";
