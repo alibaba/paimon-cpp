@@ -25,7 +25,9 @@
 #include <vector>
 
 #include "arrow/c/abi.h"
+#include "arrow/c/helpers.h"
 #include "fmt/format.h"
+#include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/file_index/file_index_writer.h"
 #include "paimon/global_index/global_index_writer.h"
@@ -40,8 +42,10 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
                            const std::shared_ptr<FileIndexWriter>& writer)
         : index_type_(index_type), file_manager_(file_manager), writer_(writer) {}
 
-    Status AddBatch(::ArrowArray* c_arrow_array) override {
-        int64_t length = c_arrow_array->length;
+    Status AddBatch(::ArrowArray* c_arrow_array, std::vector<int64_t>&& relative_row_ids) override {
+        PAIMON_RETURN_NOT_OK(
+            GlobalIndexUtils::CheckRelativeRowIds(c_arrow_array, relative_row_ids, count_));
+        auto length = c_arrow_array->length;
         PAIMON_RETURN_NOT_OK(writer_->AddBatch(c_arrow_array));
         count_ += length;
         return Status::OK();
@@ -73,7 +77,6 @@ class FileIndexWriterWrapper : public GlobalIndexWriter {
         PAIMON_RETURN_NOT_OK(out->Flush());
         PAIMON_RETURN_NOT_OK(out->Close());
         GlobalIndexIOMeta meta(file_manager_->ToPath(file_name), /*file_size=*/bytes->size(),
-                               /*range_end=*/count_ - 1,
                                /*metadata=*/nullptr);
         return std::vector<GlobalIndexIOMeta>({meta});
     }

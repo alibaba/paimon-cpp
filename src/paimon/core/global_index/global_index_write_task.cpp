@@ -17,6 +17,7 @@
 #include "paimon/global_index/global_index_write_task.h"
 
 #include "arrow/c/bridge.h"
+#include "paimon/common/table/special_fields.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/core/core_options.h"
@@ -82,7 +83,7 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
         .WithFileSystem(core_options.GetFileSystem())
         .EnablePrefetch(true)
         .WithMemoryPool(pool)
-        .SetReadSchema({field_name});
+        .SetReadSchema({field_name, SpecialFields::RowId().Name()});
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<ReadContext> read_context,
                            read_context_builder.Finish());
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<TableRead> table_read,
@@ -90,7 +91,7 @@ Result<std::unique_ptr<BatchReader>> CreateBatchReader(
     return table_read->CreateReader(indexed_split);
 }
 
-Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
+Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name, const Range& range,
                                                   BatchReader* batch_reader,
                                                   GlobalIndexWriter* global_index_writer) {
     while (true) {
@@ -103,18 +104,33 @@ Result<std::vector<GlobalIndexIOMeta>> BuildIndex(const std::string& field_name,
                                           arrow::ImportArray(c_array.get(), c_schema.get()));
         auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
         if (!struct_array) {
-            return Status::Invalid("array read from batch reader is not a struct array");
+            return Status::Invalid(
+                "array read from batch reader is not a struct array in GlobalIndexWriteTask");
         }
-        arrow::ArrayVector fields = struct_array->fields();
-        fields.erase(fields.begin());
-        if (fields.empty()) {
-            return Status::Invalid("array read from batch reader only contains row kind");
+        auto indexed_array = struct_array->GetFieldByName(field_name);
+        if (!indexed_array) {
+            return Status::Invalid(fmt::format(
+                "read array does not contain {} field in GlobalIndexWriteTask", field_name));
+        }
+        auto row_id_array = struct_array->GetFieldByName(SpecialFields::RowId().Name());
+        auto typed_row_id_array = std::dynamic_pointer_cast<arrow::Int64Array>(row_id_array);
+        if (!typed_row_id_array) {
+            return Status::Invalid(
+                fmt::format("read array does not contain {} field, or it cannot be casted to "
+                            "Int64Array in GlobalIndexWriteTask",
+                            SpecialFields::RowId().Name()));
+        }
+        std::vector<int64_t> relative_row_ids;
+        relative_row_ids.reserve(typed_row_id_array->length());
+        for (int64_t i = 0; i < typed_row_id_array->length(); i++) {
+            relative_row_ids.push_back(typed_row_id_array->Value(i) - range.from);
         }
         PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::StructArray> new_array,
-                                          arrow::StructArray::Make(fields, {field_name}));
+                                          arrow::StructArray::Make({indexed_array}, {field_name}));
         ::ArrowArray c_new_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*new_array, &c_new_array));
-        PAIMON_RETURN_NOT_OK(global_index_writer->AddBatch(&c_new_array));
+        PAIMON_RETURN_NOT_OK(
+            global_index_writer->AddBatch(&c_new_array, std::move(relative_row_ids)));
     }
     return global_index_writer->Finish();
 }
@@ -127,20 +143,15 @@ Result<std::shared_ptr<CommitMessage>> ToCommitMessage(
     index_file_metas.reserve(global_index_io_metas.size());
     bool is_external_path = file_manager->IsExternalPath();
     for (const auto& io_meta : global_index_io_metas) {
-        if (range.Count() != io_meta.range_end + 1) {
-            return Status::Invalid(
-                fmt::format("specified range length {} mismatch indexed range length {}",
-                            range.Count(), io_meta.range_end + 1));
-        }
         std::optional<std::string> external_path;
         if (is_external_path) {
             PAIMON_ASSIGN_OR_RAISE(Path path, PathUtil::ToPath(io_meta.file_path));
             external_path = path.ToString();
         }
         index_file_metas.push_back(std::make_shared<IndexFileMeta>(
-            index_type, PathUtil::GetName(io_meta.file_path), io_meta.file_size,
-            io_meta.range_end + 1, /*dv_ranges=*/std::nullopt, external_path,
-            GlobalIndexMeta(range.from, io_meta.range_end + range.from, field_id,
+            index_type, PathUtil::GetName(io_meta.file_path), io_meta.file_size, range.Count(),
+            /*dv_ranges=*/std::nullopt, external_path,
+            GlobalIndexMeta(range.from, range.to, field_id,
                             /*extra_field_ids=*/std::nullopt, io_meta.metadata)));
     }
     DataIncrement data_increment(std::move(index_file_metas));
@@ -200,8 +211,9 @@ Result<std::shared_ptr<CommitMessage>> GlobalIndexWriteTask::WriteIndex(
         CreateBatchReader(table_path, field_name, indexed_split, core_options, pool));
 
     // read from data split and write to index writer
-    PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> global_index_io_metas,
-                           BuildIndex(field_name, batch_reader.get(), global_index_writer.get()));
+    PAIMON_ASSIGN_OR_RAISE(
+        std::vector<GlobalIndexIOMeta> global_index_io_metas,
+        BuildIndex(field_name, range, batch_reader.get(), global_index_writer.get()));
 
     // generate commit message
     return ToCommitMessage(index_type, field.Id(), range, global_index_io_metas,

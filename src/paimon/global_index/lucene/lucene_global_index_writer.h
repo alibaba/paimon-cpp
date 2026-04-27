@@ -48,7 +48,7 @@ class LuceneGlobalIndexWriter : public GlobalIndexWriter {
 
     ~LuceneGlobalIndexWriter() override;
 
-    Status AddBatch(::ArrowArray* c_arrow_array) override;
+    Status AddBatch(::ArrowArray* c_arrow_array, std::vector<int64_t>&& relative_row_ids) override;
 
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 

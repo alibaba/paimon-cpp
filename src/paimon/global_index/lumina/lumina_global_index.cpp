@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "lumina/api/Dataset.h"
 #include "lumina/api/LuminaBuilder.h"
 #include "lumina/api/LuminaSearcher.h"
@@ -26,6 +27,7 @@
 #include "lumina/core/Constants.h"
 #include "lumina/core/Status.h"
 #include "lumina/core/Types.h"
+#include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/rapidjson_util.h"
 #include "paimon/common/utils/string_utils.h"
@@ -161,25 +163,15 @@ Result<std::shared_ptr<GlobalIndexReader>> LuminaGlobalIndex::CreateReader(
         searcher->Open(std::move(lumina_file_reader), ::lumina::api::IOOptions()));
 
     // check meta
-    PAIMON_RETURN_NOT_OK(CheckLuminaIndexMeta(
-        searcher->GetMeta(), /*row_count=*/io_meta.range_end + 1, index_info.dimension));
+    if (searcher->GetMeta().dim != index_info.dimension) {
+        return Status::Invalid(
+            fmt::format("lumina index dimension {} mismatch dimension {} in io meta",
+                        searcher->GetMeta().dim, index_info.dimension));
+    }
     auto searcher_with_filter = std::make_unique<::lumina::extensions::SearchWithFilterExtension>();
     PAIMON_RETURN_NOT_OK_FROM_LUMINA(searcher->Attach(*searcher_with_filter));
-    return std::make_shared<LuminaIndexReader>(io_meta.range_end, index_info, std::move(searcher),
+    return std::make_shared<LuminaIndexReader>(index_info, std::move(searcher),
                                                std::move(searcher_with_filter), lumina_pool);
-}
-
-Status LuminaGlobalIndex::CheckLuminaIndexMeta(const ::lumina::api::LuminaSearcher::IndexInfo& meta,
-                                               int64_t row_count, uint32_t dimension) {
-    if (meta.dim != dimension) {
-        return Status::Invalid(fmt::format(
-            "lumina index dimension {} mismatch dimension {} in io meta", meta.dim, dimension));
-    }
-    if (meta.count != static_cast<uint64_t>(row_count)) {
-        return Status::Invalid(fmt::format(
-            "lumina index row count {} mismatch row count {} in io meta", meta.count, row_count));
-    }
-    return Status::OK();
 }
 
 class LuminaDataset : public ::lumina::api::Dataset {
@@ -242,7 +234,10 @@ LuminaIndexWriter::LuminaIndexWriter(const std::string& field_name,
       io_options_(std::move(io_options)),
       lumina_options_(lumina_options) {}
 
-Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array) {
+Status LuminaIndexWriter::AddBatch(::ArrowArray* arrow_array,
+                                   std::vector<int64_t>&& relative_row_ids) {
+    PAIMON_RETURN_NOT_OK(
+        GlobalIndexUtils::CheckRelativeRowIds(arrow_array, relative_row_ids, count_));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                       arrow::ImportArray(arrow_array, arrow_type_));
     if (array->null_count() != 0) {
@@ -304,18 +299,16 @@ Result<std::vector<GlobalIndexIOMeta>> LuminaIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(lumina_options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_->GetPaimonPool().get());
     GlobalIndexIOMeta meta(file_manager_->ToPath(index_file_name), file_size,
-                           /*range_end=*/count_ - 1,
                            /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }
 
 LuminaIndexReader::LuminaIndexReader(
-    int64_t range_end, const LuminaIndexReader::IndexInfo& index_info,
+    const LuminaIndexReader::IndexInfo& index_info,
     std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
     std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
     const std::shared_ptr<LuminaMemoryPool>& pool)
-    : range_end_(range_end),
-      index_info_(index_info),
+    : index_info_(index_info),
       pool_(pool),
       searcher_(std::move(searcher)),
       searcher_with_filter_(std::move(searcher_with_filter)) {}

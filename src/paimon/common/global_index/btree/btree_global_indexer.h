@@ -50,8 +50,8 @@ namespace paimon {
 
 class BTreeGlobalIndexer : public GlobalIndexer {
  public:
-    explicit BTreeGlobalIndexer(const std::map<std::string, std::string>& options)
-        : options_(options) {}
+    static Result<std::unique_ptr<BTreeGlobalIndexer>> Create(
+        const std::map<std::string, std::string>& options);
 
     Result<std::shared_ptr<GlobalIndexWriter>> CreateWriter(
         const std::string& field_name, ::ArrowSchema* arrow_schema,
@@ -64,11 +64,12 @@ class BTreeGlobalIndexer : public GlobalIndexer {
         const std::shared_ptr<MemoryPool>& pool) const override;
 
  private:
-    static Result<RoaringBitmap64> ReadNullBitmap(const std::shared_ptr<BlockCache>& cache,
-                                                  const std::optional<BlockHandle>& block_handle,
-                                                  MemoryPool* pool);
+    BTreeGlobalIndexer(const std::shared_ptr<CacheManager>& cache_manager,
+                       const std::map<std::string, std::string>& options)
+        : cache_manager_(cache_manager), options_(options) {}
 
  private:
+    std::shared_ptr<CacheManager> cache_manager_;
     std::map<std::string, std::string> options_;
 };
 

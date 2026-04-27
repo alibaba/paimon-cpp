@@ -1,0 +1,319 @@
+/*
+ * Copyright 2026-present Alibaba Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "paimon/common/global_index/btree/lazy_filtered_btree_reader.h"
+
+#include <future>
+#include <utility>
+
+#include "paimon/common/executor/future.h"
+#include "paimon/common/global_index/btree/btree_file_footer.h"
+#include "paimon/common/global_index/btree/btree_global_index_reader.h"
+#include "paimon/common/global_index/btree/btree_index_meta.h"
+#include "paimon/common/global_index/btree/key_serializer.h"
+#include "paimon/common/memory/memory_slice.h"
+#include "paimon/common/memory/memory_slice_input.h"
+#include "paimon/common/sst/block_cache.h"
+#include "paimon/common/sst/sst_file_reader.h"
+#include "paimon/common/utils/crc32c.h"
+#include "paimon/global_index/bitmap_global_index_result.h"
+#include "paimon/utils/roaring_bitmap64.h"
+
+namespace paimon {
+LazyFilteredBTreeReader::LazyFilteredBTreeReader(
+    const std::vector<GlobalIndexIOMeta>& files, const std::shared_ptr<arrow::DataType>& key_type,
+    const std::shared_ptr<GlobalIndexFileReader>& file_reader,
+    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool,
+    const std::shared_ptr<Executor>& executor)
+    : pool_(pool),
+      file_selector_(files, key_type, pool),
+      key_type_(key_type),
+      file_reader_(file_reader),
+      cache_manager_(cache_manager),
+      executor_(executor) {}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitIsNotNull() {
+    return DispatchVisit(
+        [this]() { return file_selector_.VisitIsNotNull(); },
+        [](const std::shared_ptr<GlobalIndexReader>& reader) { return reader->VisitIsNotNull(); });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitIsNull() {
+    return DispatchVisit(
+        [this]() { return file_selector_.VisitIsNull(); },
+        [](const std::shared_ptr<GlobalIndexReader>& reader) { return reader->VisitIsNull(); });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitEqual(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitEqual(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitEqual(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitNotEqual(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitNotEqual(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitNotEqual(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitLessThan(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitLessThan(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitLessThan(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitLessOrEqual(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitLessOrEqual(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitLessOrEqual(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitGreaterThan(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitGreaterThan(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitGreaterThan(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitGreaterOrEqual(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitGreaterOrEqual(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitGreaterOrEqual(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitIn(
+    const std::vector<Literal>& literals) {
+    return DispatchVisit([this, &literals]() { return file_selector_.VisitIn(literals); },
+                         [&literals](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitIn(literals);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitNotIn(
+    const std::vector<Literal>& literals) {
+    return DispatchVisit([this, &literals]() { return file_selector_.VisitNotIn(literals); },
+                         [&literals](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitNotIn(literals);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitStartsWith(
+    const Literal& prefix) {
+    return DispatchVisit([this, &prefix]() { return file_selector_.VisitStartsWith(prefix); },
+                         [&prefix](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitStartsWith(prefix);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitEndsWith(
+    const Literal& suffix) {
+    return DispatchVisit([this, &suffix]() { return file_selector_.VisitEndsWith(suffix); },
+                         [&suffix](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitEndsWith(suffix);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitContains(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitContains(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitContains(literal);
+                         });
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitLike(
+    const Literal& literal) {
+    return DispatchVisit([this, &literal]() { return file_selector_.VisitLike(literal); },
+                         [&literal](const std::shared_ptr<GlobalIndexReader>& reader) {
+                             return reader->VisitLike(literal);
+                         });
+}
+
+Result<std::shared_ptr<ScoredGlobalIndexResult>> LazyFilteredBTreeReader::VisitVectorSearch(
+    const std::shared_ptr<VectorSearch>& vector_search) {
+    return Status::Invalid("LazyFilteredBTreeReader does not support vector search");
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::VisitFullTextSearch(
+    const std::shared_ptr<FullTextSearch>& full_text_search) {
+    return Status::Invalid("LazyFilteredBTreeReader does not support full text search");
+}
+
+Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::DispatchVisit(
+    SelectAction select_files, ReaderAction action) {
+    PAIMON_ASSIGN_OR_RAISE(std::vector<GlobalIndexIOMeta> selected_files, select_files());
+    if (selected_files.empty()) {
+        return std::make_shared<BitmapGlobalIndexResult>([]() { return RoaringBitmap64(); });
+    }
+
+    // Prepare all readers sequentially (reader_cache_ is not thread-safe)
+    std::vector<std::shared_ptr<GlobalIndexReader>> readers;
+    readers.reserve(selected_files.size());
+    for (const auto& meta : selected_files) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, GetOrCreateReader(meta));
+        readers.push_back(std::move(reader));
+    }
+
+    // Execute actions: parallel if executor is available, sequential otherwise
+    std::vector<Result<std::shared_ptr<GlobalIndexResult>>> collected_results;
+    if (executor_ != nullptr) {
+        // Parallel: submit all tasks to executor, then collect results in order
+        std::vector<std::future<Result<std::shared_ptr<GlobalIndexResult>>>> futures;
+        futures.reserve(readers.size());
+        for (const auto& reader : readers) {
+            futures.push_back(
+                Via(executor_.get(),
+                    [&action, &reader]() -> Result<std::shared_ptr<GlobalIndexResult>> {
+                        return action(reader);
+                    }));
+        }
+        collected_results = CollectAll(futures);
+    } else {
+        // Sequential fallback: execute actions one by one
+        collected_results.reserve(readers.size());
+        for (const auto& reader : readers) {
+            collected_results.push_back(action(reader));
+        }
+    }
+
+    // Merge results in submission order
+    std::shared_ptr<GlobalIndexResult> merged_result = nullptr;
+    for (auto& result_or_status : collected_results) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
+                               std::move(result_or_status));
+        if (result == nullptr) {
+            continue;
+        }
+        if (merged_result == nullptr) {
+            merged_result = std::move(result);
+        } else {
+            PAIMON_ASSIGN_OR_RAISE(merged_result, merged_result->Or(result));
+        }
+    }
+
+    if (merged_result == nullptr) {
+        return Status::Invalid("DispatchVisit cannot return empty result");
+    }
+    return merged_result;
+}
+
+Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateReader(
+    const GlobalIndexIOMeta& meta) {
+    auto iterator = reader_cache_.find(meta.file_path);
+    if (iterator != reader_cache_.end()) {
+        return iterator->second;
+    }
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, CreateSingleReader(meta));
+    reader_cache_[meta.file_path] = reader;
+    return reader;
+}
+
+Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingleReader(
+    const GlobalIndexIOMeta& meta) {
+    auto comparator = KeySerializer::CreateComparator(key_type_, pool_);
+
+    // Deserialize min/max keys from meta
+    auto index_meta = BTreeIndexMeta::Deserialize(meta.metadata, pool_.get());
+    std::optional<Literal> min_key;
+    std::optional<Literal> max_key;
+    if (index_meta->FirstKey()) {
+        PAIMON_ASSIGN_OR_RAISE(
+            min_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->FirstKey()),
+                                                   key_type_, pool_.get()));
+    }
+    if (index_meta->LastKey()) {
+        PAIMON_ASSIGN_OR_RAISE(
+            max_key, KeySerializer::DeserializeKey(MemorySlice::Wrap(index_meta->LastKey()),
+                                                   key_type_, pool_.get()));
+    }
+
+    // Open input stream and create block cache
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<InputStream> input_stream,
+                           file_reader_->GetInputStream(meta.file_path));
+    auto block_cache =
+        std::make_shared<BlockCache>(meta.file_path, input_stream, cache_manager_, pool_);
+
+    // Read footer
+    PAIMON_ASSIGN_OR_RAISE(MemorySegment footer_segment,
+                           block_cache->GetBlock(meta.file_size - BTreeFileFooter::kEncodingLength,
+                                                 BTreeFileFooter::kEncodingLength, true,
+                                                 /*decompress_func=*/nullptr));
+    auto footer_slice = MemorySlice::Wrap(footer_segment);
+    auto footer_input = footer_slice.ToInput();
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<BTreeFileFooter> footer,
+                           BTreeFileFooter::Read(&footer_input));
+
+    // Read null bitmap
+    PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 null_bitmap,
+                           ReadNullBitmap(block_cache, footer->GetNullBitmapHandle()));
+
+    // Create SST file reader
+    PAIMON_ASSIGN_OR_RAISE(
+        std::shared_ptr<SstFileReader> sst_file_reader,
+        SstFileReader::Create(footer->GetIndexBlockHandle(), footer->GetBloomFilterHandle(),
+                              comparator, block_cache, pool_));
+
+    return std::make_shared<BTreeGlobalIndexReader>(sst_file_reader, std::move(null_bitmap),
+                                                    min_key, max_key, key_type_, pool_);
+}
+
+Result<RoaringBitmap64> LazyFilteredBTreeReader::ReadNullBitmap(
+    const std::shared_ptr<BlockCache>& cache, const std::optional<BlockHandle>& block_handle) {
+    RoaringBitmap64 null_bitmap;
+    if (!block_handle.has_value()) {
+        return null_bitmap;
+    }
+
+    // Read bytes and CRC value
+    PAIMON_ASSIGN_OR_RAISE(
+        MemorySegment segment,
+        cache->GetBlock(block_handle->Offset(), block_handle->Size() + 4, /*is_index=*/false,
+                        /*decompress_func=*/nullptr));
+
+    auto slice = MemorySlice::Wrap(segment);
+    auto slice_input = slice.ToInput();
+
+    // Read null bitmap data
+    auto null_bitmap_bytes = slice_input.ReadSlice(block_handle->Size()).CopyBytes(pool_.get());
+
+    // Calculate and verify CRC32C checksum
+    uint32_t calculated_crc =
+        CRC32C::calculate(null_bitmap_bytes->data(), null_bitmap_bytes->size());
+    int32_t expected_crc = slice_input.ReadInt();
+    if (calculated_crc != static_cast<uint32_t>(expected_crc)) {
+        return Status::Invalid(fmt::format(
+            "CRC check failure during decoding null bitmap. Expected: {}, Calculated: {}",
+            expected_crc, calculated_crc));
+    }
+
+    // Deserialize null bitmap
+    PAIMON_RETURN_NOT_OK(
+        null_bitmap.Deserialize(null_bitmap_bytes->data(), null_bitmap_bytes->size()));
+    return null_bitmap;
+}
+
+}  // namespace paimon
