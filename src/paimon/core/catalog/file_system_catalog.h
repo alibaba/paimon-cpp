@@ -62,6 +62,8 @@ class FileSystemCatalog : public Catalog {
     std::string GetRootPath() const override;
     std::shared_ptr<FileSystem> GetFileSystem() const override;
     Result<std::shared_ptr<Table>> GetTable(const Identifier& identifier) const override;
+    Result<std::vector<SnapshotInfo>> ListSnapshots(const Identifier& identifier,
+                                                    const std::string& branch) const override;
 
  private:
     static std::string NewDatabasePath(const std::string& warehouse, const std::string& db_name);

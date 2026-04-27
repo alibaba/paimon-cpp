@@ -26,6 +26,7 @@
 
 #include "paimon/catalog/identifier.h"
 #include "paimon/result.h"
+#include "paimon/snapshot/snapshot_info.h"
 #include "paimon/status.h"
 #include "paimon/type_fwd.h"
 #include "paimon/visibility.h"
@@ -188,6 +189,15 @@ class PAIMON_EXPORT Catalog {
     /// @param identifier The identifier (database and table name) of the table to load.
     /// @return A result containing table schema if the table exists, or an error status on failure.
     virtual Result<std::shared_ptr<Schema>> LoadTableSchema(const Identifier& identifier) const = 0;
+
+    /// Lists all snapshots of the specified table, ordered by snapshot id.
+    ///
+    /// @param identifier The identifier (database and table name) of the table.
+    /// @param branch Branch name; empty string means the main branch.
+    /// @return A result containing a vector of SnapshotInfo ordered by
+    ///         snapshot id ascending, or an error status.
+    virtual Result<std::vector<SnapshotInfo>> ListSnapshots(
+        const Identifier& identifier, const std::string& branch = "") const = 0;
 };
 
 }  // namespace paimon

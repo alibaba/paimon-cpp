@@ -16,6 +16,7 @@
 
 #include "paimon/core/catalog/file_system_catalog.h"
 
+#include <algorithm>
 #include <cstring>
 #include <optional>
 #include <set>
@@ -28,7 +29,9 @@
 #include "paimon/common/utils/arrow/status_utils.h"
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
+#include "paimon/core/snapshot.h"
 #include "paimon/core/utils/branch_manager.h"
+#include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/defs.h"
 #include "paimon/fs/file_system.h"
 #include "paimon/logging.h"
@@ -440,6 +443,56 @@ Status FileSystemCatalog::RenameTable(const Identifier& from_table, const Identi
     std::string to_path = GetTableLocation(to_table);
     PAIMON_RETURN_NOT_OK(fs_->Rename(from_path, to_path));
     return Status::OK();
+}
+
+namespace {
+SnapshotInfo::CommitKind ConvertCommitKind(Snapshot::CommitKind internal) {
+    if (internal == Snapshot::CommitKind::Append()) {
+        return SnapshotInfo::CommitKind::APPEND;
+    }
+    if (internal == Snapshot::CommitKind::Compact()) {
+        return SnapshotInfo::CommitKind::COMPACT;
+    }
+    if (internal == Snapshot::CommitKind::Overwrite()) {
+        return SnapshotInfo::CommitKind::OVERWRITE;
+    }
+    if (internal == Snapshot::CommitKind::Analyze()) {
+        return SnapshotInfo::CommitKind::ANALYZE;
+    }
+    return SnapshotInfo::CommitKind::UNKNOWN;
+}
+}  // namespace
+
+Result<std::vector<SnapshotInfo>> FileSystemCatalog::ListSnapshots(
+    const Identifier& identifier, const std::string& branch) const {
+    PAIMON_ASSIGN_OR_RAISE(bool exists, TableExists(identifier));
+    if (!exists) {
+        return Status::NotExist(fmt::format("table {} does not exist", identifier.ToString()));
+    }
+
+    auto table_path = GetTableLocation(identifier);
+    SnapshotManager mgr(fs_, table_path, branch);
+    PAIMON_ASSIGN_OR_RAISE(std::vector<Snapshot> snapshots, mgr.GetAllSnapshots());
+    std::sort(snapshots.begin(), snapshots.end(),
+              [](const Snapshot& a, const Snapshot& b) { return a.Id() < b.Id(); });
+
+    std::vector<SnapshotInfo> result;
+    result.reserve(snapshots.size());
+
+    for (const auto& snap : snapshots) {
+        SnapshotInfo info;
+        info.snapshot_id = snap.Id();
+        info.schema_id = snap.SchemaId();
+        info.commit_user = snap.CommitUser();
+        info.commit_kind = ConvertCommitKind(snap.GetCommitKind());
+        info.time_millis = snap.TimeMillis();
+        info.total_record_count = snap.TotalRecordCount();
+        info.delta_record_count = snap.DeltaRecordCount();
+        info.watermark = snap.Watermark();
+        result.push_back(std::move(info));
+    }
+
+    return result;
 }
 
 }  // namespace paimon
