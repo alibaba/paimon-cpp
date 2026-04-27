@@ -72,6 +72,10 @@ class PostponeBucketWriter : public BatchWriter {
         return Status::NotImplemented("not implemented");
     }
 
+    Status FlushMemory() override {
+        return Flush();
+    }
+
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
     Status Close() override {

@@ -21,21 +21,16 @@
 #include <variant>
 
 #include "arrow/api.h"
-#include "arrow/array/array_base.h"
 #include "arrow/array/array_nested.h"
 #include "arrow/ipc/json_simple.h"
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/types/row_kind.h"
 #include "paimon/common/utils/fields_comparator.h"
-#include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
-#include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
-#include "paimon/metrics.h"
-#include "paimon/status.h"
 #include "paimon/testing/utils/binary_row_generator.h"
 #include "paimon/testing/utils/key_value_checker.h"
 #include "paimon/testing/utils/read_result_collector.h"
@@ -46,18 +41,14 @@ class KeyValueInMemoryRecordReaderTest : public testing::Test {
  public:
     void SetUp() override {
         pool_ = GetDefaultPool();
-        auto mfunc = std::make_unique<DeduplicateMergeFunction>(/*ignore_delete=*/false);
-        merge_function_wrapper_ = std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
     }
 
     void TearDown() override {
         pool_.reset();
-        merge_function_wrapper_.reset();
     }
 
  private:
     std::shared_ptr<MemoryPool> pool_;
-    std::shared_ptr<ReducerMergeFunctionWrapper> merge_function_wrapper_;
 };
 
 TEST_F(KeyValueInMemoryRecordReaderTest, TestSimple) {
@@ -102,13 +93,13 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestSimple) {
                                                   /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-        /*last_sequence_num=*/0, std::move(src_array),
+        /*last_sequence_num=*/0, src_array,
         std::vector<RecordBatch::RowKind>(
             {RecordBatch::RowKind::INSERT, RecordBatch::RowKind::UPDATE_BEFORE,
              RecordBatch::RowKind::UPDATE_AFTER, RecordBatch::RowKind::DELETE}),
         std::vector<std::string>({"k0", "k1"}),
-        /*user_defined_sequence_fields=*/std::vector<std::string>(), key_comparator,
-        merge_function_wrapper_, pool_);
+        /*user_defined_sequence_fields=*/std::vector<std::string>(),
+        /*sequence_fields_ascending=*/true, key_comparator, pool_);
     ASSERT_OK_AND_ASSIGN(
         auto results, (ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,
                                                                   KeyValueRecordReader::Iterator>(
@@ -155,6 +146,19 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestUserDefinedSequenceFields) {
         /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 1}, pool_.get()),
         /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 2, 11, 21, 31}, pool_.get()));
     expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/3, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/
+        BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 21, std::monostate()}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/0, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 21, 31}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/5, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 22, 31}, pool_.get()));
+    expected.emplace_back(
         RowKind::Insert(), /*sequence_number=*/6, /*level=*/KeyValue::UNKNOWN_LEVEL,
         /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
         /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 12, 22, 32}, pool_.get()));
@@ -168,10 +172,79 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestUserDefinedSequenceFields) {
                                                   /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-        /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),
+        /*last_sequence_num=*/0, src_array, std::vector<RecordBatch::RowKind>(),
         std::vector<std::string>({"k0", "k1"}),
-        /*user_defined_sequence_fields=*/std::vector<std::string>({"s0", "s1"}), key_comparator,
-        merge_function_wrapper_, pool_);
+        /*user_defined_sequence_fields=*/std::vector<std::string>({"s0", "s1"}),
+        /*sequence_fields_ascending=*/true, key_comparator, pool_);
+    ASSERT_OK_AND_ASSIGN(
+        auto results, (ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,
+                                                                  KeyValueRecordReader::Iterator>(
+                          record_reader.get())));
+    KeyValueChecker::CheckResult(expected, results, /*key_arity=*/2, /*value_arity=*/5);
+}
+
+TEST_F(KeyValueInMemoryRecordReaderTest, TestUserDefinedSequenceFieldsDescending) {
+    std::vector<DataField> fields = {DataField(0, arrow::field("k1", arrow::int32())),
+                                     DataField(1, arrow::field("k0", arrow::int32())),
+                                     DataField(2, arrow::field("v0", arrow::int32())),
+                                     DataField(3, arrow::field("s1", arrow::int32())),
+                                     DataField(4, arrow::field("s0", arrow::int32()))};
+
+    std::shared_ptr<arrow::DataType> src_type =
+        DataField::ConvertDataFieldsToArrowStructType(fields);
+
+    auto src_array = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [2, 2, 11, 21, 31],
+        [1, 2, 11, 21, 31],
+        [1, 1, 10, 20, 30],
+        [2, 2, 11, 21, null],
+        [2, 3, 13, 23, 33],
+        [2, 2, 11, 22, 31],
+        [2, 2, 12, 22, 32]
+    ])")
+            .ValueOrDie());
+
+    std::vector<KeyValue> expected;
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/2, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 1}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 1, 10, 20, 30}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/1, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 1}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 2, 11, 21, 31}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/3, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/
+        BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 21, std::monostate()}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/6, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 12, 22, 32}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/5, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 22, 31}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/0, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({2, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 2, 11, 21, 31}, pool_.get()));
+    expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/4, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({3, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({2, 3, 13, 23, 33}, pool_.get()));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> key_comparator,
+                         FieldsComparator::Create({fields[1], fields[0]},
+                                                  /*is_ascending_order=*/true));
+
+    auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
+        /*last_sequence_num=*/0, src_array, std::vector<RecordBatch::RowKind>(),
+        std::vector<std::string>({"k0", "k1"}),
+        /*user_defined_sequence_fields=*/std::vector<std::string>({"s0", "s1"}),
+        /*sequence_fields_ascending=*/false, key_comparator, pool_);
     ASSERT_OK_AND_ASSIGN(
         auto results, (ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,
                                                                   KeyValueRecordReader::Iterator>(
@@ -203,17 +276,17 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestNonExistPK) {
                                                   /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-        /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),
+        /*last_sequence_num=*/0, src_array, std::vector<RecordBatch::RowKind>(),
         std::vector<std::string>({"non_exist_key"}),
-        /*user_defined_sequence_fields=*/std::vector<std::string>(), key_comparator,
-        merge_function_wrapper_, pool_);
+        /*user_defined_sequence_fields=*/std::vector<std::string>(),
+        /*sequence_fields_ascending=*/true, key_comparator, pool_);
     ASSERT_NOK_WITH_MSG((ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,
                                                                     KeyValueRecordReader::Iterator>(
                             record_reader.get())),
                         "cannot find field non_exist_key");
 }
 
-TEST_F(KeyValueInMemoryRecordReaderTest, TestStableSortAndMerge) {
+TEST_F(KeyValueInMemoryRecordReaderTest, TestStableSortWithDuplicateKeys) {
     std::vector<DataField> fields = {DataField(0, arrow::field("k0", arrow::int32())),
                                      DataField(1, arrow::field("k1", arrow::int32())),
                                      DataField(2, arrow::field("v0", arrow::int32())),
@@ -240,6 +313,10 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestStableSortAndMerge) {
         /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 1}, pool_.get()),
         /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 1, 10, 20, 30}, pool_.get()));
     expected.emplace_back(
+        RowKind::Insert(), /*sequence_number=*/0, /*level=*/KeyValue::UNKNOWN_LEVEL,
+        /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 2}, pool_.get()),
+        /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 2, 11, 21, 31}, pool_.get()));
+    expected.emplace_back(
         RowKind::Delete(), /*sequence_number=*/3, /*level=*/KeyValue::UNKNOWN_LEVEL,
         /*key=*/BinaryRowGenerator::GenerateRowPtr({1, 2}, pool_.get()),
         /*value=*/BinaryRowGenerator::GenerateRowPtr({1, 2, 12, 22, 32}, pool_.get()));
@@ -253,13 +330,13 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestStableSortAndMerge) {
                                                   /*is_ascending_order=*/true));
 
     auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-        /*last_sequence_num=*/0, std::move(src_array),
+        /*last_sequence_num=*/0, src_array,
         std::vector<RecordBatch::RowKind>(
             {RecordBatch::RowKind::INSERT, RecordBatch::RowKind::UPDATE_BEFORE,
              RecordBatch::RowKind::UPDATE_AFTER, RecordBatch::RowKind::DELETE}),
         std::vector<std::string>({"k0", "k1"}),
-        /*user_defined_sequence_fields=*/std::vector<std::string>(), key_comparator,
-        merge_function_wrapper_, pool_);
+        /*user_defined_sequence_fields=*/std::vector<std::string>(),
+        /*sequence_fields_ascending=*/true, key_comparator, pool_);
     ASSERT_OK_AND_ASSIGN(
         auto results, (ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,
                                                                   KeyValueRecordReader::Iterator>(
@@ -280,11 +357,22 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestVariantType) {
                                 const BinaryRowGenerator::ValueType& key,
                                 const BinaryRowGenerator::ValueType& sequence) {
         std::vector<KeyValue> expected;
+        expected.emplace_back(RowKind::Insert(), /*sequence_number=*/3,
+                              /*level=*/KeyValue::UNKNOWN_LEVEL,
+                              /*key=*/BinaryRowGenerator::GenerateRowPtr({key[0]}, pool_.get()),
+                              /*value=*/
+                              BinaryRowGenerator::GenerateRowPtr(
+                                  {key[0], std::monostate{}, 12, 22, 32}, pool_.get()));
         expected.emplace_back(
             RowKind::Insert(), /*sequence_number=*/1, /*level=*/KeyValue::UNKNOWN_LEVEL,
             /*key=*/BinaryRowGenerator::GenerateRowPtr({key[0]}, pool_.get()),
             /*value=*/
             BinaryRowGenerator::GenerateRowPtr({key[0], sequence[0], 10, 20, 30}, pool_.get()));
+        expected.emplace_back(
+            RowKind::Insert(), /*sequence_number=*/2, /*level=*/KeyValue::UNKNOWN_LEVEL,
+            /*key=*/BinaryRowGenerator::GenerateRowPtr({key[1]}, pool_.get()),
+            /*value=*/
+            BinaryRowGenerator::GenerateRowPtr({key[1], sequence[0], 13, 23, 33}, pool_.get()));
         expected.emplace_back(
             RowKind::Insert(), /*sequence_number=*/0, /*level=*/KeyValue::UNKNOWN_LEVEL,
             /*key=*/BinaryRowGenerator::GenerateRowPtr({key[1]}, pool_.get()),
@@ -296,10 +384,10 @@ TEST_F(KeyValueInMemoryRecordReaderTest, TestVariantType) {
                                                       /*is_ascending_order=*/true));
 
         auto record_reader = std::make_unique<KeyValueInMemoryRecordReader>(
-            /*last_sequence_num=*/0, std::move(src_array), std::vector<RecordBatch::RowKind>(),
+            /*last_sequence_num=*/0, src_array, std::vector<RecordBatch::RowKind>(),
             std::vector<std::string>({"k0"}),
-            /*user_defined_sequence_fields=*/std::vector<std::string>({"s0"}), key_comparator,
-            merge_function_wrapper_, pool_);
+            /*user_defined_sequence_fields=*/std::vector<std::string>({"s0"}),
+            /*sequence_fields_ascending=*/true, key_comparator, pool_);
         ASSERT_OK_AND_ASSIGN(
             auto results,
             (ReadResultCollector::CollectKeyValueResult<KeyValueInMemoryRecordReader,

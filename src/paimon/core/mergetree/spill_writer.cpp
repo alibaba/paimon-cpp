@@ -61,7 +61,8 @@ Status SpillWriter::Open() {
             [[maybe_unused]] auto status = fs_->Delete(channel_id_.GetPath());
         }
     });
-    PAIMON_ASSIGN_OR_RAISE(auto arrow_compression, ArrowUtils::GetCompressionType(compression_));
+    PAIMON_ASSIGN_OR_RAISE(arrow::Compression::type arrow_compression,
+                           ArrowUtils::GetCompressionType(compression_));
     if (!arrow::util::Codec::SupportsCompressionLevel(arrow_compression)) {
         compression_level_ = arrow::util::Codec::UseDefaultCompressionLevel();
     }

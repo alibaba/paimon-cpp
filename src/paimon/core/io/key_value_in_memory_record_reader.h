@@ -28,7 +28,6 @@
 #include "paimon/common/utils/fields_comparator.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/key_value.h"
-#include "paimon/core/mergetree/compact/merge_function_wrapper.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"
 
@@ -41,18 +40,17 @@ struct ColumnarBatchContext;
 class FieldsComparator;
 class MemoryPool;
 class Metrics;
-template <typename T>
-class MergeFunctionWrapper;
 
 class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
  public:
-    KeyValueInMemoryRecordReader(
-        int64_t last_sequence_num, std::shared_ptr<arrow::StructArray>&& struct_array,
-        std::vector<RecordBatch::RowKind>&& row_kinds, const std::vector<std::string>& primary_keys,
-        const std::vector<std::string>& user_defined_sequence_fields,
-        const std::shared_ptr<FieldsComparator>& key_comparator,
-        const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
-        const std::shared_ptr<MemoryPool>& pool);
+    KeyValueInMemoryRecordReader(int64_t last_sequence_num,
+                                 const std::shared_ptr<arrow::StructArray>& struct_array,
+                                 const std::vector<RecordBatch::RowKind>& row_kinds,
+                                 const std::vector<std::string>& primary_keys,
+                                 const std::vector<std::string>& user_defined_sequence_fields,
+                                 bool sequence_fields_ascending,
+                                 const std::shared_ptr<FieldsComparator>& key_comparator,
+                                 const std::shared_ptr<MemoryPool>& pool);
 
     class Iterator : public KeyValueRecordReader::Iterator {
      public:
@@ -83,11 +81,11 @@ class KeyValueInMemoryRecordReader : public KeyValueRecordReader {
     int64_t last_sequence_num_ = -1;
     std::vector<std::string> primary_keys_;
     std::vector<std::string> user_defined_sequence_fields_;
+    bool sequence_fields_ascending_ = true;
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<arrow::StructArray> value_struct_array_;
     std::vector<RecordBatch::RowKind> row_kinds_;
     std::shared_ptr<FieldsComparator> key_comparator_;
-    std::shared_ptr<MergeFunctionWrapper<KeyValue>> merge_function_wrapper_;
 
     std::shared_ptr<arrow::NumericArray<arrow::UInt64Type>> sort_indices_;
     std::shared_ptr<ColumnarBatchContext> key_ctx_;

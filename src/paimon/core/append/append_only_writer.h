@@ -68,6 +68,10 @@ class AppendOnlyWriter : public BatchWriter {
     Status Compact(bool full_compaction) override {
         return Flush(/*wait_for_latest_compaction=*/true, full_compaction);
     }
+
+    Status FlushMemory() override {
+        return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
+    }
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
     Result<bool> CompactNotCompleted() override {
         PAIMON_RETURN_NOT_OK(compact_manager_->TriggerCompaction(/*full_compaction=*/false));
