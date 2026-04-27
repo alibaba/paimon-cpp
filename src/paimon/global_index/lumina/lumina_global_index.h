@@ -71,10 +71,6 @@ class LuminaGlobalIndex : public GlobalIndexer {
         const std::shared_ptr<MemoryPool>& pool) const override;
 
  private:
-    static Status CheckLuminaIndexMeta(const ::lumina::api::LuminaSearcher::IndexInfo& meta,
-                                       int64_t row_count, uint32_t dimension);
-
- private:
     std::map<std::string, std::string> options_;
 };
 
@@ -88,7 +84,7 @@ class LuminaIndexWriter : public GlobalIndexWriter {
                       const std::map<std::string, std::string>& lumina_options,
                       const std::shared_ptr<LuminaMemoryPool>& pool);
 
-    Status AddBatch(::ArrowArray* arrow_array) override;
+    Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& relative_row_ids) override;
 
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
@@ -114,8 +110,7 @@ class LuminaIndexReader : public GlobalIndexReader {
     };
 
     LuminaIndexReader(
-        int64_t range_end, const IndexInfo& index_info,
-        std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
+        const IndexInfo& index_info, std::unique_ptr<::lumina::api::LuminaSearcher>&& searcher,
         std::unique_ptr<::lumina::extensions::SearchWithFilterExtension>&& searcher_with_filter,
         const std::shared_ptr<LuminaMemoryPool>& pool);
 
@@ -130,66 +125,66 @@ class LuminaIndexReader : public GlobalIndexReader {
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitFullTextSearch(
         const std::shared_ptr<FullTextSearch>& full_text_search) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNull() override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLessOrEqual(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterThan(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitGreaterOrEqual(
         const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitStartsWith(const Literal& prefix) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEndsWith(const Literal& suffix) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLike(const Literal& literal) override {
-        return BitmapGlobalIndexResult::FromRanges({Range(0, range_end_)});
+        return std::shared_ptr<GlobalIndexResult>();
     }
 
     bool IsThreadSafe() const override {
@@ -203,7 +198,6 @@ class LuminaIndexReader : public GlobalIndexReader {
     static Result<LuminaIndexReader::IndexInfo> GetIndexInfo(const GlobalIndexIOMeta& io_meta);
 
  private:
-    int64_t range_end_;
     LuminaIndexReader::IndexInfo index_info_;
     std::shared_ptr<LuminaMemoryPool> pool_;
     std::unique_ptr<::lumina::api::LuminaSearcher> searcher_;

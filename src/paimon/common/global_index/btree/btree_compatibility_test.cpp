@@ -34,18 +34,18 @@
 #include "paimon/testing/utils/testharness.h"
 namespace paimon::test {
 class BTreeCompatibilityTest : public ::testing::Test {
- protected:
-    struct CsvRecord {
-        int64_t row_id;
-        std::string key;  // "NULL" if is_null
-        bool is_null;
-    };
-
+ public:
     void SetUp() override {
         pool_ = GetDefaultPool();
         ASSERT_OK_AND_ASSIGN(fs_, FileSystemFactory::Get("local", "/", {}));
         data_dir_ = GetDataDir() + "/global_index/btree/btree_compatibility_data";
     }
+
+    struct CsvRecord {
+        int64_t row_id;
+        std::string key;  // "NULL" if is_null
+        bool is_null;
+    };
 
     std::string ReadFileAsString(const std::string& path) const {
         EXPECT_OK_AND_ASSIGN(auto input, fs_->Open(path));
@@ -110,13 +110,13 @@ class BTreeCompatibilityTest : public ::testing::Test {
 
     Result<std::shared_ptr<GlobalIndexReader>> CreateReaderFromFiles(
         const std::string& bin_path, const std::string& meta_path,
-        const std::shared_ptr<arrow::DataType>& arrow_type, int64_t record_count) const {
+        const std::shared_ptr<arrow::DataType>& arrow_type) const {
         auto meta_str = ReadFileAsString(meta_path);
         std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
         PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(bin_path));
         auto file_size = static_cast<int64_t>(file_status->GetLen());
 
-        GlobalIndexIOMeta io_meta(bin_path, file_size, record_count - 1, meta_bytes);
+        GlobalIndexIOMeta io_meta(bin_path, file_size, meta_bytes);
         std::vector<GlobalIndexIOMeta> metas = {io_meta};
 
         auto schema = arrow::schema({arrow::field("testField", arrow_type)});
@@ -125,8 +125,8 @@ class BTreeCompatibilityTest : public ::testing::Test {
 
         auto file_reader = std::make_shared<LocalGlobalIndexFileReader>(fs_);
         std::map<std::string, std::string> options;
-        BTreeGlobalIndexer indexer(options);
-        return indexer.CreateReader(c_schema.get(), file_reader, metas, pool_);
+        PAIMON_ASSIGN_OR_RAISE(auto indexer, BTreeGlobalIndexer::Create(options));
+        return indexer->CreateReader(c_schema.get(), file_reader, metas, pool_);
     }
 
     void RunIntQueries(const std::shared_ptr<GlobalIndexReader>& reader,
@@ -370,6 +370,174 @@ class BTreeCompatibilityTest : public ::testing::Test {
         }
     }
 
+    // Run float-type queries against a reader with CSV records as ground truth
+    void RunFloatQueries(const std::shared_ptr<GlobalIndexReader>& reader,
+                         const std::vector<CsvRecord>& records) const {
+        // VisitIsNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNull());
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids =
+                CollectMatchingRows(records, [](const CsvRecord& r) { return r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitIsNotNull
+        {
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIsNotNull());
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids =
+                CollectMatchingRows(records, [](const CsvRecord& r) { return !r.is_null; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+        // check special value
+        {
+            float value = -INFINITY;
+            Literal literal(value);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [](const CsvRecord& r) { return !r.is_null && r.key == "-infinity"; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+        {
+            float value = INFINITY;
+            Literal literal(value);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [](const CsvRecord& r) { return !r.is_null && r.key == "+infinity"; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+        {
+            Literal literal(static_cast<float>(std::nan("")));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [](const CsvRecord& r) { return !r.is_null && r.key == "NaN"; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+        {
+            Literal literal(static_cast<float>(-0.00f));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [](const CsvRecord& r) { return !r.is_null && r.key == "-0.00f"; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+        {
+            Literal literal(static_cast<float>(0.00f));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(
+                records, [](const CsvRecord& r) { return !r.is_null && r.key == "0.00f"; });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitEqual for the first non-null key
+        for (const auto& rec : records) {
+            if (!rec.is_null && rec.key != "-infinity") {
+                float key_val = std::stof(rec.key);
+                Literal literal(key_val);
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stof(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+
+        // VisitEqual for the last non-null key
+        for (auto it = records.rbegin(); it != records.rend(); ++it) {
+            if (!it->is_null && it->key != "+infinity" && it->key != "NaN") {
+                float key_val = std::stof(it->key);
+                Literal literal(key_val);
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(records, [key_val](const CsvRecord& r) {
+                    return !r.is_null && std::stof(r.key) == key_val;
+                });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+
+        // VisitEqual for a non-existent key
+        {
+            Literal literal(static_cast<float>(-99.99));
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            ASSERT_TRUE(actual_ids.empty());
+        }
+
+        float mid_key = -1;
+        {
+            std::vector<float> non_null_keys;
+            for (const auto& rec : records) {
+                if (!rec.is_null) {
+                    non_null_keys.push_back(std::stof(rec.key));
+                }
+            }
+            ASSERT_FALSE(non_null_keys.empty());
+            mid_key = non_null_keys[non_null_keys.size() / 2];
+        }
+        // VisitLessThan for a mid-range key
+        {
+            Literal literal(mid_key);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitLessThan(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [mid_key](const CsvRecord& r) {
+                return !r.is_null && std::stof(r.key) < mid_key;
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitGreaterOrEqual for a mid-range key
+        {
+            Literal literal(mid_key);
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitGreaterOrEqual(literal));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [mid_key](const CsvRecord& r) {
+                return !r.is_null && (std::stof(r.key) >= mid_key || r.key == "NaN");
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitIn for multiple keys
+        {
+            float k1 = -9.27f;
+            float k2 = 62.91f;
+            float k3 = 108.17f;
+            std::vector<Literal> in_literals = {Literal(k1), Literal(k2), Literal(k3)};
+            ASSERT_OK_AND_ASSIGN(auto result, reader->VisitIn(in_literals));
+            auto actual_ids = CollectRowIds(result);
+            auto expected_ids = CollectMatchingRows(records, [k1, k2, k3](const CsvRecord& r) {
+                if (r.is_null) {
+                    return false;
+                }
+                float v = std::stof(r.key);
+                return v == k1 || v == k2 || v == k3;
+            });
+            ASSERT_EQ(actual_ids, expected_ids);
+        }
+
+        // VisitNotEqual for the first non-null key
+        for (const auto& rec : records) {
+            if (!rec.is_null) {
+                float key_val = std::stof(rec.key);
+                Literal literal(key_val);
+                ASSERT_OK_AND_ASSIGN(auto result, reader->VisitNotEqual(literal));
+                auto actual_ids = CollectRowIds(result);
+                auto expected_ids = CollectMatchingRows(
+                    records, [rec](const CsvRecord& r) { return !r.is_null && r.key != rec.key; });
+                ASSERT_EQ(actual_ids, expected_ids);
+                break;
+            }
+        }
+    }
+
     class LocalGlobalIndexFileReader : public GlobalIndexFileReader {
      public:
         explicit LocalGlobalIndexFileReader(const std::shared_ptr<FileSystem>& fs) : fs_(fs) {}
@@ -383,6 +551,7 @@ class BTreeCompatibilityTest : public ::testing::Test {
         std::shared_ptr<FileSystem> fs_;
     };
 
+ private:
     std::shared_ptr<MemoryPool> pool_;
     std::shared_ptr<FileSystem> fs_;
     std::string data_dir_;
@@ -399,7 +568,7 @@ TEST_F(BTreeCompatibilityTest, ReadAndQueryIntData) {
         ASSERT_EQ(static_cast<int32_t>(records.size()), count);
 
         ASSERT_OK_AND_ASSIGN(auto reader,
-                             CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
+                             CreateReaderFromFiles(bin_path, meta_path, arrow::int32()));
         RunIntQueries(reader, records);
     }
 }
@@ -415,9 +584,23 @@ TEST_F(BTreeCompatibilityTest, ReadAndQueryStringData) {
         ASSERT_EQ(static_cast<int32_t>(records.size()), count);
 
         ASSERT_OK_AND_ASSIGN(auto reader,
-                             CreateReaderFromFiles(bin_path, meta_path, arrow::utf8(), count));
+                             CreateReaderFromFiles(bin_path, meta_path, arrow::utf8()));
         RunStringQueries(reader, records);
     }
+}
+
+TEST_F(BTreeCompatibilityTest, ReadAndQueryFloatData) {
+    int32_t count = 50;
+    std::string prefix = "btree_test_float_" + std::to_string(count);
+    std::string bin_path = data_dir_ + "/" + prefix + ".bin";
+    std::string meta_path = bin_path + ".meta";
+    std::string csv_path = data_dir_ + "/" + prefix + ".csv";
+
+    auto records = ParseCsvFile(csv_path);
+    ASSERT_EQ(static_cast<int32_t>(records.size()), count);
+
+    ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow::float32()));
+    RunFloatQueries(reader, records);
 }
 
 TEST_F(BTreeCompatibilityTest, AllNulls) {
@@ -430,8 +613,7 @@ TEST_F(BTreeCompatibilityTest, AllNulls) {
     ASSERT_FALSE(records.empty());
     auto count = static_cast<int32_t>(records.size());
 
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
+    ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow::int32()));
 
     // All rows should be null
     {
@@ -469,8 +651,7 @@ TEST_F(BTreeCompatibilityTest, NoNulls) {
     ASSERT_FALSE(records.empty());
     auto count = static_cast<int32_t>(records.size());
 
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
+    ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow::int32()));
 
     // No rows should be null
     {
@@ -536,10 +717,8 @@ TEST_F(BTreeCompatibilityTest, DuplicateKeys) {
 
     auto records = ParseCsvFile(csv_path);
     ASSERT_FALSE(records.empty());
-    auto count = static_cast<int32_t>(records.size());
 
-    ASSERT_OK_AND_ASSIGN(auto reader,
-                         CreateReaderFromFiles(bin_path, meta_path, arrow::int32(), count));
+    ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow::int32()));
 
     // VisitIsNull
     {
@@ -619,6 +798,31 @@ TEST_F(BTreeCompatibilityTest, MetaDeserialization) {
                              KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
                                                            arrow::int32(), pool_.get()));
         ASSERT_EQ(max_key, Literal(143));
+    }
+
+    // Test float_50 meta
+    {
+        std::string meta_path = data_dir_ + "/btree_test_float_50.bin.meta";
+        auto meta_str = ReadFileAsString(meta_path);
+        std::shared_ptr<Bytes> meta_bytes = Bytes::AllocateBytes(meta_str, pool_.get());
+
+        auto meta = BTreeIndexMeta::Deserialize(meta_bytes, pool_.get());
+        ASSERT_TRUE(meta);
+
+        ASSERT_TRUE(meta->HasNulls());
+        ASSERT_FALSE(meta->OnlyNulls());
+
+        ASSERT_TRUE(meta->FirstKey());
+        ASSERT_OK_AND_ASSIGN(auto min_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->FirstKey()),
+                                                           arrow::float32(), pool_.get()));
+        ASSERT_EQ(min_key, Literal(static_cast<float>(-INFINITY)));
+
+        ASSERT_TRUE(meta->LastKey());
+        ASSERT_OK_AND_ASSIGN(auto max_key,
+                             KeySerializer::DeserializeKey(MemorySlice::Wrap(meta->LastKey()),
+                                                           arrow::float32(), pool_.get()));
+        ASSERT_EQ(max_key, Literal(static_cast<float>(std::nan(""))));
     }
 
     // Test all_nulls meta
@@ -703,8 +907,7 @@ TEST_F(BTreeCompatibilityTest, RowCountConsistency) {
         ASSERT_FALSE(records.empty());
         auto count = static_cast<int32_t>(records.size());
 
-        ASSERT_OK_AND_ASSIGN(auto reader,
-                             CreateReaderFromFiles(bin_path, meta_path, arrow_type, count));
+        ASSERT_OK_AND_ASSIGN(auto reader, CreateReaderFromFiles(bin_path, meta_path, arrow_type));
 
         ASSERT_OK_AND_ASSIGN(auto null_result, reader->VisitIsNull());
         auto null_ids = CollectRowIds(null_result);

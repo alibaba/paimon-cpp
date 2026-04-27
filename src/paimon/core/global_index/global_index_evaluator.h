@@ -38,11 +38,11 @@ class PAIMON_EXPORT GlobalIndexEvaluator {
     ///       vector similarity scoring is effectively limited to rows that satisfy
     ///       the predicate.
     /// @return A `Result` containing:
-    ///         - `std::nullopt` if the predicate cannot be evaluated by this index (e.g., field has
+    ///         - `nullptr` if the predicate cannot be evaluated by this index (e.g., field has
     ///         no index),
     ///         - A `std::shared_ptr<GlobalIndexResult>` if evaluation succeeds.
     ///         The `GlobalIndexResult` indicates the matching rows (e.g., via row ID bitmaps).
-    virtual Result<std::optional<std::shared_ptr<GlobalIndexResult>>> Evaluate(
+    virtual Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<VectorSearch>& vector_search) = 0;
 };

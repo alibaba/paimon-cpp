@@ -38,19 +38,19 @@ class GlobalIndexEvaluatorImpl : public GlobalIndexEvaluator {
                              IndexReadersCreator create_index_readers)
         : table_schema_(table_schema), create_index_readers_(std::move(create_index_readers)) {}
 
-    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> Evaluate(
+    Result<std::shared_ptr<GlobalIndexResult>> Evaluate(
         const std::shared_ptr<Predicate>& predicate,
         const std::shared_ptr<VectorSearch>& vector_search) override;
 
  private:
-    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> EvaluateVectorSearch(
+    Result<std::shared_ptr<GlobalIndexResult>> EvaluateVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search,
-        const std::optional<std::shared_ptr<GlobalIndexResult>>& predicate_result);
+        const std::shared_ptr<GlobalIndexResult>& predicate_result);
 
-    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> EvaluatePredicate(
+    Result<std::shared_ptr<GlobalIndexResult>> EvaluatePredicate(
         const std::shared_ptr<Predicate>& predicate);
 
-    Result<std::optional<std::shared_ptr<GlobalIndexResult>>> EvaluateCompoundPredicate(
+    Result<std::shared_ptr<GlobalIndexResult>> EvaluateCompoundPredicate(
         const std::shared_ptr<CompoundPredicate>& compound_predicate);
 
     Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GetIndexReaders(

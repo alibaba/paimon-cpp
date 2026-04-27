@@ -65,12 +65,7 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
 
     ~BTreeGlobalIndexWriter() override = default;
 
-    Status AddBatch(::ArrowArray* arrow_array) override {
-        // TODO(xinyu.lxy): refactor AddBatch with relative row ids
-        return Status::Invalid("BTreeGlobalIndexWriter not support AddBatch without row_ids");
-    }
-
-    Status AddBatch(::ArrowArray* arrow_array, const std::vector<int64_t>& row_ids);
+    Status AddBatch(::ArrowArray* arrow_array, std::vector<int64_t>&& relative_row_ids) override;
 
     /// Finish writing and return the index metadata.
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
@@ -100,8 +95,6 @@ class BTreeGlobalIndexWriter : public GlobalIndexWriter {
     std::shared_ptr<OutputStream> output_stream_;
     std::unique_ptr<SstFileWriter> sst_writer_;
 
-    // TODO(xinyu.lxy): remove it when GlobalIndexIOMeta is updated
-    int64_t max_row_id_ = -1;
     std::optional<Literal> first_key_;
     std::optional<Literal> last_key_;
 

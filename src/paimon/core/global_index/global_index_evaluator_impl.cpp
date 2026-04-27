@@ -22,10 +22,10 @@
 #include "paimon/predicate/predicate_utils.h"
 
 namespace paimon {
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexEvaluatorImpl::Evaluate(
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::Evaluate(
     const std::shared_ptr<Predicate>& predicate,
     const std::shared_ptr<VectorSearch>& vector_search) {
-    std::optional<std::shared_ptr<GlobalIndexResult>> compound_result;
+    std::shared_ptr<GlobalIndexResult> compound_result;
     if (predicate) {
         PAIMON_ASSIGN_OR_RAISE(compound_result, EvaluatePredicate(predicate));
     }
@@ -53,10 +53,9 @@ Result<std::vector<std::shared_ptr<GlobalIndexReader>>> GlobalIndexEvaluatorImpl
     return readers;
 }
 
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>>
-GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search,
-    const std::optional<std::shared_ptr<GlobalIndexResult>>& predicate_result) {
+    const std::shared_ptr<GlobalIndexResult>& predicate_result) {
     PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<GlobalIndexReader>> readers,
                            GetIndexReaders(vector_search->field_name));
     if (readers.empty()) {
@@ -72,7 +71,7 @@ GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
     auto final_vector_search = vector_search;
     if (predicate_result) {
         auto bitmap_global_index_result =
-            std::dynamic_pointer_cast<BitmapGlobalIndexResult>(predicate_result.value());
+            std::dynamic_pointer_cast<BitmapGlobalIndexResult>(predicate_result);
         if (!bitmap_global_index_result) {
             return Status::Invalid(
                 "The pre_filter of vector search only supports BitmapGlobalIndexResult");
@@ -87,13 +86,13 @@ GlobalIndexEvaluatorImpl::EvaluateVectorSearch(
     }
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> scored_result,
                            vector_search_reader->VisitVectorSearch(final_vector_search));
-    return std::optional<std::shared_ptr<GlobalIndexResult>>(scored_result);
+    return scored_result;
 }
 
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>>
-GlobalIndexEvaluatorImpl::EvaluatePredicate(const std::shared_ptr<Predicate>& predicate) {
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluatePredicate(
+    const std::shared_ptr<Predicate>& predicate) {
     if (predicate == nullptr) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
 
     if (auto compound_predicate = std::dynamic_pointer_cast<CompoundPredicate>(predicate)) {
@@ -103,23 +102,26 @@ GlobalIndexEvaluatorImpl::EvaluatePredicate(const std::shared_ptr<Predicate>& pr
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::shared_ptr<GlobalIndexReader>> readers,
                                GetIndexReaders(field_name));
         // calculate compound result as field may has multiple indexes
-        std::optional<std::shared_ptr<GlobalIndexResult>> compound_result;
+        std::shared_ptr<GlobalIndexResult> compound_result;
         for (const auto& index_reader : readers) {
             PAIMON_ASSIGN_OR_RAISE(
                 std::shared_ptr<GlobalIndexResult> sub_result,
                 PredicateUtils::VisitPredicate<std::shared_ptr<GlobalIndexResult>>(leaf_predicate,
                                                                                    index_reader));
-            if (!compound_result) {
-                compound_result = sub_result;
-            } else {
-                PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> and_result,
-                                       compound_result.value()->And(sub_result));
-                compound_result = and_result;
+            if (sub_result) {
+                if (!compound_result) {
+                    compound_result = sub_result;
+                } else {
+                    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> and_result,
+                                           compound_result->And(sub_result));
+                    compound_result = and_result;
+                }
             }
-            assert(compound_result);
-            PAIMON_ASSIGN_OR_RAISE(bool is_empty, compound_result.value()->IsEmpty());
-            if (is_empty) {
-                return compound_result;
+            if (compound_result) {
+                PAIMON_ASSIGN_OR_RAISE(bool is_empty, compound_result->IsEmpty());
+                if (is_empty) {
+                    return compound_result;
+                }
             }
         }
         return compound_result;
@@ -128,43 +130,42 @@ GlobalIndexEvaluatorImpl::EvaluatePredicate(const std::shared_ptr<Predicate>& pr
         "cannot cast predicate {} to CompoundPredicate or LeafPredicate", predicate->ToString()));
 }
 
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>>
-GlobalIndexEvaluatorImpl::EvaluateCompoundPredicate(
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexEvaluatorImpl::EvaluateCompoundPredicate(
     const std::shared_ptr<CompoundPredicate>& compound_predicate) {
     if (compound_predicate->GetFunction().GetType() == Function::Type::OR) {
-        std::optional<std::shared_ptr<GlobalIndexResult>> compound_result;
+        std::shared_ptr<GlobalIndexResult> compound_result;
         for (const auto& child : compound_predicate->Children()) {
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> sub_result,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> sub_result,
                                    EvaluatePredicate(child));
             if (!sub_result) {
-                return std::optional<std::shared_ptr<GlobalIndexResult>>();
+                return std::shared_ptr<GlobalIndexResult>(nullptr);
             }
             if (!compound_result) {
                 compound_result = sub_result;
             } else {
                 PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> or_result,
-                                       compound_result.value()->Or(sub_result.value()));
+                                       compound_result->Or(sub_result));
                 compound_result = or_result;
             }
         }
         return compound_result;
     } else if (compound_predicate->GetFunction().GetType() == Function::Type::AND) {
-        std::optional<std::shared_ptr<GlobalIndexResult>> compound_result;
+        std::shared_ptr<GlobalIndexResult> compound_result;
         for (const auto& child : compound_predicate->Children()) {
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> sub_result,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> sub_result,
                                    EvaluatePredicate(child));
             if (sub_result) {
                 if (!compound_result) {
                     compound_result = sub_result;
                 } else {
                     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> and_result,
-                                           compound_result.value()->And(sub_result.value()));
+                                           compound_result->And(sub_result));
                     compound_result = and_result;
                 }
             }
 
             if (compound_result) {
-                PAIMON_ASSIGN_OR_RAISE(bool is_empty, compound_result.value()->IsEmpty());
+                PAIMON_ASSIGN_OR_RAISE(bool is_empty, compound_result->IsEmpty());
                 if (is_empty) {
                     return compound_result;
                 }

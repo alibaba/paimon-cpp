@@ -92,9 +92,8 @@ Result<std::shared_ptr<LuceneGlobalIndexReader>> LuceneGlobalIndexReader::Create
                                                       write_options, kJiebaTokenizeMode,
                                                       std::string(kDefaultJiebaTokenizeMode)));
         }
-        return std::shared_ptr<LuceneGlobalIndexReader>(
-            new LuceneGlobalIndexReader(LuceneUtils::StringToWstring(field_name), io_meta.range_end,
-                                        searcher, tokenize_mode, jieba));
+        return std::shared_ptr<LuceneGlobalIndexReader>(new LuceneGlobalIndexReader(
+            LuceneUtils::StringToWstring(field_name), searcher, tokenize_mode, jieba));
     } catch (const std::exception& e) {
         return Status::Invalid(
             fmt::format("create lucene global index reader failed, with {} error.", e.what()));

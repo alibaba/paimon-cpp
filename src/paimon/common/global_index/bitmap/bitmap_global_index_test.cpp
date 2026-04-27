@@ -75,7 +75,9 @@ class BitmapGlobalIndexTest : public ::testing::Test {
 
         ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array));
+        std::vector<int64_t> row_ids(array->length());
+        std::iota(row_ids.begin(), row_ids.end(), 0);
+        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
         // check meta
         if (result_metas.empty()) {
@@ -85,7 +87,6 @@ class BitmapGlobalIndexTest : public ::testing::Test {
         auto file_name = PathUtil::GetName(result_metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "bitmap-global-index-"));
         EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-        EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_FALSE(result_metas[0].metadata);
         return result_metas[0];
     }
@@ -161,7 +162,7 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
 
         // greater than return REMAIN file index result, will convert to all range global index
         // result
-        CheckResult(reader->VisitGreaterThan(lit_c).value(), {0, 1, 2, 3, 4});
+        ASSERT_FALSE(reader->VisitGreaterThan(lit_c).value());
 
         // test visit vector search
         ASSERT_NOK_WITH_MSG(reader->VisitVectorSearch(std::make_shared<VectorSearch>(
@@ -169,11 +170,11 @@ TEST_F(BitmapGlobalIndexTest, TestStringType) {
                                 std::nullopt, std::map<std::string, std::string>())),
                             "FileIndexReaderWrapper is not supposed to handle vector search query");
         // test VisitStartsWith, VisitEndsWith, VisitContains, VisitLike, VisitFullTextSearch
-        CheckResult(reader->VisitStartsWith(lit_c).value(), {0, 1, 2, 3, 4});
-        CheckResult(reader->VisitEndsWith(lit_c).value(), {0, 1, 2, 3, 4});
-        CheckResult(reader->VisitContains(lit_c).value(), {0, 1, 2, 3, 4});
-        CheckResult(reader->VisitLike(lit_c).value(), {0, 1, 2, 3, 4});
-        CheckResult(reader->VisitFullTextSearch(nullptr).value(), {0, 1, 2, 3, 4});
+        ASSERT_FALSE(reader->VisitStartsWith(lit_c).value());
+        ASSERT_FALSE(reader->VisitEndsWith(lit_c).value());
+        ASSERT_FALSE(reader->VisitContains(lit_c).value());
+        ASSERT_FALSE(reader->VisitLike(lit_c).value());
+        ASSERT_FALSE(reader->VisitFullTextSearch(nullptr).value());
     };
 
     {
