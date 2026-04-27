@@ -18,28 +18,29 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "arrow/api.h"
+#include "paimon/common/global_index/btree/btree_defs.h"
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/global_index/global_index_reader.h"
 #include "paimon/utils/roaring_bitmap64.h"
-
 namespace paimon {
 
 /// Reader for BTree Global Index files.
 /// This reader evaluates filter predicates against a BTree-based SST file
 /// where each key maps to a list of row IDs.
-class BTreeGlobalIndexReader : public GlobalIndexReader {
+class BTreeGlobalIndexReader : public GlobalIndexReader,
+                               public std::enable_shared_from_this<BTreeGlobalIndexReader> {
  public:
-    BTreeGlobalIndexReader(
-        const std::shared_ptr<SstFileReader>& sst_file_reader,
-        const std::shared_ptr<RoaringBitmap64>& null_bitmap, const MemorySlice& min_key,
-        const MemorySlice& max_key, bool has_min_key, const std::vector<GlobalIndexIOMeta>& files,
-        const std::shared_ptr<MemoryPool>& pool,
-        std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator,
-        int32_t ts_precision);
+    BTreeGlobalIndexReader(const std::shared_ptr<SstFileReader>& sst_file_reader,
+                           RoaringBitmap64&& null_bitmap, const std::optional<Literal>& min_key,
+                           const std::optional<Literal>& max_key,
+                           const std::shared_ptr<arrow::DataType>& key_type,
+                           const std::shared_ptr<MemoryPool>& pool);
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitIsNotNull() override;
 
@@ -63,12 +64,6 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     Result<std::shared_ptr<GlobalIndexResult>> VisitNotIn(
         const std::vector<Literal>& literals) override;
 
-    Result<std::shared_ptr<GlobalIndexResult>> VisitBetween(const Literal& from,
-                                                            const Literal& to) override;
-
-    Result<std::shared_ptr<GlobalIndexResult>> VisitNotBetween(const Literal& from,
-                                                               const Literal& to) override;
-
     Result<std::shared_ptr<GlobalIndexResult>> VisitStartsWith(const Literal& prefix) override;
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitEndsWith(const Literal& suffix) override;
@@ -76,12 +71,6 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     Result<std::shared_ptr<GlobalIndexResult>> VisitContains(const Literal& literal) override;
 
     Result<std::shared_ptr<GlobalIndexResult>> VisitLike(const Literal& literal) override;
-
-    Result<std::shared_ptr<GlobalIndexResult>> VisitAnd(
-        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override;
-
-    Result<std::shared_ptr<GlobalIndexResult>> VisitOr(
-        const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) override;
 
     Result<std::shared_ptr<ScoredGlobalIndexResult>> VisitVectorSearch(
         const std::shared_ptr<VectorSearch>& vector_search) override;
@@ -94,25 +83,24 @@ class BTreeGlobalIndexReader : public GlobalIndexReader {
     }
 
     std::string GetIndexType() const override {
-        return "btree";
+        return BtreeDefs::kIdentifier;
     }
 
  private:
-    Result<RoaringBitmap64> RangeQuery(const MemorySlice& lower_bound,
-                                       const MemorySlice& upper_bound, bool lower_inclusive,
-                                       bool upper_inclusive);
+    Result<RoaringBitmap64> RangeQuery(const std::optional<Literal>& from,
+                                       const std::optional<Literal>& to, bool from_inclusive,
+                                       bool to_inclusive);
+
+    Status DeserializeRowIds(const MemorySlice& slice, RoaringBitmap64* result) const;
 
     Result<RoaringBitmap64> AllNonNullRows();
 
-    std::shared_ptr<SstFileReader> sst_file_reader_;
-    std::shared_ptr<RoaringBitmap64> null_bitmap_;
-    MemorySlice min_key_;
-    MemorySlice max_key_;
-    bool has_min_key_;
-    std::vector<GlobalIndexIOMeta> files_;
     std::shared_ptr<MemoryPool> pool_;
-    std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator_;
-    int32_t ts_precision_;
+    std::shared_ptr<SstFileReader> sst_file_reader_;
+    RoaringBitmap64 null_bitmap_;
+    std::optional<Literal> min_key_;
+    std::optional<Literal> max_key_;
+    std::shared_ptr<arrow::DataType> key_type_;
 };
 
 }  // namespace paimon

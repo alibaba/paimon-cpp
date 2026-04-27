@@ -16,12 +16,10 @@
 
 #include "paimon/common/global_index/btree/btree_index_meta.h"
 
-#include <gtest/gtest.h>
-
+#include "gtest/gtest.h"
 #include "paimon/memory/memory_pool.h"
 
 namespace paimon::test {
-
 class BTreeIndexMetaTest : public ::testing::Test {
  protected:
     void SetUp() override {
@@ -32,32 +30,29 @@ class BTreeIndexMetaTest : public ::testing::Test {
 };
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeNormalKeys) {
-    // Create a BTreeIndexMeta with normal keys
-    // Use std::make_shared<Bytes> to create shared_ptr with proper memory management
-    // Bytes constructor uses pool->Malloc() for internal data, and destructor uses pool->Free()
     auto first_key = std::make_shared<Bytes>("first_key_data", pool_.get());
     auto last_key = std::make_shared<Bytes>("last_key_data", pool_.get());
     auto meta = std::make_shared<BTreeIndexMeta>(first_key, last_key, true);
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
     ASSERT_GT(serialized->size(), 0u);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify first_key
     auto deserialized_first = deserialized->FirstKey();
-    ASSERT_NE(deserialized_first, nullptr);
-    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()),
+    ASSERT_TRUE(deserialized_first);
+    ASSERT_EQ(std::string(deserialized_first->data(), deserialized_first->size()),
               "first_key_data");
 
     // Verify last_key
     auto deserialized_last = deserialized->LastKey();
-    ASSERT_NE(deserialized_last, nullptr);
-    EXPECT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), "last_key_data");
+    ASSERT_TRUE(deserialized_last);
+    ASSERT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), "last_key_data");
 
     // Verify has_nulls
     ASSERT_TRUE(deserialized->HasNulls());
@@ -69,15 +64,15 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeEmptyKeys) {
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify keys are null
-    ASSERT_EQ(deserialized->FirstKey(), nullptr);
-    ASSERT_EQ(deserialized->LastKey(), nullptr);
+    ASSERT_FALSE(deserialized->FirstKey());
+    ASSERT_FALSE(deserialized->LastKey());
 
     // Verify has_nulls
     ASSERT_TRUE(deserialized->HasNulls());
@@ -91,25 +86,25 @@ TEST_F(BTreeIndexMetaTest, HasNullsAndOnlyNulls) {
     auto meta1 =
         std::make_shared<BTreeIndexMeta>(std::make_shared<Bytes>("key", pool_.get()),
                                          std::make_shared<Bytes>("key", pool_.get()), true);
-    EXPECT_TRUE(meta1->HasNulls());
-    EXPECT_FALSE(meta1->OnlyNulls());
+    ASSERT_TRUE(meta1->HasNulls());
+    ASSERT_FALSE(meta1->OnlyNulls());
 
     // Case 2: No nulls with keys
     auto meta2 =
         std::make_shared<BTreeIndexMeta>(std::make_shared<Bytes>("key", pool_.get()),
                                          std::make_shared<Bytes>("key", pool_.get()), false);
-    EXPECT_FALSE(meta2->HasNulls());
-    EXPECT_FALSE(meta2->OnlyNulls());
+    ASSERT_FALSE(meta2->HasNulls());
+    ASSERT_FALSE(meta2->OnlyNulls());
 
     // Case 3: Only nulls (no keys)
     auto meta3 = std::make_shared<BTreeIndexMeta>(nullptr, nullptr, true);
-    EXPECT_TRUE(meta3->HasNulls());
-    EXPECT_TRUE(meta3->OnlyNulls());
+    ASSERT_TRUE(meta3->HasNulls());
+    ASSERT_TRUE(meta3->OnlyNulls());
 
     // Case 4: No nulls and no keys (edge case)
     auto meta4 = std::make_shared<BTreeIndexMeta>(nullptr, nullptr, false);
-    EXPECT_FALSE(meta4->HasNulls());
-    EXPECT_TRUE(meta4->OnlyNulls());
+    ASSERT_FALSE(meta4->HasNulls());
+    ASSERT_TRUE(meta4->OnlyNulls());
 }
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeNoNulls) {
@@ -120,14 +115,14 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeNoNulls) {
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify has_nulls is false
-    EXPECT_FALSE(deserialized->HasNulls());
+    ASSERT_FALSE(deserialized->HasNulls());
 }
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyFirstKey) {
@@ -137,19 +132,19 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyFirstKey) {
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify first_key
     auto deserialized_first = deserialized->FirstKey();
-    ASSERT_NE(deserialized_first, nullptr);
-    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), "first");
+    ASSERT_TRUE(deserialized_first);
+    ASSERT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), "first");
 
     // Verify last_key is null
-    EXPECT_EQ(deserialized->LastKey(), nullptr);
+    ASSERT_FALSE(deserialized->LastKey());
 }
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyLastKey) {
@@ -159,19 +154,19 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeWithOnlyLastKey) {
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify first_key is null
-    EXPECT_EQ(deserialized->FirstKey(), nullptr);
+    ASSERT_FALSE(deserialized->FirstKey());
 
     // Verify last_key
     auto deserialized_last = deserialized->LastKey();
-    ASSERT_NE(deserialized_last, nullptr);
-    EXPECT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), "last");
+    ASSERT_TRUE(deserialized_last);
+    ASSERT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), "last");
 }
 
 TEST_F(BTreeIndexMetaTest, SerializeDeserializeBinaryKeys) {
@@ -184,21 +179,21 @@ TEST_F(BTreeIndexMetaTest, SerializeDeserializeBinaryKeys) {
 
     // Serialize
     auto serialized = meta->Serialize(pool_.get());
-    ASSERT_NE(serialized, nullptr);
+    ASSERT_TRUE(serialized);
 
     // Deserialize
     auto deserialized = BTreeIndexMeta::Deserialize(serialized, pool_.get());
-    ASSERT_NE(deserialized, nullptr);
+    ASSERT_TRUE(deserialized);
 
     // Verify first_key
     auto deserialized_first = deserialized->FirstKey();
-    ASSERT_NE(deserialized_first, nullptr);
-    EXPECT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), binary_first);
+    ASSERT_TRUE(deserialized_first);
+    ASSERT_EQ(std::string(deserialized_first->data(), deserialized_first->size()), binary_first);
 
     // Verify last_key
     auto deserialized_last = deserialized->LastKey();
-    ASSERT_NE(deserialized_last, nullptr);
-    EXPECT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), binary_last);
+    ASSERT_TRUE(deserialized_last);
+    ASSERT_EQ(std::string(deserialized_last->data(), deserialized_last->size()), binary_last);
 }
 
 }  // namespace paimon::test

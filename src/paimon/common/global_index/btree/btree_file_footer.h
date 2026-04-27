@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <memory>
+#include <optional>
 
 #include "paimon/common/memory/memory_slice_input.h"
 #include "paimon/common/memory/memory_slice_output.h"
@@ -30,20 +30,18 @@ class BTreeFileFooter {
     static Result<std::shared_ptr<BTreeFileFooter>> Read(MemorySliceInput* input);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer, MemoryPool* pool);
     static MemorySlice Write(const std::shared_ptr<BTreeFileFooter>& footer,
-                             MemorySliceOutput& output);
+                             MemorySliceOutput* output);
 
  public:
-    BTreeFileFooter(const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-                    const std::shared_ptr<BlockHandle>& index_block_handle,
-                    const std::shared_ptr<BlockHandle>& null_bitmap_handle)
-        : version_(CURRENT_VERSION),
-          bloom_filter_handle_(bloom_filter_handle),
-          index_block_handle_(index_block_handle),
-          null_bitmap_handle_(null_bitmap_handle) {}
+    BTreeFileFooter(const std::optional<BloomFilterHandle>& bloom_filter_handle,
+                    const BlockHandle& index_block_handle,
+                    const std::optional<BlockHandle>& null_bitmap_handle)
+        : BTreeFileFooter(kCurrentVersion, bloom_filter_handle, index_block_handle,
+                          null_bitmap_handle) {}
 
-    BTreeFileFooter(int32_t version, const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
-                    const std::shared_ptr<BlockHandle>& index_block_handle,
-                    const std::shared_ptr<BlockHandle>& null_bitmap_handle)
+    BTreeFileFooter(int32_t version, const std::optional<BloomFilterHandle>& bloom_filter_handle,
+                    const BlockHandle& index_block_handle,
+                    const std::optional<BlockHandle>& null_bitmap_handle)
         : version_(version),
           bloom_filter_handle_(bloom_filter_handle),
           index_block_handle_(index_block_handle),
@@ -53,28 +51,28 @@ class BTreeFileFooter {
         return version_;
     }
 
-    std::shared_ptr<BloomFilterHandle> GetBloomFilterHandle() const {
+    const std::optional<BloomFilterHandle>& GetBloomFilterHandle() const {
         return bloom_filter_handle_;
     }
 
-    std::shared_ptr<BlockHandle> GetIndexBlockHandle() const {
+    const BlockHandle& GetIndexBlockHandle() const {
         return index_block_handle_;
     }
 
-    std::shared_ptr<BlockHandle> GetNullBitmapHandle() const {
+    const std::optional<BlockHandle>& GetNullBitmapHandle() const {
         return null_bitmap_handle_;
     }
 
  public:
     static constexpr int32_t kMagicNumber = 0x50425449;
-    static constexpr int32_t CURRENT_VERSION = 1;
-    static constexpr int32_t ENCODED_LENGTH = 52;
+    static constexpr int32_t kCurrentVersion = 1;
+    static constexpr int32_t kEncodingLength = 52;
 
  private:
     int32_t version_;
-    std::shared_ptr<BloomFilterHandle> bloom_filter_handle_;
-    std::shared_ptr<BlockHandle> index_block_handle_;
-    std::shared_ptr<BlockHandle> null_bitmap_handle_;
+    std::optional<BloomFilterHandle> bloom_filter_handle_;
+    BlockHandle index_block_handle_;
+    std::optional<BlockHandle> null_bitmap_handle_;
 };
 
 }  // namespace paimon

@@ -16,216 +16,106 @@
 
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 
-#include <cstring>
-
+#include "fmt/format.h"
+#include "paimon/common/global_index/btree/key_serializer.h"
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/common/memory/memory_slice_input.h"
-#include "paimon/common/memory/memory_slice_output.h"
-#include "paimon/common/utils/date_time_utils.h"
-#include "paimon/common/utils/field_type_utils.h"
-#include "paimon/data/decimal.h"
-#include "paimon/data/timestamp.h"
 #include "paimon/global_index/bitmap_global_index_result.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/predicate/literal.h"
 namespace paimon {
-
-// Helper function to convert Literal to MemorySlice
-static Result<MemorySlice> LiteralToMemorySlice(const Literal& literal, MemoryPool* pool,
-                                                int32_t ts_precision) {
-    if (literal.IsNull()) {
-        return Status::Invalid("Cannot convert null literal to MemorySlice for btree index query");
-    }
-
-    auto type = literal.GetType();
-
-    // Handle string/binary types
-    if (type == FieldType::STRING || type == FieldType::BINARY) {
-        auto str_value = literal.GetValue<std::string>();
-        auto bytes = std::make_shared<Bytes>(str_value, pool);
-        return MemorySlice::Wrap(bytes);
-    }
-
-    // Handle integer types
-    if (type == FieldType::BIGINT) {
-        auto value = literal.GetValue<int64_t>();
-        auto bytes = std::make_shared<Bytes>(8, pool);
-        memcpy(bytes->data(), &value, sizeof(int64_t));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::INT) {
-        auto value = literal.GetValue<int32_t>();
-        auto bytes = std::make_shared<Bytes>(4, pool);
-        memcpy(bytes->data(), &value, sizeof(int32_t));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::TINYINT) {
-        auto value = literal.GetValue<int8_t>();
-        auto bytes = std::make_shared<Bytes>(1, pool);
-        bytes->data()[0] = static_cast<char>(value);
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::SMALLINT) {
-        auto value = literal.GetValue<int16_t>();
-        auto bytes = std::make_shared<Bytes>(2, pool);
-        memcpy(bytes->data(), &value, sizeof(int16_t));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::BOOLEAN) {
-        bool value = literal.GetValue<bool>();
-        auto bytes = std::make_shared<Bytes>(1, pool);
-        bytes->data()[0] = value ? 1 : 0;
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::FLOAT) {
-        auto value = literal.GetValue<float>();
-        auto bytes = std::make_shared<Bytes>(sizeof(float), pool);
-        memcpy(bytes->data(), &value, sizeof(float));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::DOUBLE) {
-        auto value = literal.GetValue<double>();
-        auto bytes = std::make_shared<Bytes>(sizeof(double), pool);
-        memcpy(bytes->data(), &value, sizeof(double));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::DATE) {
-        // DATE is stored as int32_t to match Java's writeInt
-        auto value = literal.GetValue<int32_t>();
-        auto bytes = std::make_shared<Bytes>(sizeof(int32_t), pool);
-        memcpy(bytes->data(), &value, sizeof(int32_t));
-        return MemorySlice::Wrap(bytes);
-    }
-
-    if (type == FieldType::TIMESTAMP) {
-        auto ts = literal.GetValue<Timestamp>();
-        if (Timestamp::IsCompact(ts_precision)) {
-            // compact: writeLong(millisecond)
-            int64_t value = ts.GetMillisecond();
-            auto bytes = std::make_shared<Bytes>(sizeof(int64_t), pool);
-            memcpy(bytes->data(), &value, sizeof(int64_t));
-            return MemorySlice::Wrap(bytes);
-        } else {
-            // non-compact: writeLong(millisecond) + writeVarLenInt(nanoOfMillisecond)
-            MemorySliceOutput ts_out(13, pool);
-            ts_out.WriteValue(ts.GetMillisecond());
-            PAIMON_RETURN_NOT_OK(ts_out.WriteVarLenInt(ts.GetNanoOfMillisecond()));
-            return ts_out.ToSlice();
-        }
-    }
-
-    if (type == FieldType::DECIMAL) {
-        auto decimal_value = literal.GetValue<Decimal>();
-        auto bytes = std::make_shared<Bytes>(16, pool);
-        uint64_t high_bits = decimal_value.HighBits();
-        uint64_t low_bits = decimal_value.LowBits();
-        for (int i = 0; i < 8; ++i) {
-            bytes->data()[i] = static_cast<char>((high_bits >> (56 - i * 8)) & 0xFF);
-        }
-        for (int i = 0; i < 8; ++i) {
-            bytes->data()[8 + i] = static_cast<char>((low_bits >> (56 - i * 8)) & 0xFF);
-        }
-        return MemorySlice::Wrap(bytes);
-    }
-
-    return Status::NotImplemented("Literal type " + FieldTypeUtils::FieldTypeToString(type) +
-                                  " not yet supported in btree index");
-}
-
 BTreeGlobalIndexReader::BTreeGlobalIndexReader(
-    const std::shared_ptr<SstFileReader>& sst_file_reader,
-    const std::shared_ptr<RoaringBitmap64>& null_bitmap, const MemorySlice& min_key,
-    const MemorySlice& max_key, bool has_min_key, const std::vector<GlobalIndexIOMeta>& files,
-    const std::shared_ptr<MemoryPool>& pool,
-    std::function<int32_t(const MemorySlice&, const MemorySlice&)> comparator, int32_t ts_precision)
-    : sst_file_reader_(sst_file_reader),
-      null_bitmap_(null_bitmap),
+    const std::shared_ptr<SstFileReader>& sst_file_reader, RoaringBitmap64&& null_bitmap,
+    const std::optional<Literal>& min_key, const std::optional<Literal>& max_key,
+    const std::shared_ptr<arrow::DataType>& key_type, const std::shared_ptr<MemoryPool>& pool)
+    : pool_(pool),
+      sst_file_reader_(sst_file_reader),
+      null_bitmap_(std::move(null_bitmap)),
       min_key_(min_key),
       max_key_(max_key),
-      has_min_key_(has_min_key),
-      files_(files),
-      pool_(pool),
-      comparator_(std::move(comparator)),
-      ts_precision_(ts_precision) {}
+      key_type_(key_type) {}
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNotNull() {
-    return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->AllNonNullRows();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNull() {
     return std::make_shared<BitmapGlobalIndexResult>(
-        [this]() -> Result<RoaringBitmap64> { return *null_bitmap_; });
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->null_bitmap_;
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitStartsWith(
     const Literal& prefix) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &prefix]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto prefix_slice,
-                               LiteralToMemorySlice(prefix, pool_.get(), ts_precision_));
+    if (prefix.IsNull()) {
+        return Status::Invalid("StartsWith pattern cannot be null");
+    }
 
-        auto prefix_type = prefix.GetType();
+    if (prefix.GetType() == FieldType::STRING) {
+        auto prefix_str = prefix.GetValue<std::string>();
+        if (prefix_str.empty()) {
+            return std::make_shared<BitmapGlobalIndexResult>(
+                [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+                    return reader->AllNonNullRows();
+                });
+        }
 
-        if (prefix_type == FieldType::STRING || prefix_type == FieldType::BINARY) {
-            auto prefix_bytes = prefix_slice.GetHeapMemory();
-            if (!prefix_bytes || prefix_bytes->size() == 0) {
-                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-                return result;
-            }
-
-            std::string upper_bound_str(prefix_bytes->data(), prefix_bytes->size());
-            bool overflow = true;
-            for (int i = static_cast<int>(upper_bound_str.size()) - 1; i >= 0 && overflow; --i) {
-                auto c = static_cast<unsigned char>(upper_bound_str[i]);
-                if (c < 0xFF) {
-                    upper_bound_str[i] = c + 1;
-                    overflow = false;
-                } else {
-                    upper_bound_str[i] = 0x00;
-                }
-            }
-
-            if (!overflow) {
-                auto upper_bytes = std::make_shared<Bytes>(upper_bound_str, pool_.get());
-                auto upper_bound_slice = MemorySlice::Wrap(upper_bytes);
-                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                                       RangeQuery(prefix_slice, upper_bound_slice, true, false));
-                return result;
+        // Compute the exclusive upper bound for the prefix range.
+        // Increment the last byte; carry over if it overflows 0xFF.
+        std::string upper_str = prefix_str;
+        bool overflow = true;
+        for (int32_t i = static_cast<int32_t>(upper_str.size()) - 1; i >= 0 && overflow; --i) {
+            auto c = static_cast<unsigned char>(upper_str[i]);
+            if (c < 0xFF) {
+                upper_str[i] = static_cast<char>(c + 1);
+                overflow = false;
             } else {
-                // If overflow (all bytes were 0xFF), use max_key_ as upper bound
-                PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                                       RangeQuery(prefix_slice, max_key_, true, false));
-                return result;
+                upper_str[i] = 0x00;
             }
         }
 
-        return RoaringBitmap64();
-    });
+        if (!overflow) {
+            Literal upper_bound(FieldType::STRING, upper_str.data(), upper_str.size());
+            return std::make_shared<BitmapGlobalIndexResult>(
+                [reader = shared_from_this(), prefix = prefix,
+                 upper_bound = std::move(upper_bound)]() -> Result<RoaringBitmap64> {
+                    return reader->RangeQuery(prefix, upper_bound, /*from_inclusive=*/true,
+                                              /*to_inclusive=*/false);
+                });
+        }
+
+        // All bytes were 0xFF, use max_key_ as upper bound
+        return std::make_shared<BitmapGlobalIndexResult>(
+            [reader = shared_from_this(), prefix = prefix]() -> Result<RoaringBitmap64> {
+                return reader->RangeQuery(prefix, reader->max_key_, /*from_inclusive=*/true,
+                                          /*to_inclusive=*/true);
+            });
+    }
+
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->AllNonNullRows();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEndsWith(
     const Literal& suffix) {
-    return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->AllNonNullRows();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitContains(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->AllNonNullRows();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
@@ -233,119 +123,98 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLike(
     if (literal.IsNull()) {
         return Status::Invalid("LIKE pattern cannot be null");
     }
+    if (literal.GetType() == FieldType::STRING) {
+        auto pattern = literal.GetValue<std::string>();
 
-    auto pattern = literal.GetValue<std::string>();
+        bool is_prefix_pattern = false;
+        std::string prefix;
 
-    bool is_prefix_pattern = false;
-    std::string prefix;
+        size_t first_wildcard = pattern.find_first_of("_%");
 
-    size_t first_wildcard = pattern.find_first_of("_%");
+        if (first_wildcard != std::string::npos && pattern[first_wildcard] == '%' &&
+            first_wildcard == pattern.length() - 1) {
+            is_prefix_pattern = true;
+            prefix = pattern.substr(0, first_wildcard);
+        }
 
-    if (first_wildcard != std::string::npos) {
-        if (pattern[first_wildcard] == '%' && first_wildcard == pattern.length() - 1) {
-            bool has_wildcard_in_prefix = false;
-            for (size_t i = 0; i < first_wildcard; ++i) {
-                if (pattern[i] == '_' || pattern[i] == '%') {
-                    has_wildcard_in_prefix = true;
-                    break;
-                }
-            }
-            if (!has_wildcard_in_prefix) {
-                is_prefix_pattern = true;
-                prefix = pattern.substr(0, first_wildcard);
-            }
+        if (is_prefix_pattern) {
+            Literal prefix_literal(FieldType::STRING, prefix.data(), prefix.length());
+            return VisitStartsWith(prefix_literal);
         }
     }
-
-    if (is_prefix_pattern) {
-        Literal prefix_literal(FieldType::STRING, prefix.c_str(), prefix.length());
-        return VisitStartsWith(prefix_literal);
-    }
-
-    return std::make_shared<BitmapGlobalIndexResult>([this]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this()]() -> Result<RoaringBitmap64> {
+            return reader->AllNonNullRows();
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessThan(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(min_key_, literal_slice, true, false));
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            return reader->RangeQuery(reader->min_key_, literal, /*from_inclusive=*/true,
+                                      /*to_inclusive=*/false);
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitGreaterOrEqual(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(literal_slice, max_key_, true, true));
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            return reader->RangeQuery(literal, reader->max_key_, /*from_inclusive=*/true,
+                                      /*to_inclusive=*/true);
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotEqual(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 equal_result,
-                               RangeQuery(literal_slice, literal_slice, true, true));
-        result -= equal_result;
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, reader->AllNonNullRows());
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 equal_result,
+                                   reader->RangeQuery(literal, literal, /*from_inclusive=*/true,
+                                                      /*to_inclusive=*/true));
+            result -= equal_result;
+            return result;
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitLessOrEqual(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(min_key_, literal_slice, true, true));
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            return reader->RangeQuery(reader->min_key_, literal, /*from_inclusive=*/true,
+                                      /*to_inclusive=*/true);
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitEqual(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(literal_slice, literal_slice, true, true));
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            return reader->RangeQuery(literal, literal, /*from_inclusive=*/true,
+                                      /*to_inclusive=*/true);
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitGreaterThan(
     const Literal& literal) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &literal]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                               LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(literal_slice, max_key_, false, true));
-        return result;
-    });
+    return std::make_shared<BitmapGlobalIndexResult>(
+        [reader = shared_from_this(), literal = literal]() -> Result<RoaringBitmap64> {
+            return reader->RangeQuery(literal, reader->max_key_, /*from_inclusive=*/false,
+                                      /*to_inclusive=*/true);
+        });
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIn(
     const std::vector<Literal>& literals) {
     return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &literals]() -> Result<RoaringBitmap64> {
+        [reader = shared_from_this(), literals = literals]() -> Result<RoaringBitmap64> {
             RoaringBitmap64 result;
             for (const auto& literal : literals) {
-                PAIMON_ASSIGN_OR_RAISE(auto literal_slice,
-                                       LiteralToMemorySlice(literal, pool_.get(), ts_precision_));
                 PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 literal_result,
-                                       RangeQuery(literal_slice, literal_slice, true, true));
+                                       reader->RangeQuery(literal, literal, /*from_inclusive=*/true,
+                                                          /*to_inclusive=*/true));
                 result |= literal_result;
             }
             return result;
@@ -355,150 +224,47 @@ Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIn(
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotIn(
     const std::vector<Literal>& literals) {
     return std::make_shared<BitmapGlobalIndexResult>(
-        [this, &literals]() -> Result<RoaringBitmap64> {
-            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, AllNonNullRows());
-
-            PAIMON_ASSIGN_OR_RAISE(auto in_result_ptr, VisitIn(literals));
-            PAIMON_ASSIGN_OR_RAISE(auto in_iterator, in_result_ptr->CreateIterator());
-
-            RoaringBitmap64 in_bitmap;
-            while (in_iterator->HasNext()) {
-                in_bitmap.Add(in_iterator->Next());
+        [reader = shared_from_this(), literals = literals]() -> Result<RoaringBitmap64> {
+            PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result, reader->AllNonNullRows());
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> in_result,
+                                   reader->VisitIn(literals));
+            auto* typed_in_result = dynamic_cast<BitmapGlobalIndexResult*>(in_result.get());
+            if (!typed_in_result) {
+                return Status::Invalid(
+                    "VisitIn should return BitmapGlobalIndexResult in BTreeGlobalIndexReader");
             }
-
-            result -= in_bitmap;
+            PAIMON_ASSIGN_OR_RAISE(const RoaringBitmap64* in_bitmap, typed_in_result->GetBitmap());
+            result -= (*in_bitmap);
             return result;
         });
 }
 
-Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitBetween(const Literal& from,
-                                                                                const Literal& to) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &from,
-                                                      &to]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto from_slice,
-                               LiteralToMemorySlice(from, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 result,
-                               RangeQuery(from_slice, to_slice, true, true));
-        return result;
-    });
-}
-
-Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitNotBetween(
-    const Literal& from, const Literal& to) {
-    return std::make_shared<BitmapGlobalIndexResult>([this, &from,
-                                                      &to]() -> Result<RoaringBitmap64> {
-        PAIMON_ASSIGN_OR_RAISE(auto from_slice,
-                               LiteralToMemorySlice(from, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(auto to_slice, LiteralToMemorySlice(to, pool_.get(), ts_precision_));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 lower_result,
-                               RangeQuery(min_key_, from_slice, true, false));
-        PAIMON_ASSIGN_OR_RAISE(RoaringBitmap64 upper_result,
-                               RangeQuery(to_slice, max_key_, false, true));
-        lower_result |= upper_result;
-        return lower_result;
-    });
-}
-
-Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitAnd(
-    const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) {
-    return std::make_shared<BitmapGlobalIndexResult>([&children]() -> Result<RoaringBitmap64> {
-        if (children.empty()) {
-            return Status::Invalid("VisitAnd called with no children");
-        }
-
-        auto first_result_status = children[0];
-        if (!first_result_status.ok()) {
-            return first_result_status.status();
-        }
-        auto first_result = std::move(first_result_status).value();
-        PAIMON_ASSIGN_OR_RAISE(auto first_iterator, first_result->CreateIterator());
-
-        RoaringBitmap64 result_bitmap;
-        while (first_iterator->HasNext()) {
-            result_bitmap.Add(first_iterator->Next());
-        }
-
-        for (size_t i = 1; i < children.size(); ++i) {
-            auto child_status = children[i];
-            if (!child_status.ok()) {
-                return child_status.status();
-            }
-            auto child = std::move(child_status).value();
-            PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
-
-            RoaringBitmap64 child_bitmap;
-            while (child_iterator->HasNext()) {
-                child_bitmap.Add(child_iterator->Next());
-            }
-
-            result_bitmap &= child_bitmap;
-        }
-
-        return result_bitmap;
-    });
-}
-
-Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitOr(
-    const std::vector<Result<std::shared_ptr<GlobalIndexResult>>>& children) {
-    return std::make_shared<BitmapGlobalIndexResult>([&children]() -> Result<RoaringBitmap64> {
-        RoaringBitmap64 result_bitmap;
-
-        for (const auto& child_status : children) {
-            if (!child_status.ok()) {
-                return child_status.status();
-            }
-            auto child = std::move(child_status).value();
-            PAIMON_ASSIGN_OR_RAISE(auto child_iterator, child->CreateIterator());
-
-            while (child_iterator->HasNext()) {
-                result_bitmap.Add(child_iterator->Next());
-            }
-        }
-
-        return result_bitmap;
-    });
-}
-
 Result<std::shared_ptr<ScoredGlobalIndexResult>> BTreeGlobalIndexReader::VisitVectorSearch(
     const std::shared_ptr<VectorSearch>& vector_search) {
-    return Status::NotImplemented("Vector search not supported in BTree index");
+    return Status::Invalid("Vector search not supported in BTree index");
 }
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitFullTextSearch(
     const std::shared_ptr<FullTextSearch>& full_text_search) {
-    return Status::NotImplemented("Full text search not supported in BTree index");
+    return Status::Invalid("Full text search not supported in BTree index");
 }
 
-Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const MemorySlice& lower_bound,
-                                                           const MemorySlice& upper_bound,
-                                                           bool lower_inclusive,
-                                                           bool upper_inclusive) {
+Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<Literal>& from,
+                                                           const std::optional<Literal>& to,
+                                                           bool from_inclusive, bool to_inclusive) {
     RoaringBitmap64 result;
-
-    // Create an index block iterator to iterate through data blocks
-    auto index_iterator = sst_file_reader_->CreateIndexIterator();
-
-    // Seek iterator to the lower bound
-    auto lower_bytes = lower_bound.GetHeapMemory();
-
-    if (lower_bytes) {
-        PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result,
-                               index_iterator->SeekTo(lower_bound));
-    }
-
-    // Check if there are any blocks to read
-    if (!index_iterator->HasNext()) {
+    if (!from || !to) {
         return result;
     }
 
+    // Create an index block iterator to iterate through data blocks
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> from_bytes,
+                           KeySerializer::SerializeKey(from.value(), key_type_, pool_.get()));
+    auto index_iterator = sst_file_reader_->CreateIndexIterator();
+    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result,
+                           index_iterator->SeekTo(MemorySlice::Wrap(from_bytes)));
+
     bool first_block = true;
-
-    // Compare key with bounds using the comparator
-    if (!comparator_) {
-        return Status::Invalid("Comparator is not set for BTreeGlobalIndexReader");
-    }
-
     while (index_iterator->HasNext()) {
         // Get the next data block
         PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockIterator> data_iterator,
@@ -509,76 +275,61 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const MemorySlice& lo
         }
 
         // For the first block, we need to seek within the block to the exact position
-        if (first_block && lower_bytes) {
-            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool found, data_iterator->SeekTo(lower_bound));
+        if (first_block) {
+            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool found,
+                                   data_iterator->SeekTo(MemorySlice::Wrap(from_bytes)));
             first_block = false;
-
-            if (!data_iterator->HasNext()) {
-                continue;
-            }
         }
 
         // Iterate through entries in the data block
         while (data_iterator->HasNext()) {
             PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> entry, data_iterator->Next());
-            int cmp_lower = comparator_(entry->key, lower_bound);
+            PAIMON_ASSIGN_OR_RAISE(
+                Literal key, KeySerializer::DeserializeKey(entry->key, key_type_, pool_.get()));
+            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, key.CompareTo(from.value()));
 
             // Check lower bound
-            if (!lower_inclusive && cmp_lower == 0) {
+            if (!from_inclusive && cmp_from == 0) {
                 continue;
             }
 
             // Check upper bound
-            int cmp_upper = comparator_(entry->key, upper_bound);
+            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, key.CompareTo(to.value()));
 
-            if (cmp_upper > 0 || (!upper_inclusive && cmp_upper == 0)) {
+            if (cmp_to > 0 || (!to_inclusive && cmp_to == 0)) {
                 return result;
             }
 
-            // Deserialize row IDs from the value
-            auto value_bytes = entry->value.CopyBytes(pool_.get());
-            auto value_slice = MemorySlice::Wrap(value_bytes);
-            auto value_input = value_slice.ToInput();
-
-            // Read row IDs. The format is: [num_row_ids (VarLenLong)][row_id1 (VarLenLong)]...
-            // Use VarLenLong to match Java's DataOutputStream.writeVarLong format
-            PAIMON_ASSIGN_OR_RAISE(int64_t num_row_ids, value_input.ReadVarLenLong());
-
-            for (int64_t i = 0; i < num_row_ids; i++) {
-                PAIMON_ASSIGN_OR_RAISE(int64_t row_id, value_input.ReadVarLenLong());
-                result.Add(row_id);
-            }
+            PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry->value, &result));
         }
     }
-
     return result;
 }
 
+Status BTreeGlobalIndexReader::DeserializeRowIds(const MemorySlice& slice,
+                                                 RoaringBitmap64* result) const {
+    auto input = slice.ToInput();
+    PAIMON_ASSIGN_OR_RAISE(int32_t num_row_ids, input.ReadVarLenInt());
+    if (num_row_ids <= 0) {
+        return Status::Invalid(fmt::format(
+            "Invalid row id length {} in DeserializeRowIds for BTreeGlobalIndexReader, must > 0",
+            num_row_ids));
+    }
+    for (int32_t i = 0; i < num_row_ids; i++) {
+        PAIMON_ASSIGN_OR_RAISE(int64_t row_id, input.ReadVarLenLong());
+        result->Add(row_id);
+    }
+    return Status::OK();
+}
+
 Result<RoaringBitmap64> BTreeGlobalIndexReader::AllNonNullRows() {
-    if (files_.empty()) {
+    // Traverse all data to avoid returning null values, which is very advantageous in
+    // situations where there are many null values
+    // TODO(xinyu.lxy) do not traverse all data if less null values
+    if (!min_key_) {
         return RoaringBitmap64();
     }
-
-    int64_t total_rows = files_[0].range_end + 1;
-    uint64_t null_count = null_bitmap_->Cardinality();
-
-    const double NULL_RATIO_THRESHOLD = 0.1;
-    const int64_t MAX_ROWS_FOR_SUBTRACTION = 10000000;
-
-    bool use_subtraction = (total_rows <= MAX_ROWS_FOR_SUBTRACTION) &&
-                           (null_count < static_cast<uint64_t>(total_rows * NULL_RATIO_THRESHOLD));
-
-    if (use_subtraction) {
-        RoaringBitmap64 result;
-        result.AddRange(0, total_rows);
-        result -= *null_bitmap_;
-        return result;
-    }
-
-    if (!has_min_key_) {
-        return RoaringBitmap64();
-    }
-    return RangeQuery(min_key_, max_key_, true, true);
+    return RangeQuery(min_key_, max_key_, /*from_inclusive=*/true, /*to_inclusive=*/true);
 }
 
 }  // namespace paimon

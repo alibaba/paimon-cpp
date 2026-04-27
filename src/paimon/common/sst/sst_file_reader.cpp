@@ -24,7 +24,7 @@ namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
     const std::shared_ptr<InputStream>& in, const BlockHandle& index_block_handle,
-    const std::shared_ptr<BloomFilterHandle>& bloom_filter_handle,
+    const std::optional<BloomFilterHandle>& bloom_filter_handle,
     MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
     const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
@@ -32,8 +32,9 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
 
     // read bloom filter directly now
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
-    if (bloom_filter_handle && (bloom_filter_handle->ExpectedEntries() ||
-                                bloom_filter_handle->Size() || bloom_filter_handle->Offset())) {
+    if (bloom_filter_handle.has_value() &&
+        (bloom_filter_handle->ExpectedEntries() || bloom_filter_handle->Size() ||
+         bloom_filter_handle->Offset())) {
         bloom_filter = std::make_shared<BloomFilter>(bloom_filter_handle->ExpectedEntries(),
                                                      bloom_filter_handle->Size());
         PAIMON_ASSIGN_OR_RAISE(
@@ -64,7 +65,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
         new SstFileReader(pool, block_cache, bloom_filter, reader, comparator));
 }
 
-Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateFromStream(
+Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
     const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
     const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
@@ -92,10 +93,6 @@ SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,
       bloom_filter_(bloom_filter),
       index_block_reader_(index_block_reader),
       comparator_(std::move(comparator)) {}
-
-std::unique_ptr<SstFileIterator> SstFileReader::CreateIterator() {
-    return std::make_unique<SstFileIterator>(this, index_block_reader_->Iterator());
-}
 
 std::unique_ptr<BlockIterator> SstFileReader::CreateIndexIterator() {
     return index_block_reader_->Iterator();
@@ -161,9 +158,8 @@ Result<MemorySegment> SstFileReader::DecompressBlock(const MemorySegment& compre
         static_cast<char>(static_cast<int32_t>(trailer->CompressionType()) & 0xFF);
     crc32c_code = CRC32C::calculate(&compression_val, 1, crc32c_code);
     if (trailer->Crc32c() != static_cast<int32_t>(crc32c_code)) {
-        return Status::Invalid(fmt::format("Expected crc32c({}) but found crc32c({})",
-                                           SstFileUtils::ToHexString(trailer->Crc32c()),
-                                           SstFileUtils::ToHexString(crc32c_code)));
+        return Status::Invalid(fmt::format("Expected crc32c({:#x}) but found crc32c({:#x})",
+                                           trailer->Crc32c(), crc32c_code));
     }
 
     // decompress data
@@ -199,24 +195,4 @@ Status SstFileReader::Close() {
     return Status::OK();
 }
 
-SstFileIterator::SstFileIterator(SstFileReader* reader,
-                                 std::unique_ptr<BlockIterator> index_iterator)
-    : reader_(reader), index_iterator_(std::move(index_iterator)) {}
-
-Status SstFileIterator::SeekTo(const std::shared_ptr<Bytes>& key) {
-    auto key_slice = MemorySlice::Wrap(key);
-    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool index_success, index_iterator_->SeekTo(key_slice));
-    if (index_iterator_->HasNext()) {
-        PAIMON_ASSIGN_OR_RAISE(data_iterator_, reader_->GetNextBlock(index_iterator_));
-        // The index block entry key is the last key of the corresponding data block.
-        // If there is some index entry key >= target key, the related data block must
-        // also contain some key >= target key, which means seeked_data_block.HasNext()
-        // must be true
-        PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool data_success,
-                               data_iterator_->SeekTo(key_slice));
-    } else {
-        data_iterator_.reset();
-    }
-    return Status::OK();
-}
 }  // namespace paimon

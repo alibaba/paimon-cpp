@@ -216,6 +216,14 @@ class FileStoreScan {
                              const std::shared_ptr<arrow::Schema>& arrow_schema,
                              const std::shared_ptr<ScanFilter>& scan_filters);
 
+    /// Set the bucket filter derived from predicate analysis (e.g., BucketSelectConverter).
+    /// Only sets the filter if no explicit bucket filter was already set.
+    void SetBucketFilterIfAbsent(int32_t bucket) {
+        if (!bucket_filter_.has_value()) {
+            bucket_filter_ = bucket;
+        }
+    }
+
     // When schema evolves, predicates might contain fields requiring casting. To avoid false
     // negatives when filtering by stats, we exclude those fields from predicate.
     static Result<std::shared_ptr<Predicate>> ReconstructPredicateWithNonCastedFields(

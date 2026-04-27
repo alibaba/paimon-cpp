@@ -14,29 +14,24 @@
  * limitations under the License.
  */
 
-#pragma once
-#include <sstream>
-
-#include "fmt/format.h"
-#include "paimon/common/compression/block_compression_type.h"
-#include "paimon/common/memory/memory_slice.h"
+#include "paimon/snapshot/snapshot_info.h"
 
 namespace paimon {
 
-/// Utils for sst file.
-class SstFileUtils {
- public:
-    static Result<BlockCompressionType> From(int8_t v) {
-        if (v == 0) {
-            return BlockCompressionType::NONE;
-        } else if (v == 1) {
-            return BlockCompressionType::ZSTD;
-        } else if (v == 2) {
-            return BlockCompressionType::LZ4;
-        }
-        return Status::Invalid(
-            fmt::format("not support compression type code {}", static_cast<int32_t>(v)));
+std::string SnapshotInfo::CommitKindToString(CommitKind kind) {
+    switch (kind) {
+        case CommitKind::APPEND:
+            return "APPEND";
+        case CommitKind::COMPACT:
+            return "COMPACT";
+        case CommitKind::OVERWRITE:
+            return "OVERWRITE";
+        case CommitKind::ANALYZE:
+            return "ANALYZE";
+        case CommitKind::UNKNOWN:
+            return "UNKNOWN";
     }
-};
+    return "UNKNOWN";
+}
 
 }  // namespace paimon

@@ -21,6 +21,7 @@ set(PAIMON_GLOBAL_INDEX_SRC
     btree/btree_global_index_reader.cpp
     btree/btree_global_index_writer.cpp
     btree/btree_index_meta.cpp
+    btree/key_serializer.cpp
     rangebitmap/range_bitmap_global_index.cpp
     rangebitmap/range_bitmap_global_index_factory.cpp)
 

@@ -83,7 +83,7 @@ Result<bool> BlockIterator::SeekTo(const MemorySlice& target_key) {
     }
 
     // If we exit the loop without finding exact match, polled_position_ points to
-    // the first entry with key > target_key (if any), or -1 if all keys < target_key
+    // the first entry with key >= target_key (if any), or -1 if all keys < target_key
     return false;
 }
 

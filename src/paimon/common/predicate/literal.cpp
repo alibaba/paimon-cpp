@@ -26,6 +26,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/status.h"
@@ -329,13 +330,11 @@ Result<int32_t> Literal::CompareTo(const Literal& other) const {
                        ? 0
                        : ((impl_->value_.BigIntVal < other.impl_->value_.BigIntVal) ? -1 : 1);
         case FieldType::FLOAT:
-            return impl_->value_.FloatVal == other.impl_->value_.FloatVal
-                       ? 0
-                       : ((impl_->value_.FloatVal < other.impl_->value_.FloatVal) ? -1 : 1);
+            return FieldsComparator::CompareFloatingPoint(impl_->value_.FloatVal,
+                                                          other.impl_->value_.FloatVal);
         case FieldType::DOUBLE:
-            return impl_->value_.DoubleVal == other.impl_->value_.DoubleVal
-                       ? 0
-                       : ((impl_->value_.DoubleVal < other.impl_->value_.DoubleVal) ? -1 : 1);
+            return FieldsComparator::CompareFloatingPoint(impl_->value_.DoubleVal,
+                                                          other.impl_->value_.DoubleVal);
         case FieldType::STRING:
         case FieldType::BINARY: {
             std::string_view v1(impl_->value_.Buffer, impl_->size_);

@@ -112,11 +112,7 @@ class BinaryRow final : public BinarySection, public InternalRow, public DataSet
     bool operator==(const BinaryRow& other) const;
     // TODO(liancheng.lsz): single column to be implemented
 
-    std::string ToString() const override {
-        std::stringstream ss;
-        ss << std::hex << static_cast<uint32_t>(HashCode());
-        return "BinaryRow@" + ss.str();
-    }
+    std::string ToString() const override;
 
     int32_t HashCode() const override;
 

@@ -67,19 +67,18 @@ Result<BlockHandle> SstFileWriter::WriteIndexBlock() {
     return FlushBlockWriter(index_block_writer_.get());
 }
 
-Result<std::shared_ptr<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
+Result<std::optional<BloomFilterHandle>> SstFileWriter::WriteBloomFilter() {
     if (!bloom_filter_) {
-        return std::shared_ptr<BloomFilterHandle>();
+        return std::optional<BloomFilterHandle>();
     }
     auto bf_slice = bloom_filter_->GetBitSet()->ToSlice();
     auto data = bf_slice.ReadStringView();
     PAIMON_ASSIGN_OR_RAISE(int64_t bloom_filter_pos, out_->GetPos());
-    auto handle = std::make_shared<BloomFilterHandle>(bloom_filter_pos, data.size(),
-                                                      bloom_filter_->ExpectedEntries());
+    BloomFilterHandle handle(bloom_filter_pos, data.size(), bloom_filter_->ExpectedEntries());
 
     PAIMON_RETURN_NOT_OK(WriteBytes(data.data(), data.size()));
 
-    return handle;
+    return std::optional<BloomFilterHandle>(handle);
 }
 
 Status SstFileWriter::WriteSlice(const MemorySlice& slice) {

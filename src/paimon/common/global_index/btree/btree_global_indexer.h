@@ -17,18 +17,37 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "paimon/common/global_index/btree/btree_defs.h"
 #include "paimon/common/global_index/btree/btree_global_index_reader.h"
 #include "paimon/common/sst/block_cache.h"
 #include "paimon/common/sst/block_handle.h"
-#include "paimon/file_index/file_index_result.h"
 #include "paimon/global_index/global_indexer.h"
 #include "paimon/global_index/io/global_index_file_reader.h"
 #include "paimon/utils/roaring_bitmap64.h"
-
 namespace paimon {
+/// The indexer for btree index. We do not build a B-tree directly in memory, instead, we form a
+/// logical B-tree via multi-level metadata over SST files that store the actual data, as below:
+///
+///                                             BTree-Index
+///                                             /           |
+///                                            /    ...     |
+///                                           /             |
+///     +--------------------------------------+           +------------+
+///     |               SST File               |           |            |
+///     +--------------------------------------+           |            |
+///     |              Root Index              |           |            |
+///     |             /   ...    |             |    ...    |  SST File  |
+///     |     Leaf Index  ...  Leaf Index      |           |            |
+///     |     /  ...   |       /  ...   |      |           |            |
+///     | DataBlock       ...        DataBlock |           |            |
+///     +--------------------------------------+           +------------+
+///
+/// This approach significantly reduces memory pressure during index reads.
+
 class BTreeGlobalIndexer : public GlobalIndexer {
  public:
     explicit BTreeGlobalIndexer(const std::map<std::string, std::string>& options)
@@ -45,11 +64,9 @@ class BTreeGlobalIndexer : public GlobalIndexer {
         const std::shared_ptr<MemoryPool>& pool) const override;
 
  private:
-    static Result<std::shared_ptr<GlobalIndexResult>> ToGlobalIndexResult(
-        int64_t range_end, const std::shared_ptr<FileIndexResult>& result);
-
-    static Result<std::shared_ptr<RoaringBitmap64>> ReadNullBitmap(
-        const std::shared_ptr<BlockCache>& cache, const std::shared_ptr<BlockHandle>& block_handle);
+    static Result<RoaringBitmap64> ReadNullBitmap(const std::shared_ptr<BlockCache>& cache,
+                                                  const std::optional<BlockHandle>& block_handle,
+                                                  MemoryPool* pool);
 
  private:
     std::map<std::string, std::string> options_;

@@ -25,72 +25,89 @@
 #include "paimon/common/sst/sst_file_writer.h"
 #include "paimon/global_index/global_index_writer.h"
 #include "paimon/global_index/io/global_index_file_writer.h"
+#include "paimon/predicate/literal.h"
 #include "paimon/utils/roaring_bitmap64.h"
-
 namespace paimon {
 
 /// Writer for BTree Global Index files.
 /// This writer builds an SST file where each key maps to a list of row IDs.
+/// Note that users must keep written keys monotonically incremental. All null keys are stored in a
+/// separate bitmap, which will be serialized and appended to the file end on close. The layout is
+/// as below:
+///
+///    +-----------------------------------+------+
+///    |             Footer                |      |
+///    +-----------------------------------+      |
+///    |           Index Block             |      +--> Loaded on open
+///    +-----------------------------------+      |
+///    |        Bloom Filter Block         |      |
+///    +-----------------------------------+------+
+///    |         Null Bitmap Block         |      |
+///    +-----------------------------------+      |
+///    |            Data Block             |      |
+///    +-----------------------------------+      +--> Loaded on requested
+///    |              ......               |      |
+///    +-----------------------------------+      |
+///    |            Data Block             |      |
+///    +-----------------------------------+------+
+///
+/// For efficiency, we combine entries with the same keys and store a compact list of row ids for
+/// each key.
 class BTreeGlobalIndexWriter : public GlobalIndexWriter {
  public:
     /// Factory method that may fail during initialization (e.g.,
     /// Arrow schema import). Use this instead of the constructor.
     static Result<std::shared_ptr<BTreeGlobalIndexWriter>> Create(
-        const std::string& field_name, ::ArrowSchema* arrow_schema,
-        const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+        const std::string& field_name, const std::shared_ptr<arrow::StructType>& arrow_type,
+        const std::shared_ptr<GlobalIndexFileWriter>& file_writer, int32_t block_size,
         const std::shared_ptr<paimon::BlockCompressionFactory>& compression_factory,
-        const std::shared_ptr<MemoryPool>& pool, int32_t block_size);
+        const std::shared_ptr<MemoryPool>& pool);
 
     ~BTreeGlobalIndexWriter() override = default;
 
-    /// Add a batch of data from an Arrow array.
-    /// The Arrow array should contain a single column of the indexed field.
-    Status AddBatch(::ArrowArray* arrow_array) override;
+    Status AddBatch(::ArrowArray* arrow_array) override {
+        // TODO(xinyu.lxy): refactor AddBatch with relative row ids
+        return Status::Invalid("BTreeGlobalIndexWriter not support AddBatch without row_ids");
+    }
+
+    Status AddBatch(::ArrowArray* arrow_array, const std::vector<int64_t>& row_ids);
 
     /// Finish writing and return the index metadata.
     Result<std::vector<GlobalIndexIOMeta>> Finish() override;
 
  private:
-    BTreeGlobalIndexWriter(
-        const std::string& field_name, std::shared_ptr<arrow::DataType> arrow_type,
-        const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
-        const std::shared_ptr<paimon::BlockCompressionFactory>& compression_factory,
-        const std::shared_ptr<MemoryPool>& pool, int32_t block_size);
+    BTreeGlobalIndexWriter(const std::string& field_name,
+                           const std::shared_ptr<arrow::DataType>& arrow_type,
+                           const std::shared_ptr<arrow::DataType>& key_type,
+                           const std::shared_ptr<GlobalIndexFileWriter>& file_writer,
+                           const std::string& index_file_name,
+                           const std::shared_ptr<OutputStream>& output_stream,
+                           std::unique_ptr<SstFileWriter>&& sst_writer,
+                           const std::shared_ptr<MemoryPool>& pool);
 
-    // Helper method to write a key-value pair to the SST file
-    Status WriteKeyValue(std::shared_ptr<Bytes> key, const std::vector<int64_t>& row_ids);
+    Status Flush();
 
-    // Helper method to serialize row IDs into a Bytes object
-    Result<std::shared_ptr<Bytes>> SerializeRowIds(const std::vector<int64_t>& row_ids);
-
-    // Helper method to write null bitmap to the output stream
-    Result<std::shared_ptr<BlockHandle>> WriteNullBitmap(const std::shared_ptr<OutputStream>& out);
-
-    // Helper method to compare binary keys for std::map ordering
-    int32_t CompareBinaryKeys(const std::shared_ptr<Bytes>& a,
-                              const std::shared_ptr<Bytes>& b) const;
+    Result<std::optional<BlockHandle>> WriteNullBitmap(const std::shared_ptr<OutputStream>& out);
 
  private:
     std::string field_name_;
     std::shared_ptr<arrow::DataType> arrow_type_;
+    std::shared_ptr<arrow::DataType> key_type_;
     std::shared_ptr<MemoryPool> pool_;
+
     std::shared_ptr<GlobalIndexFileWriter> file_writer_;
-
-    // SST file writer (declared after pool_ to ensure correct destruction order)
-    std::unique_ptr<SstFileWriter> sst_writer_;
+    std::string index_file_name_;
     std::shared_ptr<OutputStream> output_stream_;
-    std::string file_name_;
+    std::unique_ptr<SstFileWriter> sst_writer_;
 
-    // Track first and last keys for index meta
-    std::shared_ptr<Bytes> first_key_;
-    std::shared_ptr<Bytes> last_key_;
+    // TODO(xinyu.lxy): remove it when GlobalIndexIOMeta is updated
+    int64_t max_row_id_ = -1;
+    std::optional<Literal> first_key_;
+    std::optional<Literal> last_key_;
 
     // Null bitmap tracking
-    std::shared_ptr<RoaringBitmap64> null_bitmap_;
-    bool has_nulls_;
-
-    // Current row ID counter
-    int64_t current_row_id_;
+    RoaringBitmap64 null_bitmap_;
+    std::vector<int64_t> current_row_ids_;
 };
 
 }  // namespace paimon

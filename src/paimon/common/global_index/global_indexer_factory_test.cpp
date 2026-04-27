@@ -38,4 +38,17 @@ TEST(GlobalIndexerFactoryTest, TestNonExist) {
                          GlobalIndexerFactory::Get("nonexist", options));
     ASSERT_FALSE(indexer);
 }
+
+TEST(GlobalIndexerFactoryTest, TestLuminaVectorAnnCompatibility) {
+    // "lumina-vector-ann" should be treated as "lumina" for backward compatibility.
+    // Both identifiers should produce the same result (either both succeed or both return nullptr
+    // depending on whether the lumina module is linked).
+    std::map<std::string, std::string> options;
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexer> lumina_vector_ann_indexer,
+                         GlobalIndexerFactory::Get("lumina-vector-ann", options));
+    ASSERT_OK_AND_ASSIGN(std::unique_ptr<GlobalIndexer> lumina_indexer,
+                         GlobalIndexerFactory::Get("lumina", options));
+
+    ASSERT_EQ(static_cast<bool>(lumina_vector_ann_indexer), static_cast<bool>(lumina_indexer));
+}
 }  // namespace paimon::test

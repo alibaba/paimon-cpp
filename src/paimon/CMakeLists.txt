@@ -151,6 +151,9 @@ set(PAIMON_CORE_SRCS
     core/mergetree/spill_writer.cpp
     core/append/append_only_writer.cpp
     core/append/bucketed_append_compact_manager.cpp
+    core/bucket/bucket_select_converter.cpp
+    core/append/append_compact_task.cpp
+    core/append/append_compact_coordinator.cpp
     core/bucket/hive_bucket_function.cpp
     core/bucket/mod_bucket_function.cpp
     core/bucket/bucket_id_calculator.cpp
@@ -284,6 +287,7 @@ set(PAIMON_CORE_SRCS
     core/schema/schema_validation.cpp
     core/schema/table_schema.cpp
     core/snapshot.cpp
+    core/snapshot_info.cpp
     core/stats/simple_stats_collector.cpp
     core/stats/simple_stats_converter.cpp
     core/stats/simple_stats.cpp
@@ -412,8 +416,7 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/bitmap/bitmap_global_index_test.cpp
                     common/global_index/btree/btree_index_meta_test.cpp
                     common/global_index/btree/btree_file_footer_test.cpp
-                    common/global_index/btree/btree_global_indexer_test.cpp
-                    common/global_index/btree/btree_global_index_writer_test.cpp
+                    common/global_index/btree/key_serializer_test.cpp
                     common/global_index/btree/btree_global_index_integration_test.cpp
                     common/global_index/btree/btree_compatibility_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
@@ -527,7 +530,9 @@ if(PAIMON_BUILD_TESTS)
     add_paimon_test(core_test
                     SOURCES
                     core/append/append_only_writer_test.cpp
+                    core/append/append_compact_coordinator_test.cpp
                     core/append/bucketed_append_compact_manager_test.cpp
+                    core/bucket/bucket_select_converter_test.cpp
                     core/bucket/default_bucket_function_test.cpp
                     core/bucket/hive_bucket_function_test.cpp
                     core/bucket/bucket_id_calculator_test.cpp
