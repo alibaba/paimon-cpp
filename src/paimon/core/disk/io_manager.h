@@ -35,14 +35,6 @@ class IOManager {
         return tmp_dir_;
     }
 
-    Result<std::string> GenerateTempFilePath(const std::string& prefix) const {
-        std::string uuid;
-        if (!UUID::Generate(&uuid)) {
-            return Status::Invalid("generate uuid for io manager tmp path failed.");
-        }
-        return PathUtil::JoinPath(tmp_dir_, prefix + "-" + uuid + std::string(kSuffix));
-    }
-
     Result<FileIOChannel::ID> CreateChannel() {
         PAIMON_ASSIGN_OR_RAISE(auto* manager, GetFileChannelManager());
         return manager->CreateChannel();
@@ -74,7 +66,6 @@ class IOManager {
         return file_channel_manager_.get();
     }
 
-    static constexpr char kSuffix[] = ".channel";
     static constexpr char kDirNamePrefix[] = "io";
     std::string tmp_dir_;
     std::shared_ptr<FileSystem> file_system_;

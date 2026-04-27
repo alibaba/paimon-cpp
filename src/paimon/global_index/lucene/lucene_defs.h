@@ -32,6 +32,8 @@ static inline const char kLuceneReadBufferSize[] = "read.buffer-size";
 // default is false
 static inline const char kLuceneWriteOmitTermFreqAndPositions[] =
     "write.omit-term-freq-and-position";
+// no default value, must explicit set
+static inline const char kLuceneWriteTmpDir[] = "write.tmp.directory";
 
 static inline const char kJiebaDictDirEnv[] = "PAIMON_JIEBA_DICT_DIR";
 

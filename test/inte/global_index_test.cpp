@@ -2432,8 +2432,11 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithRangeBitmapAndBitmap) {
 TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
                                  arrow::field("f1", arrow::int32())};
+    auto tmp_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
     std::map<std::string, std::string> lucene_options = {
-        {"lucene-fts.write.omit-term-freq-and-position", "false"}};
+        {"lucene-fts.write.omit-term-freq-and-position", "false"},
+        {"lucene-fts.write.tmp.directory", tmp_dir->Str()}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, file_format_},

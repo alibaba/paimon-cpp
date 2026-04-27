@@ -142,6 +142,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/byte_range_combiner.cpp
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
+    common/utils/row_range_index.cpp
     common/utils/status.cpp
     common/utils/string_utils.cpp)
 
@@ -455,6 +456,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/row_range_index_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
                     common/utils/arrow/arrow_stream_adapter_test.cpp
