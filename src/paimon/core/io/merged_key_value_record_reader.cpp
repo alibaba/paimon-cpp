@@ -86,7 +86,6 @@ Status MergedKeyValueRecordReader::Iterator::LoadNextKeyValue() {
         current_iterator_.reset();
         PAIMON_ASSIGN_OR_RAISE(current_iterator_, reader_->reader_->NextBatch());
         if (current_iterator_ == nullptr) {
-            reader_->reader_->Close();
             return Status::OK();
         }
     }
@@ -110,6 +109,7 @@ std::shared_ptr<Metrics> MergedKeyValueRecordReader::GetReaderMetrics() const {
 }
 
 void MergedKeyValueRecordReader::Close() {
+    visited_ = true;
     reader_->Close();
 }
 

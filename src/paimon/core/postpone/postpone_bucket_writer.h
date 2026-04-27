@@ -72,6 +72,10 @@ class PostponeBucketWriter : public BatchWriter {
         return Status::NotImplemented("not implemented");
     }
 
+    uint64_t GetMemoryUsage() const override {
+        return 0;
+    }
+
     Status FlushMemory() override {
         return Flush();
     }

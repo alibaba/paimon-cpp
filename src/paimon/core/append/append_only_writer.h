@@ -69,6 +69,9 @@ class AppendOnlyWriter : public BatchWriter {
         return Flush(/*wait_for_latest_compaction=*/true, full_compaction);
     }
 
+    uint64_t GetMemoryUsage() const override {
+        return 0;
+    }
     Status FlushMemory() override {
         return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
     }

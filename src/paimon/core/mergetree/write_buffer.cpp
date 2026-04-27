@@ -16,6 +16,7 @@
 
 #include "paimon/core/mergetree/write_buffer.h"
 
+#include <limits>
 #include <memory>
 #include <utility>
 
@@ -34,6 +35,7 @@ WriteBuffer::WriteBuffer(
     const std::shared_ptr<MergeFunctionWrapper<KeyValue>>& merge_function_wrapper,
     const std::shared_ptr<MemoryPool>& pool)
     : key_comparator_(key_comparator), merge_function_wrapper_(merge_function_wrapper) {
+    // TODO(jinli.zjw): input sequence_fields_ascending as parameter
     sort_buffer_ = std::make_unique<BinaryInMemorySortBuffer>(
         last_sequence_number, value_type, trimmed_primary_keys, user_defined_sequence_fields,
         /*sequence_fields_ascending=*/true, key_comparator,

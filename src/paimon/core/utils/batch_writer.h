@@ -37,9 +37,7 @@ class BatchWriter {
     virtual ~BatchWriter() = default;
 
     /// Return current in-memory data usage in bytes
-    virtual uint64_t GetMemoryUsage() const {
-        return 0;
-    }
+    virtual uint64_t GetMemoryUsage() const = 0;
 
     /// Flush in-memory data.
     virtual Status FlushMemory() = 0;
