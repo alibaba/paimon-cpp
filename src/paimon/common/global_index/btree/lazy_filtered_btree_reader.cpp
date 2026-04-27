@@ -174,7 +174,7 @@ Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::DispatchVisi
     std::vector<std::shared_ptr<GlobalIndexReader>> readers;
     readers.reserve(selected_files.size());
     for (const auto& meta : selected_files) {
-        PAIMON_ASSIGN_OR_RAISE(auto reader, GetOrCreateReader(meta));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, GetOrCreateReader(meta));
         readers.push_back(std::move(reader));
     }
 
@@ -203,7 +203,8 @@ Result<std::shared_ptr<GlobalIndexResult>> LazyFilteredBTreeReader::DispatchVisi
     // Merge results in submission order
     std::shared_ptr<GlobalIndexResult> merged_result = nullptr;
     for (auto& result_or_status : collected_results) {
-        PAIMON_ASSIGN_OR_RAISE(auto result, std::move(result_or_status));
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result,
+                               std::move(result_or_status));
         if (result == nullptr) {
             continue;
         }
@@ -226,7 +227,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateR
     if (iterator != reader_cache_.end()) {
         return iterator->second;
     }
-    PAIMON_ASSIGN_OR_RAISE(auto reader, CreateSingleReader(meta));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexReader> reader, CreateSingleReader(meta));
     reader_cache_[meta.file_path] = reader;
     return reader;
 }
