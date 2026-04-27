@@ -145,7 +145,7 @@ Status GlobalIndexScanImpl::Scan() {
     return Status::OK();
 }
 
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::ParallelScan(
+Result<std::shared_ptr<GlobalIndexResult>> GlobalIndexScanImpl::ParallelScan(
     const std::vector<Range>& ranges, const std::shared_ptr<Predicate>& predicate,
     const std::shared_ptr<VectorSearch>& vector_search, const std::shared_ptr<Executor>& executor) {
     std::vector<std::shared_ptr<RowRangeGlobalIndexScannerImpl>> range_scanners;
@@ -162,23 +162,22 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::P
         range_scanners.push_back(scanner_impl);
     }
 
-    std::vector<std::future<Result<std::optional<std::shared_ptr<GlobalIndexResult>>>>> futures;
+    std::vector<std::future<Result<std::shared_ptr<GlobalIndexResult>>>> futures;
     for (size_t i = 0; i < range_scanners.size(); i++) {
         const auto& scanner = range_scanners[i];
         const auto& range = ranges[i];
-        auto search_index =
-            [&scanner, &predicate, &vector_search,
-             &range]() -> Result<std::optional<std::shared_ptr<GlobalIndexResult>>> {
+        auto search_index = [&scanner, &predicate, &vector_search,
+                             &range]() -> Result<std::shared_ptr<GlobalIndexResult>> {
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexEvaluator> evaluator,
                                    scanner->CreateIndexEvaluator());
-            PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
+            PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> index_result,
                                    evaluator->Evaluate(predicate, vector_search));
             if (!index_result) {
                 return index_result;
             }
             PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> result_with_offset,
-                                   index_result.value()->AddOffset(range.from));
-            return std::optional<std::shared_ptr<GlobalIndexResult>>(result_with_offset);
+                                   index_result->AddOffset(range.from));
+            return result_with_offset;
         };
         futures.push_back(Via(executor.get(), search_index));
     }
@@ -186,32 +185,31 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> GlobalIndexScanImpl::P
 
     // collect inner result and check all null
     bool all_null = true;
-    std::vector<std::optional<std::shared_ptr<GlobalIndexResult>>> results;
+    std::vector<std::shared_ptr<GlobalIndexResult>> results;
     for (auto& result : collected_results) {
-        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> inner_result,
-                               result);
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> inner_result, result);
         if (inner_result) {
             all_null = false;
         }
         results.push_back(std::move(inner_result));
     }
     if (all_null) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
 
     // union result from multiple ranges
-    std::optional<std::shared_ptr<GlobalIndexResult>> final_global_index_result;
+    std::shared_ptr<GlobalIndexResult> final_global_index_result;
 
     for (size_t i = 0; i < results.size(); ++i) {
         std::shared_ptr<GlobalIndexResult> result =
-            results[i] ? results[i].value() : BitmapGlobalIndexResult::FromRanges({ranges[i]});
+            results[i] ? results[i] : BitmapGlobalIndexResult::FromRanges({ranges[i]});
         if (!final_global_index_result) {
             final_global_index_result = result;
         } else {
             PAIMON_ASSIGN_OR_RAISE(final_global_index_result,
-                                   final_global_index_result.value()->Or(result));
+                                   final_global_index_result->Or(result));
         }
     }
-    return std::optional<std::shared_ptr<GlobalIndexResult>>(final_global_index_result);
+    return final_global_index_result;
 }
 }  // namespace paimon

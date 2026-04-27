@@ -23,13 +23,10 @@
 namespace paimon {
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
-    const std::shared_ptr<InputStream>& in, const BlockHandle& index_block_handle,
+    const BlockHandle& index_block_handle,
     const std::optional<BloomFilterHandle>& bloom_filter_handle,
-    MemorySlice::SliceComparator comparator, const std::shared_ptr<CacheManager>& cache_manager,
+    MemorySlice::SliceComparator comparator, const std::shared_ptr<BlockCache>& block_cache,
     const std::shared_ptr<MemoryPool>& pool) {
-    PAIMON_ASSIGN_OR_RAISE(std::string file_path, in->GetUri());
-    auto block_cache = std::make_shared<BlockCache>(file_path, in, cache_manager, pool);
-
     // read bloom filter directly now
     std::shared_ptr<BloomFilter> bloom_filter = nullptr;
     if (bloom_filter_handle.has_value() &&
@@ -67,7 +64,7 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::Create(
 
 Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
     const std::shared_ptr<InputStream>& in, MemorySlice::SliceComparator comparator,
-    const std::shared_ptr<CacheManager>& cache_manager, const std::shared_ptr<MemoryPool>& pool) {
+    const std::shared_ptr<BlockCache>& block_cache, const std::shared_ptr<MemoryPool>& pool) {
     PAIMON_ASSIGN_OR_RAISE(uint64_t file_len, in->Length());
     PAIMON_RETURN_NOT_OK(
         in->Seek(file_len - SortLookupStoreFooter::ENCODED_LENGTH, SeekOrigin::FS_SEEK_SET));
@@ -78,9 +75,9 @@ Result<std::shared_ptr<SstFileReader>> SstFileReader::CreateForSortLookupStore(
     auto footer_input = footer_slice.ToInput();
     PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<SortLookupStoreFooter> read_footer,
                            SortLookupStoreFooter::ReadSortLookupStoreFooter(&footer_input));
-    return SstFileReader::Create(in, read_footer->GetIndexBlockHandle(),
+    return SstFileReader::Create(read_footer->GetIndexBlockHandle(),
                                  read_footer->GetBloomFilterHandle(), std::move(comparator),
-                                 cache_manager, pool);
+                                 block_cache, pool);
 }
 
 SstFileReader::SstFileReader(const std::shared_ptr<MemoryPool>& pool,
