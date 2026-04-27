@@ -20,8 +20,8 @@
 #include <cstring>
 
 #include "fmt/format.h"
+#include "paimon/macros.h"
 #include "paimon/result.h"
-
 namespace paimon {
 
 /// Variable-length integer encoding/decoding utilities.
@@ -46,7 +46,7 @@ class VarLengthIntUtils {
     /// Encodes a non-negative int32 as varint into `dest`.
     /// Returns the number of bytes written.
     static Result<int32_t> EncodeInt(int32_t value, char* dest) {
-        if (value < 0) {
+        if (PAIMON_UNLIKELY(value < 0)) {
             return Status::Invalid(
                 fmt::format("negative value: v={} for VarLengthInt Encoding", value));
         }
@@ -63,7 +63,7 @@ class VarLengthIntUtils {
     /// Encodes a non-negative int64 as varint into `dest`.
     /// Returns the number of bytes written.
     static Result<int32_t> EncodeLong(int64_t value, char* dest) {
-        if (value < 0) {
+        if (PAIMON_UNLIKELY(value < 0)) {
             return Status::Invalid(
                 fmt::format("negative value: v={} for VarLengthInt Encoding", value));
         }
@@ -83,7 +83,7 @@ class VarLengthIntUtils {
     /// Inlines a 1-byte fast path (values 0-127), which is the most common case.
     static inline Result<int32_t> DecodeInt(const char* data, int32_t* offset) {
         auto first_byte = static_cast<uint8_t>(data[*offset]);
-        if (__builtin_expect((first_byte & 0x80) == 0, 1)) {
+        if (PAIMON_LIKELY((first_byte & 0x80) == 0)) {
             ++(*offset);
             return static_cast<int32_t>(first_byte);
         }
@@ -104,7 +104,7 @@ class VarLengthIntUtils {
     /// Inlines a 1-byte fast path (values 0-127), which is the most common case.
     static inline Result<int64_t> DecodeLong(const char* data, int32_t* offset) {
         auto first_byte = static_cast<uint8_t>(data[*offset]);
-        if (__builtin_expect((first_byte & 0x80) == 0, 1)) {
+        if (PAIMON_LIKELY((first_byte & 0x80) == 0)) {
             ++(*offset);
             return static_cast<int64_t>(first_byte);
         }

@@ -46,8 +46,8 @@ int32_t MemorySlice::Offset() const {
     return offset_;
 }
 
-std::shared_ptr<Bytes> MemorySlice::GetOrCreateHeapMemory() const {
-    return segment_.GetOrCreateHeapMemory();
+std::shared_ptr<Bytes> MemorySlice::GetOrCreateHeapMemory(MemoryPool* pool) const {
+    return segment_.GetOrCreateHeapMemory(pool);
 }
 
 const MemorySegment& MemorySlice::GetSegment() const {

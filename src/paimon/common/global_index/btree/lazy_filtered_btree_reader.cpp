@@ -234,6 +234,7 @@ Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::GetOrCreateR
 
 Result<std::shared_ptr<GlobalIndexReader>> LazyFilteredBTreeReader::CreateSingleReader(
     const GlobalIndexIOMeta& meta) {
+    // Create comparator based on field type
     auto comparator = KeySerializer::CreateComparator(key_type_, pool_);
 
     // Deserialize min/max keys from meta

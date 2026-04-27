@@ -43,7 +43,7 @@ class PAIMON_EXPORT MemorySliceInput {
     }
 
     inline Status SetPosition(int32_t position) {
-        if (__builtin_expect(position < 0 || position > length_, 0)) {
+        if (position < 0 || position > length_) {
             return Status::IndexError(fmt::format("position {} index out of bounds", position));
         }
         position_ = position;
@@ -53,6 +53,7 @@ class PAIMON_EXPORT MemorySliceInput {
     inline bool IsReadable() const {
         return position_ < length_;
     }
+
     inline int32_t Available() const {
         return length_ - position_;
     }
@@ -98,7 +99,7 @@ class PAIMON_EXPORT MemorySliceInput {
         return VarLengthIntUtils::DecodeLong(data_, &position_);
     }
 
-    inline MemorySlice ReadSlice(int32_t length) {
+    inline MemorySlice ReadSliceView(int32_t length) {
         auto view_segment = MemorySegment::WrapView(data_ + position_, length);
         position_ += length;
         return MemorySlice(view_segment, 0, length);
@@ -114,9 +115,9 @@ class PAIMON_EXPORT MemorySliceInput {
     }
 
  private:
-    MemorySlice slice_;  // Keeps the underlying memory alive (owning reference).
-    const char* data_;   // Cached raw pointer for fast access.
-    int32_t length_;     // Cached length.
+    MemorySlice slice_;
+    const char* data_;  // Cached raw pointer for fast access.
+    int32_t length_;    // Cached length.
     int32_t position_ = 0;
 
     ByteOrder byte_order_ = SystemByteOrder();

@@ -77,10 +77,6 @@ class PAIMON_EXPORT MemorySegment {
         return size_;
     }
 
-    inline bool IsOffHeap() const {
-        return false;
-    }
-
     /// Returns the raw data pointer (valid for both owning and non-owning segments).
     inline const char* Data() const {
         return data_;
@@ -157,14 +153,14 @@ class PAIMON_EXPORT MemorySegment {
 
     bool EqualTo(const MemorySegment& seg2, int32_t offset1, int32_t offset2, int32_t length) const;
 
-    std::shared_ptr<Bytes> GetOrCreateHeapMemory() const {
+    std::shared_ptr<Bytes> GetOrCreateHeapMemory(MemoryPool* pool) const {
         if (heap_memory_) {
             return heap_memory_;
         }
         if (!data_) {
             return nullptr;
         }
-        auto copy = std::make_shared<Bytes>(size_, GetDefaultPool().get());
+        auto copy = std::make_shared<Bytes>(size_, pool);
         std::memcpy(const_cast<char*>(copy->data()), data_, size_);
         return copy;
     }

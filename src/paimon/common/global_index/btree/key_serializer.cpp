@@ -21,6 +21,7 @@
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/utils/date_time_utils.h"
 #include "paimon/common/utils/field_type_utils.h"
+#include "paimon/common/utils/fields_comparator.h"
 #include "paimon/common/utils/preconditions.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
@@ -238,7 +239,7 @@ MemorySlice::SliceComparator KeySerializer::CreateComparator(
                 float fa, fb;
                 memcpy(&fa, &ia, sizeof(float));
                 memcpy(&fb, &ib, sizeof(float));
-                return (fa < fb) ? -1 : (fa > fb ? 1 : 0);
+                return FieldsComparator::CompareFloatingPoint(fa, fb);
             };
         case arrow::Type::type::DOUBLE:
             return [](const MemorySlice& a, const MemorySlice& b) -> Result<int32_t> {
@@ -247,7 +248,7 @@ MemorySlice::SliceComparator KeySerializer::CreateComparator(
                 double da, db;
                 memcpy(&da, &ia, sizeof(double));
                 memcpy(&db, &ib, sizeof(double));
-                return (da < db) ? -1 : (da > db ? 1 : 0);
+                return FieldsComparator::CompareFloatingPoint(da, db);
             };
         default:
             break;

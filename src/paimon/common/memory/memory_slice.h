@@ -49,7 +49,7 @@ class PAIMON_EXPORT MemorySlice {
 
     int32_t Length() const;
     int32_t Offset() const;
-    std::shared_ptr<Bytes> GetOrCreateHeapMemory() const;
+    std::shared_ptr<Bytes> GetOrCreateHeapMemory(MemoryPool* pool) const;
     const MemorySegment& GetSegment() const;
 
     /// Returns a raw pointer to the start of this slice's data.

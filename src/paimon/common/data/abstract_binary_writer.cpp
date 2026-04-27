@@ -183,7 +183,7 @@ void AbstractBinaryWriter::Grow(int32_t min_capacity) {
         new_capacity = min_capacity;
     }
     std::shared_ptr<Bytes> new_bytes =
-        Bytes::CopyOf(*(segment_.GetOrCreateHeapMemory()), new_capacity, pool_);
+        Bytes::CopyOf(*(segment_.GetOrCreateHeapMemory(pool_)), new_capacity, pool_);
     segment_ = MemorySegment::Wrap(new_bytes);
     AfterGrow();
 }

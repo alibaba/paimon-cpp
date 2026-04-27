@@ -40,15 +40,15 @@ Result<BlockEntry> BlockIterator::Next() {
 
 Result<BlockEntry> BlockIterator::ReadEntry() {
     PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
-    auto key = input_.ReadSlice(key_length);
+    auto key = input_.ReadSliceView(key_length);
     PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
-    auto value = input_.ReadSlice(value_length);
+    auto value = input_.ReadSliceView(value_length);
     return BlockEntry(key, value);
 }
 
 Result<MemorySlice> BlockIterator::ReadKeyAndSkipValue() {
     PAIMON_ASSIGN_OR_RAISE(int32_t key_length, input_.ReadVarLenInt());
-    auto key = input_.ReadSlice(key_length);
+    auto key = input_.ReadSliceView(key_length);
     PAIMON_ASSIGN_OR_RAISE(int32_t value_length, input_.ReadVarLenInt());
     PAIMON_RETURN_NOT_OK(input_.SetPosition(input_.Position() + value_length));
     return key;

@@ -258,7 +258,7 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
         return result;
     }
 
-    // Serialize from/to keys once, then compare at MemorySlice level in the loop.
+    // Create an index block iterator to iterate through data blocks
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> from_bytes,
                            KeySerializer::SerializeKey(from.value(), key_type_, pool_.get()));
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> to_bytes,

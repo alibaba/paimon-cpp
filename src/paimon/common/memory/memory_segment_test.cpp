@@ -717,7 +717,7 @@ TEST(MemorySegmentTest, TestNonOwningWrapView) {
     ASSERT_EQ(std::memcmp(buf.data(), seg.Data(), raw_size), 0);
 
     // --- GetOrCreateHeapMemory on non-owning: should copy ---
-    auto heap = seg.GetOrCreateHeapMemory();
+    auto heap = seg.GetOrCreateHeapMemory(pool.get());
     ASSERT_NE(heap, nullptr);
     ASSERT_EQ(static_cast<int32_t>(heap->size()), raw_size);
     // Returned copy should be independent: modifying seg shouldn't affect heap
