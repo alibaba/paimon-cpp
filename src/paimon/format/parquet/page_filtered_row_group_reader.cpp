@@ -41,7 +41,7 @@ std::function<bool(const ::parquet::DataPageStats&)> PageFilteredRowGroupReader:
     auto page_counter = std::make_shared<int32_t>(0);
 
     const auto& page_locations = offset_index->page_locations();
-    int32_t num_pages = static_cast<int32_t>(page_locations.size());
+    auto num_pages = static_cast<int32_t>(page_locations.size());
 
     return [row_ranges, page_locations, num_pages, row_group_row_count,
             page_counter](const ::parquet::DataPageStats& /*stats*/) -> bool {
@@ -69,7 +69,7 @@ std::pair<RowRanges, int64_t> PageFilteredRowGroupReader::ComputeCompressedRowRa
     const RowRanges& original_ranges, const std::shared_ptr<::parquet::OffsetIndex>& offset_index,
     int64_t row_group_row_count) {
     const auto& page_locations = offset_index->page_locations();
-    int32_t num_pages = static_cast<int32_t>(page_locations.size());
+    auto num_pages = static_cast<int32_t>(page_locations.size());
     const auto& ranges = original_ranges.GetRanges();
 
     RowRanges compressed;
@@ -331,7 +331,7 @@ std::vector<::arrow::io::ReadRange> PageFilteredRowGroupReader::ComputePageRange
         }
 
         const auto& page_locations = offset_index->page_locations();
-        int32_t num_pages = static_cast<int32_t>(page_locations.size());
+        auto num_pages = static_cast<int32_t>(page_locations.size());
 
         for (int32_t page_idx = 0; page_idx < num_pages; ++page_idx) {
             int64_t first_row = page_locations[page_idx].first_row_index;

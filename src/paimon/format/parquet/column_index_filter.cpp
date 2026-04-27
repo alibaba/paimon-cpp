@@ -262,7 +262,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByEqual(
     const auto& max_values = column_index->encoded_max_values();
     const auto& null_counts = column_index->null_counts();
     bool has_null_counts = column_index->has_null_counts();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -304,7 +304,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByNotEqual(
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
     const auto& max_values = column_index->encoded_max_values();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -335,7 +335,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessThan(
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -356,7 +356,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByLessOrEqual(
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& min_values = column_index->encoded_min_values();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -377,7 +377,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterThan(
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& max_values = column_index->encoded_max_values();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -398,7 +398,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByGreaterOrEqual(
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
     const auto& max_values = column_index->encoded_max_values();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -419,7 +419,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNull(
     const auto& null_pages = column_index->null_pages();
     const auto& null_counts = column_index->null_counts();
     bool has_null_counts = column_index->has_null_counts();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (null_pages[i]) {
@@ -441,7 +441,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIsNotNull(
     const std::shared_ptr<::parquet::ColumnIndex>& column_index) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     for (int32_t i = 0; i < num_pages; ++i) {
         if (!null_pages[i]) {
@@ -461,7 +461,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByIn(
     const auto& max_values = column_index->encoded_max_values();
     const auto& null_counts = column_index->null_counts();
     bool has_null_counts = column_index->has_null_counts();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     bool has_null =
         std::any_of(literals.begin(), literals.end(), [](const Literal& l) { return l.IsNull(); });
@@ -505,7 +505,7 @@ std::vector<int32_t> ColumnIndexFilter::FilterPagesByNotIn(
     const std::vector<Literal>& literals) {
     std::vector<int32_t> matching_pages;
     const auto& null_pages = column_index->null_pages();
-    int32_t num_pages = static_cast<int32_t>(null_pages.size());
+    auto num_pages = static_cast<int32_t>(null_pages.size());
 
     bool has_null = false;
     for (const auto& literal : literals) {
@@ -600,14 +600,14 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
             if (encoded.size() < sizeof(int64_t)) return std::nullopt;
             int64_t enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(int64_t));
-            int64_t lit_val = literal.GetValue<int64_t>();
+            auto lit_val = literal.GetValue<int64_t>();
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::FLOAT: {
             if (encoded.size() < sizeof(float)) return std::nullopt;
             float enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(float));
-            float lit_val = literal.GetValue<float>();
+            auto lit_val = literal.GetValue<float>();
             if (std::isnan(enc_val) || std::isnan(lit_val)) return std::nullopt;
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
@@ -615,20 +615,20 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
             if (encoded.size() < sizeof(double)) return std::nullopt;
             double enc_val;
             std::memcpy(&enc_val, encoded.data(), sizeof(double));
-            double lit_val = literal.GetValue<double>();
+            auto lit_val = literal.GetValue<double>();
             if (std::isnan(enc_val) || std::isnan(lit_val)) return std::nullopt;
             return (enc_val < lit_val) ? -1 : (enc_val > lit_val) ? 1 : 0;
         }
         case FieldType::STRING:
         case FieldType::BINARY: {
-            std::string lit_val = literal.GetValue<std::string>();
+            auto lit_val = literal.GetValue<std::string>();
             int cmp = encoded.compare(lit_val);
             return (cmp < 0) ? -1 : (cmp > 0) ? 1 : 0;
         }
         case FieldType::DECIMAL: {
             // Parquet stores DECIMAL as INT32, INT64, or FIXED_LEN_BYTE_ARRAY depending
             // on precision. All are stored as unscaled integer values.
-            Decimal lit_decimal = literal.GetValue<Decimal>();
+            auto lit_decimal = literal.GetValue<Decimal>();
             Decimal::int128_t lit_val = lit_decimal.Value();
             Decimal::int128_t enc_val;
 
@@ -648,8 +648,8 @@ std::optional<int32_t> ColumnIndexFilter::CompareEncodedWithLiteral(const std::s
                 // Sign-extend from the first byte
                 enc_val = (static_cast<int8_t>(encoded[0]) < 0) ? static_cast<Decimal::int128_t>(-1)
                                                                 : static_cast<Decimal::int128_t>(0);
-                for (size_t i = 0; i < encoded.size(); ++i) {
-                    enc_val = (enc_val << 8) | static_cast<uint8_t>(encoded[i]);
+                for (char c : encoded) {
+                    enc_val = (enc_val << 8) | static_cast<uint8_t>(c);
                 }
             }
 
