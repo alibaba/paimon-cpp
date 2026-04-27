@@ -85,7 +85,7 @@ std::vector<Range> RowRangeIndex::IntersectedRanges(int64_t start, int64_t end) 
 
 int32_t RowRangeIndex::LowerBound(int64_t target) const {
     int32_t left = 0;
-    int32_t right = static_cast<int32_t>(ends_.size());
+    auto right = static_cast<int32_t>(ends_.size());
     while (left < right) {
         int32_t mid = left + (right - left) / 2;
         if (ends_[mid] < target) {
