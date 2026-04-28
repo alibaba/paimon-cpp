@@ -655,7 +655,7 @@ struct CoreOptions::Impl {
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_SNAPSHOT_ID, &scan_snapshot_id));
         // Parse scan.timestamp-millis and scan.timestamp
         std::string scan_timestamp_str;
-        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_TIMESTAMP, &scan_timestamp_str));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TIMESTAMP, &scan_timestamp_str));
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TIMESTAMP_MILLIS, &scan_timestamp_millis));
         if (scan_timestamp_millis != std::nullopt && !scan_timestamp_str.empty()) {
             return Status::Invalid(

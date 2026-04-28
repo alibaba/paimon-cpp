@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "paimon/core/mergetree/external_sort_buffer.h"
+
 #include <cassert>
 #include <utility>
 
@@ -31,7 +33,6 @@
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/io/row_to_arrow_array_converter.h"
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_min_heap.h"
-#include "paimon/core/mergetree/external_sort_buffer.h"
 #include "paimon/core/mergetree/spill_channel_manager.h"
 #include "paimon/core/mergetree/spill_reader.h"
 #include "paimon/core/mergetree/spill_writer.h"
@@ -82,6 +83,10 @@ ExternalSortBuffer::ExternalSortBuffer(
       spill_channel_manager_(std::make_shared<SpillChannelManager>(
           options_.GetFileSystem(), options_.GetLocalSortMaxNumFileHandles())),
       spill_channel_enumerator_(spill_channel_enumerator) {}
+
+ExternalSortBuffer::~ExternalSortBuffer() {
+    Clear();
+}
 
 bool ExternalSortBuffer::HasSpilledData() const {
     return !spill_channel_manager_->GetChannels().empty();

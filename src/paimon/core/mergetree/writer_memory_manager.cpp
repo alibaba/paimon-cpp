@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ void WriterMemoryManager::UnregisterWriter(BatchWriter* writer) {
     assert(total_memory_ >= iter->second);
     total_memory_ -= iter->second;
     writer_memory_.erase(iter);
-    assert(total_memory_ == ComputeTotalMemoryForDebug());
 }
 
 void WriterMemoryManager::RefreshWriterMemory(BatchWriter* writer) {
@@ -67,8 +66,6 @@ void WriterMemoryManager::UpdateWriterMemory(BatchWriter* writer) {
         }
         iter->second = current_memory_usage;
     }
-
-    assert(total_memory_ == ComputeTotalMemoryForDebug());
 }
 
 WriterMemoryManager::Candidate WriterMemoryManager::PickLargest(
@@ -83,14 +80,6 @@ WriterMemoryManager::Candidate WriterMemoryManager::PickLargest(
         }
     }
     return candidate;
-}
-
-uint64_t WriterMemoryManager::ComputeTotalMemoryForDebug() const {
-    uint64_t total_memory = 0;
-    for (const auto& [_, memory] : writer_memory_) {
-        total_memory += memory;
-    }
-    return total_memory;
 }
 
 Status WriterMemoryManager::ShrinkToLimit() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-present Alibaba Inc.
+ * Copyright 2026-present Alibaba Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,8 +46,6 @@ class WriterMemoryManager {
 
     void UpdateWriterMemory(BatchWriter* writer);
     Candidate PickLargest(const std::unordered_set<BatchWriter*>& skipped) const;
-    // XXX: for debug, remove it
-    uint64_t ComputeTotalMemoryForDebug() const;
     Status ShrinkToLimit();
 
     uint64_t max_memory_;

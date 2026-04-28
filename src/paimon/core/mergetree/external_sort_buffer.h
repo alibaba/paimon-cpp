@@ -79,6 +79,7 @@ class ExternalSortBuffer : public SortBuffer {
                        const CoreOptions& options,
                        const std::shared_ptr<FileIOChannel::Enumerator>& spill_channel_enumerator,
                        const std::shared_ptr<MemoryPool>& pool);
+    ~ExternalSortBuffer();
 
     std::unique_ptr<InMemorySortBuffer> in_memory_buffer_;
 
