@@ -148,4 +148,70 @@ Result<int32_t> StringUtils::StringToDate(const std::string& str) {
     return time / SECONDS_PER_DAY;
 }
 
+/// Parses a timestamp string into unix milliseconds.
+/// Supported formats: "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd HH:mm:ss.SSS".
+/// Uses the default local time zone, consistent with Java Paimon behavior.
+Result<int64_t> StringUtils::StringToTimestampMillis(const std::string& str) {
+    std::tm timeinfo{};
+    timeinfo.tm_isdst = -1;
+
+    // Try "yyyy-MM-dd HH:mm:ss" first (also matches "yyyy-MM-dd HH:mm:ss.SSS")
+    std::istringstream ss(str);
+    ss >> std::get_time(&timeinfo, "%Y-%m-%d %H:%M:%S");
+    int32_t millis_part = 0;
+
+    if (!ss.fail()) {
+        // Check for optional fractional seconds ".SSS"
+        if (ss.peek() == '.') {
+            ss.get();
+            std::string frac;
+            while (frac.size() < 3 && ss.peek() != std::char_traits<char>::eof() &&
+                   std::isdigit(static_cast<unsigned char>(ss.peek()))) {
+                frac += static_cast<char>(ss.get());
+            }
+            if (frac.empty()) {
+                return Status::Invalid(
+                    fmt::format("failed to convert string '{}' to timestamp, "
+                                "expected digits after '.'",
+                                str));
+            }
+            // Pad to 3 digits: "1" -> 100, "12" -> 120, "123" -> 123
+            while (frac.size() < 3) {
+                frac += '0';
+            }
+            auto parsed = StringToValue<int32_t>(frac);
+            if (parsed) {
+                millis_part = parsed.value();
+            }
+        }
+    } else {
+        // Fall back to "yyyy-MM-dd" (date only, time defaults to 00:00:00)
+        ss.clear();
+        ss.str(str);
+        timeinfo = std::tm{};
+        timeinfo.tm_isdst = -1;
+        ss >> std::get_time(&timeinfo, "%Y-%m-%d");
+        if (ss.fail()) {
+            return Status::Invalid(
+                fmt::format("failed to convert string '{}' to timestamp, "
+                            "supported formats: yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, "
+                            "yyyy-MM-dd HH:mm:ss.SSS",
+                            str));
+        }
+    }
+
+    if (ss.peek() != std::char_traits<char>::eof()) {
+        return Status::Invalid(
+            fmt::format("failed to convert string '{}' to timestamp, "
+                        "unexpected trailing characters",
+                        str));
+    }
+
+    std::time_t time = mktime(&timeinfo);
+    if (time == -1) {
+        return Status::Invalid(fmt::format("failed to convert string '{}' to timestamp", str));
+    }
+    return static_cast<int64_t>(time) * 1000 + millis_part;
+}
+
 }  // namespace paimon

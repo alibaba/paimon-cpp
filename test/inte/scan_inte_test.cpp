@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -32,11 +33,14 @@
 #include "paimon/common/utils/decimal_utils.h"
 #include "paimon/core/io/data_file_meta.h"
 #include "paimon/core/manifest/file_source.h"
+#include "paimon/core/snapshot.h"
 #include "paimon/core/stats/simple_stats.h"
 #include "paimon/core/table/source/data_split_impl.h"
+#include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/data/decimal.h"
 #include "paimon/data/timestamp.h"
 #include "paimon/defs.h"
+#include "paimon/fs/local/local_file_system.h"
 #include "paimon/memory/bytes.h"
 #include "paimon/memory/memory_pool.h"
 #include "paimon/predicate/literal.h"
@@ -2100,6 +2104,110 @@ TEST_F(ScanInteTest, TestScanInvalidTag) {
     ASSERT_OK_AND_ASSIGN(auto scan_context, context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_scan, TableScan::Create(std::move(scan_context)));
     ASSERT_NOK_WITH_MSG(table_scan->CreatePlan(), "Tag 'unknown' doesn't exist.");
+}
+
+TEST_F(ScanInteTest, TestWithAppendTimestampMillisBatchScan) {
+    std::string table_path = GetDataDir() + "orc/append_09.db/append_09";
+
+    auto fs = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(fs, table_path);
+    ASSERT_OK_AND_ASSIGN(Snapshot snap3, mgr.LoadSnapshot(3));
+
+    // EarlierOrEqual(snap3.time) → snap-3
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis()));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
+        ASSERT_EQ(plan->SnapshotId().value(), 3);
+    }
+    // EarlierOrEqual(snap3.time - 1) → snap-2
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis() - 1));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
+        ASSERT_EQ(plan->SnapshotId().value(), 2);
+    }
+    // EarlierOrEqual(INT64_MAX) → snap-5 (latest)
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS,
+                          std::to_string(std::numeric_limits<int64_t>::max()));
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan, scan->CreatePlan());
+        ASSERT_EQ(plan->SnapshotId().value(), 5);
+    }
+    // EarlierOrEqual(0) → no snapshot found, expect error
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, "0");
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_NOK_WITH_MSG(scan->CreatePlan(),
+                            "There is currently no snapshot earlier than or equal to timestamp");
+    }
+}
+
+TEST_F(ScanInteTest, TestWithAppendTimestampMillisStreamScan) {
+    std::string table_path = GetDataDir() + "orc/append_09.db/append_09";
+
+    auto fs = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(fs, table_path);
+    ASSERT_OK_AND_ASSIGN(Snapshot snap2, mgr.LoadSnapshot(2));
+    ASSERT_OK_AND_ASSIGN(Snapshot snap3, mgr.LoadSnapshot(3));
+
+    // T=0: no snapshot earlier than T=0, stream starts from snapshot 1.
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, "0").WithStreamingMode(true);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
+        ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan1, scan->CreatePlan());
+        ASSERT_EQ(plan1->SnapshotId().value(), 1);
+    }
+    // T=snap2.time+1: EarlierThan(snap2.time+1)=snap2, stream starts from snapshot 3.
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap2.TimeMillis() + 1))
+            .WithStreamingMode(true);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
+        ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan1, scan->CreatePlan());
+        ASSERT_EQ(plan1->SnapshotId().value(), 3);
+    }
+    // T=snap3.time: EarlierThan(snap3.time)=snap2, stream starts from snapshot 3.
+    {
+        ScanContextBuilder builder(table_path);
+        builder.AddOption(Options::SCAN_TIMESTAMP_MILLIS, std::to_string(snap3.TimeMillis()))
+            .WithStreamingMode(true);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
+        ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan1, scan->CreatePlan());
+        ASSERT_EQ(plan1->SnapshotId().value(), 3);
+    }
+    // T=INT64_MAX: EarlierThan(INT64_MAX)=snap5, stream starts from snapshot 6 (beyond latest).
+    {
+        ScanContextBuilder builder(table_path);
+        builder
+            .AddOption(Options::SCAN_TIMESTAMP_MILLIS,
+                       std::to_string(std::numeric_limits<int64_t>::max()))
+            .WithStreamingMode(true);
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<ScanContext> ctx, builder.Finish());
+        ASSERT_OK_AND_ASSIGN(std::unique_ptr<TableScan> scan, TableScan::Create(std::move(ctx)));
+        ASSERT_OK_AND_ASSIGN(std::shared_ptr<Plan> plan0, scan->CreatePlan());
+        ASSERT_EQ(plan0->SnapshotId(), std::nullopt);
+        ASSERT_TRUE(plan0->Splits().empty());
+    }
 }
 
 }  // namespace paimon::test

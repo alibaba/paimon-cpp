@@ -141,6 +141,8 @@ class PAIMON_EXPORT StringUtils {
 
     static Result<int32_t> StringToDate(const std::string& str);
 
+    static Result<int64_t> StringToTimestampMillis(const std::string& str);
+
     template <typename T>
     static std::optional<T> StringToValue(const std::string& str);
 };

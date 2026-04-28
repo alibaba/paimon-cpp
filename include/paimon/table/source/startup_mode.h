@@ -48,6 +48,12 @@ class PAIMON_EXPORT StartupMode {
     /// specified by "scan.snapshot-id" but does not read new changes
     static const StartupMode FromSnapshotFull();
 
+    /// Starts from a timestamp specified by either "scan.timestamp-millis" or
+    /// "scan.timestamp". For batch sources, produces the latest snapshot whose
+    /// timestamp is <= the specified timestamp. For streaming sources, continuously
+    /// reads changes starting from the first snapshot at or after the timestamp.
+    static const StartupMode FromTimestamp();
+
  public:
     std::string ToString() const;
     bool operator==(const StartupMode& other) const;

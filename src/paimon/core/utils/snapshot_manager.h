@@ -60,6 +60,8 @@ class SnapshotManager {
     Result<bool> SnapshotExists(int64_t snapshot_id) const;
     Result<std::set<std::string>> TryGetNonSnapshotFiles(int64_t older_than_ms) const;
     Result<std::vector<Snapshot>> GetAllSnapshots() const;
+    Result<std::optional<Snapshot>> EarlierOrEqualTimeMillis(int64_t timestamp_millis) const;
+    Result<std::optional<Snapshot>> EarlierThanTimeMillis(int64_t timestamp_millis) const;
 
  private:
     static constexpr int32_t READ_HINT_RETRY_NUM = 3;
@@ -78,6 +80,8 @@ class SnapshotManager {
         const std::string& prefix) const;
     std::optional<int64_t> ReadHint(const std::string& file_name, const std::string& dir) const;
     Status CommitHint(int64_t snapshot_id, const std::string& file_name, const std::string& dir);
+    Result<std::optional<Snapshot>> FindSnapshotBeforeTimestamp(
+        int64_t timestamp_millis, const std::function<bool(int64_t, int64_t)>& compare) const;
 
  private:
     std::shared_ptr<FileSystem> fs_;
