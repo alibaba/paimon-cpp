@@ -351,6 +351,18 @@ struct PAIMON_EXPORT Options {
     /// engine when delete records are received. Default value is "false".
     static const char AGGREGATION_REMOVE_RECORD_ON_DELETE[];
 
+    /// "scan.timestamp-millis" - Optional timestamp used in case of "from-timestamp" scan mode.
+    /// For batch sources, produces the latest snapshot earlier than or equal to the timestamp.
+    /// For streaming sources, starts from the first snapshot at or after the timestamp.
+    /// "scan.timestamp" can be used as an alternative string input for the same mode.
+    static const char SCAN_TIMESTAMP_MILLIS[];
+
+    /// "scan.timestamp" - Optional timestamp string used in case of "from-timestamp" scan mode,
+    /// as an alternative to "scan.timestamp-millis".
+    /// It will be automatically converted to timestamp in unix milliseconds, using local time zone.
+    /// Supported formats: yyyy-MM-dd, yyyy-MM-dd HH:mm:ss, yyyy-MM-dd HH:mm:ss.SSS.
+    static const char SCAN_TIMESTAMP[];
+
     /// "scan.tag-name" - Optional tag name used in case of "from-snapshot" scan mode.
     static const char SCAN_TAG_NAME[];
     /// "write-only" - If set to "true", compactions and snapshot expiration will be skipped. This

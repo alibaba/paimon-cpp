@@ -33,6 +33,8 @@ TEST(StartupModeTest, FromString) {
     ASSERT_EQ(StartupMode::FromSnapshot(), mode);
     ASSERT_OK_AND_ASSIGN(mode, StartupMode::FromString("from-snapshot-full"));
     ASSERT_EQ(StartupMode::FromSnapshotFull(), mode);
+    ASSERT_OK_AND_ASSIGN(mode, StartupMode::FromString("from-timestamp"));
+    ASSERT_EQ(StartupMode::FromTimestamp(), mode);
     ASSERT_NOK(StartupMode::FromString("unknown"));
 }
 

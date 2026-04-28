@@ -83,6 +83,33 @@ class AbstractTableScan : public TableScan {
                 return Status::Invalid(
                     "scan.snapshot-id must be set when startup mode is FROM_SNAPSHOT_FULL");
             }
+        } else if (startup_mode == StartupMode::FromTimestamp()) {
+            std::optional<int64_t> timestamp_millis = core_options_.GetScanTimestampMillis();
+            if (timestamp_millis == std::nullopt) {
+                return Status::Invalid(
+                    "scan.timestamp-millis or scan.timestamp must be set when startup mode is "
+                    "FROM_TIMESTAMP");
+            }
+            if (is_streaming) {
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::optional<Snapshot> earlier_snapshot,
+                    snapshot_manager->EarlierThanTimeMillis(timestamp_millis.value()));
+                int64_t start_id =
+                    earlier_snapshot ? earlier_snapshot->Id() + 1 : Snapshot::FIRST_SNAPSHOT_ID;
+                return std::make_shared<ContinuousFromSnapshotStartingScanner>(snapshot_manager,
+                                                                               start_id);
+            } else {
+                PAIMON_ASSIGN_OR_RAISE(
+                    std::optional<Snapshot> snapshot,
+                    snapshot_manager->EarlierOrEqualTimeMillis(timestamp_millis.value()));
+                if (snapshot == std::nullopt) {
+                    return Status::Invalid(fmt::format(
+                        "There is currently no snapshot earlier than or equal to timestamp [{}]",
+                        timestamp_millis.value()));
+                }
+                return std::make_shared<StaticFromSnapshotStartingScanner>(snapshot_manager,
+                                                                           snapshot->Id());
+            }
         }
         return Status::Invalid(
             fmt::format("Unsupported snapshot startup mode {}", startup_mode.ToString()));

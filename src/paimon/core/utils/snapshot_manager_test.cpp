@@ -137,6 +137,100 @@ TEST(SnapshotManagerTest, TestPathNotExist) {
     ASSERT_EQ(snapshot, std::nullopt);
 }
 
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisExactMatch) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // snapshot-3 has timeMillis = 1721614515032
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721614515032));
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_EQ(snapshot->Id(), 3);
+}
+
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisBetweenSnapshots) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Between snapshot-3 (1721614515032) and snapshot-4 (1721615035363), should return snapshot-3
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721614600000));
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_EQ(snapshot->Id(), 3);
+}
+
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisBeforeAll) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Before snapshot-1 (1721614343270), should return nullopt
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721614343269));
+    ASSERT_FALSE(snapshot.has_value());
+}
+
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisAfterAll) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // After snapshot-5 (1721615035453), should return snapshot-5
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721615099999));
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_EQ(snapshot->Id(), 5);
+}
+
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisFirstSnapshot) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Exact match on snapshot-1
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721614343270));
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_EQ(snapshot->Id(), 1);
+}
+
+TEST(SnapshotManagerTest, TestEarlierOrEqualTimeMillisNoSnapshots) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/not_exist";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierOrEqualTimeMillis(1721614343270));
+    ASSERT_FALSE(snapshot.has_value());
+}
+
+TEST(SnapshotManagerTest, TestEarlierThanTimeMillisExactMatch) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Exact match on snapshot-1 (1721614343270) should not include snapshot-1 for strict <
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierThanTimeMillis(1721614343270));
+    ASSERT_FALSE(snapshot.has_value());
+}
+
+TEST(SnapshotManagerTest, TestEarlierThanTimeMillisBetweenSnapshots) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Between snapshot-1 (1721614343270) and snapshot-2 (1721614468258), should return snapshot-1
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierThanTimeMillis(1721614400000));
+    ASSERT_TRUE(snapshot.has_value());
+    ASSERT_EQ(snapshot->Id(), 1);
+}
+
+TEST(SnapshotManagerTest, TestEarlierThanTimeMillisBeforeAll) {
+    std::string test_data_path = paimon::test::GetDataDir() + "/orc/append_09.db/append_09";
+    auto file_system = std::make_shared<LocalFileSystem>();
+    SnapshotManager mgr(file_system, test_data_path);
+    // Before snapshot-1 (1721614343270), should return no snapshot
+    ASSERT_OK_AND_ASSIGN(std::optional<Snapshot> snapshot,
+                         mgr.EarlierThanTimeMillis(1721614343269));
+    ASSERT_FALSE(snapshot.has_value());
+}
+
 TEST(SnapshotManagerTest, TestCommitLatestHint) {
     auto dir = UniqueTestDirectory::Create();
     ASSERT_TRUE(dir);
