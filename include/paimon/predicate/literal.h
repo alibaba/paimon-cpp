@@ -108,7 +108,7 @@ class PAIMON_EXPORT Literal {
 namespace std {
 template <>
 struct hash<::paimon::Literal> {
-    size_t operator()(const paimon::Literal& literal) const {
+    size_t operator()(const ::paimon::Literal& literal) const {
         return literal.HashCode();
     }
 };
