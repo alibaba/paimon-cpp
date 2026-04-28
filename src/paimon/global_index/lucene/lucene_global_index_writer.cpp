@@ -58,9 +58,11 @@ Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create
         if (!UUID::Generate(&uuid)) {
             return Status::Invalid("generate uuid for lucene tmp path failed.");
         }
-        // create a local tmp path
-        std::string tmp_path = PathUtil::JoinPath(std::filesystem::temp_directory_path().string(),
-                                                  "paimon-lucene-" + uuid);
+        // get local tmp path
+        PAIMON_ASSIGN_OR_RAISE(std::string tmp_dir, OptionsUtils::GetValueFromMap<std::string>(
+                                                        options, std::string(kLuceneWriteTmpDir)));
+        std::string tmp_path = PathUtil::JoinPath(tmp_dir, "paimon-lucene-" + uuid);
+
         auto lucene_dir = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(tmp_path),
                                                     Lucene::NoLockFactory::getNoLockFactory());
         // TODO(xinyu.lxy): support other tokenizer

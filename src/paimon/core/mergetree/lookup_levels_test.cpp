@@ -56,6 +56,7 @@ class LookupLevelsTest : public testing::Test {
         dir_ = UniqueTestDirectory::Create("local");
         fs_ = dir_->GetFileSystem();
         noop_compact_manager_ = std::make_shared<NoopCompactManager>();
+        io_manager_ = std::make_shared<IOManager>(tmp_dir_->Str(), tmp_dir_->GetFileSystem());
     }
 
     void TearDown() override {}
@@ -145,7 +146,6 @@ class LookupLevelsTest : public testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto table_schema, schema_manager->ReadSchema(0));
         PAIMON_ASSIGN_OR_RAISE(CoreOptions options, CoreOptions::FromMap(table_schema->Options()));
 
-        auto io_manager = std::make_shared<IOManager>(tmp_dir_->Str(), tmp_dir_->GetFileSystem());
         auto processor_factory =
             std::make_shared<PersistValueAndPosProcessor::Factory>(arrow_schema_);
         auto serializer_factory = std::make_shared<DefaultLookupSerializerFactory>();
@@ -161,8 +161,8 @@ class LookupLevelsTest : public testing::Test {
                 options.GetLookupCacheFileRetentionMs(), options.GetLookupCacheMaxDiskSize());
         }
         return LookupLevels<PositionedKeyValue>::Create(
-            fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager,
-            std::move(io_manager), path_factory, table_schema, levels,
+            fs_, BinaryRow::EmptyRow(), /*bucket=*/0, options, schema_manager, io_manager_,
+            path_factory, table_schema, levels,
             /*dv_factory=*/{}, processor_factory, serializer_factory, lookup_store_factory,
             lookup_file_cache,
             /*remote_lookup_file_manager=*/nullptr, pool_);
@@ -176,6 +176,7 @@ class LookupLevelsTest : public testing::Test {
     std::unique_ptr<UniqueTestDirectory> dir_;
     std::shared_ptr<FileSystem> fs_;
     std::shared_ptr<NoopCompactManager> noop_compact_manager_;
+    std::shared_ptr<IOManager> io_manager_;
 };
 
 TEST_F(LookupLevelsTest, TestMultiLevels) {
@@ -234,13 +235,17 @@ TEST_F(LookupLevelsTest, TestMultiLevels) {
     // test lookup file in tmp dir
     std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_EQ(file_status_list.size(), 1);
+    auto channel_dir = file_status_list[0]->GetPath();
+    file_status_list.clear();
+    ASSERT_OK(fs_->ListDir(channel_dir, &file_status_list));
     ASSERT_EQ(file_status_list.size(), 2);
     ASSERT_EQ(levels->drop_file_callbacks_.size(), 1);
 
     // test close will rm local lookup file
     ASSERT_OK(lookup_levels->Close());
     file_status_list.clear();
-    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &file_status_list));
+    ASSERT_OK(fs_->ListDir(channel_dir, &file_status_list));
     ASSERT_TRUE(file_status_list.empty());
     ASSERT_TRUE(levels->drop_file_callbacks_.empty());
     ASSERT_EQ(lookup_levels->lookup_file_cache_->Size(), 0);
@@ -732,6 +737,10 @@ TEST_F(LookupLevelsTest, TestLookupFileCacheIntegration) {
     // Collect local file paths for later verification
     std::vector<std::unique_ptr<BasicFileStatus>> tmp_files;
     ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &tmp_files));
+    ASSERT_EQ(tmp_files.size(), 1);
+    auto channel_dir = tmp_files[0]->GetPath();
+    tmp_files.clear();
+    ASSERT_OK(fs_->ListDir(channel_dir, &tmp_files));
     ASSERT_EQ(tmp_files.size(), 3);
 
     // --- Scenario 4: Close instance 1 invalidates only its own files ---
@@ -750,7 +759,7 @@ TEST_F(LookupLevelsTest, TestLookupFileCacheIntegration) {
 
     // All local lookup files should be deleted
     tmp_files.clear();
-    ASSERT_OK(fs_->ListDir(tmp_dir_->Str(), &tmp_files));
+    ASSERT_OK(fs_->ListDir(channel_dir, &tmp_files));
     ASSERT_TRUE(tmp_files.empty());
 }
 

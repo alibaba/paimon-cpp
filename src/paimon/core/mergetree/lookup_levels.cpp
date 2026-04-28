@@ -219,7 +219,8 @@ Result<std::shared_ptr<LookupFile>> LookupLevels<T>::CreateLookupFile(
     PAIMON_ASSIGN_OR_RAISE(
         std::string prefix,
         LookupFile::LocalFilePrefix(partition_schema_, partition_, bucket_, file->file_name));
-    PAIMON_ASSIGN_OR_RAISE(std::string kv_file_path, io_manager_->GenerateTempFilePath(prefix));
+    PAIMON_ASSIGN_OR_RAISE(FileIOChannel::ID channel_id, io_manager_->CreateChannel(prefix));
+    std::string kv_file_path = channel_id.GetPath();
 
     int64_t schema_id = table_schema_->Id();
     std::string file_ser_version = serializer_factory_->Version();
