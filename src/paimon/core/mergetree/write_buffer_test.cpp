@@ -179,8 +179,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
           ["Alice", 10, 0, 13.1]
         ])")
                 .ValueOrDie();
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use,
-                             BinaryInMemorySortBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t expected_memory_use =
             1 + (13 + 3 * 4 + 1) + (3 * 4 + 1) + (3 * 4 + 1) + (3 * 8 + 1);
         ASSERT_EQ(memory_use, expected_memory_use);
@@ -207,8 +206,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
         [true, 0, 0, 0, 0, 1.4E-45, 4.9E-324, 0, 0, "0.00000000000000000000", "Alice", "wood"]
 ])")
                 .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use,
-                             BinaryInMemorySortBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t expected_memory_use = 1 + (4 + 1) + (4 + 1) + (2 * 4 + 1) + (4 * 4 + 1) +
                                       (8 * 4 + 1) + (4 * 4 + 1) + (8 * 4 + 1) + (4 * 4 + 1) +
                                       (8 * 4 + 1) + (4 * 16 + 1) + (25 + 4 * 4 + 1) +
@@ -230,8 +228,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
         [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]]
     ])")
                 .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use,
-                             BinaryInMemorySortBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t list_mem = 1 + (4 * 6 + 1);
         int64_t map_mem = 1 + (33 + 4 * 7 + 1) + (8 * 7 + 1);
         int64_t struct_mem = 1 + (8 * 3 + 1) + (8 * 3 + 1) + (1 * 3 + 1);

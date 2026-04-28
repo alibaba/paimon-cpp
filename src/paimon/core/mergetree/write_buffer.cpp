@@ -23,7 +23,7 @@
 #include "arrow/type.h"
 #include "paimon/core/io/key_value_record_reader.h"
 #include "paimon/core/io/merged_key_value_record_reader.h"
-#include "paimon/core/mergetree/binary_in_memory_sort_buffer.h"
+#include "paimon/core/mergetree/in_memory_sort_buffer.h"
 
 namespace paimon {
 
@@ -36,7 +36,7 @@ WriteBuffer::WriteBuffer(
     const std::shared_ptr<MemoryPool>& pool)
     : key_comparator_(key_comparator), merge_function_wrapper_(merge_function_wrapper) {
     // TODO(jinli.zjw): input sequence_fields_ascending as parameter
-    sort_buffer_ = std::make_unique<BinaryInMemorySortBuffer>(
+    sort_buffer_ = std::make_unique<InMemorySortBuffer>(
         last_sequence_number, value_type, trimmed_primary_keys, user_defined_sequence_fields,
         /*sequence_fields_ascending=*/true, key_comparator,
         /*write_buffer_size=*/std::numeric_limits<int64_t>::max(), pool);

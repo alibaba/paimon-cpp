@@ -73,6 +73,8 @@ class PostponeBucketWriter : public BatchWriter {
     }
 
     uint64_t GetMemoryUsage() const override {
+        // used for spill, PostponeBucketWriter do not support spill, so return 0 to avoid
+        // triggering spill
         return 0;
     }
 

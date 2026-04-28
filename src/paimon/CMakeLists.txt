@@ -251,7 +251,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
-    core/mergetree/binary_in_memory_sort_buffer.cpp
+    core/mergetree/in_memory_sort_buffer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp

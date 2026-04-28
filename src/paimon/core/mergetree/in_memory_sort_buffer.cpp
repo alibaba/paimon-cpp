@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/core/mergetree/binary_in_memory_sort_buffer.h"
+#include "paimon/core/mergetree/in_memory_sort_buffer.h"
 
 #include <cassert>
 #include <utility>
@@ -33,12 +33,14 @@
 
 namespace paimon {
 
-BinaryInMemorySortBuffer::BinaryInMemorySortBuffer(
-    int64_t last_sequence_number, const std::shared_ptr<arrow::DataType>& value_type,
-    const std::vector<std::string>& trimmed_primary_keys,
-    const std::vector<std::string>& user_defined_sequence_fields, bool sequence_fields_ascending,
-    const std::shared_ptr<FieldsComparator>& key_comparator, uint64_t write_buffer_size,
-    const std::shared_ptr<MemoryPool>& pool)
+InMemorySortBuffer::InMemorySortBuffer(int64_t last_sequence_number,
+                                       const std::shared_ptr<arrow::DataType>& value_type,
+                                       const std::vector<std::string>& trimmed_primary_keys,
+                                       const std::vector<std::string>& user_defined_sequence_fields,
+                                       bool sequence_fields_ascending,
+                                       const std::shared_ptr<FieldsComparator>& key_comparator,
+                                       uint64_t write_buffer_size,
+                                       const std::shared_ptr<MemoryPool>& pool)
     : pool_(pool),
       value_type_(value_type),
       trimmed_primary_keys_(trimmed_primary_keys),
@@ -48,20 +50,20 @@ BinaryInMemorySortBuffer::BinaryInMemorySortBuffer(
       write_buffer_size_(write_buffer_size),
       next_sequence_number_(last_sequence_number + 1) {}
 
-void BinaryInMemorySortBuffer::Clear() {
+void InMemorySortBuffer::Clear() {
     buffered_batches_.clear();
     current_memory_in_bytes_ = 0;
 }
 
-uint64_t BinaryInMemorySortBuffer::GetMemorySize() const {
+uint64_t InMemorySortBuffer::GetMemorySize() const {
     return current_memory_in_bytes_;
 }
 
-Result<bool> BinaryInMemorySortBuffer::FlushMemory() {
+Result<bool> InMemorySortBuffer::FlushMemory() {
     return false;
 }
 
-Result<bool> BinaryInMemorySortBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
+Result<bool> InMemorySortBuffer::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     if (ArrowArrayIsReleased(moved_batch->GetData())) {
         return Status::Invalid("invalid batch: data is released");
     }
@@ -84,8 +86,7 @@ Result<bool> BinaryInMemorySortBuffer::Write(std::unique_ptr<RecordBatch>&& move
     return current_memory_in_bytes_ < write_buffer_size_;
 }
 
-Result<std::vector<std::unique_ptr<KeyValueRecordReader>>>
-BinaryInMemorySortBuffer::CreateReaders() {
+Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> InMemorySortBuffer::CreateReaders() {
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
     if (buffered_batches_.empty()) {
         return readers;
@@ -102,14 +103,13 @@ BinaryInMemorySortBuffer::CreateReaders() {
     return readers;
 }
 
-bool BinaryInMemorySortBuffer::HasData() const {
+bool InMemorySortBuffer::HasData() const {
     return !buffered_batches_.empty();
 }
 
 // TODO(jinli.zjw): Consider making the memory estimation more accurate.
 // https://github.com/alibaba/paimon-cpp/pull/206#discussion_r3021325389
-Result<int64_t> BinaryInMemorySortBuffer::EstimateMemoryUse(
-    const std::shared_ptr<arrow::Array>& array) {
+Result<int64_t> InMemorySortBuffer::EstimateMemoryUse(const std::shared_ptr<arrow::Array>& array) {
     arrow::Type::type type = array->type()->id();
     int64_t null_bits_size_in_bytes = (array->length() + 7) / 8;
     switch (type) {

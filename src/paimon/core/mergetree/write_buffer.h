@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "arrow/type_fwd.h"
-#include "paimon/core/mergetree/binary_in_memory_sort_buffer.h"
+#include "paimon/core/mergetree/in_memory_sort_buffer.h"
 #include "paimon/core/mergetree/sort_buffer.h"
 #include "paimon/record_batch.h"
 #include "paimon/result.h"

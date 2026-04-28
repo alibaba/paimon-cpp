@@ -70,6 +70,8 @@ class AppendOnlyWriter : public BatchWriter {
     }
 
     uint64_t GetMemoryUsage() const override {
+        // used for spill, AppendOnlyWriter do not support spill, so return 0 to avoid triggering
+        // spill
         return 0;
     }
     Status FlushMemory() override {

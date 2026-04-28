@@ -47,15 +47,15 @@ struct BufferedWriteBatch {
 
 /// Pure in-memory SortBuffer: buffers RecordBatches and exposes them as sorted
 /// KeyValueRecordReaders. Does not support spill to disk.
-class BinaryInMemorySortBuffer : public SortBuffer {
+class InMemorySortBuffer : public SortBuffer {
  public:
-    BinaryInMemorySortBuffer(int64_t last_sequence_number,
-                             const std::shared_ptr<arrow::DataType>& value_type,
-                             const std::vector<std::string>& trimmed_primary_keys,
-                             const std::vector<std::string>& user_defined_sequence_fields,
-                             bool sequence_fields_ascending,
-                             const std::shared_ptr<FieldsComparator>& key_comparator,
-                             uint64_t write_buffer_size, const std::shared_ptr<MemoryPool>& pool);
+    InMemorySortBuffer(int64_t last_sequence_number,
+                       const std::shared_ptr<arrow::DataType>& value_type,
+                       const std::vector<std::string>& trimmed_primary_keys,
+                       const std::vector<std::string>& user_defined_sequence_fields,
+                       bool sequence_fields_ascending,
+                       const std::shared_ptr<FieldsComparator>& key_comparator,
+                       uint64_t write_buffer_size, const std::shared_ptr<MemoryPool>& pool);
 
     void Clear() override;
     uint64_t GetMemorySize() const override;
