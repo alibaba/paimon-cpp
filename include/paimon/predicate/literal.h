@@ -37,8 +37,9 @@ class PAIMON_EXPORT Literal {
     explicit Literal(FieldType type);
 
     /// Creates a literal from a typed value.
-    /// The template parameter T must be compatible with one of the supported field types.
-    /// @tparam T The C++ type of the value (must match a supported FieldType).
+    /// The template parameter T must be compatible with one of the supported field types
+    /// (must match a supported FieldType).
+    /// T can be bool, int8_t, int16_t, int32_t, int64_t, float, double, Timestamp and Decimal.
     /// @param val The value to store in the literal.
     template <typename T>
     explicit Literal(const T& val);

@@ -40,12 +40,12 @@ TEST(FileIndexReaderWrapperTest, TestToGlobalIndexResult) {
 
     {
         ASSERT_OK_AND_ASSIGN(auto global_result, FileIndexReaderWrapper::ToGlobalIndexResult(
-                                                     /*range_end=*/5l, FileIndexResult::Remain()));
-        check_result(global_result, {0l, 1l, 2l, 3l, 4l, 5l});
+                                                     FileIndexResult::Remain()));
+        ASSERT_FALSE(global_result);
     }
     {
-        ASSERT_OK_AND_ASSIGN(auto global_result, FileIndexReaderWrapper::ToGlobalIndexResult(
-                                                     /*range_end=*/5l, FileIndexResult::Skip()));
+        ASSERT_OK_AND_ASSIGN(auto global_result,
+                             FileIndexReaderWrapper::ToGlobalIndexResult(FileIndexResult::Skip()));
         check_result(global_result, {});
     }
     {
@@ -53,8 +53,8 @@ TEST(FileIndexReaderWrapperTest, TestToGlobalIndexResult) {
             return RoaringBitmap32::From({1, 4, 2147483647});
         };
         auto file_result = std::make_shared<BitmapIndexResult>(bitmap_supplier);
-        ASSERT_OK_AND_ASSIGN(auto global_result, FileIndexReaderWrapper::ToGlobalIndexResult(
-                                                     /*range_end=*/2147483647l, file_result));
+        ASSERT_OK_AND_ASSIGN(auto global_result,
+                             FileIndexReaderWrapper::ToGlobalIndexResult(file_result));
         check_result(global_result, {1l, 4l, 2147483647l});
     }
     {
@@ -68,7 +68,7 @@ TEST(FileIndexReaderWrapperTest, TestToGlobalIndexResult) {
         };
         auto file_result = std::make_shared<FakeFileIndexResult>();
         ASSERT_NOK_WITH_MSG(
-            FileIndexReaderWrapper::ToGlobalIndexResult(/*range_end=*/10l, file_result),
+            FileIndexReaderWrapper::ToGlobalIndexResult(file_result),
             "invalid FileIndexResult, supposed to be Remain or Skip or BitmapIndexResult");
     }
 }

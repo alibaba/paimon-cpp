@@ -19,8 +19,10 @@
 #include <filesystem>
 
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "lucene++/FileUtils.h"
 #include "lucene++/NoLockFactory.h"
+#include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/io/data_output_stream.h"
 #include "paimon/common/utils/options_utils.h"
 #include "paimon/common/utils/path_util.h"
@@ -56,9 +58,11 @@ Result<std::shared_ptr<LuceneGlobalIndexWriter>> LuceneGlobalIndexWriter::Create
         if (!UUID::Generate(&uuid)) {
             return Status::Invalid("generate uuid for lucene tmp path failed.");
         }
-        // create a local tmp path
-        std::string tmp_path = PathUtil::JoinPath(std::filesystem::temp_directory_path().string(),
-                                                  "paimon-lucene-" + uuid);
+        // get local tmp path
+        PAIMON_ASSIGN_OR_RAISE(std::string tmp_dir, OptionsUtils::GetValueFromMap<std::string>(
+                                                        options, std::string(kLuceneWriteTmpDir)));
+        std::string tmp_path = PathUtil::JoinPath(tmp_dir, "paimon-lucene-" + uuid);
+
         auto lucene_dir = Lucene::FSDirectory::open(LuceneUtils::StringToWstring(tmp_path),
                                                     Lucene::NoLockFactory::getNoLockFactory());
         // TODO(xinyu.lxy): support other tokenizer
@@ -122,7 +126,10 @@ LuceneGlobalIndexWriter::~LuceneGlobalIndexWriter() {
     }
 }
 
-Status LuceneGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array) {
+Status LuceneGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
+                                         std::vector<int64_t>&& relative_row_ids) {
+    PAIMON_RETURN_NOT_OK(
+        GlobalIndexUtils::CheckRelativeRowIds(arrow_array, relative_row_ids, row_id_));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                       arrow::ImportArray(arrow_array, arrow_type_));
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
@@ -231,7 +238,6 @@ Result<std::vector<GlobalIndexIOMeta>> LuceneGlobalIndexWriter::Finish() {
     PAIMON_RETURN_NOT_OK(RapidJsonUtil::ToJsonString(options_, &options_json));
     auto meta_bytes = std::make_shared<Bytes>(options_json, pool_.get());
     GlobalIndexIOMeta meta(file_writer_->ToPath(index_file_name), file_size,
-                           /*range_end=*/static_cast<int64_t>(row_id_) - 1,
                            /*metadata=*/meta_bytes);
     return std::vector<GlobalIndexIOMeta>({meta});
 }

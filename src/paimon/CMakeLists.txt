@@ -142,6 +142,7 @@ set(PAIMON_COMMON_SRCS
     common/utils/byte_range_combiner.cpp
     common/utils/roaring_bitmap32.cpp
     common/utils/roaring_bitmap64.cpp
+    common/utils/row_range_index.cpp
     common/utils/status.cpp
     common/utils/string_utils.cpp)
 
@@ -408,6 +409,7 @@ if(PAIMON_BUILD_TESTS)
                     common/file_index/bloomfilter/fast_hash_test.cpp
                     common/global_index/complete_index_score_batch_reader_test.cpp
                     common/global_index/global_index_result_test.cpp
+                    common/global_index/global_index_utils_test.cpp
                     common/global_index/global_indexer_factory_test.cpp
                     common/global_index/bitmap_global_index_result_test.cpp
                     common/global_index/bitmap_scored_global_index_result_test.cpp
@@ -417,6 +419,8 @@ if(PAIMON_BUILD_TESTS)
                     common/global_index/btree/key_serializer_test.cpp
                     common/global_index/btree/btree_global_index_integration_test.cpp
                     common/global_index/btree/btree_compatibility_test.cpp
+                    common/global_index/btree/btree_file_meta_selector_test.cpp
+                    common/global_index/btree/lazy_filtered_btree_reader_test.cpp
                     common/global_index/rangebitmap/range_bitmap_global_index_test.cpp
                     common/global_index/wrap/file_index_reader_wrapper_test.cpp
                     common/io/byte_array_input_stream_test.cpp
@@ -450,6 +454,7 @@ if(PAIMON_BUILD_TESTS)
                     common/types/data_type_json_parser_test.cpp
                     common/types/row_kind_test.cpp
                     common/types/data_type_test.cpp
+                    common/utils/row_range_index_test.cpp
                     common/utils/var_length_int_utils_test.cpp
                     common/utils/arrow/arrow_utils_test.cpp
                     common/utils/arrow/arrow_stream_adapter_test.cpp

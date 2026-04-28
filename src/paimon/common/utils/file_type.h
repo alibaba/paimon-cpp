@@ -14,20 +14,27 @@
  * limitations under the License.
  */
 
-#include "paimon/common/global_index/btree/btree_global_index_factory.h"
+#pragma once
 
-#include <utility>
+#include <string>
 
-#include "paimon/common/global_index/btree/btree_global_indexer.h"
+#include "paimon/visibility.h"
+
 namespace paimon {
 
-const char BTreeGlobalIndexerFactory::IDENTIFIER[] = "btree-global";
+enum class FileType {
+    kMeta,
+    kData,
+    kBucketIndex,
+    kGlobalIndex,
+    kFileIndex,
+};
 
-Result<std::unique_ptr<GlobalIndexer>> BTreeGlobalIndexerFactory::Create(
-    const std::map<std::string, std::string>& options) const {
-    return BTreeGlobalIndexer::Create(options);
-}
-
-REGISTER_PAIMON_FACTORY(BTreeGlobalIndexerFactory);
+class PAIMON_EXPORT FileTypeUtils {
+ public:
+    static bool IsIndex(FileType file_type);
+    static FileType Classify(const std::string& file_path);
+    static std::string ToString(FileType file_type);
+};
 
 }  // namespace paimon

@@ -67,7 +67,6 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
         case FieldType::FLOAT: {
             MemorySliceOutput output(4, pool);
             output.Reset();
-            // TODO(xinyu): check java floatToIntBits
             auto fvalue = literal.GetValue<float>();
             int32_t ivalue;
             memcpy(&ivalue, &fvalue, sizeof(float));
@@ -77,7 +76,6 @@ Result<std::shared_ptr<Bytes>> KeySerializer::SerializeKey(
         case FieldType::DOUBLE: {
             MemorySliceOutput output(8, pool);
             output.Reset();
-            // TODO(xinyu): check java doubleToLongBits
             auto dvalue = literal.GetValue<double>();
             int64_t ivalue;
             memcpy(&ivalue, &dvalue, sizeof(double));

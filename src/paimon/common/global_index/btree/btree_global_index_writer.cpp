@@ -19,10 +19,12 @@
 #include <map>
 
 #include "arrow/c/bridge.h"
+#include "arrow/c/helpers.h"
 #include "fmt/format.h"
 #include "paimon/common/compression/block_compression_factory.h"
 #include "paimon/common/global_index/btree/btree_defs.h"
 #include "paimon/common/global_index/btree/key_serializer.h"
+#include "paimon/common/global_index/global_index_utils.h"
 #include "paimon/common/memory/memory_slice_output.h"
 #include "paimon/common/predicate/literal_converter.h"
 #include "paimon/common/utils/arrow/status_utils.h"
@@ -66,18 +68,11 @@ BTreeGlobalIndexWriter::BTreeGlobalIndexWriter(
       sst_writer_(std::move(sst_writer)) {}
 
 Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
-                                        const std::vector<int64_t>& row_ids) {
-    if (!arrow_array) {
-        return Status::Invalid("ArrowArray is null");
-    }
+                                        std::vector<int64_t>&& relative_row_ids) {
+    PAIMON_RETURN_NOT_OK(GlobalIndexUtils::CheckRelativeRowIds(
+        arrow_array, relative_row_ids, /*expected_next_row_id=*/std::nullopt));
     PAIMON_ASSIGN_OR_RAISE_FROM_ARROW(std::shared_ptr<arrow::Array> array,
                                       arrow::ImportArray(arrow_array, arrow_type_));
-    if (static_cast<int64_t>(row_ids.size()) != array->length()) {
-        return Status::Invalid(
-            fmt::format("row_ids length {} mismatch arrow_array length {} when AddBatch to "
-                        "BTreeGlobalIndexWriter",
-                        row_ids.size(), array->length()));
-    }
     auto struct_array = std::dynamic_pointer_cast<arrow::StructArray>(array);
     PAIMON_RETURN_NOT_OK(Preconditions::CheckNotNull(
         struct_array, "arrow array must be struct array when AddBatch to BTreeGlobalIndexWriter"));
@@ -92,9 +87,8 @@ Status BTreeGlobalIndexWriter::AddBatch(::ArrowArray* arrow_array,
                            LiteralConverter::ConvertLiteralsFromArray(*value_array,
                                                                       /*own_data=*/true));
     for (size_t i = 0; i < literals.size(); ++i) {
-        int64_t row_id = row_ids[i];
+        int64_t row_id = relative_row_ids[i];
         const auto& literal = literals[i];
-        max_row_id_ = std::max(max_row_id_, row_id);
         if (literal.IsNull()) {
             // Track null values
             null_bitmap_.Add(row_id);
@@ -202,7 +196,7 @@ Result<std::vector<GlobalIndexIOMeta>> BTreeGlobalIndexWriter::Finish() {
     // Create GlobalIndexIOMeta
     std::string file_path = file_writer_->ToPath(index_file_name_);
     PAIMON_ASSIGN_OR_RAISE(int64_t file_size, file_writer_->GetFileSize(index_file_name_));
-    GlobalIndexIOMeta io_meta(file_path, file_size, max_row_id_, meta_bytes);
+    GlobalIndexIOMeta io_meta(file_path, file_size, meta_bytes);
     return std::vector<GlobalIndexIOMeta>{io_meta};
 }
 

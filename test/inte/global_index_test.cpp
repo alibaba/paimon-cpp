@@ -345,15 +345,6 @@ TEST_P(GlobalIndexTest, TestWriteIndex) {
             "Unknown index type invalid, may not registered");
     }
     {
-        // test invalid range mismatch
-        ASSERT_NOK_WITH_MSG(
-            GlobalIndexWriteTask::WriteIndex(
-                table_path, "f0", "bitmap",
-                std::make_shared<IndexedSplitImpl>(split, std::vector<Range>({Range(0, 8)})),
-                /*options=*/{}, pool_),
-            "specified range length 9 mismatch indexed range length 8");
-    }
-    {
         // test invalid multiple ranges
         ASSERT_NOK_WITH_MSG(GlobalIndexWriteTask::WriteIndex(
                                 table_path, "f0", "bitmap",
@@ -470,7 +461,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                     Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,7}");
+        ASSERT_EQ(index_result->ToString(), "{0,7}");
     }
     {
         // test not equal predicate for f0
@@ -479,7 +470,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                        Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{1,2,3,4,5,6}");
+        ASSERT_EQ(index_result->ToString(), "{1,2,3,4,5,6}");
     }
     {
         // test equal predicate for f1
@@ -487,7 +478,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                  FieldType::INT, Literal(20));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{4,6,7}");
+        ASSERT_EQ(index_result->ToString(), "{4,6,7}");
     }
     {
         // test equal predicate for f2
@@ -495,7 +486,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                  FieldType::INT, Literal(1));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,4,5}");
+        ASSERT_EQ(index_result->ToString(), "{0,1,4,5}");
     }
     {
         // test is null predicate
@@ -503,7 +494,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             PredicateBuilder::IsNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{7}");
+        ASSERT_EQ(index_result->ToString(), "{7}");
     }
     {
         // test is not null predicate
@@ -511,7 +502,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
             PredicateBuilder::IsNotNull(/*field_index=*/2, /*field_name=*/"f2", FieldType::INT);
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6}");
+        ASSERT_EQ(index_result->ToString(), "{0,1,2,3,4,5,6}");
     }
     {
         // test in predicate
@@ -521,7 +512,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
              Literal(FieldType::STRING, "Lucy", 4)});
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,4,5,7}");
+        ASSERT_EQ(index_result->ToString(), "{0,1,4,5,7}");
     }
     {
         // test not in predicate
@@ -531,7 +522,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
              Literal(FieldType::STRING, "Lucy", 4)});
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{2,3,6}");
+        ASSERT_EQ(index_result->ToString(), "{2,3,6}");
     }
     {
         // test and predicate
@@ -543,7 +534,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{7}");
+        ASSERT_EQ(index_result->ToString(), "{7}");
     }
     {
         // test or predicate
@@ -555,7 +546,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::Or({f0_predicate, f1_predicate}));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,4,6,7}");
+        ASSERT_EQ(index_result->ToString(), "{0,4,6,7}");
     }
     {
         // test non-result
@@ -563,7 +554,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                  FieldType::INT, Literal(30));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{}");
+        ASSERT_EQ(index_result->ToString(), "{}");
     }
     {
         // test early stopping
@@ -579,7 +570,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                              PredicateBuilder::And({f1_predicate, f2_predicate, f0_predicate}));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{}");
+        ASSERT_EQ(index_result->ToString(), "{}");
     }
     {
         // test greater than predicate which bitmap index is not support, will return all range
@@ -587,7 +578,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                        FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+        ASSERT_FALSE(index_result);
     }
     {
         // test greater or equal predicate which bitmap index is not support, will return all range
@@ -595,7 +586,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                           FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+        ASSERT_FALSE(index_result);
     }
     {
         // test less than predicate which bitmap index is not support, will return all range
@@ -603,7 +594,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                     FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+        ASSERT_FALSE(index_result);
     }
     {
         // test less or equal predicate which bitmap index is not support, will return all range
@@ -611,7 +602,7 @@ TEST_P(GlobalIndexTest, TestScanIndex) {
                                                        FieldType::INT, Literal(10));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,1,2,3,4,5,6,7}");
+        ASSERT_FALSE(index_result);
     }
     {
         // test a predicate for field with no index
@@ -662,7 +653,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithSpecificSnapshot) {
         ASSERT_OK_AND_ASSIGN(auto predicate, PredicateBuilder::And({f0_predicate, f1_predicate}));
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(index_result.value()->ToString(), "{0,7}");
+        ASSERT_EQ(index_result->ToString(), "{0,7}");
     }
     {
         // test or predicate
@@ -749,7 +740,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithRange) {
                                        Literal(FieldType::STRING, "Alice", 5));
         ASSERT_OK_AND_ASSIGN(auto evaluator_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-        ASSERT_EQ(evaluator_result.value()->ToString(), "{1,2,3,4,5,6}");
+        ASSERT_EQ(evaluator_result->ToString(), "{1,2,3,4,5,6}");
     }
     {
         ASSERT_OK_AND_ASSIGN(auto range_scanner, global_index_scan->CreateRangeScan(Range(10, 13)));
@@ -817,7 +808,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                                                             Literal(FieldType::STRING, "Bob", 3));
                 ASSERT_OK_AND_ASSIGN(auto index_result,
                                      evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-                ASSERT_EQ(index_result.value()->ToString(), "{0,2,3}");
+                ASSERT_EQ(index_result->ToString(), "{0,2,3}");
             }
             {
                 // test equal predicate for Alice
@@ -826,7 +817,7 @@ TEST_P(GlobalIndexTest, TestScanIndexWithPartition) {
                                                          Literal(FieldType::STRING, "Alice", 5));
                 ASSERT_OK_AND_ASSIGN(auto index_result,
                                      evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
-                ASSERT_EQ(index_result.value()->ToString(), "{0}");
+                ASSERT_EQ(index_result->ToString(), "{0}");
             }
         };
 
@@ -997,7 +988,7 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         ASSERT_OK_AND_ASSIGN(auto index_result,
                              evaluator->Evaluate(predicate, /*vector_search=*/nullptr));
         ASSERT_TRUE(index_result);
-        ASSERT_EQ(index_result.value()->ToString(), bitmap_result);
+        ASSERT_EQ(index_result->ToString(), bitmap_result);
 
         // check lumina index
         ASSERT_OK_AND_ASSIGN(auto lumina_reader, range_scanner->CreateReader("f1", "lumina"));
@@ -1014,13 +1005,13 @@ TEST_P(GlobalIndexTest, TestWriteCommitScanReadIndexWithPartition) {
         ASSERT_OK_AND_ASSIGN(auto compound_index_result,
                              evaluator->Evaluate(predicate, vector_search_without_filter));
         ASSERT_TRUE(compound_index_result);
-        ASSERT_EQ(compound_index_result.value()->ToString(), lumina_result);
+        ASSERT_EQ(compound_index_result->ToString(), lumina_result);
 
         // check read array
         std::vector<std::string> read_field_names = schema->field_names();
         read_field_names.push_back("_INDEX_SCORE");
         ASSERT_OK_AND_ASSIGN(auto result_with_offset,
-                             compound_index_result.value()->AddOffset(expected_range.from));
+                             compound_index_result->AddOffset(expected_range.from));
         ASSERT_OK_AND_ASSIGN(auto plan, ScanGlobalIndexAndData(table_path, /*predicate=*/nullptr,
                                                                /*vector_search=*/nullptr,
                                                                /*options=*/{}, result_with_offset));
@@ -2441,8 +2432,11 @@ TEST_P(GlobalIndexTest, TestDataEvolutionBatchScanWithRangeBitmapAndBitmap) {
 TEST_P(GlobalIndexTest, TestLuceneWriteCommitScanReadIndexWithScore) {
     arrow::FieldVector fields = {arrow::field("f0", arrow::utf8()),
                                  arrow::field("f1", arrow::int32())};
+    auto tmp_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
     std::map<std::string, std::string> lucene_options = {
-        {"lucene-fts.write.omit-term-freq-and-position", "false"}};
+        {"lucene-fts.write.omit-term-freq-and-position", "false"},
+        {"lucene-fts.write.tmp.directory", tmp_dir->Str()}};
     auto schema = arrow::schema(fields);
     std::map<std::string, std::string> options = {{Options::MANIFEST_FORMAT, "orc"},
                                                   {Options::FILE_FORMAT, file_format_},

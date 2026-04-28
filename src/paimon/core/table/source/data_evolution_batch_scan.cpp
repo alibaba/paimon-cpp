@@ -41,11 +41,10 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::CreatePlan() {
     std::optional<std::vector<Range>> row_ranges;
     std::shared_ptr<GlobalIndexResult> final_global_index_result = global_index_result_;
     if (!final_global_index_result) {
-        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
-                               EvalGlobalIndex());
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<GlobalIndexResult> index_result, EvalGlobalIndex());
         if (index_result) {
-            final_global_index_result = index_result.value();
-            PAIMON_ASSIGN_OR_RAISE(row_ranges, index_result.value()->ToRanges());
+            final_global_index_result = index_result;
+            PAIMON_ASSIGN_OR_RAISE(row_ranges, index_result->ToRanges());
         }
     } else {
         PAIMON_ASSIGN_OR_RAISE(row_ranges, final_global_index_result->ToRanges());
@@ -107,14 +106,13 @@ Result<std::shared_ptr<Plan>> DataEvolutionBatchScan::WrapToIndexedSplits(
     return std::make_shared<PlanImpl>(data_plan->SnapshotId(), indexed_splits);
 }
 
-Result<std::optional<std::shared_ptr<GlobalIndexResult>>> DataEvolutionBatchScan::EvalGlobalIndex()
-    const {
+Result<std::shared_ptr<GlobalIndexResult>> DataEvolutionBatchScan::EvalGlobalIndex() const {
     auto predicate = batch_scan_->GetNonPartitionPredicate();
     if (!predicate && !vector_search_) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
     if (!core_options_.GlobalIndexEnabled()) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
     auto partition_filter = batch_scan_->GetPartitionPredicate();
     // TODO(lisizhuo.lsz): support time travel
@@ -128,7 +126,7 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> DataEvolutionBatchScan
     }
     PAIMON_ASSIGN_OR_RAISE(std::vector<Range> indexed_row_ranges, index_scan->GetRowRangeList());
     if (indexed_row_ranges.empty()) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
     const auto& snapshot = index_scan_impl->GetSnapshot();
     const std::optional<int64_t>& next_row_id = snapshot.NextRowId();
@@ -139,20 +137,18 @@ Result<std::optional<std::shared_ptr<GlobalIndexResult>>> DataEvolutionBatchScan
     std::vector<Range> non_indexed_row_ranges =
         Range(0, next_row_id.value() - 1).Exclude(indexed_row_ranges);
     PAIMON_ASSIGN_OR_RAISE(
-        std::optional<std::shared_ptr<GlobalIndexResult>> index_result,
+        std::shared_ptr<GlobalIndexResult> index_result,
         index_scan_impl->ParallelScan(indexed_row_ranges, predicate, vector_search_, executor_));
     if (!index_result) {
-        return std::optional<std::shared_ptr<GlobalIndexResult>>();
+        return std::shared_ptr<GlobalIndexResult>(nullptr);
     }
-    auto index_result_value = std::move(index_result).value();
     if (!non_indexed_row_ranges.empty()) {
         for (const auto& range : non_indexed_row_ranges) {
-            PAIMON_ASSIGN_OR_RAISE(
-                index_result_value,
-                index_result_value->Or(BitmapGlobalIndexResult::FromRanges({range})));
+            PAIMON_ASSIGN_OR_RAISE(index_result,
+                                   index_result->Or(BitmapGlobalIndexResult::FromRanges({range})));
         }
     }
-    return std::optional<std::shared_ptr<paimon::GlobalIndexResult>>(index_result_value);
+    return index_result;
 }
 
 }  // namespace paimon

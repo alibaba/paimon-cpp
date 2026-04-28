@@ -69,7 +69,8 @@ class LuceneGlobalIndexTest : public ::testing::Test,
                                                const std::shared_ptr<arrow::DataType>& data_type,
                                                const std::map<std::string, std::string>& options,
                                                const std::shared_ptr<arrow::Array>& array,
-                                               const Range& expected_range) const {
+                                               const Range& expected_range,
+                                               const std::string& tmp_dir) const {
         auto global_index = std::make_shared<LuceneGlobalIndex>(options);
         auto path_factory = std::make_shared<FakeIndexPathFactory>(index_root);
         auto file_writer = std::make_shared<GlobalIndexFileManager>(fs_, path_factory);
@@ -80,15 +81,29 @@ class LuceneGlobalIndexTest : public ::testing::Test,
 
         ArrowArray c_array;
         PAIMON_RETURN_NOT_OK_FROM_ARROW(arrow::ExportArray(*array, &c_array));
-        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array));
+        std::vector<int64_t> row_ids(array->length(), 0);
+        std::iota(row_ids.begin(), row_ids.end(), 0);
+        PAIMON_RETURN_NOT_OK(global_writer->AddBatch(&c_array, std::move(row_ids)));
         PAIMON_ASSIGN_OR_RAISE(auto result_metas, global_writer->Finish());
+
+        // check tmp dir
+        std::vector<std::unique_ptr<BasicFileStatus>> file_status_list;
+        EXPECT_OK(fs_->ListDir(tmp_dir, &file_status_list));
+        EXPECT_EQ(file_status_list.size(), 1);
+
         // check meta
         EXPECT_EQ(result_metas.size(), 1);
         auto file_name = PathUtil::GetName(result_metas[0].file_path);
         EXPECT_TRUE(StringUtils::StartsWith(file_name, "lucene-fts-global-index-"));
         EXPECT_TRUE(StringUtils::EndsWith(file_name, ".index"));
-        EXPECT_EQ(result_metas[0].range_end, expected_range.to);
         EXPECT_TRUE(result_metas[0].metadata);
+
+        // after reset writer, rm tmp files
+        global_writer.reset();
+        file_status_list.clear();
+        EXPECT_OK(fs_->ListDir(tmp_dir, &file_status_list));
+        EXPECT_TRUE(file_status_list.empty());
+
         return result_metas[0];
     }
 
@@ -127,14 +142,16 @@ class LuceneGlobalIndexTest : public ::testing::Test,
 
 TEST_P(LuceneGlobalIndexTest, TestSimple) {
     int32_t read_buffer_size = GetParam();
-
     auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
+    auto tmp_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
     std::string test_root = test_root_dir->Str();
 
     std::map<std::string, std::string> options = {
         {"lucene-fts.write.omit-term-freq-and-position", "false"},
-        {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)}};
+        {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)},
+        {"lucene-fts.write.tmp.directory", tmp_dir->Str()}};
     std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
                                                                                     R"([
         ["This is an test document."],
@@ -145,11 +162,13 @@ TEST_P(LuceneGlobalIndexTest, TestSimple) {
                                               .ValueOrDie();
 
     // write index
-    ASSERT_OK_AND_ASSIGN(auto meta,
-                         WriteGlobalIndex(test_root, data_type_, options, array, Range(0, 3)));
+    ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(test_root, data_type_, options, array,
+                                                     Range(0, 3), tmp_dir->Str()));
     if (read_buffer_size == 10) {
-        ASSERT_EQ(std::string(meta.metadata->data(), meta.metadata->size()),
-                  R"({"read.buffer-size":"10","write.omit-term-freq-and-position":"false"})");
+        ASSERT_EQ(
+            std::string(meta.metadata->data(), meta.metadata->size()),
+            R"({"read.buffer-size":"10","write.omit-term-freq-and-position":"false","write.tmp.directory":")" +
+                tmp_dir->Str() + R"("})");
     }
 
     // create reader
@@ -292,13 +311,15 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
 
     auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
     ASSERT_TRUE(test_root_dir);
+    auto tmp_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(tmp_dir);
     std::string test_root = test_root_dir->Str();
 
     std::map<std::string, std::string> options = {
         {"lucene-fts.write.omit-term-freq-and-position", "false"},
         {"lucene-fts.read.buffer-size", std::to_string(read_buffer_size)},
         {"lucene-fts.jieba.tokenize-mode", "query"},
-    };
+        {"lucene-fts.write.tmp.directory", tmp_dir->Str()}};
 
     std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
                                                                                     R"([
@@ -311,12 +332,13 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
                                               .ValueOrDie();
 
     // write index
-    ASSERT_OK_AND_ASSIGN(auto meta,
-                         WriteGlobalIndex(test_root, data_type_, options, array, Range(0, 4)));
+    ASSERT_OK_AND_ASSIGN(auto meta, WriteGlobalIndex(test_root, data_type_, options, array,
+                                                     Range(0, 4), tmp_dir->Str()));
     if (read_buffer_size == 10) {
         ASSERT_EQ(
             std::string(meta.metadata->data(), meta.metadata->size()),
-            R"({"jieba.tokenize-mode":"query","read.buffer-size":"10","write.omit-term-freq-and-position":"false"})");
+            R"({"jieba.tokenize-mode":"query","read.buffer-size":"10","write.omit-term-freq-and-position":"false","write.tmp.directory":")" +
+                tmp_dir->Str() + R"("})");
     }
 
     // create reader
@@ -405,6 +427,23 @@ TEST_P(LuceneGlobalIndexTest, TestSimpleChinese) {
     }
 }
 
+TEST_F(LuceneGlobalIndexTest, TestInvalidWithoutTmpDir) {
+    auto test_root_dir = paimon::test::UniqueTestDirectory::Create();
+    ASSERT_TRUE(test_root_dir);
+    std::string test_root = test_root_dir->Str();
+
+    std::map<std::string, std::string> options = {
+        {"lucene-fts.write.omit-term-freq-and-position", "false"}};
+    std::shared_ptr<arrow::Array> array = arrow::ipc::internal::json::ArrayFromJSON(data_type_,
+                                                                                    R"([
+        ["This is an test document."]
+    ])")
+                                              .ValueOrDie();
+
+    // write index
+    ASSERT_NOK_WITH_MSG(WriteGlobalIndex(test_root, data_type_, options, array, Range(0, 0), ""),
+                        "key write.tmp.directory does not exist in map");
+}
 INSTANTIATE_TEST_SUITE_P(ReadBufferSize, LuceneGlobalIndexTest,
                          ::testing::ValuesIn(std::vector<int32_t>({10, 100, 1024})));
 
