@@ -29,6 +29,7 @@
 #include "paimon/status.h"
 #include "paimon/testing/mock/mock_file_system.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/timezone_guard.h"
 namespace paimon::test {
 
 TEST(CoreOptionsTest, TestDefaultValue) {
@@ -597,5 +598,52 @@ TEST(CoreOptionsTest, TestNormalizeValueInCoreOption) {
     ASSERT_EQ(LookupCompactMode::GENTLE, core_options.GetLookupCompactMode());
     ASSERT_TRUE(core_options.SequenceFieldSortOrderIsAscending());
     ASSERT_EQ(BucketFunctionType::MOD, core_options.GetBucketFunctionType());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillis) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"}}));
+    ASSERT_EQ(1721614515032, core_options.GetScanTimestampMillis().value());
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisExplicitMode) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_MODE, "from-timestamp"},
+                                               {Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"}}));
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+    ASSERT_EQ(1721614515032, core_options.GetScanTimestampMillis().value());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisNotSet) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options, CoreOptions::FromMap({}));
+    ASSERT_EQ(std::nullopt, core_options.GetScanTimestampMillis());
+    ASSERT_EQ(StartupMode::LatestFull(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampString) {
+    TimezoneGuard tz_guard("Asia/Shanghai");
+    ASSERT_OK_AND_ASSIGN(CoreOptions core_options,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}));
+    ASSERT_EQ(core_options.GetScanTimestampMillis().value(), 1685548800000);
+    ASSERT_EQ(StartupMode::FromTimestamp(), core_options.GetStartupMode());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampStringDateOnly) {
+    ASSERT_OK_AND_ASSIGN(CoreOptions opts1,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01"}}));
+    ASSERT_OK_AND_ASSIGN(CoreOptions opts2,
+                         CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}));
+    ASSERT_EQ(opts1.GetScanTimestampMillis().value(), opts2.GetScanTimestampMillis().value());
+}
+
+TEST(CoreOptionsTest, TestScanTimestampMillisAndStringMutuallyExclusive) {
+    ASSERT_NOK_WITH_MSG(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP_MILLIS, "1721614515032"},
+                                              {Options::SCAN_TIMESTAMP, "2023-06-01 00:00:00"}}),
+                        "scan.timestamp-millis and scan.timestamp cannot be set at the same time");
+}
+
+TEST(CoreOptionsTest, TestScanTimestampInvalidString) {
+    ASSERT_NOK(CoreOptions::FromMap({{Options::SCAN_TIMESTAMP, "not-a-date"}}));
 }
 }  // namespace paimon::test

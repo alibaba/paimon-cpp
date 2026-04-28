@@ -369,6 +369,7 @@ struct CoreOptions::Impl {
     std::shared_ptr<FileFormat> manifest_file_format;
 
     std::optional<int64_t> scan_snapshot_id;
+    std::optional<int64_t> scan_timestamp_millis;
     ExpireConfig expire_config;
     std::vector<std::string> sequence_field;
     std::vector<std::string> remove_record_on_sequence_group;
@@ -657,6 +658,19 @@ struct CoreOptions::Impl {
     Status ParseScanAndBranchOptions(const ConfigParser& parser) {
         // Parse scan.snapshot-id - optional snapshot id for "from-snapshot" scan mode
         PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_SNAPSHOT_ID, &scan_snapshot_id));
+        // Parse scan.timestamp-millis and scan.timestamp
+        std::string scan_timestamp_str;
+        PAIMON_RETURN_NOT_OK(parser.ParseString(Options::SCAN_TIMESTAMP, &scan_timestamp_str));
+        PAIMON_RETURN_NOT_OK(parser.Parse(Options::SCAN_TIMESTAMP_MILLIS, &scan_timestamp_millis));
+        if (scan_timestamp_millis != std::nullopt && !scan_timestamp_str.empty()) {
+            return Status::Invalid(
+                "scan.timestamp-millis and scan.timestamp cannot be set at the same time");
+        }
+        if (!scan_timestamp_str.empty()) {
+            PAIMON_ASSIGN_OR_RAISE(int64_t millis,
+                                   StringUtils::StringToTimestampMillis(scan_timestamp_str));
+            scan_timestamp_millis = millis;
+        }
         // Parse scan.mode - scanning behavior of the source, default "default"
         PAIMON_RETURN_NOT_OK(parser.ParseStartupMode(&startup_mode));
         // Parse scan.fallback-branch - fallback branch when partition not found
@@ -942,6 +956,9 @@ int64_t CoreOptions::GetSourceSplitOpenFileCost() const {
 std::optional<int64_t> CoreOptions::GetScanSnapshotId() const {
     return impl_->scan_snapshot_id;
 }
+std::optional<int64_t> CoreOptions::GetScanTimestampMillis() const {
+    return impl_->scan_timestamp_millis;
+}
 int64_t CoreOptions::GetManifestTargetFileSize() const {
     return impl_->manifest_target_file_size;
 }
@@ -962,6 +979,9 @@ StartupMode CoreOptions::GetStartupMode() const {
     if (impl_->startup_mode == StartupMode::Default()) {
         if (GetScanSnapshotId() != std::nullopt || GetScanTagName() != std::nullopt) {
             return StartupMode::FromSnapshot();
+        }
+        if (GetScanTimestampMillis() != std::nullopt) {
+            return StartupMode::FromTimestamp();
         }
         return StartupMode::LatestFull();
     }

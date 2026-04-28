@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "paimon/status.h"
 #include "paimon/testing/utils/testharness.h"
+#include "paimon/testing/utils/timezone_guard.h"
 
 namespace paimon::test {
 class StringUtilsTest : public ::testing::Test {
@@ -399,6 +400,53 @@ TEST_F(StringUtilsTest, TestStringToDate) {
     ASSERT_NOK(StringUtils::StringToDate("-1970-01-02"));
     ASSERT_NOK(StringUtils::StringToDate(""));
     ASSERT_NOK(StringUtils::StringToDate("1970-XX-02"));
+}
+
+TEST_F(StringUtilsTest, TestStringToTimestampMillis) {
+    TimezoneGuard tz_guard("Asia/Shanghai");
+    // "yyyy-MM-dd HH:mm:ss" format
+    {
+        ASSERT_OK_AND_ASSIGN(int64_t millis,
+                             StringUtils::StringToTimestampMillis("1970-01-01 00:00:00"));
+        ASSERT_EQ(millis, -28800000);
+    }
+    // "yyyy-MM-dd HH:mm:ss.SSS" format
+    {
+        ASSERT_OK_AND_ASSIGN(int64_t millis1,
+                             StringUtils::StringToTimestampMillis("2023-06-01 00:00:00.000"));
+        ASSERT_OK_AND_ASSIGN(int64_t millis2,
+                             StringUtils::StringToTimestampMillis("2023-06-01 00:00:00.123"));
+        ASSERT_EQ(millis2 - millis1, 123);
+    }
+    // "yyyy-MM-dd" format (date only, time defaults to 00:00:00)
+    {
+        ASSERT_OK_AND_ASSIGN(int64_t millis1, StringUtils::StringToTimestampMillis("2023-06-01"));
+        ASSERT_OK_AND_ASSIGN(int64_t millis2,
+                             StringUtils::StringToTimestampMillis("2023-06-01 00:00:00"));
+        ASSERT_EQ(millis1, millis2);
+    }
+    // Fractional second padding: "1" -> 100ms, "12" -> 120ms
+    {
+        ASSERT_OK_AND_ASSIGN(int64_t millis_base,
+                             StringUtils::StringToTimestampMillis("2023-06-01 12:00:00.000"));
+        ASSERT_OK_AND_ASSIGN(int64_t millis_1,
+                             StringUtils::StringToTimestampMillis("2023-06-01 12:00:00.1"));
+        ASSERT_EQ(millis_1 - millis_base, 100);
+        ASSERT_OK_AND_ASSIGN(int64_t millis_12,
+                             StringUtils::StringToTimestampMillis("2023-06-01 12:00:00.12"));
+        ASSERT_EQ(millis_12 - millis_base, 120);
+    }
+    // Invalid strings
+    ASSERT_NOK(StringUtils::StringToTimestampMillis(""));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("not-a-date"));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-XX-01 00:00:00"));
+    // Trailing garbage
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00abc"));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00.12xyz"));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00 "));
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00.12 "));
+    // Trailing dot with no digits
+    ASSERT_NOK(StringUtils::StringToTimestampMillis("2023-06-01 00:00:00."));
 }
 
 TEST_F(StringUtilsTest, TestVectorToString) {

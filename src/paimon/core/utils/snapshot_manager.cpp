@@ -248,4 +248,49 @@ Result<std::vector<Snapshot>> SnapshotManager::GetAllSnapshots() const {
     return snapshots;
 }
 
+Result<std::optional<Snapshot>> SnapshotManager::EarlierOrEqualTimeMillis(
+    int64_t timestamp_millis) const {
+    return FindSnapshotBeforeTimestamp(timestamp_millis, std::less_equal<int64_t>{});
+}
+
+Result<std::optional<Snapshot>> SnapshotManager::EarlierThanTimeMillis(
+    int64_t timestamp_millis) const {
+    return FindSnapshotBeforeTimestamp(timestamp_millis, std::less<int64_t>{});
+}
+
+Result<std::optional<Snapshot>> SnapshotManager::FindSnapshotBeforeTimestamp(
+    int64_t timestamp_millis, const std::function<bool(int64_t, int64_t)>& compare) const {
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> latest_id, LatestSnapshotId());
+    if (latest_id == std::nullopt) {
+        return std::optional<Snapshot>();
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(std::optional<int64_t> earliest_id, EarliestSnapshotId());
+    if (earliest_id == std::nullopt) {
+        return std::optional<Snapshot>();
+    }
+
+    PAIMON_ASSIGN_OR_RAISE(Snapshot earliest_snapshot, LoadSnapshot(earliest_id.value()));
+    if (!compare(earliest_snapshot.TimeMillis(), timestamp_millis)) {
+        return std::optional<Snapshot>();
+    }
+
+    int64_t lo = earliest_id.value();
+    int64_t hi = latest_id.value();
+    std::optional<Snapshot> result;
+
+    while (lo <= hi) {
+        int64_t mid = lo + (hi - lo) / 2;
+        PAIMON_ASSIGN_OR_RAISE(Snapshot snapshot, LoadSnapshot(mid));
+        if (compare(snapshot.TimeMillis(), timestamp_millis)) {
+            lo = mid + 1;
+            result = std::move(snapshot);
+        } else {
+            hi = mid - 1;
+        }
+    }
+
+    return result;
+}
+
 }  // namespace paimon
