@@ -49,7 +49,7 @@ Result<std::unique_ptr<SpillReader>> SpillReader::Create(
 Status SpillReader::Open(const FileIOChannel::ID& channel_id) {
     const std::string& file_path = channel_id.GetPath();
     PAIMON_ASSIGN_OR_RAISE(in_stream_, fs_->Open(file_path));
-    PAIMON_ASSIGN_OR_RAISE(auto file_status, fs_->GetFileStatus(file_path));
+    PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<FileStatus> file_status, fs_->GetFileStatus(file_path));
     uint64_t file_len = file_status->GetLen();
     arrow_input_stream_adapter_ =
         std::make_shared<ArrowInputStreamAdapter>(in_stream_, arrow_pool_, file_len);
@@ -73,7 +73,8 @@ Result<KeyValue> SpillReader::Iterator::Next() {
     auto key = std::make_unique<ColumnarRowRef>(reader_->key_ctx_, cursor_);
     auto value = std::make_unique<ColumnarRowRef>(reader_->value_ctx_, cursor_);
     cursor_++;
-    return KeyValue(row_kind, sequence_number, /*level=*/0, std::move(key), std::move(value));
+    return KeyValue(row_kind, sequence_number, KeyValue::UNKNOWN_LEVEL, std::move(key),
+                    std::move(value));
 }
 
 Result<std::unique_ptr<KeyValueRecordReader::Iterator>> SpillReader::NextBatch() {

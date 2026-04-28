@@ -58,8 +58,7 @@ MergeTreeWriter::MergeTreeWriter(
     int64_t schema_id, const std::shared_ptr<arrow::Schema>& value_schema,
     const CoreOptions& options, const std::shared_ptr<CompactManager>& compact_manager,
     const std::shared_ptr<MemoryPool>& pool)
-    : last_sequence_number_(last_sequence_number + 1),
-      pool_(pool),
+    : pool_(pool),
       trimmed_primary_keys_(trimmed_primary_keys),
       options_(options),
       path_factory_(path_factory),
@@ -71,8 +70,8 @@ MergeTreeWriter::MergeTreeWriter(
       metrics_(std::make_shared<MetricsImpl>()) {
     write_schema_ = SpecialFields::CompleteSequenceAndValueKindField(value_schema);
     write_buffer_ = std::make_unique<WriteBuffer>(
-        arrow::struct_(value_schema->fields()), trimmed_primary_keys_, options_.GetSequenceField(),
-        key_comparator_, merge_function_wrapper_, pool_);
+        last_sequence_number, arrow::struct_(value_schema->fields()), trimmed_primary_keys_,
+        options_.GetSequenceField(), key_comparator_, merge_function_wrapper_, pool_);
 }
 
 Status MergeTreeWriter::DoClose() {
@@ -118,7 +117,7 @@ Status MergeTreeWriter::DoClose() {
 
 Status MergeTreeWriter::Write(std::unique_ptr<RecordBatch>&& moved_batch) {
     PAIMON_RETURN_NOT_OK(write_buffer_->Write(std::move(moved_batch)));
-    if (write_buffer_->GetMemoryUsage() >= options_.GetWriteBufferSize()) {
+    if (write_buffer_->GetMemoryUsage() >= static_cast<uint64_t>(options_.GetWriteBufferSize())) {
         return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
     }
     return Status::OK();
@@ -224,9 +223,10 @@ Status MergeTreeWriter::Flush(bool wait_for_latest_compaction, bool forced_full_
         if (compact_manager_->ShouldWaitForLatestCompaction()) {
             wait_for_latest_compaction = true;
         }
+        auto cleanup_guard = ScopeGuard([&]() { write_buffer_->Clear(); });
         // 1. flush write buffer to get in-memory readers
         PAIMON_ASSIGN_OR_RAISE(std::vector<std::unique_ptr<KeyValueRecordReader>> readers,
-                               write_buffer_->DrainToReaders(&last_sequence_number_));
+                               write_buffer_->CreateReaders());
         // 2. prepare loser tree sort merge reader
         auto sort_merge_reader = std::make_unique<SortMergeReaderWithLoserTree>(
             std::move(readers), key_comparator_, user_defined_seq_comparator_,

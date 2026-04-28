@@ -30,9 +30,12 @@
 #include "gtest/gtest.h"
 #include "paimon/common/types/data_field.h"
 #include "paimon/common/utils/fields_comparator.h"
+#include "paimon/core/core_options.h"
 #include "paimon/core/io/concat_key_value_record_reader.h"
 #include "paimon/core/io/key_value_record_reader.h"
+#include "paimon/core/io/merged_key_value_record_reader.h"
 #include "paimon/core/key_value.h"
+#include "paimon/core/mergetree/compact/aggregate/aggregate_merge_function.h"
 #include "paimon/core/mergetree/compact/deduplicate_merge_function.h"
 #include "paimon/core/mergetree/compact/reducer_merge_function_wrapper.h"
 #include "paimon/core/mergetree/compact/sort_merge_reader_with_loser_tree.h"
@@ -116,6 +119,46 @@ class SortMergeReaderTest : public testing::Test {
             auto sort_merge_reader = CreateSortMergeReader<SortMergeReaderType>(
                 src_array_vec, user_key_comparator, user_defined_seq_comparator, key_schema,
                 value_schema, batch_size);
+            ASSERT_OK_AND_ASSIGN(
+                std::vector<KeyValue> results,
+                (ReadResultCollector::CollectKeyValueResult<
+                    SortMergeReader, SortMergeReader::Iterator>(sort_merge_reader.get())));
+            KeyValueChecker::CheckResult(expected, results, key_schema->num_fields(),
+                                         value_schema->num_fields());
+        }
+    }
+
+    template <typename SortMergeReaderType>
+    void CheckSortMergeResultForAggregate(
+        const std::vector<std::shared_ptr<arrow::StructArray>>& src_array_vec,
+        const std::shared_ptr<FieldsComparator>& user_key_comparator,
+        const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
+        const std::shared_ptr<arrow::Schema>& key_schema,
+        const std::shared_ptr<arrow::Schema>& value_schema,
+        const std::vector<std::string>& user_defined_sequence_fields,
+        const std::vector<std::string>& primary_keys, const CoreOptions& core_options,
+        const std::vector<KeyValue>& expected) const {
+        for (auto batch_size : {1, 2, 3, 4, 100}) {
+            ASSERT_OK_AND_ASSIGN(
+                std::unique_ptr<AggregateMergeFunction> mfunc,
+                AggregateMergeFunction::Create(value_schema, primary_keys, core_options));
+            auto merge_function_wrapper =
+                std::make_shared<ReducerMergeFunctionWrapper>(std::move(mfunc));
+            std::vector<std::unique_ptr<KeyValueRecordReader>> merged_readers;
+
+            std::vector<std::unique_ptr<KeyValueRecordReader>> readers;
+            for (const auto& src_array : src_array_vec) {
+                auto file_batch_reader = std::make_unique<MockFileBatchReader>(
+                    src_array, src_array->type(), /*batch_size=*/batch_size);
+                auto record_reader = std::make_unique<MockKeyValueDataFileRecordReader>(
+                    std::move(file_batch_reader), key_schema, value_schema, /*level=*/0, pool_);
+                merged_readers.push_back(std::make_unique<MergedKeyValueRecordReader>(
+                    std::move(record_reader), user_key_comparator, merge_function_wrapper));
+            }
+
+            auto sort_merge_reader = std::make_unique<SortMergeReaderType>(
+                std::move(merged_readers), user_key_comparator, user_defined_seq_comparator,
+                merge_function_wrapper);
             ASSERT_OK_AND_ASSIGN(
                 std::vector<KeyValue> results,
                 (ReadResultCollector::CollectKeyValueResult<
@@ -583,6 +626,90 @@ TEST_F(SortMergeReaderTest, TestSortMergeIn3WaysWithUserDefinedSeq) {
         pool_);
     CheckResult({src_array1, src_array2, src_array3}, user_key_comparator,
                 user_defined_seq_comparator, key_schema, value_schema, expected);
+}
+
+TEST_F(SortMergeReaderTest, TestSortMergeWithAggMergeFunction) {
+    // key: k0, user defined sequence field: ts, value: v0
+    // Format: [_SEQUENCE_NUMBER, _VALUE_KIND, k0, ts, v0]
+    // Using sum aggregation: k0 uses primary-key agg, ts use last_value agg and v0 use sum agg.
+    //
+    // Reader1 (SEQUENCE_NUMBER 0..5):
+    //   [key=1,ts=1,v=1], [key=1,ts=2,v=2], [key=1,ts=3,v=3]
+    //   [key=1,ts=4,v=4], [key=2,ts=4,v=40], [key=2,ts=5,v=50]
+    // Reader2 (SEQUENCE_NUMBER 6..11):
+    //   [key=1,ts=5,v=5], [key=1,ts=6,v=6], [key=2,ts=1,v=10]
+    //   [key=2,ts=2,v=20], [key=2,ts=3,v=30], [key=2,ts=6,v=60]
+    //
+    // With user_defined_seq_comparator on ts field, sort by key asc, then ts asc within same key:
+    // key=1: ts=1(v=1), ts=2(v=2), ts=3(v=3), ts=4(v=4), ts=5(v=5), ts=6(v=6)
+    // key=2: ts=1(v=10), ts=2(v=20), ts=3(v=30), ts=4(v=40), ts=5(v=50), ts=6(v=60)
+    //
+    // After sum aggregation:
+    // key=1: k0=1, ts=last_value(1,2,3,4,5,6)=6, v0=sum(1,2,3,4,5,6)=21, seq=7
+    // key=2: k0=2, ts=last_value(1,2,3,4,5,6)=6, v0=sum(10,20,30,40,50,60)=210, seq=11
+
+    arrow::FieldVector fields = {
+        arrow::field("_SEQUENCE_NUMBER", arrow::int64()),
+        arrow::field("_VALUE_KIND", arrow::int8()), arrow::field("k0", arrow::int32()),
+        arrow::field("ts", arrow::int32()), arrow::field("v0", arrow::int32())};
+
+    auto data_fields = CreateDataField(fields);
+    std::shared_ptr<arrow::Schema> key_schema = arrow::schema(arrow::FieldVector({fields[2]}));
+    std::shared_ptr<arrow::Schema> value_schema =
+        arrow::schema(arrow::FieldVector({fields[2], fields[3], fields[4]}));
+    std::shared_ptr<arrow::DataType> src_type = arrow::struct_(fields);
+
+    auto src_array1 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [0, 0, 1, 1, 1],
+        [1, 0, 1, 2, 2],
+        [2, 0, 1, 3, 3],
+        [3, 0, 1, 4, 4],
+        [4, 0, 2, 4, 40],
+        [5, 0, 2, 5, 50]
+    ])")
+            .ValueOrDie());
+
+    auto src_array2 = std::dynamic_pointer_cast<arrow::StructArray>(
+        arrow::ipc::internal::json::ArrayFromJSON(src_type, R"([
+        [6, 0, 1, 5, 5],
+        [7, 0, 1, 6, 6],
+        [8, 0, 2, 1, 10],
+        [9, 0, 2, 2, 20],
+        [10, 0, 2, 3, 30],
+        [11, 0, 2, 6, 60]
+    ])")
+            .ValueOrDie());
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_key_comparator,
+                         FieldsComparator::Create({data_fields[2]}, std::vector<int32_t>({0}),
+                                                  /*is_ascending_order=*/true));
+    // user_defined_seq_comparator based on ts field (index 1 in value schema {k0, ts, v0})
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<FieldsComparator> user_defined_seq_comparator,
+                         FieldsComparator::Create({data_fields[2], data_fields[3], data_fields[4]},
+                                                  std::vector<int32_t>({1}),
+                                                  /*is_ascending_order=*/true));
+    // Configure sum aggregation for all non-primary-key fields
+    std::string user_defined_sequence_field = "ts";
+    ASSERT_OK_AND_ASSIGN(
+        CoreOptions core_options,
+        CoreOptions::FromMap({{Options::FIELDS_DEFAULT_AGG_FUNC, "sum"},
+                              {Options::SEQUENCE_FIELD, user_defined_sequence_field}}));
+
+    // After sum aggregation, same-key rows are merged:
+    // key=1: seq=7, k0=1, ts=6, v0=21
+    // key=2: seq=11, k0=2, ts=6, v0=210
+    std::vector<KeyValue> expected =
+        KeyValueChecker::GenerateKeyValues({7, 11}, {{1}, {2}}, {{1, 6, 21}, {2, 6, 210}}, pool_);
+    for (auto& kv : expected) {
+        kv.level = KeyValue::UNKNOWN_LEVEL;
+    }
+    CheckSortMergeResultForAggregate<SortMergeReaderWithLoserTree>(
+        {src_array1, src_array2}, user_key_comparator, user_defined_seq_comparator, key_schema,
+        value_schema, {user_defined_sequence_field}, {"k0"}, core_options, expected);
+    CheckSortMergeResultForAggregate<SortMergeReaderWithMinHeap>(
+        {src_array1, src_array2}, user_key_comparator, user_defined_seq_comparator, key_schema,
+        value_schema, {user_defined_sequence_field}, {"k0"}, core_options, expected);
 }
 
 }  // namespace paimon::test

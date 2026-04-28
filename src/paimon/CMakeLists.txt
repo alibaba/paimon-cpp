@@ -216,6 +216,7 @@ set(PAIMON_CORE_SRCS
     core/io/key_value_data_file_record_reader.cpp
     core/io/key_value_data_file_writer.cpp
     core/io/key_value_in_memory_record_reader.cpp
+    core/io/merged_key_value_record_reader.cpp
     core/io/key_value_meta_projection_consumer.cpp
     core/io/key_value_projection_consumer.cpp
     core/io/key_value_projection_reader.cpp
@@ -249,6 +250,7 @@ set(PAIMON_CORE_SRCS
     core/mergetree/compact/lookup_merge_tree_compact_rewriter.cpp
     core/mergetree/compact/changelog_merge_tree_rewriter.cpp
     core/mergetree/merge_tree_writer.cpp
+    core/mergetree/in_memory_sort_buffer.cpp
     core/mergetree/write_buffer.cpp
     core/mergetree/levels.cpp
     core/mergetree/lookup_file.cpp
@@ -573,6 +575,7 @@ if(PAIMON_BUILD_TESTS)
                     core/io/key_value_data_file_record_reader_test.cpp
                     core/io/key_value_projection_reader_test.cpp
                     core/io/key_value_in_memory_record_reader_test.cpp
+                    core/io/merged_key_value_record_reader_test.cpp
                     core/io/complete_row_tracking_fields_reader_test.cpp
                     core/io/data_file_meta_test.cpp
                     core/io/file_index_evaluator_test.cpp

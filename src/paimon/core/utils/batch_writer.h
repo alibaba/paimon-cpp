@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 #include "paimon/result.h"
@@ -34,6 +35,12 @@ class BatchWriter {
  public:
     BatchWriter() = default;
     virtual ~BatchWriter() = default;
+
+    /// Return current in-memory data usage in bytes
+    virtual uint64_t GetMemoryUsage() const = 0;
+
+    /// Flush in-memory data.
+    virtual Status FlushMemory() = 0;
 
     /// Add a record batch to the writer.
     virtual Status Write(std::unique_ptr<RecordBatch>&& batch) = 0;

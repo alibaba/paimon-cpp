@@ -96,8 +96,9 @@ class WriteBufferTest : public ::testing::Test {
 };
 
 TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
-    WriteBuffer write_buffer(value_type_, primary_keys_, /*user_defined_sequence_fields=*/{},
-                             key_comparator_, merge_function_wrapper_, pool_);
+    WriteBuffer write_buffer(/*last_sequence_number=*/9, value_type_, primary_keys_,
+                             /*user_defined_sequence_fields=*/{}, key_comparator_,
+                             merge_function_wrapper_, pool_);
 
     std::shared_ptr<arrow::Array> array1 =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -116,13 +117,12 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
     ASSERT_FALSE(write_buffer.IsEmpty());
     ASSERT_GT(write_buffer.GetMemoryUsage(), 0);
 
-    int64_t last_sequence_number = 10;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.CreateReaders());
 
     ASSERT_EQ(readers.size(), 2);
+    write_buffer.Clear();
     ASSERT_TRUE(write_buffer.IsEmpty());
     ASSERT_EQ(write_buffer.GetMemoryUsage(), 0);
-    ASSERT_EQ(last_sequence_number, 13);
 
     ASSERT_OK_AND_ASSIGN(auto first_result, ReadReaderResult(readers[0].get()));
     ASSERT_EQ(first_result.sequence_numbers, (std::vector<int64_t>{10, 11}));
@@ -137,8 +137,9 @@ TEST_F(WriteBufferTest, TestFlushResetsStateAndAdvancesSequenceNumber) {
 }
 
 TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
-    WriteBuffer write_buffer(value_type_, primary_keys_, /*user_defined_sequence_fields=*/{},
-                             key_comparator_, merge_function_wrapper_, pool_);
+    WriteBuffer write_buffer(/*last_sequence_number=*/-1, value_type_, primary_keys_,
+                             /*user_defined_sequence_fields=*/{}, key_comparator_,
+                             merge_function_wrapper_, pool_);
 
     std::shared_ptr<arrow::Array> array =
         arrow::ipc::internal::json::ArrayFromJSON(value_type_, R"([
@@ -157,10 +158,8 @@ TEST_F(WriteBufferTest, TestFlushPreservesRowKinds) {
 
     ASSERT_OK(write_buffer.Write(CreateBatch(array, row_kinds)));
 
-    int64_t last_sequence_number = 0;
-    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.DrainToReaders(&last_sequence_number));
+    ASSERT_OK_AND_ASSIGN(auto readers, write_buffer.CreateReaders());
     ASSERT_EQ(readers.size(), 1);
-    ASSERT_EQ(last_sequence_number, 4);
 
     ASSERT_OK_AND_ASSIGN(auto reader_result, ReadReaderResult(readers[0].get()));
 
@@ -180,7 +179,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
           ["Alice", 10, 0, 13.1]
         ])")
                 .ValueOrDie();
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, WriteBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t expected_memory_use =
             1 + (13 + 3 * 4 + 1) + (3 * 4 + 1) + (3 * 4 + 1) + (3 * 8 + 1);
         ASSERT_EQ(memory_use, expected_memory_use);
@@ -207,7 +206,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
         [true, 0, 0, 0, 0, 1.4E-45, 4.9E-324, 0, 0, "0.00000000000000000000", "Alice", "wood"]
 ])")
                 .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, WriteBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t expected_memory_use = 1 + (4 + 1) + (4 + 1) + (2 * 4 + 1) + (4 * 4 + 1) +
                                       (8 * 4 + 1) + (4 * 4 + 1) + (8 * 4 + 1) + (4 * 4 + 1) +
                                       (8 * 4 + 1) + (4 * 16 + 1) + (25 + 4 * 4 + 1) +
@@ -229,7 +228,7 @@ TEST_F(WriteBufferTest, TestEstimateMemoryUse) {
         [[6],          [["elephant", 7], ["fox", 8]],          [null, 30.1, true]]
     ])")
                 .ValueOrDie());
-        ASSERT_OK_AND_ASSIGN(int64_t memory_use, WriteBuffer::EstimateMemoryUse(array));
+        ASSERT_OK_AND_ASSIGN(int64_t memory_use, InMemorySortBuffer::EstimateMemoryUse(array));
         int64_t list_mem = 1 + (4 * 6 + 1);
         int64_t map_mem = 1 + (33 + 4 * 7 + 1) + (8 * 7 + 1);
         int64_t struct_mem = 1 + (8 * 3 + 1) + (8 * 3 + 1) + (1 * 3 + 1);

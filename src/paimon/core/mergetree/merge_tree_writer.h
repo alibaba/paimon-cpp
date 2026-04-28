@@ -75,6 +75,14 @@ class MergeTreeWriter : public BatchWriter {
 
     Result<CommitIncrement> PrepareCommit(bool wait_compaction) override;
 
+    uint64_t GetMemoryUsage() const override {
+        return 0;
+    }
+
+    Status FlushMemory() override {
+        return Flush(/*wait_for_latest_compaction=*/false, /*forced_full_compaction=*/false);
+    }
+
     Status Close() override {
         return DoClose();
     }
@@ -97,7 +105,6 @@ class MergeTreeWriter : public BatchWriter {
     Status UpdateCompactDeletionFile(const std::shared_ptr<CompactDeletionFile>& new_deletion_file);
 
  private:
-    int64_t last_sequence_number_;
     std::shared_ptr<MemoryPool> pool_;
     std::vector<std::string> trimmed_primary_keys_;
     CoreOptions options_;
