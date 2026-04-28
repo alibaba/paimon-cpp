@@ -36,8 +36,8 @@ class FieldsComparator;
 class KeyValueRecordReader;
 class Metrics;
 
-/// `SortMergeReader` implemented with min-heap. Merge the KeyValue parsed by
-/// KeyValueDataFileRecordReader and return the iterator of KeyValue
+/// `SortMergeReader` implemented with loser tree. Merge the KeyValue parsed by
+/// KeyValueRecordReader and return the iterator of KeyValue
 class SortMergeReaderWithLoserTree : public SortMergeReader {
  public:
     SortMergeReaderWithLoserTree(
