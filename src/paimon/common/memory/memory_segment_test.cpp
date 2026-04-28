@@ -160,31 +160,6 @@ TEST(MemorySegmentTest, TestCompare) {
     ASSERT_LT(seg1.Compare(seg2, i, i, 9, 9), 0);
 }
 
-TEST(MemorySegmentTest, TestSwapBytes) {
-    auto pool = GetDefaultPool();
-    int32_t str_size = 1024;
-    std::string test_string1, test_string2;
-    test_string1.reserve(str_size);
-    test_string2.reserve(str_size);
-    for (int32_t j = 0; j < str_size; j++) {
-        test_string1 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
-        test_string2 += static_cast<char>(paimon::test::RandomNumber(0, 25) + 'a');
-    }
-    std::shared_ptr<Bytes> bytes1 = Bytes::AllocateBytes(test_string1, pool.get());
-    std::shared_ptr<Bytes> bytes2 = Bytes::AllocateBytes(test_string2, pool.get());
-
-    MemorySegment seg1 = MemorySegment::Wrap(bytes1);
-    MemorySegment seg2 = MemorySegment::Wrap(bytes2);
-
-    std::shared_ptr<Bytes> bytes1_serialize = Bytes::AllocateBytes(test_string2.size(), pool.get());
-    std::shared_ptr<Bytes> bytes2_serialize = Bytes::AllocateBytes(test_string1.size(), pool.get());
-    seg1.SwapBytes(bytes1_serialize.get(), &seg2, 0, 0, str_size);
-    seg1.CopyToUnsafe(0, bytes1_serialize->data(), 0, str_size);
-    seg2.CopyToUnsafe(0, bytes2_serialize->data(), 0, str_size);
-    ASSERT_EQ(test_string1, std::string(bytes2_serialize->data(), bytes2_serialize->size()));
-    ASSERT_EQ(test_string2, std::string(bytes1_serialize->data(), bytes1_serialize->size()));
-}
-
 TEST(MemorySegmentTest, TestCharAccess) {
     auto pool = paimon::GetDefaultPool();
     int32_t page_size = 64 * 1024;
@@ -672,5 +647,85 @@ TEST(MemorySegmentTest, TestEqual) {
     ASSERT_EQ(seg1, seg3);
     ASSERT_FALSE(seg1 == seg2);
     ASSERT_FALSE(seg2 == seg1);
+}
+
+TEST(MemorySegmentTest, TestNonOwningWrapView) {
+    // Prepare owning data as source
+    auto pool = paimon::GetDefaultPool();
+    std::string source_data = "Hello, WrapView MemorySegment!";
+    auto owning_bytes = std::make_shared<Bytes>(source_data, pool.get());
+    const char* raw_ptr = owning_bytes->data();
+    auto raw_size = static_cast<int32_t>(owning_bytes->size());
+
+    // Create non-owning segment via WrapView
+    auto seg = MemorySegment::WrapView(raw_ptr, raw_size);
+
+    // --- Data() / Size() ---
+    ASSERT_EQ(seg.Data(), raw_ptr);
+    ASSERT_EQ(seg.Size(), raw_size);
+
+    // --- Get(index) ---
+    for (int32_t i = 0; i < raw_size; ++i) {
+        ASSERT_EQ(seg.Get(i), source_data[i]);
+    }
+
+    // --- GetValue<T> ---
+    // Read first 4 bytes as int32
+    int32_t expected_int;
+    std::memcpy(&expected_int, raw_ptr, sizeof(int32_t));
+    ASSERT_EQ(seg.GetValue<int32_t>(0), expected_int);
+
+    // Read first 8 bytes as int64
+    int64_t expected_long;
+    std::memcpy(&expected_long, raw_ptr, sizeof(int64_t));
+    ASSERT_EQ(seg.GetValue<int64_t>(0), expected_long);
+
+    // --- MutableData() + Put(index, char) ---
+    char original_char = seg.Get(0);
+    seg.Put(0, 'X');
+    ASSERT_EQ(seg.Get(0), 'X');
+    seg.Put(0, original_char);  // restore
+    ASSERT_EQ(seg.Get(0), original_char);
+
+    // --- Put(index, src, offset, length) ---
+    std::string patch = "AB";
+    seg.Put(0, patch, 0, 2);
+    ASSERT_EQ(seg.Get(0), 'A');
+    ASSERT_EQ(seg.Get(1), 'B');
+
+    // --- PutValue<T> ---
+    int16_t val16 = 0x1234;
+    seg.PutValue<int16_t>(0, val16);
+    ASSERT_EQ(seg.GetValue<int16_t>(0), val16);
+
+    // --- Compare ---
+    auto seg2 = MemorySegment::WrapView(raw_ptr, raw_size);
+    // Both point to same data (we mutated seg's underlying data, seg2 sees it too)
+    ASSERT_EQ(seg.Compare(seg2, 0, 0, raw_size), 0);
+
+    // --- EqualTo ---
+    ASSERT_TRUE(seg.EqualTo(seg2, 2, 2, raw_size - 2));
+
+    // --- CopyTo owning target ---
+    auto target = MemorySegment::AllocateHeapMemory(raw_size, pool.get());
+    seg.CopyTo(0, &target, 0, raw_size);
+    ASSERT_EQ(seg.Compare(target, 0, 0, raw_size), 0);
+
+    // --- CopyToUnsafe ---
+    std::vector<char> buf(raw_size);
+    seg.CopyToUnsafe(0, buf.data(), 0, raw_size);
+    ASSERT_EQ(std::memcmp(buf.data(), seg.Data(), raw_size), 0);
+
+    // --- GetOrCreateHeapMemory on non-owning: should copy ---
+    auto heap = seg.GetOrCreateHeapMemory(pool.get());
+    ASSERT_NE(heap, nullptr);
+    ASSERT_EQ(static_cast<int32_t>(heap->size()), raw_size);
+    // Returned copy should be independent: modifying seg shouldn't affect heap
+    seg.Put(0, 'Z');
+    ASSERT_NE((*heap)[0], 'Z');
+
+    // --- operator== ---
+    auto seg3 = MemorySegment::WrapView(seg.Data(), seg.Size());
+    ASSERT_EQ(seg, seg3);
 }
 }  // namespace paimon::test

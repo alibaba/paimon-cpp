@@ -18,6 +18,7 @@
 
 #include "fmt/format.h"
 #include "paimon/common/utils/math.h"
+#include "paimon/common/utils/var_length_int_utils.h"
 namespace paimon {
 
 MemorySliceOutput::MemorySliceOutput(int32_t estimated_size, MemoryPool* pool) {
@@ -51,26 +52,18 @@ void MemorySliceOutput::WriteValue(T value) {
 }
 
 Status MemorySliceOutput::WriteVarLenInt(int32_t value) {
-    if (value < 0) {
-        return Status::Invalid(fmt::format("negative value: v={}", value));
-    }
-    while ((value & ~0x7F) != 0) {
-        WriteValue(static_cast<char>((value & 0x7F) | 0x80));
-        value >>= 7;
-    }
-    WriteValue(static_cast<char>(value));
+    EnsureSize(size_ + VarLengthIntUtils::kMaxVarIntSize);
+    PAIMON_ASSIGN_OR_RAISE(int32_t bytes_written,
+                           VarLengthIntUtils::EncodeInt(value, segment_.MutableData() + size_));
+    size_ += bytes_written;
     return Status::OK();
 }
 
 Status MemorySliceOutput::WriteVarLenLong(int64_t value) {
-    if (value < 0) {
-        return Status::Invalid(fmt::format("negative value: v={}", value));
-    }
-    while ((value & ~0x7F) != 0) {
-        WriteValue(static_cast<char>((value & 0x7F) | 0x80));
-        value >>= 7;
-    }
-    WriteValue(static_cast<char>(value));
+    EnsureSize(size_ + VarLengthIntUtils::kMaxVarLongSize);
+    PAIMON_ASSIGN_OR_RAISE(int32_t bytes_written,
+                           VarLengthIntUtils::EncodeLong(value, segment_.MutableData() + size_));
+    size_ += bytes_written;
     return Status::OK();
 }
 

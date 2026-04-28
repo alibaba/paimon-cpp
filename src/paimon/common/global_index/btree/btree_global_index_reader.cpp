@@ -33,7 +33,8 @@ BTreeGlobalIndexReader::BTreeGlobalIndexReader(
       null_bitmap_(std::move(null_bitmap)),
       min_key_(min_key),
       max_key_(max_key),
-      key_type_(key_type) {}
+      key_type_(key_type),
+      comparator_(KeySerializer::CreateComparator(key_type, pool)) {}
 
 Result<std::shared_ptr<GlobalIndexResult>> BTreeGlobalIndexReader::VisitIsNotNull() {
     return std::make_shared<BitmapGlobalIndexResult>(
@@ -260,9 +261,13 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
     // Create an index block iterator to iterate through data blocks
     PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> from_bytes,
                            KeySerializer::SerializeKey(from.value(), key_type_, pool_.get()));
+    PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Bytes> to_bytes,
+                           KeySerializer::SerializeKey(to.value(), key_type_, pool_.get()));
+    MemorySlice from_slice = MemorySlice::Wrap(from_bytes);
+    MemorySlice to_slice = MemorySlice::Wrap(to_bytes);
+
     auto index_iterator = sst_file_reader_->CreateIndexIterator();
-    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result,
-                           index_iterator->SeekTo(MemorySlice::Wrap(from_bytes)));
+    PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool seek_result, index_iterator->SeekTo(from_slice));
 
     bool first_block = true;
     while (index_iterator->HasNext()) {
@@ -276,33 +281,33 @@ Result<RoaringBitmap64> BTreeGlobalIndexReader::RangeQuery(const std::optional<L
 
         // For the first block, we need to seek within the block to the exact position
         if (first_block) {
-            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool found,
-                                   data_iterator->SeekTo(MemorySlice::Wrap(from_bytes)));
+            PAIMON_ASSIGN_OR_RAISE([[maybe_unused]] bool found, data_iterator->SeekTo(from_slice));
             first_block = false;
         }
 
         // Iterate through entries in the data block
         while (data_iterator->HasNext()) {
-            PAIMON_ASSIGN_OR_RAISE(std::unique_ptr<BlockEntry> entry, data_iterator->Next());
-            PAIMON_ASSIGN_OR_RAISE(
-                Literal key, KeySerializer::DeserializeKey(entry->key, key_type_, pool_.get()));
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, key.CompareTo(from.value()));
+            PAIMON_ASSIGN_OR_RAISE(BlockEntry entry, data_iterator->Next());
+
+            // Compare entry key against from bound
+            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_from, comparator_(entry.key, from_slice));
 
             // Check lower bound
             if (!from_inclusive && cmp_from == 0) {
                 continue;
             }
 
-            // Check upper bound
-            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, key.CompareTo(to.value()));
+            // Compare entry key against to bound
+            PAIMON_ASSIGN_OR_RAISE(int32_t cmp_to, comparator_(entry.key, to_slice));
 
             if (cmp_to > 0 || (!to_inclusive && cmp_to == 0)) {
                 return result;
             }
 
-            PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry->value, &result));
+            PAIMON_RETURN_NOT_OK(DeserializeRowIds(entry.value, &result));
         }
     }
+
     return result;
 }
 

@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <memory>
-
 #include "paimon/common/memory/memory_slice.h"
 #include "paimon/result.h"
 

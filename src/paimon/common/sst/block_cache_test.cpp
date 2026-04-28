@@ -42,8 +42,8 @@ class BlockCacheTest : public ::testing::Test {
         PAIMON_ASSIGN_OR_RAISE(auto out, fs_->Create(path, false));
         for (int32_t i = 0; i < num_blocks; i++) {
             auto segment = MemorySegment::AllocateHeapMemory(block_size, pool_.get());
-            std::memset(segment.GetHeapMemory()->data(), i & 0xFF, block_size);
-            PAIMON_RETURN_NOT_OK(out->Write(segment.GetHeapMemory()->data(), block_size));
+            std::memset(segment.MutableData(), i & 0xFF, block_size);
+            PAIMON_RETURN_NOT_OK(out->Write(segment.MutableData(), block_size));
         }
         PAIMON_RETURN_NOT_OK(out->Flush());
         PAIMON_RETURN_NOT_OK(out->Close());

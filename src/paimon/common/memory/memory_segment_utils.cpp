@@ -104,7 +104,7 @@ std::shared_ptr<Bytes> MemorySegmentUtils::GetBytes(const std::vector<MemorySegm
                                                     MemoryPool* pool) {
     // avoid copy if `base` is `byte[]`
     if (segments.size() == 1) {
-        std::shared_ptr<Bytes> heap_memory = segments[0].GetHeapMemory();
+        std::shared_ptr<Bytes> heap_memory = segments[0].GetOrCreateHeapMemory(pool);
         if (base_offset == 0 && heap_memory != nullptr &&
             static_cast<int32_t>(heap_memory->size()) == size_in_bytes) {
             return heap_memory;

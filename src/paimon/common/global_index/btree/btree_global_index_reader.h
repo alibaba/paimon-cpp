@@ -24,6 +24,7 @@
 
 #include "arrow/api.h"
 #include "paimon/common/global_index/btree/btree_defs.h"
+#include "paimon/common/global_index/btree/key_serializer.h"
 #include "paimon/common/sst/sst_file_reader.h"
 #include "paimon/global_index/global_index_io_meta.h"
 #include "paimon/global_index/global_index_reader.h"
@@ -101,6 +102,7 @@ class BTreeGlobalIndexReader : public GlobalIndexReader,
     std::optional<Literal> min_key_;
     std::optional<Literal> max_key_;
     std::shared_ptr<arrow::DataType> key_type_;
+    MemorySlice::SliceComparator comparator_;
 };
 
 }  // namespace paimon

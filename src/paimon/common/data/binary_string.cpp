@@ -279,8 +279,6 @@ bool BinaryString::MatchAtOneSeg(const BinaryString& s, int32_t pos) const {
 }
 
 std::string_view BinaryString::GetStringView() const {
-    const auto* bytes = segment_.GetArray();
-    assert(bytes);
-    return std::string_view(bytes->data() + offset_, size_in_bytes_);
+    return std::string_view(segment_.Data() + offset_, size_in_bytes_);
 }
 }  // namespace paimon

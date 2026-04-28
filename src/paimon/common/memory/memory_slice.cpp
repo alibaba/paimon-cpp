@@ -46,8 +46,8 @@ int32_t MemorySlice::Offset() const {
     return offset_;
 }
 
-std::shared_ptr<Bytes> MemorySlice::GetHeapMemory() const {
-    return segment_.GetHeapMemory();
+std::shared_ptr<Bytes> MemorySlice::GetOrCreateHeapMemory(MemoryPool* pool) const {
+    return segment_.GetOrCreateHeapMemory(pool);
 }
 
 const MemorySegment& MemorySlice::GetSegment() const {
@@ -71,14 +71,12 @@ int64_t MemorySlice::ReadLong(int32_t position) const {
 }
 
 std::string_view MemorySlice::ReadStringView() const {
-    auto array = segment_.GetArray();
-    return {array->data() + offset_, static_cast<size_t>(length_)};
+    return {Data(), static_cast<size_t>(length_)};
 }
 
 std::shared_ptr<Bytes> MemorySlice::CopyBytes(MemoryPool* pool) const {
     auto bytes = std::make_shared<Bytes>(length_, pool);
-    auto target = MemorySegment::Wrap(bytes);
-    segment_.CopyTo(offset_, &target, 0, length_);
+    std::memcpy(const_cast<char*>(bytes->data()), Data(), length_);
     return bytes;
 }
 

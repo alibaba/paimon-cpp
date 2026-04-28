@@ -29,12 +29,24 @@ namespace paimon {
 class MemoryPool;
 
 /// This class represents a piece of memory.
+///
+/// Supports two modes:
+/// - Owning mode: holds a shared_ptr<Bytes> for lifetime management.
+/// - Non-owning (view) mode: holds a raw pointer to external data.
+///   The caller must ensure the underlying memory outlives this segment.
 class PAIMON_EXPORT MemorySegment {
  public:
-    MemorySegment() = default;
+    MemorySegment() : data_(nullptr), size_(0) {}
 
+    /// Wrap a shared_ptr<Bytes> to create an owning segment.
     static MemorySegment Wrap(const std::shared_ptr<Bytes>& buffer) {
         return MemorySegment(buffer);
+    }
+
+    /// Create a non-owning segment that references external memory.
+    /// The caller must guarantee that `data` remains valid for the lifetime of this segment.
+    static MemorySegment WrapView(const char* data, int32_t size) {
+        return MemorySegment(data, size);
     }
 
     static MemorySegment AllocateHeapMemory(int32_t size, MemoryPool* pool) {
@@ -42,94 +54,96 @@ class PAIMON_EXPORT MemorySegment {
         return Wrap(Bytes::AllocateBytes(size, pool));
     }
 
-    MemorySegment(const MemorySegment& other) {
-        heap_memory_ = other.heap_memory_;
-    }
-
+    MemorySegment(const MemorySegment& other) = default;
     MemorySegment& operator=(const MemorySegment& other) = default;
 
     bool operator==(const MemorySegment& other) const {
         if (this == &other) {
             return true;
         }
-        if (heap_memory_ == other.heap_memory_) {
+        if (data_ == other.data_ && size_ == other.size_) {
             return true;
         }
-        if (!heap_memory_ || !other.heap_memory_) {
+        if (!data_ || !other.data_) {
             return false;
         }
-        return *heap_memory_ == *other.heap_memory_;
+        if (size_ != other.size_) {
+            return false;
+        }
+        return std::memcmp(data_, other.data_, size_) == 0;
     }
 
     inline int32_t Size() const {
-        return heap_memory_->size();
+        return size_;
     }
-    inline bool IsOffHeap() const {
-        return false;
-    }
-    inline Bytes* GetArray() const {
-        return heap_memory_.get();
+
+    /// Returns the raw data pointer (valid for both owning and non-owning segments).
+    inline const char* Data() const {
+        return data_;
     }
 
     inline char Get(int32_t index) const {
-        return *(heap_memory_->data() + index);
+        return *(data_ + index);
     }
+
+    /// Returns a mutable pointer to the data. Use with caution on non-owning segments.
+    inline char* MutableData() {
+        return const_cast<char*>(data_);
+    }
+
     inline void Put(int32_t index, char b) {
-        (*heap_memory_)[index] = b;
+        MutableData()[index] = b;
     }
+
     inline void Get(int32_t index, Bytes* dst) const {
         return Get(index, dst, /*offset=*/0, dst->size());
     }
+
     inline void Put(int32_t index, const Bytes& src) {
         return Put(index, src, /*offset=*/0, src.size());
     }
+
     template <typename T>
     inline void Get(int32_t index, T* dst, int32_t offset, int32_t length) const {
-        // check the byte array offset and length and the status
         assert(static_cast<int32_t>(dst->size()) >= (offset + length));
-        assert(static_cast<int32_t>(heap_memory_->size()) >= (index + length));
-        std::memcpy(const_cast<char*>(dst->data()) + offset, heap_memory_->data() + index, length);
+        assert(size_ >= (index + length));
+        std::memcpy(const_cast<char*>(dst->data()) + offset, data_ + index, length);
     }
 
     template <typename T>
     inline void Put(int32_t index, const T& src, int32_t offset, int32_t length) {
-        // check the byte array offset and length
         assert(static_cast<int32_t>(src.size()) >= (offset + length));
-        assert(static_cast<int32_t>(heap_memory_->size()) >= (index + length));
-        std::memcpy(heap_memory_->data() + index, src.data() + offset, length);
+        assert(size_ >= (index + length));
+        std::memcpy(MutableData() + index, src.data() + offset, length);
     }
 
-    // only support: bool, char, int16_t, int32_t, int64_t, double, float
     template <typename T>
     T GetValue(int32_t index) const {
         static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
         T value;
-        std::memcpy(&value, heap_memory_->data() + index, sizeof(T));
+        std::memcpy(&value, data_ + index, sizeof(T));
         return value;
     }
 
-    // only support: bool, char, int16_t, int32_t, int64_t, double, float
     template <typename T>
     void PutValue(int32_t index, const T& value) {
         static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
-        std::memcpy(heap_memory_->data() + index, &value, sizeof(T));
-    }
 
-    // TODO(yonghao.fyh): support bulk read / write
+        std::memcpy(MutableData() + index, &value, sizeof(T));
+    }
 
     void CopyTo(int32_t offset, MemorySegment* target, int32_t target_offset,
                 int32_t num_bytes) const {
         assert(offset >= 0);
         assert(target_offset >= 0);
         assert(num_bytes >= 0);
-        std::memcpy(target->heap_memory_->data() + target_offset, heap_memory_->data() + offset,
-                    num_bytes);
+
+        std::memcpy(target->MutableData() + target_offset, data_ + offset, num_bytes);
     }
 
     void CopyToUnsafe(int32_t offset, void* target, int32_t target_offset,
                       int32_t num_bytes) const {
-        std::memcpy(static_cast<char*>(target) + target_offset, heap_memory_->data() + offset,
-                    num_bytes);
+        std::memcpy(static_cast<char*>(target) + target_offset, data_ + offset, num_bytes);
     }
 
     int32_t Compare(const MemorySegment& seg2, int32_t offset1, int32_t offset2, int32_t len) const;
@@ -137,31 +151,38 @@ class PAIMON_EXPORT MemorySegment {
     int32_t Compare(const MemorySegment& seg2, int32_t offset1, int32_t offset2, int32_t len1,
                     int32_t len2) const;
 
-    void SwapBytes(Bytes* temp_buffer, MemorySegment* seg2, int32_t offset1, int32_t offset2,
-                   int32_t len);
-    /// Equals two memory segment regions.
-    ///
-    /// @param seg2 Segment to equal this segment with
-    /// @param offset1 Offset of this segment to start equaling
-    /// @param offset2 Offset of seg2 to start equaling
-    /// @param length Size of the equaled memory region
-    /// @return true if equal, false otherwise
     bool EqualTo(const MemorySegment& seg2, int32_t offset1, int32_t offset2, int32_t length) const;
 
-    /// Get the heap byte array object.
-    ///
-    /// @return Return non-null if the memory is on the heap, and return null if the
-    /// memory if off the heap.
-    std::shared_ptr<Bytes> GetHeapMemory() const {
-        return heap_memory_;
+    std::shared_ptr<Bytes> GetOrCreateHeapMemory(MemoryPool* pool) const {
+        if (heap_memory_) {
+            return heap_memory_;
+        }
+        if (!data_) {
+            return nullptr;
+        }
+        auto copy = std::make_shared<Bytes>(size_, pool);
+        std::memcpy(const_cast<char*>(copy->data()), data_, size_);
+        return copy;
     }
 
  private:
-    explicit MemorySegment(const std::shared_ptr<Bytes>& heap_memory) : heap_memory_(heap_memory) {
+    /// Owning constructor.
+    explicit MemorySegment(const std::shared_ptr<Bytes>& heap_memory)
+        : heap_memory_(heap_memory),
+          data_(heap_memory->data()),
+          size_(static_cast<int32_t>(heap_memory->size())) {
         assert(heap_memory_);
     }
 
+    /// Non-owning constructor.
+    MemorySegment(const char* data, int32_t size)
+        : heap_memory_(nullptr), data_(data), size_(size) {
+        assert(data != nullptr || size == 0);
+    }
+
     std::shared_ptr<Bytes> heap_memory_;
+    const char* data_;
+    int32_t size_;
 };
 
 template <>
