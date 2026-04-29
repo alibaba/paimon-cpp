@@ -182,7 +182,7 @@ struct PAIMON_EXPORT Options {
     static const char WRITE_BUFFER_SPILLABLE[];
 
     /// "write-buffer-spill.max-disk-size" - The max disk to use for write buffer spill. This only
-    /// work when the write buffer spill is enabled. Default value is unlimited.
+    /// works when the write buffer spill is enabled. Default value is unlimited.
     static const char WRITE_BUFFER_SPILL_MAX_DISK_SIZE[];
 
     /// "local-sort.max-num-file-handles" - The maximal fan-in for external merge sort. It limits

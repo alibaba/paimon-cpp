@@ -18,7 +18,6 @@
 
 #include <memory>
 #include <optional>
-#include <queue>
 #include <utility>
 #include <vector>
 
@@ -37,7 +36,7 @@ class KeyValueRecordReader;
 class Metrics;
 
 /// `SortMergeReader` implemented with loser tree. Merge the KeyValue parsed by
-/// KeyValueRecordReader and return the iterator of KeyValue
+/// `KeyValueRecordReader` and return the iterator of KeyValue
 class SortMergeReaderWithLoserTree : public SortMergeReader {
  public:
     SortMergeReaderWithLoserTree(

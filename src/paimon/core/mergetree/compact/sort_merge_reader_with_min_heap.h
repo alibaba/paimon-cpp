@@ -39,7 +39,7 @@ template <typename T>
 class MergeFunctionWrapper;
 
 /// `SortMergeReader` implemented with min-heap. Merge the KeyValue or only sort the KeyValue parsed
-/// by KeyValueRecordReader and return the iterator of KeyValue
+/// by `KeyValueRecordReader` and return the iterator of KeyValue
 class SortMergeReaderWithMinHeap : public SortMergeReader {
  public:
     SortMergeReaderWithMinHeap(

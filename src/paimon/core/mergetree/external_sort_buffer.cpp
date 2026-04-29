@@ -92,16 +92,6 @@ bool ExternalSortBuffer::HasSpilledData() const {
     return !spill_channel_manager_->GetChannels().empty();
 }
 
-std::vector<FileIOChannel::ID> ExternalSortBuffer::GetSpillChannelIdsSnapshot() const {
-    const auto& channels = spill_channel_manager_->GetChannels();
-    std::vector<FileIOChannel::ID> spill_channel_ids;
-    spill_channel_ids.reserve(channels.size());
-    for (const auto& spill_channel_id : channels) {
-        spill_channel_ids.push_back(spill_channel_id);
-    }
-    return spill_channel_ids;
-}
-
 void ExternalSortBuffer::Clear() {
     in_memory_buffer_->Clear();
     CleanupSpillFiles();
@@ -171,7 +161,7 @@ Result<int64_t> ExternalSortBuffer::SpillToDisk(
     std::vector<std::unique_ptr<KeyValueRecordReader>>&& readers, int32_t write_batch_size) {
     const auto& spill_compress_options = options_.GetSpillCompressOptions();
     PAIMON_ASSIGN_OR_RAISE(
-        auto spill_writer,
+        std::unique_ptr<SpillWriter> spill_writer,
         SpillWriter::Create(options_.GetFileSystem(), write_schema_, spill_channel_enumerator_,
                             spill_channel_manager_, spill_compress_options.compress,
                             spill_compress_options.zstd_level));
@@ -229,8 +219,7 @@ Status ExternalSortBuffer::MergeSpilledFiles() {
     if (spill_channel_manager_->GetChannels().size() < 2) {
         return Status::OK();
     }
-
-    auto spill_channel_ids_before_merge = GetSpillChannelIdsSnapshot();
+    auto spill_channel_ids_before_merge = spill_channel_manager_->GetChannels();
     auto cleanup_guard = ScopeGuard([&]() {
         for (const auto& spill_channel_id : spill_channel_ids_before_merge) {
             [[maybe_unused]] auto status = spill_channel_manager_->DeleteChannel(spill_channel_id);

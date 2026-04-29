@@ -18,7 +18,6 @@
 
 #include <cstdint>
 #include <unordered_map>
-#include <unordered_set>
 
 #include "paimon/status.h"
 
@@ -26,16 +25,20 @@ namespace paimon {
 
 class BatchWriter;
 
-/// Coordinates global write-buffer memory across managed writers.
-/// NOTE: This class is not thread-safe.
+/// Coordinates global write-buffer memory across managed writers. Used in `AbstractFileStoreWrite`.
+/// @note This class is not thread-safe.
 class WriterMemoryManager {
  public:
-    explicit WriterMemoryManager(uint64_t max_memory) : max_memory_(max_memory) {}
+    explicit WriterMemoryManager(uint64_t memory_limit) : memory_limit_(memory_limit) {}
 
+    /// Register a writer when create a new `BatchWriter` in `AbstractFileStoreWrite::GetWriter()`
     void RegisterWriter(BatchWriter* writer);
+    /// Unregister a writer when the `BatchWriter` has been erased in `AbstractFileStoreWrite`
     void UnregisterWriter(BatchWriter* writer);
+    /// Refresh the memory usage of a writer when after `BatchWriter::PrepareCommit()`
     void RefreshWriterMemory(BatchWriter* writer);
-
+    /// Check if the total memory usage exceeds the limit after `BatchWriter::Write()`, and trigger
+    /// flush if needed.
     Status OnWriteCompleted(BatchWriter* writer);
 
  private:
@@ -45,10 +48,10 @@ class WriterMemoryManager {
     };
 
     void UpdateWriterMemory(BatchWriter* writer);
-    Candidate PickLargest(const std::unordered_set<BatchWriter*>& skipped) const;
+    Candidate PickLargest() const;
     Status ShrinkToLimit();
 
-    uint64_t max_memory_;
+    const uint64_t memory_limit_;
     uint64_t total_memory_ = 0;
     std::unordered_map<BatchWriter*, uint64_t> writer_memory_;
 };

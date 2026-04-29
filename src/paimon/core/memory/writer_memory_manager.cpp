@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/core/mergetree/writer_memory_manager.h"
+#include "paimon/core/memory/writer_memory_manager.h"
 
 #include <cassert>
 
@@ -44,7 +44,7 @@ void WriterMemoryManager::RefreshWriterMemory(BatchWriter* writer) {
 
 Status WriterMemoryManager::OnWriteCompleted(BatchWriter* writer) {
     UpdateWriterMemory(writer);
-    if (total_memory_ < max_memory_) {
+    if (total_memory_ < memory_limit_) {
         return Status::OK();
     }
 
@@ -68,13 +68,9 @@ void WriterMemoryManager::UpdateWriterMemory(BatchWriter* writer) {
     }
 }
 
-WriterMemoryManager::Candidate WriterMemoryManager::PickLargest(
-    const std::unordered_set<BatchWriter*>& skipped) const {
+WriterMemoryManager::Candidate WriterMemoryManager::PickLargest() const {
     Candidate candidate;
     for (const auto& [writer, memory] : writer_memory_) {
-        if (skipped.find(writer) != skipped.end()) {
-            continue;
-        }
         if (memory > candidate.memory) {
             candidate = {writer, memory};
         }
@@ -83,33 +79,29 @@ WriterMemoryManager::Candidate WriterMemoryManager::PickLargest(
 }
 
 Status WriterMemoryManager::ShrinkToLimit() {
-    std::unordered_set<BatchWriter*> no_progress_writers;
     while (true) {
-        if (total_memory_ < max_memory_) {
+        if (total_memory_ < memory_limit_) {
             return Status::OK();
         }
 
-        Candidate picked = PickLargest(no_progress_writers);
+        Candidate picked = PickLargest();
         if (picked.memory == 0) {
             return Status::Invalid(
                 fmt::format("Unable to release memory to below the write-buffer-size limit ({} "
                             "bytes), this might be a bug.",
-                            max_memory_));
+                            memory_limit_));
         }
-
         BatchWriter* candidate = picked.writer;
         uint64_t before_memory = picked.memory;
-
         PAIMON_RETURN_NOT_OK(candidate->FlushMemory());
 
         UpdateWriterMemory(candidate);
-
         uint64_t after_memory = candidate->GetMemoryUsage();
-
         if (after_memory >= before_memory) {
-            no_progress_writers.insert(candidate);
-        } else {
-            no_progress_writers.erase(candidate);
+            return Status::Invalid(fmt::format(
+                "Before flushing memory, writer had {} bytes of memory allocated, After flushing "
+                "memory, writer still has {} bytes of memory allocated, this might be a bug.",
+                before_memory, after_memory));
         }
     }
 }

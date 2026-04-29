@@ -773,11 +773,13 @@ TEST_F(SortMergeReaderTest, TestRawSortNoMergeWithMinHeap) {
     // key: k0, user defined sequence field: ts, value: v0
     // Format: [_SEQUENCE_NUMBER, _VALUE_KIND, k0, ts, v0]
     // Reader1 (SEQUENCE_NUMBER 0..5):
-    //   batch1: [key=1,ts=1,v=1], [key=1,ts=2,v=2], [key=1,ts=3,v=3]
-    //   batch2: [key=1,ts=4,v=4], [key=2,ts=4,v=40], [key=2,ts=5,v=50]
+    //   [key=1,ts=1,v=1], [key=1,ts=2,v=2], [key=1,ts=3,v=3]
+    //   [key=1,ts=4,v=4], [key=2,ts=4,v=40], [key=2,ts=5,v=50]
     // Reader2 (SEQUENCE_NUMBER 6..11):
-    //   batch1: [key=1,ts=5,v=5], [key=1,ts=6,v=6], [key=2,ts=1,v=10]
-    //   batch2: [key=2,ts=2,v=20], [key=2,ts=3,v=30], [key=2,ts=6,v=60]
+    //   [key=1,ts=5,v=5], [key=1,ts=6,v=6], [key=2,ts=1,v=10]
+    //   [key=2,ts=2,v=20], [key=2,ts=3,v=30], [key=2,ts=6,v=60]
+    //
+    // After sort:
     // With user_defined_seq_comparator on ts field, sort by key asc, then ts asc within same key
     // key=1: ts=1(seq0,v=1), ts=2(seq1,v=2), ts=3(seq2,v=3), ts=4(seq3,v=4),
     //        ts=5(seq6,v=5), ts=6(seq7,v=6)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "paimon/core/mergetree/writer_memory_manager.h"
+#include "paimon/core/memory/writer_memory_manager.h"
 
 #include <algorithm>
 #include <memory>
@@ -35,8 +35,8 @@ namespace {
 
 class FakeBatchWriter : public BatchWriter {
  public:
-    explicit FakeBatchWriter(std::string name, std::vector<std::string>* flush_history = nullptr)
-        : name_(std::move(name)), flush_history_(flush_history) {}
+    FakeBatchWriter(const std::string& name, std::vector<std::string>* flush_history)
+        : name_(name), flush_history_(flush_history) {}
 
     void SetMemoryUsage(uint64_t memory_usage) {
         memory_usage_ = memory_usage;
@@ -52,7 +52,7 @@ class FakeBatchWriter : public BatchWriter {
 
     Status FlushMemory() override {
         uint64_t reduction = memory_usage_;
-        if (flush_calls_ < static_cast<int>(flush_reductions_.size())) {
+        if (flush_calls_ < static_cast<int32_t>(flush_reductions_.size())) {
             reduction = flush_reductions_[flush_calls_];
         }
         reduction = std::min(reduction, memory_usage_);
@@ -103,13 +103,13 @@ class FakeBatchWriter : public BatchWriter {
     std::vector<std::string>* flush_history_;
     std::vector<uint64_t> flush_reductions_;
     uint64_t memory_usage_ = 0;
-    int flush_calls_ = 0;
+    int32_t flush_calls_ = 0;
 };
 
 }  // namespace
 
 TEST(WriterMemoryManagerTest, DoesNotFlushWhenMemoryIsBelowLimit) {
-    WriterMemoryManager manager(/*max_memory=*/100);
+    WriterMemoryManager manager(/*memory_limit=*/100);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer("writer", &flush_history);
     manager.RegisterWriter(&writer);
@@ -120,7 +120,7 @@ TEST(WriterMemoryManagerTest, DoesNotFlushWhenMemoryIsBelowLimit) {
 }
 
 TEST(WriterMemoryManagerTest, UnregisterWriterRemovesMemoryFromLedger) {
-    WriterMemoryManager manager(/*max_memory=*/100);
+    WriterMemoryManager manager(/*memory_limit=*/100);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -137,7 +137,7 @@ TEST(WriterMemoryManagerTest, UnregisterWriterRemovesMemoryFromLedger) {
 }
 
 TEST(WriterMemoryManagerTest, RefreshWriterMemoryUpdatesLedgerWithoutFlushing) {
-    WriterMemoryManager manager(/*max_memory=*/80);
+    WriterMemoryManager manager(/*memory_limit=*/80);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -155,7 +155,7 @@ TEST(WriterMemoryManagerTest, RefreshWriterMemoryUpdatesLedgerWithoutFlushing) {
 }
 
 TEST(WriterMemoryManagerTest, FlushWriterMemoryWithMultipleWriters) {
-    WriterMemoryManager manager(/*max_memory=*/100);
+    WriterMemoryManager manager(/*memory_limit=*/100);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -182,7 +182,7 @@ TEST(WriterMemoryManagerTest, FlushWriterMemoryWithMultipleWriters) {
 }
 
 TEST(WriterMemoryManagerTest, ReclaimsCallerWhenCallerIsLargestWriter) {
-    WriterMemoryManager manager(/*max_memory=*/100);
+    WriterMemoryManager manager(/*memory_limit=*/100);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -193,7 +193,6 @@ TEST(WriterMemoryManagerTest, ReclaimsCallerWhenCallerIsLargestWriter) {
     manager.RefreshWriterMemory(&writer_a);
 
     writer_b.SetMemoryUsage(90);
-    writer_b.SetFlushReductions({90});
     ASSERT_OK(manager.OnWriteCompleted(&writer_b));
 
     ASSERT_EQ(flush_history, std::vector<std::string>({"writer_b"}));
@@ -202,7 +201,7 @@ TEST(WriterMemoryManagerTest, ReclaimsCallerWhenCallerIsLargestWriter) {
 }
 
 TEST(WriterMemoryManagerTest, ContinuesReclaimingUntilBelowGlobalLimit) {
-    WriterMemoryManager manager(/*max_memory=*/61);
+    WriterMemoryManager manager(/*memory_limit=*/61);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -224,7 +223,7 @@ TEST(WriterMemoryManagerTest, ContinuesReclaimingUntilBelowGlobalLimit) {
 }
 
 TEST(WriterMemoryManagerTest, ReturnsConfigurationErrorWhenNoWriterCanReleaseEnoughMemory) {
-    WriterMemoryManager manager(/*max_memory=*/100);
+    WriterMemoryManager manager(/*memory_limit=*/100);
     std::vector<std::string> flush_history;
     FakeBatchWriter writer_a("writer_a", &flush_history);
     manager.RegisterWriter(&writer_a);
@@ -232,14 +231,15 @@ TEST(WriterMemoryManagerTest, ReturnsConfigurationErrorWhenNoWriterCanReleaseEno
     manager.RegisterWriter(&writer_b);
 
     writer_b.SetMemoryUsage(20);
-    writer_b.SetFlushReductions({20});
     manager.RefreshWriterMemory(&writer_b);
 
     writer_a.SetMemoryUsage(120);
     writer_a.SetFlushReductions({10, 0});
-    ASSERT_NOK_WITH_MSG(manager.OnWriteCompleted(&writer_a),
-                        "Unable to release memory to below the write-buffer-size limit");
-    ASSERT_EQ(flush_history, std::vector<std::string>({"writer_a", "writer_b"}));
+    ASSERT_NOK_WITH_MSG(
+        manager.OnWriteCompleted(&writer_a),
+        "Before flushing memory, writer had 110 bytes of memory allocated, After flushing memory, "
+        "writer still has 110 bytes of memory allocated, this might be a bug.");
+    ASSERT_EQ(flush_history, std::vector<std::string>({"writer_a"}));
 }
 
 }  // namespace paimon::test

@@ -68,7 +68,7 @@ class SortBufferTest : public ::testing::Test {
         ASSERT_OK_AND_ASSIGN(
             std::shared_ptr<TableSchema> table_schema,
             TableSchema::Create(/*schema_id=*/0, value_schema_, /*partition_keys=*/{},
-                                primary_keys_, /*options=*/{}));
+                                primary_keys_, /*options=*/{{Options::BUCKET, "1"}}));
         data_generator_ = std::make_shared<DataGenerator>(table_schema, pool_);
 
         ASSERT_OK_AND_ASSIGN(key_comparator_, FieldsComparator::Create(
@@ -99,6 +99,12 @@ class SortBufferTest : public ::testing::Test {
 
     BinaryRow MakeRow(const RowKind* kind, const std::string& key, int32_t seq, int32_t val) {
         return BinaryRowGenerator::GenerateRow(kind, {key, seq, val}, pool_.get());
+    }
+    std::unique_ptr<paimon::RecordBatch> MakeBatch(const std::vector<BinaryRow>& input_rows) {
+        EXPECT_OK_AND_ASSIGN(auto batches,
+                             data_generator_->SplitArrayByPartitionAndBucket(input_rows));
+        EXPECT_EQ(1, batches.size());
+        return std::move(batches[0]);
     }
 
     Result<std::vector<ReaderResult>> CollectRows(KeyValueRecordReader* reader) const {
@@ -232,7 +238,7 @@ TEST_F(SortBufferTest, TestInMemorySortBufferEstimateMemoryUse) {
     }
 }
 
-TEST_F(SortBufferTest, TestInMemorySortBufferAssignsSequenceNumbersPerBatchAndClearsState) {
+TEST_F(SortBufferTest, TestInMemorySortBufferSimple) {
     InMemorySortBuffer buffer(/*last_sequence_number=*/9, value_type_, primary_keys_,
                               sequence_fields_, /*sequence_fields_ascending=*/true, key_comparator_,
                               /*write_buffer_size=*/1024 * 1024, pool_);
@@ -241,17 +247,13 @@ TEST_F(SortBufferTest, TestInMemorySortBufferAssignsSequenceNumbersPerBatchAndCl
     input_rows.push_back(MakeRow(RowKind::Insert(), "b", 2, 200));
     input_rows.push_back(MakeRow(RowKind::Delete(), "a", 3, 300));
     input_rows.push_back(MakeRow(RowKind::UpdateAfter(), "a", 1, 100));
-    ASSERT_OK_AND_ASSIGN(auto batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer.Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer.Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
 
     input_rows.clear();
     input_rows.push_back(MakeRow(RowKind::UpdateBefore(), "c", 1, 400));
     input_rows.push_back(MakeRow(RowKind::Insert(), "b", 1, 150));
-    ASSERT_OK_AND_ASSIGN(batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer.Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer.Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
 
     ASSERT_TRUE(buffer.HasData());
@@ -281,9 +283,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithInMemoryDataAndNoSpill) {
     input_rows.push_back(MakeRow(RowKind::Delete(), "b", 2, 200));
     input_rows.push_back(MakeRow(RowKind::UpdateAfter(), "a", 3, 300));
     input_rows.push_back(MakeRow(RowKind::Insert(), "a", 1, 100));
-    ASSERT_OK_AND_ASSIGN(auto batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer->Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer->Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
     ASSERT_TRUE(buffer->HasData());
     ASSERT_GT(buffer->GetMemorySize(), 0);
@@ -304,6 +304,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithInMemoryDataAndNoSpill) {
 }
 
 TEST_F(SortBufferTest, TestExternalSortBufferWithSpilledDataAndInMemoryData) {
+    // the write buffer size limit 35 bytes is larger than 2 rows but smaller than 3 rows.
     ASSERT_OK_AND_ASSIGN(auto buffer, CreateExternalSortBuffer(/*last_sequence_number=*/19,
                                                                /*write_buffer_size=*/35));
 
@@ -311,9 +312,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithSpilledDataAndInMemoryData) {
     std::vector<BinaryRow> input_rows;
     input_rows.push_back(MakeRow(RowKind::Insert(), "b", 1, 200));
     input_rows.push_back(MakeRow(RowKind::Delete(), "b", 2, 200));
-    ASSERT_OK_AND_ASSIGN(auto batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer->Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(bool has_remaining_quota, buffer->Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
     ASSERT_TRUE(buffer->HasData());
     ASSERT_GT(buffer->GetMemorySize(), 0);
@@ -321,9 +320,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithSpilledDataAndInMemoryData) {
     // spill file 1 (with above in memory data)
     input_rows.clear();
     input_rows.push_back(MakeRow(RowKind::UpdateAfter(), "a", 3, 300));
-    ASSERT_OK_AND_ASSIGN(batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
     ASSERT_TRUE(buffer->HasData());
     ASSERT_EQ(buffer->GetMemorySize(), 0);
@@ -334,9 +331,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithSpilledDataAndInMemoryData) {
     input_rows.push_back(MakeRow(RowKind::Insert(), "c", 4, 400));
     input_rows.push_back(MakeRow(RowKind::UpdateBefore(), "a", 1, 100));
     input_rows.push_back(MakeRow(RowKind::Insert(), "b", 1, 150));
-    ASSERT_OK_AND_ASSIGN(batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
     ASSERT_TRUE(buffer->HasData());
     ASSERT_EQ(buffer->GetMemorySize(), 0);
@@ -345,9 +340,7 @@ TEST_F(SortBufferTest, TestExternalSortBufferWithSpilledDataAndInMemoryData) {
     input_rows.clear();
     input_rows.push_back(MakeRow(RowKind::Insert(), "c", 4, 400));
     input_rows.push_back(MakeRow(RowKind::UpdateBefore(), "a", 1, 100));
-    ASSERT_OK_AND_ASSIGN(batches, data_generator_->SplitArrayByPartitionAndBucket(input_rows));
-    ASSERT_EQ(1, batches.size());
-    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(std::move(batches[0])));
+    ASSERT_OK_AND_ASSIGN(has_remaining_quota, buffer->Write(MakeBatch(input_rows)));
     ASSERT_TRUE(has_remaining_quota);
     ASSERT_TRUE(buffer->HasData());
     ASSERT_GT(buffer->GetMemorySize(), 0);

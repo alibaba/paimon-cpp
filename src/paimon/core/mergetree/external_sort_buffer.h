@@ -53,6 +53,7 @@ class ExternalSortBuffer : public SortBuffer {
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<MemoryPool>& pool);
+    ~ExternalSortBuffer();
 
     void Clear() override;
     uint64_t GetMemorySize() const override;
@@ -79,7 +80,6 @@ class ExternalSortBuffer : public SortBuffer {
                        const CoreOptions& options,
                        const std::shared_ptr<FileIOChannel::Enumerator>& spill_channel_enumerator,
                        const std::shared_ptr<MemoryPool>& pool);
-    ~ExternalSortBuffer();
 
     std::unique_ptr<InMemorySortBuffer> in_memory_buffer_;
 
