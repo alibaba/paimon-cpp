@@ -371,6 +371,198 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
     list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
 endif()
 
+set(PAIMON_DEPENDENCY_SOURCE_VALUES AUTO BUNDLED SYSTEM CONDA)
+
+function(paimon_validate_dependency_source SOURCE_VALUE OPTION_NAME)
+    string(TOUPPER "${SOURCE_VALUE}" _source)
+    list(FIND PAIMON_DEPENDENCY_SOURCE_VALUES "${_source}" _source_index)
+    if(_source_index EQUAL -1)
+        message(FATAL_ERROR "${OPTION_NAME} got invalid value '${SOURCE_VALUE}'. "
+                            "Allowed values: AUTO, BUNDLED, SYSTEM, CONDA.")
+    endif()
+endfunction()
+
+function(paimon_get_dependency_source DEPENDENCY_NAME OUT_VAR)
+    set(_source "${${DEPENDENCY_NAME}_SOURCE}")
+    if("${_source}" STREQUAL "")
+        set(_source "${PAIMON_DEPENDENCY_SOURCE}")
+    endif()
+    string(TOUPPER "${_source}" _source)
+    paimon_validate_dependency_source("${_source}" "${DEPENDENCY_NAME}_SOURCE")
+    set(${OUT_VAR}
+        "${_source}"
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_set_dependency_source_default DEPENDENCY_NAME SOURCE_VALUE REASON)
+    if("${${DEPENDENCY_NAME}_SOURCE}" STREQUAL "")
+        set(${DEPENDENCY_NAME}_SOURCE
+            "${SOURCE_VALUE}"
+            CACHE STRING "Dependency source for ${DEPENDENCY_NAME}" FORCE)
+        set_property(CACHE ${DEPENDENCY_NAME}_SOURCE
+                     PROPERTY STRINGS ${PAIMON_DEPENDENCY_SOURCE_VALUES})
+        message(STATUS
+                "Defaulting ${DEPENDENCY_NAME}_SOURCE to ${SOURCE_VALUE}: ${REASON}")
+    endif()
+endfunction()
+
+function(paimon_apply_dependency_source_defaults)
+    paimon_get_dependency_source(Arrow _arrow_source)
+    if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED"
+       OR _arrow_source STREQUAL "CONDA")
+        foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+            paimon_set_dependency_source_default(
+                ${_dependency} ${_arrow_source}
+                "follow Arrow_SOURCE to avoid mixed transitive dependencies")
+        endforeach()
+    elseif(_arrow_source STREQUAL "AUTO")
+        paimon_configure_dependency_root(Arrow "${_arrow_source}"
+                                         _arrow_resolved_source)
+        find_package(ArrowAlt QUIET MODULE)
+        if(ArrowAlt_FOUND)
+            set(_arrow_dependency_default SYSTEM)
+            set(_arrow_dependency_reason
+                "system Arrow found during AUTO dependency precheck")
+        else()
+            set(_arrow_dependency_default BUNDLED)
+            set(_arrow_dependency_reason
+                "system Arrow not found during AUTO dependency precheck")
+        endif()
+        foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+            paimon_set_dependency_source_default(
+                ${_dependency} ${_arrow_dependency_default}
+                "${_arrow_dependency_reason}")
+        endforeach()
+    endif()
+endfunction()
+
+function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
+    set(_root_var "${DEPENDENCY_NAME}_ROOT")
+
+    if(SOURCE_VALUE STREQUAL "CONDA")
+        if("$ENV{CONDA_PREFIX}" STREQUAL "")
+            message(FATAL_ERROR "${DEPENDENCY_NAME}_SOURCE=CONDA requires CONDA_PREFIX")
+        endif()
+        if(NOT DEFINED ${_root_var} OR "${${_root_var}}" STREQUAL "")
+            set(${_root_var}
+                "$ENV{CONDA_PREFIX}"
+                CACHE PATH "Root directory for ${DEPENDENCY_NAME}" FORCE)
+        endif()
+        set(${OUT_SOURCE}
+            "SYSTEM"
+            PARENT_SCOPE)
+        return()
+    endif()
+
+    if(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL ""
+       AND (NOT DEFINED ${_root_var} OR "${${_root_var}}" STREQUAL ""))
+        set(${_root_var}
+            "${PAIMON_PACKAGE_PREFIX}"
+            CACHE PATH "Root directory for ${DEPENDENCY_NAME}" FORCE)
+    endif()
+
+    set(${OUT_SOURCE}
+        "${SOURCE_VALUE}"
+        PARENT_SCOPE)
+endfunction()
+
+macro(paimon_build_dependency DEPENDENCY_NAME)
+    if("${DEPENDENCY_NAME}" STREQUAL "Arrow")
+        build_arrow()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "zstd")
+        build_zstd()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Snappy")
+        build_snappy()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "LZ4")
+        build_lz4()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ZLIB")
+        build_zlib()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "RE2")
+        build_re2()
+    else()
+        message(FATAL_ERROR "No bundled build rule for ${DEPENDENCY_NAME}")
+    endif()
+endmacro()
+
+macro(resolve_dependency DEPENDENCY_NAME)
+    set(options)
+    set(one_value_args FIND_PACKAGE_NAME)
+    set(multi_value_args)
+    cmake_parse_arguments(ARG
+                          "${options}"
+                          "${one_value_args}"
+                          "${multi_value_args}"
+                          ${ARGN})
+
+    if(ARG_FIND_PACKAGE_NAME)
+        set(_paimon_find_package_name "${ARG_FIND_PACKAGE_NAME}")
+    else()
+        set(_paimon_find_package_name "${DEPENDENCY_NAME}")
+    endif()
+    set(_paimon_alt_package_name "${_paimon_find_package_name}Alt")
+    set(_paimon_found_var "${_paimon_alt_package_name}_FOUND")
+
+    paimon_get_dependency_source(${DEPENDENCY_NAME} _paimon_requested_source)
+    paimon_configure_dependency_root(${DEPENDENCY_NAME} "${_paimon_requested_source}"
+                                     _paimon_resolved_source)
+
+    if(_paimon_resolved_source STREQUAL "BUNDLED")
+        message(STATUS "Using bundled ${DEPENDENCY_NAME}")
+        paimon_build_dependency(${DEPENDENCY_NAME})
+        set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+            "BUNDLED"
+            CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+    elseif(_paimon_resolved_source STREQUAL "SYSTEM")
+        message(STATUS "Using system ${DEPENDENCY_NAME}")
+        find_package(${_paimon_alt_package_name} REQUIRED MODULE)
+        set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+            "${_paimon_requested_source}"
+            CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+    elseif(_paimon_resolved_source STREQUAL "AUTO")
+        message(STATUS "Resolving ${DEPENDENCY_NAME} with AUTO source")
+        find_package(${_paimon_alt_package_name} QUIET MODULE)
+        if(${_paimon_found_var})
+            message(STATUS "Using system ${DEPENDENCY_NAME}")
+            set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+                "SYSTEM"
+                CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        else()
+            message(STATUS "System ${DEPENDENCY_NAME} not found; using bundled")
+            paimon_build_dependency(${DEPENDENCY_NAME})
+            set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
+                "BUNDLED"
+                CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        endif()
+    else()
+        message(FATAL_ERROR "Unsupported source ${_paimon_resolved_source} "
+                            "for ${DEPENDENCY_NAME}")
+    endif()
+
+    unset(_paimon_find_package_name)
+    unset(_paimon_alt_package_name)
+    unset(_paimon_found_var)
+    unset(_paimon_requested_source)
+    unset(_paimon_resolved_source)
+endmacro()
+
+function(paimon_warn_if_mixed_arrow_dependencies)
+    if(NOT DEFINED PAIMON_Arrow_ACTUAL_SOURCE)
+        return()
+    endif()
+
+    foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
+        if(DEFINED PAIMON_${_dependency}_ACTUAL_SOURCE
+           AND NOT "${PAIMON_${_dependency}_ACTUAL_SOURCE}" STREQUAL
+                   "${PAIMON_Arrow_ACTUAL_SOURCE}")
+            message(WARNING
+                    "Arrow resolved from ${PAIMON_Arrow_ACTUAL_SOURCE}, but "
+                    "${_dependency} resolved from "
+                    "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM, "
+                    "CONDA, and BUNDLED dependencies can cause ABI conflicts.")
+        endif()
+    endforeach()
+endfunction()
+
 macro(build_lucene)
     message(STATUS "Building lucene from source")
 
@@ -1440,12 +1632,14 @@ endmacro()
 
 build_fmt()
 build_rapidjson()
-build_re2()
-build_snappy()
-build_zstd()
-build_zlib()
-build_lz4()
-build_arrow()
+paimon_apply_dependency_source_defaults()
+resolve_dependency(RE2)
+resolve_dependency(Snappy)
+resolve_dependency(zstd)
+resolve_dependency(ZLIB)
+resolve_dependency(LZ4)
+resolve_dependency(Arrow)
+paimon_warn_if_mixed_arrow_dependencies()
 build_tbb()
 build_glog()
 

@@ -140,6 +140,51 @@ $ cd build
 $ cmake ..
 $ make
 ```
+
+### Third-party dependencies
+
+Paimon C++ can either build selected third-party dependencies from bundled
+sources or use libraries that are already installed on the system. The default
+mode is `AUTO`, which tries system packages first and falls back to bundled
+sources when they are not found.
+
+```
+$ cmake -B build -DPAIMON_DEPENDENCY_SOURCE=AUTO
+```
+
+The supported dependency source values are:
+
+* `AUTO`: use a system package when available, otherwise build bundled sources.
+* `BUNDLED`: always build bundled sources.
+* `SYSTEM`: require system packages and fail if they are not found.
+* `CONDA`: use `$CONDA_PREFIX` as the default package prefix.
+
+You can also override individual dependencies. The first supported dependency
+set is Arrow/Parquet plus compression libraries.
+
+```
+$ cmake -B build \
+  -DPAIMON_DEPENDENCY_SOURCE=AUTO \
+  -DArrow_SOURCE=SYSTEM \
+  -DArrow_ROOT=/opt/arrow \
+  -Dzstd_SOURCE=BUNDLED
+```
+
+Use `PAIMON_PACKAGE_PREFIX` to provide one common prefix for dependencies whose
+own `<Package>_ROOT` variable is not set.
+
+```
+$ cmake -B build \
+  -DPAIMON_DEPENDENCY_SOURCE=SYSTEM \
+  -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
+```
+
+When `Arrow_SOURCE` is explicitly set to `SYSTEM`, `BUNDLED`, or `CONDA`, the
+compression dependencies default to the same source unless individually
+overridden. Mixing system and bundled copies of transitive dependencies can
+cause ABI conflicts, so prefer keeping Arrow and its compression dependencies
+from the same source unless you have a specific reason to override them.
+
 ## Contributing
 
 Paimon-cpp is an active open-source project and we welcome people who want to contribute or share good ideas!

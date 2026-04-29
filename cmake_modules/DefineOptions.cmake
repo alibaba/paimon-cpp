@@ -138,6 +138,32 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 
     option(PAIMON_BUILD_CONFIG_SUMMARY_JSON
            "Summarize build configuration in a JSON file" ON)
+
+    #----------------------------------------------------------------------
+    set_option_category("Dependencies")
+
+    define_option_string(PAIMON_DEPENDENCY_SOURCE
+                         "Default third-party dependency source" "AUTO" AUTO BUNDLED
+                         SYSTEM CONDA)
+
+    define_option_string(PAIMON_PACKAGE_PREFIX
+                         "Default prefix used to find third-party packages" "")
+
+    define_option(PAIMON_DEPENDENCY_USE_SHARED
+                  "Prefer shared libraries for system third-party packages" OFF)
+
+    define_option_string(Arrow_SOURCE "Dependency source for Apache Arrow" "" AUTO
+                         BUNDLED SYSTEM CONDA)
+    define_option_string(zstd_SOURCE "Dependency source for zstd" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(Snappy_SOURCE "Dependency source for Snappy" "" AUTO
+                         BUNDLED SYSTEM CONDA)
+    define_option_string(LZ4_SOURCE "Dependency source for LZ4" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(ZLIB_SOURCE "Dependency source for ZLIB" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(RE2_SOURCE "Dependency source for RE2" "" AUTO BUNDLED
+                         SYSTEM CONDA)
 endif()
 
 macro(validate_config)
