@@ -142,7 +142,7 @@ class SortMergeReaderWithMinHeap : public SortMergeReader {
     };
 
  private:
-    bool need_merge_;
+    const bool need_merge_;
     // must hold all readers, as data array is allocated by the pool of data file reader
     std::vector<std::unique_ptr<KeyValueRecordReader>> readers_holder_;
     std::vector<KeyValueRecordReader*> next_batch_readers_;
