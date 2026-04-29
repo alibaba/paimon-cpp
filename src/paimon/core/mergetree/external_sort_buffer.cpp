@@ -85,16 +85,20 @@ ExternalSortBuffer::ExternalSortBuffer(
       spill_channel_enumerator_(spill_channel_enumerator) {}
 
 ExternalSortBuffer::~ExternalSortBuffer() {
-    Clear();
+    DoClear();
 }
 
 bool ExternalSortBuffer::HasSpilledData() const {
     return !spill_channel_manager_->GetChannels().empty();
 }
 
-void ExternalSortBuffer::Clear() {
+void ExternalSortBuffer::DoClear() {
     in_memory_buffer_->Clear();
     CleanupSpillFiles();
+}
+
+void ExternalSortBuffer::Clear() {
+    DoClear();
 }
 
 uint64_t ExternalSortBuffer::GetMemorySize() const {
@@ -196,9 +200,9 @@ Result<int64_t> ExternalSortBuffer::SpillToDisk(
     }
 
     PAIMON_RETURN_NOT_OK(spill_writer->Close());
-    PAIMON_ASSIGN_OR_RAISE(int64_t merged_file_size, spill_writer->GetFileSize());
+    PAIMON_ASSIGN_OR_RAISE(int64_t spilled_file_size, spill_writer->GetFileSize());
     cleanup_guard.Release();
-    return merged_file_size;
+    return spilled_file_size;
 }
 
 Status ExternalSortBuffer::SpillMemoryBuffer(

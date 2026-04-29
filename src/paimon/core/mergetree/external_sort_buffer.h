@@ -53,7 +53,7 @@ class ExternalSortBuffer : public SortBuffer {
         const std::shared_ptr<FieldsComparator>& user_defined_seq_comparator,
         const CoreOptions& options, const std::shared_ptr<IOManager>& io_manager,
         const std::shared_ptr<MemoryPool>& pool);
-    ~ExternalSortBuffer();
+    ~ExternalSortBuffer() override;
 
     void Clear() override;
     uint64_t GetMemorySize() const override;
@@ -63,6 +63,7 @@ class ExternalSortBuffer : public SortBuffer {
     bool HasData() const override;
 
  private:
+    void DoClear();
     bool HasSpilledData() const;
     std::vector<FileIOChannel::ID> GetSpillChannelIdsSnapshot() const;
     Result<std::vector<std::unique_ptr<KeyValueRecordReader>>> CollectSpillReaders() const;
