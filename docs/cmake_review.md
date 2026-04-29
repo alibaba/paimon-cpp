@@ -193,12 +193,14 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 当前 issue #103 的实现思路是对的（仿 Arrow），但**仿 Arrow 是个坑**：Arrow 的 `ThirdpartyToolchain.cmake` 是十多年累积下来的工程债，行数已经 4000+，paimon-cpp 现在 1700 行只是开始。建议**重新评估**。
 
-### 推荐方案 A：vcpkg / Conan 作主路径，BUNDLED 退化为兜底
+### 推荐方案 A：评估 vcpkg / Conan 作主路径，BUNDLED 退化为兜底
 
 **理由：**
 - vcpkg/Conan 已经把 Arrow、ORC、protobuf、zstd、snappy、lz4、glog、fmt、TBB、GTest 全部打包好了，它们解决了你现在自己在 ExternalProject 里手写的所有 patch、flags、依赖关系
 - 用户接入只需 `cmake -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`
 - BUNDLED 模式可以保留作为 fallback（CI / 离线环境）
+
+这条路线需要单独设计讨论，当前 issue #103 的首个 PR 不应直接承诺具体包管理器集成。
 
 **改动量小**：
 
@@ -233,15 +235,9 @@ Arrow 的 ExternalProject 最大的问题是它在 build 阶段才执行，**编
 
 > ⚠ 这是 ABI 风险点之一，比 issue #103 评论里讨论的"SYSTEM Avro vs BUNDLED Arrow 的 zstd"更紧迫，因为它在**当前 BUNDLED-only 路径下就已经存在**。
 
-#### D. CONDA 模式：用 `CMAKE_PREFIX_PATH=$CONDA_PREFIX` 一刀切
+#### D. 包管理器模式需要后续单独设计
 
-现在 [paimon_configure_dependency_root](../cmake_modules/ThirdpartyToolchain.cmake#L462) 对每个 dep 单独设 `_ROOT=$CONDA_PREFIX`。Conda 是单 prefix，直接：
-
-```cmake
-list(PREPEND CMAKE_PREFIX_PATH $ENV{CONDA_PREFIX})
-```
-
-一行解决，所有 `find_package` 自动生效。
+Conda、vcpkg、Conan 等包管理器各自有不同的 toolchain / prefix 约定。它们不应混进第一版 `AUTO` / `SYSTEM` / `BUNDLED` 解析框架里仓促定型，后续可以围绕 `CMAKE_PREFIX_PATH`、`CMAKE_TOOLCHAIN_FILE`、manifest 文件和版本锁定策略单独设计。
 
 #### E. SYSTEM 模式需要版本下限检查
 

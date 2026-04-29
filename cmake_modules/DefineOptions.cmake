@@ -144,7 +144,7 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 
     define_option_string(PAIMON_DEPENDENCY_SOURCE
                          "Default third-party dependency source" "AUTO" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
 
     define_option_string(PAIMON_PACKAGE_PREFIX
                          "Default prefix used to find third-party packages" "")
@@ -153,33 +153,33 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                   "Prefer shared libraries for system third-party packages" OFF)
 
     define_option_string(Arrow_SOURCE "Dependency source for Apache Arrow" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
     define_option_string(zstd_SOURCE "Dependency source for zstd" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(Snappy_SOURCE "Dependency source for Snappy" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
     define_option_string(LZ4_SOURCE "Dependency source for LZ4" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(ZLIB_SOURCE "Dependency source for ZLIB" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(RE2_SOURCE "Dependency source for RE2" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(Protobuf_SOURCE "Dependency source for Protobuf" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
     define_option_string(ORC_SOURCE "Dependency source for Apache ORC" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
     define_option_string(fmt_SOURCE "Dependency source for fmt" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(RapidJSON_SOURCE "Dependency source for RapidJSON" ""
-                         AUTO BUNDLED SYSTEM CONDA)
+                         AUTO BUNDLED SYSTEM)
     define_option_string(TBB_SOURCE "Dependency source for TBB" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(glog_SOURCE "Dependency source for glog" "" AUTO BUNDLED
-                         SYSTEM CONDA)
+                         SYSTEM)
     define_option_string(Avro_SOURCE "Dependency source for Avro C++" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
     define_option_string(GTest_SOURCE "Dependency source for GoogleTest" "" AUTO
-                         BUNDLED SYSTEM CONDA)
+                         BUNDLED SYSTEM)
 endif()
 
 macro(validate_config)

@@ -422,6 +422,8 @@ if(PAIMON_BUILD_TESTS)
     endif()
 endif()
 
+paimon_print_dependency_resolution_summary()
+
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
     "${CMAKE_CURRENT_BINARY_DIR}/PaimonConfigVersion.cmake"

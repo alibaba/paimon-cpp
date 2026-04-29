@@ -371,14 +371,14 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.30")
     list(APPEND EP_COMMON_CMAKE_ARGS -DCMAKE_POLICY_VERSION_MINIMUM=3.5)
 endif()
 
-set(PAIMON_DEPENDENCY_SOURCE_VALUES AUTO BUNDLED SYSTEM CONDA)
+set(PAIMON_DEPENDENCY_SOURCE_VALUES AUTO BUNDLED SYSTEM)
 
 function(paimon_validate_dependency_source SOURCE_VALUE OPTION_NAME)
     string(TOUPPER "${SOURCE_VALUE}" _source)
     list(FIND PAIMON_DEPENDENCY_SOURCE_VALUES "${_source}" _source_index)
     if(_source_index EQUAL -1)
         message(FATAL_ERROR "${OPTION_NAME} got invalid value '${SOURCE_VALUE}'. "
-                            "Allowed values: AUTO, BUNDLED, SYSTEM, CONDA.")
+                            "Allowed values: AUTO, BUNDLED, SYSTEM.")
     endif()
 endfunction()
 
@@ -408,8 +408,7 @@ endfunction()
 
 function(paimon_apply_dependency_source_defaults)
     paimon_get_dependency_source(Arrow _arrow_source)
-    if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED"
-       OR _arrow_source STREQUAL "CONDA")
+    if(_arrow_source STREQUAL "SYSTEM" OR _arrow_source STREQUAL "BUNDLED")
         foreach(_dependency zstd Snappy LZ4 ZLIB RE2)
             paimon_set_dependency_source_default(
                 ${_dependency} ${_arrow_source}
@@ -437,8 +436,7 @@ function(paimon_apply_dependency_source_defaults)
 
     if(PAIMON_ENABLE_ORC)
         paimon_get_dependency_source(ORC _orc_source)
-        if(_orc_source STREQUAL "SYSTEM" OR _orc_source STREQUAL "BUNDLED"
-           OR _orc_source STREQUAL "CONDA")
+        if(_orc_source STREQUAL "SYSTEM" OR _orc_source STREQUAL "BUNDLED")
             paimon_set_dependency_source_default(
                 Protobuf ${_orc_source}
                 "follow ORC_SOURCE to avoid mixed transitive dependencies")
@@ -462,21 +460,6 @@ endfunction()
 function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
     set(_root_var "${DEPENDENCY_NAME}_ROOT")
 
-    if(SOURCE_VALUE STREQUAL "CONDA")
-        if("$ENV{CONDA_PREFIX}" STREQUAL "")
-            message(FATAL_ERROR "${DEPENDENCY_NAME}_SOURCE=CONDA requires CONDA_PREFIX")
-        endif()
-        if(NOT DEFINED ${_root_var} OR "${${_root_var}}" STREQUAL "")
-            set(${_root_var}
-                "$ENV{CONDA_PREFIX}"
-                CACHE PATH "Root directory for ${DEPENDENCY_NAME}" FORCE)
-        endif()
-        set(${OUT_SOURCE}
-            "SYSTEM"
-            PARENT_SCOPE)
-        return()
-    endif()
-
     if(NOT "${PAIMON_PACKAGE_PREFIX}" STREQUAL ""
        AND (NOT DEFINED ${_root_var} OR "${${_root_var}}" STREQUAL ""))
         set(${_root_var}
@@ -487,6 +470,73 @@ function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURC
     set(${OUT_SOURCE}
         "${SOURCE_VALUE}"
         PARENT_SCOPE)
+endfunction()
+
+function(paimon_get_dependency_root DEPENDENCY_NAME OUT_VAR)
+    set(_root_var "${DEPENDENCY_NAME}_ROOT")
+    if(DEFINED ${_root_var} AND NOT "${${_root_var}}" STREQUAL "")
+        set(${OUT_VAR}
+            "${${_root_var}}"
+            PARENT_SCOPE)
+    else()
+        set(${OUT_VAR}
+            "<default search paths>"
+            PARENT_SCOPE)
+    endif()
+endfunction()
+
+function(paimon_get_dependency_compat_target DEPENDENCY_NAME OUT_VAR)
+    if("${DEPENDENCY_NAME}" STREQUAL "Arrow")
+        set(_target arrow)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ORC")
+        set(_target orc::orc)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
+        set(_target libprotobuf)
+    elseif("${DEPENDENCY_NAME}" STREQUAL "GTest")
+        set(_target GTest::gtest)
+    else()
+        set(_target "${DEPENDENCY_NAME}")
+    endif()
+
+    set(${OUT_VAR}
+        "${_target}"
+        PARENT_SCOPE)
+endfunction()
+
+function(paimon_record_dependency_resolution DEPENDENCY_NAME REQUESTED_SOURCE
+         ACTUAL_SOURCE TARGET_NAME)
+    get_property(_dependencies GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES)
+    list(APPEND _dependencies "${DEPENDENCY_NAME}")
+    list(REMOVE_DUPLICATES _dependencies)
+    set_property(GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES "${_dependencies}")
+
+    paimon_get_dependency_root("${DEPENDENCY_NAME}" _root)
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_REQUESTED_SOURCE"
+                                "${REQUESTED_SOURCE}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE"
+                                "${ACTUAL_SOURCE}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_ROOT" "${_root}")
+    set_property(GLOBAL PROPERTY "PAIMON_${DEPENDENCY_NAME}_TARGET"
+                                "${TARGET_NAME}")
+endfunction()
+
+function(paimon_print_dependency_resolution_summary)
+    get_property(_dependencies GLOBAL PROPERTY PAIMON_RESOLVED_DEPENDENCIES)
+    if(NOT _dependencies)
+        return()
+    endif()
+
+    message(STATUS "Dependency resolution summary:")
+    foreach(_dependency IN LISTS _dependencies)
+        get_property(_requested GLOBAL
+                     PROPERTY "PAIMON_${_dependency}_REQUESTED_SOURCE")
+        get_property(_actual GLOBAL PROPERTY "PAIMON_${_dependency}_ACTUAL_SOURCE")
+        get_property(_root GLOBAL PROPERTY "PAIMON_${_dependency}_ROOT")
+        get_property(_target GLOBAL PROPERTY "PAIMON_${_dependency}_TARGET")
+        message(STATUS
+                "  ${_dependency}: requested=${_requested}, actual=${_actual}, target=${_target}, root=${_root}"
+        )
+    endforeach()
 endfunction()
 
 macro(paimon_build_dependency DEPENDENCY_NAME)
@@ -544,6 +594,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
     paimon_get_dependency_source(${DEPENDENCY_NAME} _paimon_requested_source)
     paimon_configure_dependency_root(${DEPENDENCY_NAME} "${_paimon_requested_source}"
                                      _paimon_resolved_source)
+    paimon_get_dependency_compat_target(${DEPENDENCY_NAME} _paimon_target_name)
 
     if(_paimon_resolved_source STREQUAL "BUNDLED")
         message(STATUS "Using bundled ${DEPENDENCY_NAME}")
@@ -551,12 +602,18 @@ macro(resolve_dependency DEPENDENCY_NAME)
         set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
             "BUNDLED"
             CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        paimon_record_dependency_resolution(
+            ${DEPENDENCY_NAME} "${_paimon_requested_source}" "BUNDLED"
+            "${_paimon_target_name}")
     elseif(_paimon_resolved_source STREQUAL "SYSTEM")
         message(STATUS "Using system ${DEPENDENCY_NAME}")
         find_package(${_paimon_alt_package_name} REQUIRED MODULE)
         set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
             "${_paimon_requested_source}"
             CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+        paimon_record_dependency_resolution(
+            ${DEPENDENCY_NAME} "${_paimon_requested_source}"
+            "${_paimon_requested_source}" "${_paimon_target_name}")
     elseif(_paimon_resolved_source STREQUAL "AUTO")
         message(STATUS "Resolving ${DEPENDENCY_NAME} with AUTO source")
         find_package(${_paimon_alt_package_name} QUIET MODULE)
@@ -565,12 +622,18 @@ macro(resolve_dependency DEPENDENCY_NAME)
             set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
                 "SYSTEM"
                 CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+            paimon_record_dependency_resolution(
+                ${DEPENDENCY_NAME} "${_paimon_requested_source}" "SYSTEM"
+                "${_paimon_target_name}")
         else()
             message(STATUS "System ${DEPENDENCY_NAME} not found; using bundled")
             paimon_build_dependency(${DEPENDENCY_NAME})
             set(PAIMON_${DEPENDENCY_NAME}_ACTUAL_SOURCE
                 "BUNDLED"
                 CACHE INTERNAL "Actual source for ${DEPENDENCY_NAME}")
+            paimon_record_dependency_resolution(
+                ${DEPENDENCY_NAME} "${_paimon_requested_source}" "BUNDLED"
+                "${_paimon_target_name}")
         endif()
     else()
         message(FATAL_ERROR "Unsupported source ${_paimon_resolved_source} "
@@ -582,6 +645,7 @@ macro(resolve_dependency DEPENDENCY_NAME)
     unset(_paimon_found_var)
     unset(_paimon_requested_source)
     unset(_paimon_resolved_source)
+    unset(_paimon_target_name)
 endmacro()
 
 function(paimon_warn_if_mixed_arrow_dependencies)
@@ -596,8 +660,8 @@ function(paimon_warn_if_mixed_arrow_dependencies)
             message(WARNING
                     "Arrow resolved from ${PAIMON_Arrow_ACTUAL_SOURCE}, but "
                     "${_dependency} resolved from "
-                    "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM, "
-                    "CONDA, and BUNDLED dependencies can cause ABI conflicts.")
+                    "${PAIMON_${_dependency}_ACTUAL_SOURCE}. Mixing SYSTEM "
+                    "and BUNDLED dependencies can cause ABI conflicts.")
         endif()
     endforeach()
 endfunction()

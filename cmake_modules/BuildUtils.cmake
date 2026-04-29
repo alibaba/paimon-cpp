@@ -71,6 +71,8 @@ function(add_paimon_lib LIB_NAME)
         endforeach()
         if(_paimon_objlib_deps)
             add_dependencies(${LIB_NAME}_objlib ${_paimon_objlib_deps})
+            target_link_libraries(${LIB_NAME}_objlib
+                                  PRIVATE ${_paimon_objlib_deps})
         endif()
         unset(_paimon_objlib_deps)
         unset(_paimon_dep)

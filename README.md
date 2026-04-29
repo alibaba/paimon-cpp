@@ -157,7 +157,6 @@ The supported dependency source values are:
 * `AUTO`: use a system package when available, otherwise build bundled sources.
 * `BUNDLED`: always build bundled sources.
 * `SYSTEM`: require system packages and fail if they are not found.
-* `CONDA`: use `$CONDA_PREFIX` as the default package prefix.
 
 You can also override individual dependencies. The supported dependency set
 includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt, RapidJSON, TBB, glog,
@@ -180,16 +179,20 @@ $ cmake -B build \
   -DPAIMON_PACKAGE_PREFIX=/opt/paimon-deps
 ```
 
-When `Arrow_SOURCE` is explicitly set to `SYSTEM`, `BUNDLED`, or `CONDA`, the
-compression dependencies default to the same source unless individually
-overridden. Mixing system and bundled copies of transitive dependencies can
-cause ABI conflicts, so prefer keeping Arrow and its compression dependencies
-from the same source unless you have a specific reason to override them.
+When `Arrow_SOURCE` is explicitly set to `SYSTEM` or `BUNDLED`, the compression
+dependencies default to the same source unless individually overridden. Mixing
+system and bundled copies of transitive dependencies can cause ABI conflicts,
+so prefer keeping Arrow and its compression dependencies from the same source
+unless you have a specific reason to override them.
 
 When `ORC_SOURCE` is explicitly set, `Protobuf_SOURCE` defaults to the same
 source unless individually overridden. In `AUTO` mode, Paimon prechecks for a
 system ORC installation and defaults Protobuf to `SYSTEM` only when system ORC
 is found; otherwise Protobuf stays bundled with bundled ORC.
+
+CMake prints a dependency resolution summary during configuration showing the
+requested source, actual source, compatibility target, and search root for each
+resolved dependency.
 
 ## Contributing
 
