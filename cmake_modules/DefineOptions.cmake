@@ -164,6 +164,10 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          SYSTEM CONDA)
     define_option_string(RE2_SOURCE "Dependency source for RE2" "" AUTO BUNDLED
                          SYSTEM CONDA)
+    define_option_string(Protobuf_SOURCE "Dependency source for Protobuf" "" AUTO
+                         BUNDLED SYSTEM CONDA)
+    define_option_string(ORC_SOURCE "Dependency source for Apache ORC" "" AUTO
+                         BUNDLED SYSTEM CONDA)
 endif()
 
 macro(validate_config)

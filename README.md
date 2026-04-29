@@ -160,7 +160,7 @@ The supported dependency source values are:
 * `CONDA`: use `$CONDA_PREFIX` as the default package prefix.
 
 You can also override individual dependencies. The first supported dependency
-set is Arrow/Parquet plus compression libraries.
+set includes Arrow/Parquet, ORC, Protobuf, RE2, and compression libraries.
 
 ```
 $ cmake -B build \
@@ -184,6 +184,11 @@ compression dependencies default to the same source unless individually
 overridden. Mixing system and bundled copies of transitive dependencies can
 cause ABI conflicts, so prefer keeping Arrow and its compression dependencies
 from the same source unless you have a specific reason to override them.
+
+When `ORC_SOURCE` is explicitly set, `Protobuf_SOURCE` defaults to the same
+source unless individually overridden. In `AUTO` mode, Paimon prechecks for a
+system ORC installation and defaults Protobuf to `SYSTEM` only when system ORC
+is found; otherwise Protobuf stays bundled with bundled ORC.
 
 ## Contributing
 

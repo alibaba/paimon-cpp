@@ -434,6 +434,29 @@ function(paimon_apply_dependency_source_defaults)
                 "${_arrow_dependency_reason}")
         endforeach()
     endif()
+
+    if(PAIMON_ENABLE_ORC)
+        paimon_get_dependency_source(ORC _orc_source)
+        if(_orc_source STREQUAL "SYSTEM" OR _orc_source STREQUAL "BUNDLED"
+           OR _orc_source STREQUAL "CONDA")
+            paimon_set_dependency_source_default(
+                Protobuf ${_orc_source}
+                "follow ORC_SOURCE to avoid mixed transitive dependencies")
+        elseif(_orc_source STREQUAL "AUTO")
+            paimon_configure_dependency_root(ORC "${_orc_source}"
+                                             _orc_resolved_source)
+            find_package(ORCAlt QUIET MODULE)
+            if(ORCAlt_FOUND)
+                paimon_set_dependency_source_default(
+                    Protobuf SYSTEM
+                    "system ORC found during AUTO dependency precheck")
+            else()
+                paimon_set_dependency_source_default(
+                    Protobuf BUNDLED
+                    "system ORC not found during AUTO dependency precheck")
+            endif()
+        endif()
+    endif()
 endfunction()
 
 function(paimon_configure_dependency_root DEPENDENCY_NAME SOURCE_VALUE OUT_SOURCE)
@@ -479,6 +502,10 @@ macro(paimon_build_dependency DEPENDENCY_NAME)
         build_zlib()
     elseif("${DEPENDENCY_NAME}" STREQUAL "RE2")
         build_re2()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "Protobuf")
+        build_protobuf()
+    elseif("${DEPENDENCY_NAME}" STREQUAL "ORC")
+        build_orc()
     else()
         message(FATAL_ERROR "No bundled build rule for ${DEPENDENCY_NAME}")
     endif()
@@ -1647,8 +1674,8 @@ if(PAIMON_ENABLE_AVRO)
     build_avro()
 endif()
 if(PAIMON_ENABLE_ORC)
-    build_protobuf()
-    build_orc()
+    resolve_dependency(Protobuf)
+    resolve_dependency(ORC)
 endif()
 if(PAIMON_ENABLE_JINDO)
     build_jindosdk_c()
