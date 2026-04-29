@@ -159,8 +159,9 @@ The supported dependency source values are:
 * `SYSTEM`: require system packages and fail if they are not found.
 * `CONDA`: use `$CONDA_PREFIX` as the default package prefix.
 
-You can also override individual dependencies. The first supported dependency
-set includes Arrow/Parquet, ORC, Protobuf, RE2, and compression libraries.
+You can also override individual dependencies. The supported dependency set
+includes Arrow/Parquet, ORC, Protobuf, Avro, RE2, fmt, RapidJSON, TBB, glog,
+GoogleTest, and compression libraries.
 
 ```
 $ cmake -B build \

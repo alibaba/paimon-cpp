@@ -168,6 +168,18 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
                          BUNDLED SYSTEM CONDA)
     define_option_string(ORC_SOURCE "Dependency source for Apache ORC" "" AUTO
                          BUNDLED SYSTEM CONDA)
+    define_option_string(fmt_SOURCE "Dependency source for fmt" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(RapidJSON_SOURCE "Dependency source for RapidJSON" ""
+                         AUTO BUNDLED SYSTEM CONDA)
+    define_option_string(TBB_SOURCE "Dependency source for TBB" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(glog_SOURCE "Dependency source for glog" "" AUTO BUNDLED
+                         SYSTEM CONDA)
+    define_option_string(Avro_SOURCE "Dependency source for Avro C++" "" AUTO
+                         BUNDLED SYSTEM CONDA)
+    define_option_string(GTest_SOURCE "Dependency source for GoogleTest" "" AUTO
+                         BUNDLED SYSTEM CONDA)
 endif()
 
 macro(validate_config)

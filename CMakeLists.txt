@@ -365,7 +365,7 @@ if(PAIMON_BUILD_TESTS)
     endif()
     # Adding unit tests part of the "paimon" portion of the test suite
     add_custom_target(paimon-tests)
-    build_gtest()
+    resolve_dependency(GTest)
 
     add_custom_target(unittest
                       ctest
