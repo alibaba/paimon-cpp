@@ -50,14 +50,14 @@ Result<std::optional<SystemTablePath>> TryParseSystemTablePath(const std::string
     Identifier identifier(table_name);
     try {
         if (!identifier.IsSystemTable()) {
-            return std::nullopt;
+            return std::optional<SystemTablePath>();
         }
         std::string parent = PathUtil::GetParentDirPath(path);
         SystemTablePath system_table_path;
         system_table_path.table_path = PathUtil::JoinPath(parent, identifier.GetDataTableName());
         system_table_path.branch = identifier.GetBranchName();
         system_table_path.system_table_name = identifier.GetSystemTableName().value();
-        return system_table_path;
+        return std::optional<SystemTablePath>(std::move(system_table_path));
     } catch (const std::exception& e) {
         return Status::Invalid(e.what());
     }
