@@ -149,6 +149,52 @@ TEST(FileSystemCatalogTest, TestCreateTable) {
     ArrowSchemaRelease(&schema);
 }
 
+TEST(FileSystemCatalogTest, TestOptionsSystemTableCatalog) {
+    std::map<std::string, std::string> options;
+    options[Options::FILE_SYSTEM] = "local";
+    options[Options::FILE_FORMAT] = "orc";
+    options["custom.option"] = "custom-value";
+    ASSERT_OK_AND_ASSIGN(auto core_options, CoreOptions::FromMap(options));
+    auto dir = UniqueTestDirectory::Create();
+    ASSERT_TRUE(dir);
+    FileSystemCatalog catalog(core_options.GetFileSystem(), dir->Str());
+    ASSERT_OK(catalog.CreateDatabase("db1", options, /*ignore_if_exists=*/true));
+
+    auto typed_schema = arrow::schema({arrow::field("f0", arrow::int32())});
+    ::ArrowSchema schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &schema).ok());
+    ASSERT_OK(catalog.CreateTable(Identifier("db1", "tbl1"), &schema,
+                                  /*partition_keys=*/{}, /*primary_keys=*/{}, options,
+                                  /*ignore_if_exists=*/false));
+    ArrowSchemaRelease(&schema);
+
+    Identifier options_identifier("db1", "tbl1$options");
+    ASSERT_OK_AND_ASSIGN(bool exists, catalog.TableExists(options_identifier));
+    ASSERT_TRUE(exists);
+    ASSERT_OK_AND_ASSIGN(exists, catalog.TableExists(Identifier("db1", "tbl1$unknown")));
+    ASSERT_FALSE(exists);
+    ASSERT_EQ(catalog.GetTableLocation(options_identifier),
+              PathUtil::JoinPath(PathUtil::JoinPath(dir->Str(), "db1.db"), "tbl1$options"));
+
+    ASSERT_OK_AND_ASSIGN(std::shared_ptr<Schema> system_schema,
+                         catalog.LoadTableSchema(options_identifier));
+    ASSERT_OK_AND_ASSIGN(auto c_schema, system_schema->GetArrowSchema());
+    auto loaded_schema_result = arrow::ImportSchema(c_schema.get());
+    ASSERT_TRUE(loaded_schema_result.ok()) << loaded_schema_result.status().ToString();
+    auto loaded_schema = loaded_schema_result.ValueUnsafe();
+    ASSERT_EQ(loaded_schema->field_names(), (std::vector<std::string>{"key", "value"}));
+
+    ::ArrowSchema system_create_schema;
+    ASSERT_TRUE(arrow::ExportSchema(*typed_schema, &system_create_schema).ok());
+    ASSERT_NOK_WITH_MSG(
+        catalog.CreateTable(options_identifier, &system_create_schema, {}, {}, options, false),
+        "Cannot create table for system table");
+    ArrowSchemaRelease(&system_create_schema);
+    ASSERT_NOK_WITH_MSG(catalog.DropTable(options_identifier, false), "Cannot drop system table");
+    ASSERT_NOK_WITH_MSG(catalog.RenameTable(options_identifier, Identifier("db1", "tbl2"), false),
+                        "Cannot rename system table");
+}
+
 TEST(FileSystemCatalogTest, TestCreateTableWithBlob) {
     std::map<std::string, std::string> options;
     options[Options::FILE_SYSTEM] = "local";

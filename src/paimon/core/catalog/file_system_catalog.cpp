@@ -30,6 +30,8 @@
 #include "paimon/common/utils/path_util.h"
 #include "paimon/common/utils/string_utils.h"
 #include "paimon/core/snapshot.h"
+#include "paimon/core/table/system/system_table.h"
+#include "paimon/core/table/system/system_table_schema.h"
 #include "paimon/core/utils/branch_manager.h"
 #include "paimon/core/utils/snapshot_manager.h"
 #include "paimon/defs.h"
@@ -92,6 +94,16 @@ Result<bool> FileSystemCatalog::DatabaseExists(const std::string& db_name) const
 }
 
 Result<bool> FileSystemCatalog::TableExists(const Identifier& identifier) const {
+    if (identifier.IsSystemTable()) {
+        if (!identifier.GetSystemTableName() ||
+            !IsSupportedSystemTable(identifier.GetSystemTableName().value())) {
+            return false;
+        }
+        Identifier data_identifier(identifier.GetDatabaseName(), identifier.GetDataTableName());
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                               TableSchemaExists(data_identifier));
+        return latest_schema != std::nullopt;
+    }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));
     return latest_schema != std::nullopt;
@@ -169,7 +181,7 @@ bool FileSystemCatalog::IsSystemDatabase(const std::string& db_name) {
 }
 
 bool FileSystemCatalog::IsSpecifiedSystemTable(const Identifier& identifier) {
-    return (identifier.GetTableName().find(SYSTEM_TABLE_SPLITTER) != std::string::npos);
+    return identifier.IsSystemTable();
 }
 
 bool FileSystemCatalog::IsSystemTable(const Identifier& identifier) {
@@ -237,6 +249,23 @@ Result<bool> FileSystemCatalog::TableExistsInFileSystem(const std::string& table
 
 Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
     const Identifier& identifier) const {
+    if (identifier.IsSystemTable()) {
+        if (!identifier.GetSystemTableName() ||
+            !IsSupportedSystemTable(identifier.GetSystemTableName().value())) {
+            return Status::NotExist(fmt::format("{} not exist", identifier.ToString()));
+        }
+        Identifier data_identifier(identifier.GetDatabaseName(), identifier.GetDataTableName());
+        PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
+                               TableSchemaExists(data_identifier));
+        if (!latest_schema) {
+            return Status::NotExist(fmt::format("{} not exist", data_identifier.ToString()));
+        }
+        PAIMON_ASSIGN_OR_RAISE(
+            std::shared_ptr<SystemTable> system_table,
+            CreateSystemTable(identifier.GetSystemTableName().value(), fs_,
+                              GetTableLocation(identifier), latest_schema.value()));
+        return std::make_shared<SystemTableSchema>(system_table->ArrowSchema());
+    }
     PAIMON_ASSIGN_OR_RAISE(std::optional<std::shared_ptr<TableSchema>> latest_schema,
                            TableSchemaExists(identifier));
     if (!latest_schema) {
@@ -246,6 +275,11 @@ Result<std::shared_ptr<Schema>> FileSystemCatalog::LoadTableSchema(
 }
 
 Result<std::shared_ptr<Table>> FileSystemCatalog::GetTable(const Identifier& identifier) const {
+    if (identifier.IsSystemTable()) {
+        PAIMON_ASSIGN_OR_RAISE(std::shared_ptr<Schema> schema, LoadTableSchema(identifier));
+        return std::make_shared<Table>(schema, identifier.GetDatabaseName(),
+                                       identifier.GetTableName());
+    }
     return Table::Create(fs_, GetTableLocation(identifier), identifier);
 }
 

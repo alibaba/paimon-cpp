@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include "paimon/type_fwd.h"
@@ -27,6 +28,9 @@ namespace paimon {
 class PAIMON_EXPORT Identifier {
  public:
     static const char kUnknownDatabase[];
+    static const char kSystemTableSplitter[];
+    static const char kSystemBranchPrefix[];
+    static const char kDefaultMainBranch[];
 
     explicit Identifier(const std::string& table);
     Identifier(const std::string& database, const std::string& table);
@@ -34,11 +38,22 @@ class PAIMON_EXPORT Identifier {
     bool operator==(const Identifier& other);
     const std::string& GetDatabaseName() const;
     const std::string& GetTableName() const;
+    const std::string& GetDataTableName() const;
+    const std::optional<std::string>& GetBranchName() const;
+    std::string GetBranchNameOrDefault() const;
+    const std::optional<std::string>& GetSystemTableName() const;
+    bool IsSystemTable() const;
     std::string ToString() const;
 
  private:
+    void SplitTableName() const;
+
     const std::string database_;
     const std::string table_;
+    mutable bool parsed_ = false;
+    mutable std::string data_table_;
+    mutable std::optional<std::string> branch_;
+    mutable std::optional<std::string> system_table_;
 };
 
 }  // namespace paimon
