@@ -35,6 +35,7 @@
 #include "paimon/predicate/literal.h"
 #include "paimon/predicate/predicate_builder.h"
 #include "paimon/read_context.h"
+#include "paimon/scan_context.h"
 #include "paimon/status.h"
 #include "paimon/table/source/split.h"
 #include "paimon/table/source/table_scan.h"
@@ -198,7 +199,8 @@ TEST(TableReadTest, TestReadOptionsSystemTable) {
     read_context_builder.SetOptions(options);
     ASSERT_OK_AND_ASSIGN(auto read_context, read_context_builder.Finish());
     ASSERT_OK_AND_ASSIGN(auto table_read, TableRead::Create(std::move(read_context)));
-    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader({deserialized_split}));
+    std::vector<std::shared_ptr<Split>> splits = {deserialized_split};
+    ASSERT_OK_AND_ASSIGN(auto batch_reader, table_read->CreateReader(splits));
     ASSERT_OK_AND_ASSIGN(auto result, ReadResultCollector::CollectResult(batch_reader.get()));
     ASSERT_TRUE(result);
     ASSERT_EQ(result->type()->id(), arrow::Type::STRUCT);
